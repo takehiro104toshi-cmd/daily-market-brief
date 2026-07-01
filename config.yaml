@@ -1,0 +1,162 @@
+# market_brief 設定ファイル
+# ここに書かれた銘柄・情報源はすべて公開情報のみを対象とする
+
+watchlist:
+  jp_stocks:
+    - { ticker: "7203.T", name: "トヨタ自動車" }
+    - { ticker: "6758.T", name: "ソニーグループ" }
+    - { ticker: "9984.T", name: "ソフトバンクグループ" }
+    - { ticker: "8306.T", name: "三菱UFJフィナンシャル・グループ" }
+    - { ticker: "6501.T", name: "日立製作所" }
+    - { ticker: "8035.T", name: "東京エレクトロン" }
+    - { ticker: "6098.T", name: "リクルートホールディングス" }
+    - { ticker: "7012.T", name: "川崎重工業" }
+    - { ticker: "6902.T", name: "デンソー" }
+    - { ticker: "6594.T", name: "ニデック" }
+    - { ticker: "5801.T", name: "古河電工" }
+    - { ticker: "5802.T", name: "住友電工" }
+    - { ticker: "6752.T", name: "パナソニックHD" }
+    - { ticker: "4188.T", name: "三菱ケミカルグループ" }
+    - { ticker: "3407.T", name: "旭化成" }
+    - { ticker: "1944.T", name: "きんでん" }
+  us_stocks:
+    - { ticker: "AAPL", name: "Apple" }
+    - { ticker: "MSFT", name: "Microsoft" }
+    - { ticker: "NVDA", name: "NVIDIA" }
+    - { ticker: "TSLA", name: "Tesla" }
+    - { ticker: "AMZN", name: "Amazon" }
+    - { ticker: "GOOGL", name: "Alphabet" }
+    - { ticker: "META", name: "Meta Platforms" }
+    - { ticker: "PLTR", name: "Palantir" }
+    - { ticker: "ARM", name: "Arm Holdings" }
+    - { ticker: "TSM", name: "TSMC" }
+    - { ticker: "ASML", name: "ASML" }
+    - { ticker: "LRCX", name: "Lam Research" }
+    - { ticker: "KLAC", name: "KLA" }
+
+# 主要指数（symbol: yfinance用ティッカー, stooq_symbol: Stooqでのフォールバック用）
+indices:
+  - { symbol: "^N225", name: "日経平均株価", stooq_symbol: "^nkx" }
+  - { symbol: "1306.T", name: "TOPIX連動型ETF(参考)", stooq_symbol: "^tpx" }
+  - { symbol: "^DJI", name: "NYダウ", stooq_symbol: "^dji" }
+  - { symbol: "^GSPC", name: "S&P500", stooq_symbol: "^spx" }
+  - { symbol: "^IXIC", name: "ナスダック総合", stooq_symbol: "^ndq" }
+  - { symbol: "^VIX", name: "VIX指数（恐怖指数）", stooq_symbol: "^vix" }
+
+# 為替
+forex:
+  - { symbol: "JPY=X", name: "米ドル/円", stooq_symbol: "usdjpy" }
+  - { symbol: "EURJPY=X", name: "ユーロ/円", stooq_symbol: "eurjpy" }
+  - { symbol: "EURUSD=X", name: "ユーロ/米ドル", stooq_symbol: "eurusd" }
+
+# 金利
+rates:
+  - { symbol: "^TNX", name: "米10年国債利回り", stooq_symbol: "10usy.b" }
+
+# コモディティ
+commodities:
+  - { symbol: "CL=F", name: "WTI原油先物", stooq_symbol: "cl.f" }
+  - { symbol: "GC=F", name: "金先物（ゴールド）", stooq_symbol: "gc.f" }
+
+# 公開ニュースRSS（見出し・リンクのみ取得し、本文は取得しない）
+news_sources:
+  - { name: "Yahoo!ニュース 経済", url: "https://news.yahoo.co.jp/rss/topics/business.xml" }
+  - { name: "ロイター(Yahoo!ニュース経由)", url: "https://news.yahoo.co.jp/rss/media/reut/all.xml" }
+  - { name: "NHKニュース 経済", url: "https://www3.nhk.or.jp/rss/news/cat5.xml" }
+
+# 相場以外の一般ニュース見出し（「今日の雑談」向け）。本文は取得せず見出し・リンクのみ利用。
+general_news_sources:
+  - { name: "Yahoo!ニュース トピックス", url: "https://news.yahoo.co.jp/rss/topics/top-picks.xml" }
+  - { name: "NHKニュース 総合", url: "https://www3.nhk.or.jp/rss/news/cat0.xml" }
+
+# TDnet（適時開示情報閲覧サービス）※完全に公開されている一覧ページ
+tdnet:
+  list_url_template: "https://www.release.tdnet.co.jp/inbs/I_list_001_{date}.html"
+  max_items: 20
+  lookback_days: 3
+
+# 注目テーマ抽出用キーワード（ニュース見出しに含まれるかで判定）
+themes:
+  - "半導体"
+  - "生成AI"
+  - "AI"
+  - "円安"
+  - "円高"
+  - "インバウンド"
+  - "防衛"
+  - "資源"
+  - "電力"
+  - "EV"
+  - "インフレ"
+  - "利上げ"
+  - "利下げ"
+  - "電線"
+  - "データセンター"
+
+# 注目業界の分類
+# keywords: ニュース見出しの判定キーワード
+# related_tickers: watchlistのティッカーのうち、この業種に関連する銘柄（注目銘柄セクションの中長期材料で参照）
+sectors:
+  半導体・電子部品:
+    keywords: ["半導体", "電子部品", "東京エレクトロン", "半導体製造装置", "ニデック", "モーター"]
+    related_tickers: ["8035.T", "6594.T", "NVDA", "TSM", "ASML", "LRCX", "KLAC", "ARM"]
+  自動車:
+    keywords: ["自動車", "EV", "トヨタ", "日産", "ホンダ", "デンソー"]
+    related_tickers: ["7203.T", "6902.T", "TSLA"]
+  重工業・防衛:
+    keywords: ["防衛", "重工業", "川崎重工業", "航空機", "造船"]
+    related_tickers: ["7012.T"]
+  金融:
+    keywords: ["日銀", "銀行", "金利", "利上げ", "利下げ"]
+    related_tickers: ["8306.T"]
+  資源・エネルギー:
+    keywords: ["原油", "資源", "エネルギー", "LNG"]
+    related_tickers: []
+  情報通信・生成AI:
+    keywords: ["生成AI", "AI", "通信", "ソフトバンク", "プラットフォーム"]
+    related_tickers: ["9984.T", "GOOGL", "META", "PLTR"]
+  電機・電線・素材:
+    keywords: ["パナソニック", "電線", "古河電工", "住友電工", "三菱ケミカル", "旭化成", "化学", "素材", "データセンター"]
+    related_tickers: ["6752.T", "5801.T", "5802.T", "4188.T", "3407.T"]
+  電力・インフラ:
+    keywords: ["電力", "インフラ", "きんでん", "送配電", "データセンター"]
+    related_tickers: ["1944.T"]
+
+# 「今日見るべき指標」セクション向けの節目ライン設定。
+# name は indices/forex/rates/commodities の name と一致させる。
+# lines: 節目として表示する値（現在値に最も近いラインを自動選択）
+# above_note / below_note: 現在値がラインを上回っている/下回っている場合の一言
+key_levels:
+  - name: "米ドル/円"
+    lines: [150, 155, 160]
+    above_note: "円安が進行しやすく、輸出関連株には追い風、輸入コストには逆風となりやすい水準です。"
+    below_note: "円高方向への転換が意識されやすく、輸出関連株には逆風となりやすい水準です。"
+  - name: "VIX指数（恐怖指数）"
+    lines: [20, 25, 30]
+    above_note: "市場のリスク回避姿勢が強まりやすい水準です。"
+    below_note: "落ち着いた相場地合いが意識されやすい水準です。"
+  - name: "米10年国債利回り"
+    lines: [4.0, 4.5, 5.0]
+    above_note: "金利上昇が株式のバリュエーションの重荷として意識されやすい水準です。"
+    below_note: "金利低下が株式には追い風として意識されやすい水準です。"
+  - name: "WTI原油先物"
+    lines: [70, 80, 90]
+    above_note: "インフレ再燃への警戒が意識されやすい水準です。"
+    below_note: "資源関連株には逆風、消費関連株には追い風が意識されやすい水準です。"
+  - name: "金先物（ゴールド）"
+    lines: [2200, 2400, 2600]
+    above_note: "安全資産への資金シフトが意識されやすい水準です。"
+    below_note: "リスク選好局面への回帰が意識されやすい水準です。"
+
+# マクロイベントカレンダー（FOMC・日銀会合など、公開されているスケジュールを手動で管理）
+# 「今日のイベント」セクションの今週／今月の分類に利用される。
+# 例:
+# macro_events:
+#   - { date: "2026-07-30", label: "FOMC（米連邦公開市場委員会）政策金利発表" }
+#   - { date: "2026-07-31", label: "日銀金融政策決定会合" }
+macro_events: []
+
+output:
+  dir: "output"
+  timezone: "Asia/Tokyo"
+  headlines_per_source: 8

@@ -1,0 +1,12 @@
+# Python
+.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+*.egg-info/
+
+# GitHub Pages用の一時ビルドフォルダ（ワークフロー実行のたびに再生成される）
+pages-site/
+
+# ローカル実行時のログ
+*.log

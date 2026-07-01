@@ -1,0 +1,28 @@
+[project]
+name = "daily-market-brief"
+version = "0.1.0"
+description = "毎朝、公開情報からAIが考察した日本株・米国株・為替・金利の朝レポートを生成するツール（投資助言ではありません）"
+readme = "README.md"
+requires-python = ">=3.9"
+
+dependencies = [
+    "requests>=2.31",
+    "pandas>=2.0",
+    "beautifulsoup4>=4.12",
+    "lxml>=4.9",
+    "PyYAML>=6.0",
+    "yfinance>=0.2.40",
+    "pytz>=2024.1",
+]
+
+[project.optional-dependencies]
+# Claude APIによるAI分析の文章磨き上げを使う場合のみ（未インストールでもツールは完全に動作する）
+llm = ["anthropic>=0.40.0"]
+dev = ["pytest>=7.4"]
+
+# requirements.txt は `pip install -r requirements.txt` 用にそのまま維持している。
+# 依存関係の一次情報源は本ファイルの [project.dependencies] とし、
+# requirements.txt の内容とは常に同期させること。
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

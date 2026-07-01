@@ -1,0 +1,14 @@
+requests>=2.31
+pandas>=2.0
+beautifulsoup4>=4.12
+lxml>=4.9
+PyYAML>=6.0
+yfinance>=0.2.40
+pytz>=2024.1
+
+# テスト用
+pytest>=7.4
+
+# 任意: Claude APIによるAI分析の文章磨き上げを使う場合のみインストールしてください。
+# 未インストールでもツールは完全に動作します（ルールベースの考察にフォールバックします）。
+# anthropic>=0.40.0
