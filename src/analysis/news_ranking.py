@@ -17,8 +17,10 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from ..collectors.news import Headline
-from ..report.format_utils import stars
+from ..report.format_utils import stars, truncate_to_chars
 from .models import NewsRankingItem
+
+SALES_TALK_MAX_CHARS = 100
 
 SURPRISE_KEYWORDS = [
     "上方修正", "下方修正", "最高値", "最安値", "規制", "制裁", "決算",
@@ -113,6 +115,17 @@ def _analyze_headline(
     )
 
 
+def _sales_talk(headline: Headline, analysis: "_HeadlineAnalysis") -> str:
+    """営業現場でそのまま読める、100文字以内の営業トークを生成する（断定は避ける）。"""
+    if analysis.affected_sector and analysis.affected_sector != "特定業種なし":
+        text = f"「{analysis.affected_sector}」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。"
+    elif analysis.affected_market and analysis.affected_market != "市場全体":
+        text = f"{analysis.affected_market}への影響が意識されており、値動きを確認したい局面です。"
+    else:
+        text = f"「{headline.title}」は市場全体の地合いを確認する材料の一つと考えられます。"
+    return truncate_to_chars(text, SALES_TALK_MAX_CHARS)
+
+
 def build_news_ranking(
     headlines: List[Headline],
     themes: List[str],
@@ -142,6 +155,7 @@ def build_news_ranking(
                 reason=analysis.reason,
                 affected_market=analysis.affected_market,
                 affected_sector=analysis.affected_sector,
+                sales_talk=_sales_talk(headline, analysis),
             )
         )
     return items

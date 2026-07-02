@@ -1,6 +1,6 @@
 """Claude APIによるAI考察の任意強化レイヤー（オプション機能）。
 
-本モジュールを使わなくても Market Intelligence System v2 は完全に動作する。
+本モジュールを使わなくても Market Intelligence System v4 は完全に動作する。
 各 analysis/ モジュールは、まずルールベース（決定論的な数値ロジック）で
 考察文のたたき台を必ず生成する。その上で、環境変数 `ANTHROPIC_API_KEY` が
 設定されており `anthropic` パッケージが利用可能な場合に限り、

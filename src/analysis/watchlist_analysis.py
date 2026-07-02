@@ -62,6 +62,30 @@ def _next_month_text(ticker: str, sector_matches: List[SectorMatch], ev: Optiona
     return base
 
 
+def _risk_text(
+    quote: Quote,
+    ticker: str,
+    sector_matches: List[SectorMatch],
+    ev: Optional[EarningsEvent],
+    reference: datetime,
+) -> str:
+    risks: List[str] = []
+    days = _days_until(ev.date if ev else None, reference)
+    if ev and days is not None and 0 <= days <= 14:
+        risks.append(f"決算発表（{ev.date}）を控えており、結果次第で株価が急変動するリスクがあります。")
+
+    sector = _sector_for_ticker(ticker, sector_matches)
+    if sector is not None and len(sector.headwind) > len(sector.tailwind):
+        risks.append(f"業種「{sector.label}」への逆風ニュースが優勢なため、想定より弱い展開になるリスクがあります。")
+
+    if quote.change_pct is not None and abs(quote.change_pct) >= 3:
+        risks.append("直近の値動きが大きく、短期的な過熱・反動のリスクに注意が必要な局面です。")
+
+    if not risks:
+        return "現時点で突出したリスク要因は確認されていませんが、相場全体の急変には留意が必要です。"
+    return " ".join(risks)
+
+
 def build_watchlist_analysis(
     jp_quotes: List[Quote],
     us_quotes: List[Quote],
@@ -83,6 +107,7 @@ def build_watchlist_analysis(
                     next_week=_next_week_text(q.symbol, sector_matches, ev, report_date),
                     next_month=_next_month_text(q.symbol, sector_matches, ev, report_date),
                     long_term=_long_term(q.symbol, sector_matches),
+                    risk=_risk_text(q, q.symbol, sector_matches, ev, report_date),
                 )
             )
         return entries

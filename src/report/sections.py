@@ -11,15 +11,25 @@ from typing import Dict, List, Optional
 
 from ..analysis.models import (
     AnalysisBundle,
+    CallPriorityEntry,
     EventsBreakdown,
+    ExecutiveSummaryItem,
+    InstrumentScenario,
     KeyLevelEntry,
     LongTermPick,
+    MarketImpactEntry,
+    MorningMeetingComment,
     NewsRankingItem,
+    OkasanSalesComments,
+    QAItem,
+    SalesComments,
     SalesPrep,
     ScenarioForecast,
     SectorRankingEntry,
+    SectorStrengthEntry,
     StockRankingEntry,
     ThemeForecast,
+    TopPickEntry,
     WatchlistEntry,
     WatchlistQuickEntry,
 )
@@ -131,6 +141,7 @@ def render_top_news(news_ranking: List[NewsRankingItem]) -> str:
         lines.append(f"- 理由（AI分析）: {item.reason or NOT_AVAILABLE}")
         lines.append(f"- 影響市場（AI分析）: {item.affected_market or NOT_AVAILABLE}")
         lines.append(f"- 影響業種（AI分析）: {item.affected_sector or NOT_AVAILABLE}")
+        lines.append(f"- 営業トーク: 「{item.sales_talk or NOT_AVAILABLE}」")
         lines.append("")
     return "\n".join(lines)
 
@@ -258,6 +269,25 @@ def render_sector_ranking(sector_ranking: List[SectorRankingEntry]) -> str:
     return "\n".join(lines)
 
 
+def render_top_picks(top_picks: Dict[str, List[TopPickEntry]]) -> str:
+    """朝会でそのまま読み上げられる「今日の注目5銘柄」（日本株5銘柄・米国株5銘柄）。"""
+    def _render(entries: List[TopPickEntry]) -> str:
+        if not entries:
+            return f"本日選定可能な注目銘柄がありませんでした（{NOT_AVAILABLE}）。\n"
+        lines = []
+        for e in entries:
+            lines.append(f"### 第{e.rank}位: {e.quote.name}（{e.quote.symbol}）　{e.stars}")
+            lines.append(f"直近値: {fmt_price(e.quote.price)} / 前日比: {fmt_change(e.quote.change, e.quote.change_pct)}（事実）\n")
+            lines.append(f"- **理由（AI分析）:** {e.reason}")
+            lines.append(f"- **注目材料（AI分析）:** {e.material}")
+            lines.append(f"- **短期見通し（AI分析）:** {e.short_term}")
+            lines.append("")
+        return "\n".join(lines)
+
+    parts = ["**日本株:**", "", _render(top_picks.get("jp", [])), "**米国株:**", "", _render(top_picks.get("us", []))]
+    return "\n".join(parts)
+
+
 def render_stock_ranking(stock_ranking: Dict[str, List[StockRankingEntry]]) -> str:
     def _render(entries: List[StockRankingEntry]) -> str:
         if not entries:
@@ -288,6 +318,7 @@ def render_watchlist_analysis(watchlist_analysis: Dict[str, List[WatchlistEntry]
             lines.append(f"- **今後1週間（AI分析）:** {e.next_week}")
             lines.append(f"- **今後1か月（AI分析）:** {e.next_month}")
             lines.append(f"- **長期評価（AI分析）:** {e.long_term}")
+            lines.append(f"- **リスク（AI分析）:** {e.risk}")
             lines.append("")
         return "\n".join(lines)
 
@@ -348,4 +379,135 @@ def render_source_list(sources: SourceRegistry) -> str:
         for item in items:
             lines.append(f"- [{item.label}]({item.url})")
         lines.append("")
+    return "\n".join(lines)
+
+
+def render_sales_comments(comments: SalesComments) -> str:
+    """7オーディエンス別の営業向けコメント（各約30秒で話せる長さ）をレンダリングする。"""
+    audiences = [
+        ("法人社長向け", comments.corporate),
+        ("富裕層向け", comments.wealthy),
+        ("個人投資家向け", comments.retail),
+        ("NISA初心者向け", comments.nisa_beginner),
+        ("為替に関心がある顧客向け", comments.fx_interested),
+        ("米国株に関心がある顧客向け", comments.us_stock_interested),
+        ("日本株に関心がある顧客向け", comments.jp_stock_interested),
+    ]
+    lines = []
+    for label, text in audiences:
+        lines.append(f"### {label}")
+        lines.append(text if text else f"本日はコメントを生成できませんでした（{NOT_AVAILABLE}）。")
+        lines.append("")
+    lines.append("（いずれも情報整理を目的としたトーク例であり、断定的な将来予測・投資助言ではありません。）")
+    return "\n".join(lines)
+
+
+def render_expanded_qa(qa_items: List[QAItem]) -> str:
+    if not qa_items:
+        return f"本日生成できる想定質問がありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = []
+    for item in qa_items:
+        lines.append(f"**Q. {item.question}**")
+        lines.append(f"A. {item.answer}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def render_instrument_scenarios(instrument_scenarios: List[InstrumentScenario]) -> str:
+    """日経平均・ドル円・米国市場ごとの短いシナリオ見立て（AIシナリオ：強気/中立/弱気）をレンダリングする。"""
+    if not instrument_scenarios:
+        return f"本日算出できる個別シナリオがありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = []
+    for s in instrument_scenarios:
+        lines.append(f"### {s.label}")
+        lines.append(s.outlook)
+        lines.append(f"- **注目材料:** {s.key_driver}")
+        lines.append(f"- **強気シナリオ:** {s.bull_text or NOT_AVAILABLE}")
+        lines.append(f"- **中立シナリオ:** {s.neutral_text or NOT_AVAILABLE}")
+        lines.append(f"- **弱気シナリオ:** {s.bear_text or NOT_AVAILABLE}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def render_okasan_sales_comments(comments: OkasanSalesComments) -> str:
+    """岡三証券営業向けコメント（富裕層・法人・NISA・退職金・相続の5顧客タイプ）。"""
+    audiences = [
+        ("富裕層のお客様向け", comments.wealthy),
+        ("法人のお客様向け", comments.corporate),
+        ("NISAご利用のお客様向け", comments.nisa),
+        ("退職金のご相談のお客様向け", comments.retirement),
+        ("相続・資産承継のご相談のお客様向け", comments.inheritance),
+    ]
+    lines = []
+    for label, text in audiences:
+        lines.append(f"### {label}")
+        lines.append(text if text else f"本日はコメントを生成できませんでした（{NOT_AVAILABLE}）。")
+        lines.append("")
+    lines.append("（いずれも情報整理を目的としたトーク例であり、断定的な将来予測・投資助言ではありません。特定商品の推奨は行いません。）")
+    return "\n".join(lines)
+
+
+def render_executive_summary(items: List[ExecutiveSummaryItem]) -> str:
+    """AI Executive Summary（レポート冒頭・今日最重要ニュース最大3件）をレンダリングする。"""
+    if not items:
+        return f"本日算出できる最重要ニュースがありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = []
+    for item in items:
+        lines.append(f"### {item.rank}. {item.conclusion}　{item.stars}")
+        lines.append(f"- **理由（AI分析）:** {item.reason}")
+        lines.append(f"- **日本株への影響（AI分析）:** {item.jp_stock_impact}")
+        lines.append(f"- **ドル円への影響（AI分析）:** {item.usdjpy_impact}")
+        lines.append(f"- **金利への影響（AI分析）:** {item.rate_impact}")
+        lines.append(f"- **営業トーク:** 「{item.sales_talk}」")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def render_call_priorities(entries: List[CallPriorityEntry]) -> str:
+    """「今日電話すべき顧客」（富裕層/NISA/退職金/法人/相続/若年層）をレンダリングする。"""
+    if not entries:
+        return f"本日提案可能な顧客タイプがありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = []
+    for entry in entries:
+        lines.append(f"### {entry.customer_type}")
+        lines.append(f"- **理由（AI分析）:** {entry.reason}")
+        lines.append(f"- **話題（AI分析）:** {entry.topic}")
+        lines.append(f"- **営業トーク例:** 「{entry.sales_talk}」")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def render_market_impact(entries: List[MarketImpactEntry]) -> str:
+    """「マーケットインパクト」（12対象への影響度★・方向）を一覧表示する。"""
+    if not entries:
+        return f"本日算出できるマーケットインパクトがありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = ["| 対象 | 影響度 | 方向 |", "|---|---|---|"]
+    for entry in entries:
+        lines.append(f"| {entry.target} | {entry.stars} | {entry.direction} |")
+    return "\n".join(lines) + "\n"
+
+
+def render_sector_strength(entries: List[SectorStrengthEntry]) -> str:
+    """「セクターランキング」（本日の強弱予測・矢印＋理由）をレンダリングする。"""
+    if not entries:
+        return f"本日予測可能な業種がありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = []
+    for entry in entries:
+        lines.append(f"- {entry.arrow} **{entry.label}** — {entry.reason}")
+    return "\n".join(lines) + "\n"
+
+
+def render_morning_meeting_comment(comment: MorningMeetingComment) -> str:
+    """「朝会コメント」（30秒・1分・3分の3パターン）をレンダリングする。"""
+    lines = [
+        "### 30秒バージョン",
+        comment.short_30s or f"（{NOT_AVAILABLE}）",
+        "",
+        "### 1分バージョン",
+        comment.medium_1min or f"（{NOT_AVAILABLE}）",
+        "",
+        "### 3分バージョン",
+        comment.long_3min or f"（{NOT_AVAILABLE}）",
+        "",
+    ]
     return "\n".join(lines)

@@ -19,5 +19,8 @@ class SlackNotifier(Notifier):
     def __init__(self, webhook_url: str = ""):
         self.webhook_url = webhook_url
 
+    def is_configured(self) -> bool:
+        return False  # 未実装のため常にFalse（将来実装時に置き換える）
+
     def send(self, payload: NotificationPayload) -> bool:
         raise NotImplementedError("Slack通知は未実装です（将来拡張用インターフェースのみ）。")

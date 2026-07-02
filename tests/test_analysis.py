@@ -3,17 +3,26 @@ from datetime import datetime
 
 from src.analysis import (
     ai_summary,
+    call_priority,
     causal_chain,
     chat_topics,
     events,
+    executive_summary,
+    instrument_scenarios,
     key_levels,
     long_term_picks,
+    market_impact,
+    morning_meeting_comment,
     news_ranking,
+    okasan_sales_comments,
+    sales_comments,
     sales_prep,
     scenario,
     sector_ranking,
+    sector_strength,
     stock_ranking,
     themes_forecast,
+    top_picks,
     watchlist_analysis,
     watchlist_quicklist,
 )
@@ -289,3 +298,238 @@ def test_sales_prep_casual_topics_fallback_when_no_general_news():
     forecast = scenario.build_scenario(market, [])
     result = sales_prep.build_sales_prep(market, forecast, [], [], {"jp": [], "us": []}, [])
     assert "取得不可" in result.casual_topics[0]
+
+
+# --- 営業向けコメント（7オーディエンス）と想定質問と回答例 ---
+
+
+def test_sales_comments_generates_all_seven_audiences_without_definitive_language():
+    market = _market_with_data()
+    forecast = scenario.build_scenario(market, [])
+    jp_quotes = [_quote("トヨタ自動車", 3200.0, 20.0, 0.6, symbol="7203.T")]
+    us_quotes = [_quote("NVIDIA", 120.0, 3.0, 2.6, symbol="NVDA")]
+
+    result = sales_comments.build_sales_comments(market, forecast, [], [], jp_quotes, us_quotes)
+
+    hedge_phrases = ("可能性があります", "注目されています", "局面です", "考えられます")
+    for text in (
+        result.corporate,
+        result.wealthy,
+        result.retail,
+        result.nisa_beginner,
+        result.fx_interested,
+        result.us_stock_interested,
+        result.jp_stock_interested,
+    ):
+        assert text
+        assert any(phrase in text for phrase in hedge_phrases)
+
+
+def test_sales_comments_handles_missing_market_data():
+    empty_market = {"indices": [], "forex": [], "rates": [], "commodities": []}
+    forecast = scenario.build_scenario(empty_market, [])
+    result = sales_comments.build_sales_comments(empty_market, forecast, [], [], [], [])
+    assert "取得不可" in result.corporate or "取得不可" in result.retail
+
+
+def test_expanded_qa_includes_the_five_required_questions():
+    market = _market_with_data()
+    forecast = scenario.build_scenario(market, [])
+    us_quotes = [_quote("NVIDIA", 120.0, 3.0, 2.6, symbol="NVDA")]
+
+    qa_items = sales_comments.build_expanded_qa(market, forecast, [], [], us_quotes)
+    questions = [item.question for item in qa_items]
+
+    assert "日経平均はまだ上がりますか？" in questions
+    assert "円安は続きますか？" in questions
+    assert "NVIDIAはまだ強いですか？" in questions
+    assert "日本株で今見るべき業種は？" in questions
+    assert "NISAで何を買えばいいですか？" in questions
+    for item in qa_items:
+        assert item.answer
+
+
+def test_expanded_qa_handles_missing_nvda_quote():
+    market = _market_with_data()
+    forecast = scenario.build_scenario(market, [])
+    qa_items = sales_comments.build_expanded_qa(market, forecast, [], [], [])
+    nvda_answer = next(item.answer for item in qa_items if item.question == "NVIDIAはまだ強いですか？")
+    assert "取得不可" in nvda_answer
+
+
+# --- v3: 今日の注目5銘柄 ---
+
+
+def test_top_picks_returns_at_most_five_per_market_ranked_by_absolute_change():
+    jp_quotes = [_quote(f"日本株{i}", 100.0, i, float(i), symbol=f"J{i}") for i in range(1, 8)]
+    us_quotes = [_quote(f"米国株{i}", 100.0, i, float(i), symbol=f"U{i}") for i in range(1, 4)]
+    result = top_picks.build_top_picks(jp_quotes, us_quotes, [], [])
+    assert len(result["jp"]) == 5
+    assert len(result["us"]) == 3
+    assert result["jp"][0].rank == 1
+    # 変化率の絶対値が大きい順（最大はJ7の7%）
+    assert result["jp"][0].quote.symbol == "J7"
+    for entry in result["jp"] + result["us"]:
+        assert entry.reason
+        assert entry.material
+        assert entry.short_term
+
+
+def test_top_picks_empty_when_no_quotes():
+    result = top_picks.build_top_picks([], [], [], [])
+    assert result == {"jp": [], "us": []}
+
+
+# --- v3: 日経平均・ドル円・米国市場 個別シナリオ ---
+
+
+def test_instrument_scenarios_returns_three_entries_with_data():
+    market = _market_with_data()
+    result = instrument_scenarios.build_instrument_scenarios(market, [])
+    labels = [s.label for s in result]
+    assert labels == ["日経平均", "ドル円", "米国市場"]
+    for s in result:
+        assert s.outlook
+        assert s.key_driver
+        assert s.bull_text
+        assert s.neutral_text
+        assert s.bear_text
+
+
+def test_instrument_scenarios_handles_missing_data():
+    empty_market = {"indices": [], "forex": [], "rates": [], "commodities": []}
+    result = instrument_scenarios.build_instrument_scenarios(empty_market, [])
+    for s in result:
+        assert "取得不可" in s.outlook
+
+
+def test_instrument_scenarios_mentions_boj_headline_for_usdjpy():
+    market = _market_with_data()
+    headlines = [Headline(title="日銀、金融政策を維持", link="https://example.com", source="Test")]
+    result = instrument_scenarios.build_instrument_scenarios(market, headlines)
+    usdjpy_scenario = next(s for s in result if s.label == "ドル円")
+    assert "日銀" in usdjpy_scenario.outlook
+
+
+# --- v3: 岡三証券営業向けコメント ---
+
+
+def test_okasan_sales_comments_generates_all_five_customer_types():
+    market = _market_with_data()
+    forecast = scenario.build_scenario(market, [])
+    jp_quotes = [_quote("トヨタ自動車", 3200.0, 20.0, 0.6, symbol="7203.T")]
+
+    result = okasan_sales_comments.build_okasan_sales_comments(market, forecast, [], [], jp_quotes)
+
+    for text in (result.wealthy, result.corporate, result.nisa, result.retirement, result.inheritance):
+        assert text
+        assert "断定" not in text
+
+
+def test_okasan_sales_comments_handles_missing_market_data():
+    empty_market = {"indices": [], "forex": [], "rates": [], "commodities": []}
+    forecast = scenario.build_scenario(empty_market, [])
+    result = okasan_sales_comments.build_okasan_sales_comments(empty_market, forecast, [], [], [])
+    assert "取得不可" in result.wealthy or "取得不可" in result.corporate
+
+
+# --- v4: AI Executive Summary ---
+
+
+def test_executive_summary_builds_up_to_three_items_with_impacts():
+    market = _market_with_data()
+    headlines = [
+        Headline(title=f"半導体関連ニュース{i}", link=f"https://example.com/{i}", source="Test")
+        for i in range(5)
+    ]
+    news_items = news_ranking.build_news_ranking(headlines, ["半導体"], {}, [])
+    sector_matches = match_sectors(headlines, {"半導体・電子部品": {"keywords": ["半導体"], "related_tickers": ["8035.T"]}})
+    ticker_lookup = {"8035.T": _quote("東京エレクトロン", 25000.0, 100.0, 0.4, symbol="8035.T")}
+
+    result = executive_summary.build_executive_summary(news_items, market, sector_matches, ticker_lookup)
+
+    assert 1 <= len(result) <= 3
+    for item in result:
+        assert item.conclusion
+        assert item.jp_stock_impact
+        assert item.usdjpy_impact
+        assert item.rate_impact
+        assert len(item.sales_talk) <= 100
+
+
+def test_executive_summary_empty_when_no_news():
+    market = _market_with_data()
+    result = executive_summary.build_executive_summary([], market, [], {})
+    assert result == []
+
+
+# --- v4: 今日電話すべき顧客 ---
+
+
+def test_call_priorities_covers_six_customer_types():
+    market = _market_with_data()
+    forecast = scenario.build_scenario(market, [])
+    result = call_priority.build_call_priorities(market, forecast, [], [])
+    customer_types = {entry.customer_type for entry in result}
+    assert customer_types == {"富裕層", "NISA", "退職金", "法人", "相続", "若年層"}
+    for entry in result:
+        assert entry.reason
+        assert entry.topic
+        assert entry.sales_talk
+
+
+# --- v4: マーケットインパクト ---
+
+
+def test_market_impact_covers_all_twelve_targets():
+    market = _market_with_data()
+    headlines = [Headline(title="トヨタ自動車が増産", link="https://example.com/1", source="Test")]
+    result = market_impact.build_market_impact(market, headlines)
+    targets = [entry.target for entry in result]
+    assert targets == [
+        "日経平均", "TOPIX", "ドル円", "長期金利",
+        "半導体", "銀行", "商社", "自動車", "海運", "電力", "素材", "不動産",
+    ]
+    for entry in result:
+        assert entry.direction in ("プラス", "マイナス", "中立")
+
+
+def test_market_impact_handles_missing_market_data():
+    empty_market = {"indices": [], "forex": [], "rates": [], "commodities": []}
+    result = market_impact.build_market_impact(empty_market, [])
+    assert len(result) == 12
+
+
+# --- v4: セクターランキング（強弱予測） ---
+
+
+def test_sector_strength_arrow_reflects_tailwind_headwind_balance():
+    tailwind_headline = Headline(title="上昇", link="https://example.com/1", source="Test")
+    headwind_headline = Headline(title="下落", link="https://example.com/2", source="Test")
+    sector_matches = [
+        SectorMatch(label="強い業種", tailwind=[tailwind_headline, tailwind_headline], headwind=[], neutral=[], related_tickers=[]),
+        SectorMatch(label="弱い業種", tailwind=[], headwind=[headwind_headline], neutral=[], related_tickers=[]),
+    ]
+    result = sector_strength.build_sector_strength(sector_matches)
+    by_label = {entry.label: entry for entry in result}
+    assert by_label["強い業種"].arrow == "↑"
+    assert by_label["弱い業種"].arrow == "↓"
+    # 強そう(↑)が先頭に来るよう並べ替えられていること
+    assert result[0].label == "強い業種"
+
+
+# --- v4: 朝会コメント（30秒/1分/3分） ---
+
+
+def test_morning_meeting_comment_generates_three_lengths_within_limits():
+    market = _market_with_data()
+    forecast = scenario.build_scenario(market, [])
+    headline = Headline(title="半導体関連株が上昇", link="https://example.com/1", source="Test")
+    news_items = news_ranking.build_news_ranking([headline], ["半導体"], {}, [])
+
+    result = morning_meeting_comment.build_morning_meeting_comment(forecast, news_items, [], [])
+
+    assert result.short_30s and len(result.short_30s) <= 130
+    assert result.medium_1min and len(result.medium_1min) <= 300
+    assert result.long_3min and len(result.long_3min) <= 750
+    assert len(result.short_30s) < len(result.medium_1min) < len(result.long_3min)

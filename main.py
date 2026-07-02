@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 from datetime import datetime, time
 from pathlib import Path
 from typing import Optional
@@ -20,29 +21,65 @@ import pytz
 
 from src.analysis import (
     ai_summary,
+    call_priority,
     causal_chain,
     chat_topics,
     events,
+    executive_summary,
+    instrument_scenarios,
     key_levels,
     llm_enhancer,
     long_term_picks,
+    market_impact,
+    morning_meeting_comment,
     news_ranking,
+    okasan_sales_comments,
+    sales_comments,
     sales_prep,
     scenario,
     sector_ranking,
+    sector_strength,
     stock_ranking,
     themes_forecast,
+    top_picks,
     watchlist_analysis,
     watchlist_quicklist,
 )
 from src.analysis.models import AnalysisBundle, SalesTalkBullets
 from src.analysis.sales_talk import build_sales_talk_bullets, render_sales_talk_markdown
-from src.collectors import earnings, market_data, news, tdnet, themes
+from src.collectors import (
+    bloomberg,
+    boj,
+    cnbc,
+    earnings,
+    edinet,
+    investing,
+    jpx,
+    kabutan,
+    macro,
+    market_data,
+    marketwatch,
+    minkabu,
+    mof,
+    moomoo,
+    news,
+    nikkei,
+    rakuten,
+    reuters,
+    sbi,
+    tdnet,
+    themes,
+    wsj,
+)
 from src.report.builder import build_report
 from src.report.format_utils import ticker_lookup as build_ticker_lookup
 from src.report.html_builder import build_html_report
 from src.report.mobile_builder import build_mobile_report
 from src.utils import SourceRegistry, load_config, setup_logging
+
+from notifiers.base import NotificationPayload
+from notifiers.email_sender import EmailNotifier
+from notifiers.line_sender import LineNotifier
 
 logger = logging.getLogger("market_brief")
 
@@ -85,6 +122,80 @@ def parse_args(argv: Optional[list] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _resolve_pages_url(config: dict) -> str:
+    """通知本文に載せるGitHub PagesのURLを決定する。
+
+    優先順位: 環境変数 PAGES_URL > GITHUB_REPOSITORY（GitHub Actionsが自動設定）から
+    標準的な "https://<owner>.github.io/<repo>/" を組み立て > config.yaml の
+    output.pages_url > 空文字（取得不可）。
+    """
+    explicit = os.environ.get("PAGES_URL")
+    if explicit:
+        return explicit
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    if repo and "/" in repo:
+        owner, name = repo.split("/", 1)
+        return f"https://{owner}.github.io/{name}/"
+    return config.get("output", {}).get("pages_url", "") or ""
+
+
+def _build_notification_summary(market: dict, analysis: AnalysisBundle) -> str:
+    """メール・LINE通知の本文（今日の結論＋重要ニュース3件）を組み立てる。"""
+    from src.report.sections import render_conclusion
+
+    conclusion_plain = render_conclusion(market, analysis.scenario).replace("**", "").strip()
+
+    news_items = analysis.news_ranking[:3]
+    if news_items:
+        news_block = "\n".join(f"- {item.headline.title}" for item in news_items)
+    else:
+        news_block = "本日は重要ニュースを取得できませんでした（取得不可）。"
+
+    return f"{conclusion_plain}\n\n【重要ニュース3件】\n{news_block}"
+
+
+def _send_notifications(config: dict, now: datetime, market: dict, analysis: AnalysisBundle) -> None:
+    """config.yamlのnotifications設定と環境変数に応じて、メール・LINE通知を送る。
+
+    通知の成否に関わらず例外は外に伝播させない
+    （通知の失敗でレポート生成全体を失敗させないため）。
+    """
+    notif_cfg = config.get("notifications", {})
+    try:
+        payload = NotificationPayload(
+            title=f"【Market Brief】{now.strftime('%Y-%m-%d')} 朝刊",
+            summary=_build_notification_summary(market, analysis),
+            report_url=_resolve_pages_url(config),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("通知内容の組み立てに失敗しました（通知はスキップします）: %s", exc)
+        return
+
+    if notif_cfg.get("email", {}).get("enabled", True):
+        try:
+            notifier = EmailNotifier()
+            if notifier.is_configured():
+                notifier.send(payload)
+            else:
+                logger.info("メール通知: 環境変数（SMTP_HOST等）が未設定のためスキップします。")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("メール通知の処理中にエラーが発生しました（無視して継続します）: %s", exc)
+    else:
+        logger.info("メール通知: config.yamlでenabled: falseのためスキップします。")
+
+    if notif_cfg.get("line", {}).get("enabled", True):
+        try:
+            notifier = LineNotifier()
+            if notifier.is_configured():
+                notifier.send(payload)
+            else:
+                logger.info("LINE通知: 環境変数（LINE_CHANNEL_ACCESS_TOKEN等）が未設定のためスキップします。")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("LINE通知の処理中にエラーが発生しました（無視して継続します）: %s", exc)
+    else:
+        logger.info("LINE通知: config.yamlでenabled: falseのためスキップします。")
+
+
 def _resolve_report_datetime(tz: pytz.BaseTzInfo, date_str: Optional[str]) -> datetime:
     if date_str is None:
         return datetime.now(tz)
@@ -121,16 +232,64 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
 
     logger.info("公開ニュース見出しを取得しています...")
     limit = config.get("output", {}).get("headlines_per_source", 8)
+    reliability_map = config.get("source_reliability", {})
     headlines = _safe_call(
         "news",
-        lambda: news.fetch_headlines(config.get("news_sources", []), sources, limit),
+        lambda: news.fetch_headlines(config.get("news_sources", []), sources, limit, reliability_map),
         [],
+    )
+
+    logger.info("追加の公開情報源（日経・Bloomberg・Reuters・CNBC・WSJ・MarketWatch・Investing等）を取得しています（ベストエフォート）...")
+    extra_headlines = []
+    for collector_name, fetch_fn in (
+        ("nikkei", lambda: nikkei.fetch_nikkei_headlines(sources, limit, config.get("nikkei_sources"))),
+        ("bloomberg", lambda: bloomberg.fetch_bloomberg_headlines(sources, limit, config.get("bloomberg_sources"))),
+        ("reuters", lambda: reuters.fetch_reuters_headlines(sources, limit, config.get("reuters_sources"))),
+        ("cnbc", lambda: cnbc.fetch_cnbc_headlines(sources, limit, config.get("cnbc_sources"))),
+        ("wsj", lambda: wsj.fetch_wsj_headlines(sources, limit, config.get("wsj_sources"))),
+        ("marketwatch", lambda: marketwatch.fetch_marketwatch_headlines(sources, limit, config.get("marketwatch_sources"))),
+        ("investing", lambda: investing.fetch_investing_headlines(sources, limit, config.get("investing_sources"))),
+        ("boj", lambda: boj.fetch_boj_headlines(sources, limit, config.get("boj_sources"))),
+        ("mof", lambda: mof.fetch_mof_headlines(sources, limit, config.get("mof_sources"))),
+    ):
+        extra_headlines.extend(_safe_call(collector_name, fetch_fn, []))
+    headlines = news.dedupe_headlines(headlines + extra_headlines)
+
+    _safe_call("kabutan_reference", lambda: kabutan.register_reference(sources), None)
+    _safe_call("moomoo_reference", lambda: moomoo.register_reference(sources), None)
+    _safe_call("jpx_reference", lambda: jpx.register_reference(sources), None)
+    _safe_call("minkabu_reference", lambda: minkabu.register_reference(sources), None)
+    _safe_call("sbi_reference", lambda: sbi.register_reference(sources), None)
+    _safe_call("rakuten_reference", lambda: rakuten.register_reference(sources), None)
+    edinet_documents = _safe_call(
+        "edinet",
+        lambda: edinet.fetch_edinet_documents(
+            sources, target_date=now.date(), documents_url=config.get("edinet", {}).get("documents_url")
+        ),
+        [],
+    )
+    fred_config = config.get("fred", {})
+    macro_data_points = _safe_call(
+        "macro",
+        lambda: macro.fetch_macro_data(
+            sources,
+            csv_url_template=fred_config.get("csv_url_template"),
+            series_list=fred_config.get("series"),
+        ),
+        [],
+    )
+    logger.info(
+        "追加情報源の取得結果: 追加見出し%d件（既存分と合わせて重複除去後 合計%d件）、EDINET%d件、マクロ指標%d件",
+        len(extra_headlines),
+        len(headlines),
+        len(edinet_documents),
+        len(macro_data_points),
     )
 
     logger.info("一般ニュース見出し（今日の雑談用）を取得しています...")
     general_headlines = _safe_call(
         "general_news",
-        lambda: news.fetch_headlines(config.get("general_news_sources", []), sources, limit),
+        lambda: news.fetch_headlines(config.get("general_news_sources", []), sources, limit, reliability_map),
         [],
     )
 
@@ -250,6 +409,62 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         ),
         sales_prep.SalesPrep(),
     )
+    sales_comments_result = _safe_call(
+        "sales_comments",
+        lambda: sales_comments.build_sales_comments(
+            market, scenario_forecast, theme_matches, sector_matches, jp_quotes, us_quotes
+        ),
+        sales_comments.SalesComments(),
+    )
+    expanded_qa_result = _safe_call(
+        "expanded_qa",
+        lambda: sales_comments.build_expanded_qa(market, scenario_forecast, theme_matches, sector_matches, us_quotes),
+        [],
+    )
+    top_picks_result = _safe_call(
+        "top_picks",
+        lambda: top_picks.build_top_picks(jp_quotes, us_quotes, headlines, sector_matches),
+        {"jp": [], "us": []},
+    )
+    instrument_scenarios_result = _safe_call(
+        "instrument_scenarios",
+        lambda: instrument_scenarios.build_instrument_scenarios(market, headlines),
+        [],
+    )
+    okasan_sales_comments_result = _safe_call(
+        "okasan_sales_comments",
+        lambda: okasan_sales_comments.build_okasan_sales_comments(
+            market, scenario_forecast, theme_matches, sector_matches, jp_quotes
+        ),
+        okasan_sales_comments.OkasanSalesComments(),
+    )
+    executive_summary_result = _safe_call(
+        "executive_summary",
+        lambda: executive_summary.build_executive_summary(news_ranking_items, market, sector_matches, lookup),
+        [],
+    )
+    call_priorities_result = _safe_call(
+        "call_priorities",
+        lambda: call_priority.build_call_priorities(market, scenario_forecast, theme_matches, sector_matches),
+        [],
+    )
+    market_impact_result = _safe_call(
+        "market_impact",
+        lambda: market_impact.build_market_impact(market, headlines),
+        [],
+    )
+    sector_strength_result = _safe_call(
+        "sector_strength",
+        lambda: sector_strength.build_sector_strength(sector_matches),
+        [],
+    )
+    morning_meeting_comment_result = _safe_call(
+        "morning_meeting_comment",
+        lambda: morning_meeting_comment.build_morning_meeting_comment(
+            scenario_forecast, news_ranking_items, theme_matches, sector_matches
+        ),
+        morning_meeting_comment.MorningMeetingComment(),
+    )
 
     analysis_bundle = AnalysisBundle(
         scenario=scenario_forecast,
@@ -269,6 +484,16 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         chat_topics=chat_topics_result,
         events=events_breakdown,
         ai_summary_text=ai_summary_text,
+        sales_comments=sales_comments_result,
+        expanded_qa=expanded_qa_result,
+        top_picks=top_picks_result,
+        instrument_scenarios=instrument_scenarios_result,
+        okasan_sales_comments=okasan_sales_comments_result,
+        executive_summary=executive_summary_result,
+        call_priorities=call_priorities_result,
+        market_impact=market_impact_result,
+        sector_strength=sector_strength_result,
+        morning_meeting_comment=morning_meeting_comment_result,
     )
 
     logger.info("Markdownレポートを生成しています...")
@@ -311,6 +536,9 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     latest_html_path = output_dir / LATEST_HTML_FILENAME
     latest_html_path.write_text(html_report, encoding="utf-8")
     logger.info("最新HTML版レポートを保存しました: %s", latest_html_path)
+
+    logger.info("通知（メール・LINE）の送信を確認しています...")
+    _send_notifications(config, now, market, analysis_bundle)
 
     return out_path
 

@@ -20,5 +20,8 @@ class TelegramNotifier(Notifier):
         self.bot_token = bot_token
         self.chat_id = chat_id
 
+    def is_configured(self) -> bool:
+        return False  # 未実装のため常にFalse（将来実装時に置き換える）
+
     def send(self, payload: NotificationPayload) -> bool:
         raise NotImplementedError("Telegram通知は未実装です（将来拡張用インターフェースのみ）。")

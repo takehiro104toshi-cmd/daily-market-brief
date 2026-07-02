@@ -1,4 +1,4 @@
-"""Market Intelligence System v2 の朝レポートを、スマホ閲覧前提のHTML（カードUI）で組み立てる。
+"""Market Intelligence System v4 の朝レポートを、スマホ閲覧前提のHTML（カードUI）で組み立てる。
 
 外部CSS・外部JSには依存しない自己完結型のHTMLを1ファイルで生成する
 （GitHub上でもローカルでもそのままブラウザで開ける）。
@@ -20,16 +20,26 @@ from typing import List, Optional
 
 from ..analysis.models import (
     AnalysisBundle,
+    CallPriorityEntry,
+    ExecutiveSummaryItem,
+    InstrumentScenario,
     KeyLevelEntry,
+    MarketImpactEntry,
+    MorningMeetingComment,
     NewsRankingItem,
+    OkasanSalesComments,
+    QAItem,
+    SalesComments,
     SectorRankingEntry,
+    SectorStrengthEntry,
     StockRankingEntry,
     ThemeForecast,
+    TopPickEntry,
     WatchlistQuickEntry,
 )
 from ..collectors.market_data import Quote
 from ..utils import SourceRegistry
-from .format_utils import NOT_AVAILABLE, fmt_change_compact, fmt_price
+from .format_utils import NOT_AVAILABLE, find_quote, fmt_change_compact, fmt_price
 
 STYLE = """
 :root {
@@ -51,16 +61,38 @@ body {
 .card {
   background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
   padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  scroll-margin-top: 12px;
 }
 .card h2 { font-size: 1.05rem; margin: 0 0 10px 0; }
 .card h3 { font-size: 0.95rem; margin: 10px 0 6px 0; }
+.toc { background: #f9fafb; }
+.toc-list { columns: 2; column-gap: 16px; padding-left: 18px; margin: 4px 0; list-style: none; }
+.toc-list li { margin-bottom: 6px; font-size: 0.85rem; break-inside: avoid; }
+.toc-list a { text-decoration: none; }
+.dashboard { background: #111827; color: #fff; }
+.dashboard h2 { color: #fff; }
+.dash-news-block { margin-bottom: 10px; }
+.dash-news-block h3 { color: #cbd5e1; font-size: 0.85rem; margin: 0 0 6px 0; }
+.dash-news a { color: #93c5fd; font-size: 0.85rem; line-height: 1.5; display: block; margin-bottom: 4px; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dash-tile { background: #1f2937; border-radius: 8px; padding: 8px; text-align: center; }
+.dash-label { font-size: 0.72rem; color: #9ca3af; margin-bottom: 2px; }
+.dash-value { font-size: 0.92rem; font-weight: 600; margin-bottom: 4px; }
+@media (max-width: 420px) {
+  .toc-list { columns: 1; }
+  .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+}
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
 .up { color: var(--up); background: var(--up-bg); }
 .down { color: var(--down); background: var(--down-bg); }
 .flat { color: var(--flat); background: var(--flat-bg); }
-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-table th, table td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: fixed; }
+table th, table td {
+  text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--border);
+  word-break: break-word; overflow-wrap: anywhere;
+}
 table th { color: #666; font-weight: 600; font-size: 0.78rem; }
+.updated { font-size: 0.78rem; color: #9ca3af; margin-top: 4px; }
 .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .row:last-child { border-bottom: none; }
 .legend { font-size: 0.8rem; color: #555; background: #fffbe6; border: 1px solid #f0e2a4; border-radius: 8px; padding: 10px 12px; }
@@ -97,8 +129,9 @@ def _badge(text: str, css_class: str) -> str:
     return f'<span class="badge {css_class}">{_esc(text)}</span>'
 
 
-def _card(title: str, body_html: str, extra_class: str = "") -> str:
-    return f'<div class="card {extra_class}"><h2>{_esc(title)}</h2>{body_html}</div>'
+def _card(title: str, body_html: str, extra_class: str = "", anchor: Optional[str] = None) -> str:
+    id_attr = f' id="{_esc(anchor)}"' if anchor else ""
+    return f'<div class="card {extra_class}"{id_attr}><h2>{_esc(title)}</h2>{body_html}</div>'
 
 
 def _quote_row(quote: Quote) -> str:
@@ -143,7 +176,7 @@ def _scenario_card(scenario) -> str:
         f"<p><strong>中立の理由:</strong> {_esc(scenario.neutral_reason or NOT_AVAILABLE)}</p>"
         f"<p><strong>弱気の理由:</strong> {_esc(scenario.bear_reason or NOT_AVAILABLE)}</p>"
     )
-    return _card("今日の相場シナリオ", rows + reasons)
+    return _card("今日の相場シナリオ", rows + reasons, anchor="scenario")
 
 
 def _news_ranking_html(items: List[NewsRankingItem]) -> str:
@@ -310,6 +343,184 @@ def _events_html(events) -> str:
     return f"<h3>今日</h3>{_list(events.today)}<h3>今週</h3>{_list(events.this_week)}<h3>今月</h3>{_list(events.this_month)}"
 
 
+def _sales_comments_html(comments: SalesComments) -> str:
+    audiences = [
+        ("法人社長向け", comments.corporate),
+        ("富裕層向け", comments.wealthy),
+        ("個人投資家向け", comments.retail),
+        ("NISA初心者向け", comments.nisa_beginner),
+        ("為替に関心がある顧客向け", comments.fx_interested),
+        ("米国株に関心がある顧客向け", comments.us_stock_interested),
+        ("日本株に関心がある顧客向け", comments.jp_stock_interested),
+    ]
+    parts = []
+    for label, text in audiences:
+        parts.append(f"<h3>{_esc(label)}</h3><p style='font-size:0.88rem;'>{_esc(text or NOT_AVAILABLE)}</p>")
+    return "".join(parts)
+
+
+def _expanded_qa_html(qa_items: List[QAItem]) -> str:
+    if not qa_items:
+        return f"<p>本日生成できる想定質問がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    dl = "".join(f"<dt>Q. {_esc(item.question)}</dt><dd>A. {_esc(item.answer)}</dd>" for item in qa_items)
+    return f"<dl class='qa'>{dl}</dl>"
+
+
+def _top_picks_html(top_picks: dict) -> str:
+    def _render(entries: List[TopPickEntry]) -> str:
+        if not entries:
+            return f"<p>本日選定可能な注目銘柄がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+        rows = []
+        for e in entries:
+            cls = _trend_class(e.quote.change_pct)
+            rows.append(
+                f'<div class="row"><span>第{e.rank}位 {_esc(e.quote.name)}（{_esc(e.quote.symbol)}）{_esc(e.stars)}</span>'
+                f'<span class="badge {cls}">{_esc(fmt_change_compact(e.quote.change_pct))}</span></div>'
+                f'<p style="font-size:0.85rem;color:#555;margin:2px 0 4px 0;">理由: {_esc(e.reason)}</p>'
+                f'<p style="font-size:0.8rem;color:#666;margin:0 0 4px 0;">注目材料: {_esc(e.material)}</p>'
+                f'<p style="font-size:0.8rem;color:#666;margin:0 0 8px 0;">短期見通し: {_esc(e.short_term)}</p>'
+            )
+        return "".join(rows)
+
+    return f"<h3>日本株</h3>{_render(top_picks.get('jp', []))}<h3>米国株</h3>{_render(top_picks.get('us', []))}"
+
+
+def _instrument_scenarios_html(instrument_scenarios: List[InstrumentScenario]) -> str:
+    if not instrument_scenarios:
+        return f"<p>本日算出できる個別シナリオがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    parts = []
+    for s in instrument_scenarios:
+        parts.append(
+            f"<h3>{_esc(s.label)}</h3>"
+            f"<p style='font-size:0.88rem;'>{_esc(s.outlook)}</p>"
+            f"<p style='font-size:0.78rem;color:#666;'>注目材料: {_esc(s.key_driver)}</p>"
+            f"<p style='font-size:0.8rem;'><strong>強気:</strong> {_esc(s.bull_text or NOT_AVAILABLE)}</p>"
+            f"<p style='font-size:0.8rem;'><strong>中立:</strong> {_esc(s.neutral_text or NOT_AVAILABLE)}</p>"
+            f"<p style='font-size:0.8rem;'><strong>弱気:</strong> {_esc(s.bear_text or NOT_AVAILABLE)}</p>"
+        )
+    return "".join(parts)
+
+
+def _okasan_sales_comments_html(comments: OkasanSalesComments) -> str:
+    audiences = [
+        ("富裕層のお客様向け", comments.wealthy),
+        ("法人のお客様向け", comments.corporate),
+        ("NISAご利用のお客様向け", comments.nisa),
+        ("退職金のご相談のお客様向け", comments.retirement),
+        ("相続・資産承継のご相談のお客様向け", comments.inheritance),
+    ]
+    parts = []
+    for label, text in audiences:
+        parts.append(f"<h3>{_esc(label)}</h3><p style='font-size:0.88rem;'>{_esc(text or NOT_AVAILABLE)}</p>")
+    return "".join(parts)
+
+
+def _dashboard_tile(label: str, quote: Optional[Quote]) -> str:
+    if quote is None or quote.price is None:
+        return (
+            f'<div class="dash-tile"><div class="dash-label">{_esc(label)}</div>'
+            f'<div class="dash-value">{_esc(NOT_AVAILABLE)}</div></div>'
+        )
+    cls = _trend_class(quote.change_pct)
+    return (
+        f'<div class="dash-tile"><div class="dash-label">{_esc(label)}</div>'
+        f'<div class="dash-value">{_esc(fmt_price(quote.price))}</div>'
+        f'<span class="badge {cls}">{_esc(fmt_change_compact(quote.change_pct))}</span></div>'
+    )
+
+
+def _dashboard_html(market: dict, analysis: AnalysisBundle) -> str:
+    """Today's Dashboard: 重要ニュース3件＋主要指標のカードグリッド（HTML最上部）。"""
+    indices = market.get("indices", [])
+    forex = market.get("forex", [])
+    rates = market.get("rates", [])
+    commodities = market.get("commodities", [])
+
+    news_items = analysis.executive_summary[:3] or analysis.news_ranking[:3]
+    if news_items:
+        news_html = "".join(
+            f'<div class="dash-news"><a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a></div>'
+            for item in news_items
+        )
+    else:
+        news_html = f"<p style='color:#9ca3af;font-size:0.85rem;'>{_esc(NOT_AVAILABLE)}</p>"
+
+    tiles = [
+        _dashboard_tile("ドル円", find_quote(forex, "米ドル/円")),
+        _dashboard_tile("日経平均", find_quote(indices, "日経")),
+        _dashboard_tile("NYダウ", find_quote(indices, "ダウ")),
+        _dashboard_tile("NASDAQ", find_quote(indices, "ナスダック")),
+        _dashboard_tile("SOX", find_quote(indices, "SOX")),
+        _dashboard_tile("VIX", find_quote(indices, "VIX")),
+        _dashboard_tile("10年債", find_quote(rates, "10年")),
+        _dashboard_tile("WTI", find_quote(commodities, "WTI")),
+        _dashboard_tile("金", find_quote(commodities, "金")),
+        _dashboard_tile("Bitcoin", find_quote(commodities, "ビットコイン")),
+    ]
+
+    body = f'<div class="dash-news-block"><h3>重要ニュース3件</h3>{news_html}</div>' f'<div class="dashboard-grid">{"".join(tiles)}</div>'
+    return _card("Today's Dashboard", body, extra_class="dashboard")
+
+
+def _executive_summary_html(items: List[ExecutiveSummaryItem]) -> str:
+    if not items:
+        return f"<p>本日算出できる最重要ニュースがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    parts = []
+    for item in items:
+        parts.append(
+            f"<h3>{item.rank}. {_esc(item.conclusion)} {_esc(item.stars)}</h3>"
+            f"<p style='font-size:0.85rem;'>理由: {_esc(item.reason)}</p>"
+            f"<p style='font-size:0.82rem;color:#555;'>日本株への影響: {_esc(item.jp_stock_impact)}</p>"
+            f"<p style='font-size:0.82rem;color:#555;'>ドル円への影響: {_esc(item.usdjpy_impact)}</p>"
+            f"<p style='font-size:0.82rem;color:#555;'>金利への影響: {_esc(item.rate_impact)}</p>"
+            f"<p style='font-size:0.85rem;'><strong>営業トーク:</strong> 「{_esc(item.sales_talk)}」</p>"
+        )
+    return "".join(parts)
+
+
+def _call_priorities_html(entries: List[CallPriorityEntry]) -> str:
+    if not entries:
+        return f"<p>本日提案可能な顧客タイプがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    parts = []
+    for entry in entries:
+        parts.append(
+            f"<h3>{_esc(entry.customer_type)}</h3>"
+            f"<p style='font-size:0.85rem;'>理由: {_esc(entry.reason)}</p>"
+            f"<p style='font-size:0.82rem;color:#555;'>話題: {_esc(entry.topic)}</p>"
+            f"<p style='font-size:0.85rem;'>営業トーク例: 「{_esc(entry.sales_talk)}」</p>"
+        )
+    return "".join(parts)
+
+
+def _market_impact_html(entries: List[MarketImpactEntry]) -> str:
+    if not entries:
+        return f"<p>本日算出できるマーケットインパクトがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    rows = "".join(
+        f"<tr><td>{_esc(entry.target)}</td><td>{_esc(entry.stars)}</td><td>{_esc(entry.direction)}</td></tr>"
+        for entry in entries
+    )
+    return f"<table><tr><th>対象</th><th>影響度</th><th>方向</th></tr>{rows}</table>"
+
+
+def _sector_strength_html(entries: List[SectorStrengthEntry]) -> str:
+    if not entries:
+        return f"<p>本日予測可能な業種がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    rows = "".join(
+        f'<div class="row"><span>{_esc(entry.arrow)} {_esc(entry.label)}</span></div>'
+        f'<p style="font-size:0.8rem;color:#666;margin:2px 0 8px 0;">{_esc(entry.reason)}</p>'
+        for entry in entries
+    )
+    return rows
+
+
+def _morning_meeting_comment_html(comment: MorningMeetingComment) -> str:
+    return (
+        f"<h3>30秒バージョン</h3><p style='font-size:0.85rem;'>{_esc(comment.short_30s or NOT_AVAILABLE)}</p>"
+        f"<h3>1分バージョン</h3><p style='font-size:0.85rem;'>{_esc(comment.medium_1min or NOT_AVAILABLE)}</p>"
+        f"<h3>3分バージョン</h3><p style='font-size:0.85rem;'>{_esc(comment.long_3min or NOT_AVAILABLE)}</p>"
+    )
+
+
 def _source_list_html(sources: SourceRegistry) -> str:
     refs = sources.all()
     if not refs:
@@ -327,8 +538,11 @@ def _source_list_html(sources: SourceRegistry) -> str:
 def build_html_report(report_date: datetime, market: dict, sources: SourceRegistry, analysis: AnalysisBundle) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。"""
     date_str = report_date.strftime("%Y年%m月%d日")
+    updated_str = report_date.strftime("%Y-%m-%d %H:%M")
+    tz_label = report_date.tzname() or "現地時間"
 
-    cards = [
+    top_cards = [
+        _dashboard_html(market, analysis),
         _digest_card(market, analysis),
         _card(
             "本レポートについて",
@@ -337,39 +551,70 @@ def build_html_report(report_date: datetime, market: dict, sources: SourceRegist
             "社外秘資料・有料記事の本文・ログインが必要な情報は使用していません。"
             "データを取得できなかった項目は「取得不可」と明記します。</p>",
         ),
-        _card("主要指標", _quote_table_html(market.get("indices", []) + market.get("commodities", []))),
-        _card("為替・金利", _quote_table_html(market.get("forex", []) + market.get("rates", []))),
-        _scenario_card(analysis.scenario),
-        _card("今日の重要ニュースランキング", _news_ranking_html(analysis.news_ranking)),
-        _card("今日見るべき指標", _key_levels_html(analysis.key_levels)),
-        _card("マーケット分析（因果チェーン）", _causal_chain_html(analysis.causal_chain_text, analysis.causal_chains)),
-        _card("テーマ分析", _theme_forecasts_html(analysis.theme_forecasts)),
-        _card("業界ランキング TOP10", _sector_ranking_html(analysis.sector_ranking)),
-        _card("個別株ランキング", _stock_ranking_html(analysis.stock_ranking)),
-        _card("今日のウォッチリスト", _watchlist_quicklist_html(analysis.watchlist_quicklist)),
-        _card("長期投資アイデア TOP5", _long_term_picks_html(analysis.long_term_picks)),
-        _card("営業準備", _sales_prep_html(analysis.sales_prep)),
-        _card("営業トーク", _sales_talk_html(analysis.sales_talk_bullets)),
-        _card("今日の会話ネタ", "<ul class='plain'>" + "".join(f"<li>{_esc(t)}</li>" for t in analysis.chat_topics) + "</ul>" if analysis.chat_topics else f"<p>{_esc(NOT_AVAILABLE)}</p>"),
-        _card("イベント", _events_html(analysis.events)),
-        _card("AIまとめ", f"<p>{_esc(analysis.ai_summary_text)}</p>"),
-        _card("引用（参照URL一覧）", _source_list_html(sources)),
     ]
 
-    body = "".join(cards)
+    # (anchor_id, タイトル, 本文HTML) のリスト。目次カードから各セクションへジャンプできる。
+    sections = [
+        ("executive-summary", "AI Executive Summary", _executive_summary_html(analysis.executive_summary)),
+        ("top-picks", "今日の注目5銘柄", _top_picks_html(analysis.top_picks)),
+        ("indices", "主要指標", _quote_table_html(market.get("indices", []) + market.get("commodities", []))),
+        ("fx-rates", "為替・金利", _quote_table_html(market.get("forex", []) + market.get("rates", []))),
+        ("scenario", "今日の相場シナリオ", None),  # _scenario_card は専用ヘルパーのため下で個別処理
+        ("instrument-scenarios", "日経平均・ドル円・米国市場 個別シナリオ", _instrument_scenarios_html(analysis.instrument_scenarios)),
+        ("news-ranking", "今日の重要ニュースランキング", _news_ranking_html(analysis.news_ranking)),
+        ("market-impact", "マーケットインパクト", _market_impact_html(analysis.market_impact)),
+        ("sector-strength", "セクターランキング", _sector_strength_html(analysis.sector_strength)),
+        ("key-levels", "今日見るべき指標", _key_levels_html(analysis.key_levels)),
+        ("causal-chain", "マーケット分析（因果チェーン）", _causal_chain_html(analysis.causal_chain_text, analysis.causal_chains)),
+        ("themes", "テーマ分析", _theme_forecasts_html(analysis.theme_forecasts)),
+        ("sector-ranking", "業界ランキング TOP10", _sector_ranking_html(analysis.sector_ranking)),
+        ("stock-ranking", "個別株ランキング", _stock_ranking_html(analysis.stock_ranking)),
+        ("watchlist", "今日のウォッチリスト", _watchlist_quicklist_html(analysis.watchlist_quicklist)),
+        ("long-term-picks", "長期投資アイデア TOP5", _long_term_picks_html(analysis.long_term_picks)),
+        ("call-priorities", "今日電話すべき顧客", _call_priorities_html(analysis.call_priorities)),
+        ("sales-prep", "営業準備", _sales_prep_html(analysis.sales_prep)),
+        ("sales-talk", "営業トーク", _sales_talk_html(analysis.sales_talk_bullets)),
+        ("sales-comments", "営業向けコメント", _sales_comments_html(analysis.sales_comments)),
+        ("expanded-qa", "想定質問と回答例", _expanded_qa_html(analysis.expanded_qa)),
+        ("okasan-sales-comments", "岡三証券営業向けコメント", _okasan_sales_comments_html(analysis.okasan_sales_comments)),
+        ("morning-meeting-comment", "朝会コメント", _morning_meeting_comment_html(analysis.morning_meeting_comment)),
+        (
+            "chat-topics",
+            "今日の会話ネタ",
+            "<ul class='plain'>" + "".join(f"<li>{_esc(t)}</li>" for t in analysis.chat_topics) + "</ul>"
+            if analysis.chat_topics
+            else f"<p>{_esc(NOT_AVAILABLE)}</p>",
+        ),
+        ("events", "イベント", _events_html(analysis.events)),
+        ("ai-summary", "AIまとめ", f"<p>{_esc(analysis.ai_summary_text)}</p>"),
+        ("sources", "引用（参照URL一覧）", _source_list_html(sources)),
+    ]
+
+    toc_items = "".join(f'<li><a href="#{anchor}">{_esc(title)}</a></li>' for anchor, title, _ in sections)
+    toc_card = _card("目次", f"<ul class='toc-list'>{toc_items}</ul>", extra_class="toc")
+
+    rendered_sections = []
+    for anchor, title, body_html in sections:
+        if anchor == "scenario":
+            rendered_sections.append(_scenario_card(analysis.scenario))
+        else:
+            rendered_sections.append(_card(title, body_html, anchor=anchor))
+
+    body = "".join(top_cards) + toc_card + "".join(rendered_sections)
 
     return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Market Intelligence System v2 — {_esc(date_str)}</title>
+<title>Market Intelligence System v4 — {_esc(date_str)}</title>
 <style>{STYLE}</style>
 </head>
 <body>
 <div class="header">
-  <h1>Market Intelligence System v2</h1>
+  <h1>Market Intelligence System v4</h1>
   <p>朝レポート {_esc(date_str)}（投資助言ではありません）</p>
+  <p class="updated">最終更新: {_esc(updated_str)} ({_esc(tz_label)})</p>
 </div>
 <div class="container">
 {body}
