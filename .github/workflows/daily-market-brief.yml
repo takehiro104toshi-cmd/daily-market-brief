@@ -22,10 +22,12 @@ permissions:
   pages: write
   id-token: write
 
-# 同時に複数のPagesデプロイが走らないようにする（GitHub推奨設定）
+# 同時に複数のPagesデプロイが走らないようにする（GitHub推奨設定）。
+# cancel-in-progress: true にすることで、新しい実行が始まったときに
+# 前回のデプロイが deployment_queued のまま滞留して後続をブロックするのを防ぐ。
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   generate-report:
@@ -108,6 +110,7 @@ jobs:
   deploy-pages:
     needs: generate-report
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       pages: write
       id-token: write
@@ -118,3 +121,9 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # deployment_queued のまま止まって見える現象に対応するため、
+          # デプロイ完了待ちのポーリング設定を緩める（ミリ秒単位）。
+          timeout: 1200000
+          error_count: 10
+          reporting_interval: 10000
