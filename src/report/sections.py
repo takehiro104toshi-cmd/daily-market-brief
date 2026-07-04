@@ -580,6 +580,9 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
     if bundle.theme_momentum:
         for tm in bundle.theme_momentum:
             lines.append(f"- **{tm.label}**: {tm.momentum_score}/100（{tm.momentum_label}）— {tm.reason}")
+            if tm.related_sector:
+                names_txt = "、".join(tm.beneficiary_names) if tm.beneficiary_names else "該当なし"
+                lines.append(f"  関連セクター: {tm.related_sector} ／ 関連銘柄: {names_txt}")
     else:
         lines.append(f"本日算出できるモメンタムスコアがありませんでした（{NOT_AVAILABLE}）。")
     lines.append("")
@@ -620,6 +623,8 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
             names_txt = "、".join(es.beneficiary_names) if es.beneficiary_names else "該当なし"
             lines.append(f"- **{es.label}** {es.stars}（関連セクター: {es.related_sector}）")
             lines.append(f"  {es.reason} ／ 代表的な関連銘柄: {names_txt}")
+            if es.sales_talk:
+                lines.append(f"  営業で話すポイント: {es.sales_talk}")
     else:
         lines.append(f"本日該当する初動シグナルはありませんでした（{NOT_AVAILABLE}）。")
     lines.append("")

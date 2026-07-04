@@ -395,26 +395,35 @@ class JpStockImpactEntry:
 
 @dataclass
 class ThemeMomentumEntry:
-    """「Theme Momentum Score」の1テーマ分（v1.1）。
+    """「Theme Momentum Score」の1テーマ分（v1.1、v1.4で信号を拡張）。
 
     momentum_score（0〜100）は、本日の関連見出し件数・重要ニュースとの一致・
-    causal_rules該当・durable_themes該当という既存シグナルのみから機械的に
-    算出する。前日比・週次比較は行わない（履歴データを保持していないため）。
+    Executive Summaryとの一致・causal_rules該当・durable_themes該当・
+    関連セクター/関連銘柄の有無という既存シグナルのみから機械的に算出する。
+    前日比・週次比較は行わない（履歴データを保持していないため）。
+    related_sector / beneficiary_names は、既存のcausal_rules恩恵銘柄ロジック
+    をそのまま流用した参考情報（v1.4で追加、デフォルト値付きのため既存の
+    呼び出し箇所にも影響しない）。
     """
 
     label: str
     momentum_score: int
     momentum_label: str  # 急加速 / 加速 / 横ばい / 減速
     reason: str
+    related_sector: str = ""
+    beneficiary_names: List[str] = field(default_factory=list)
 
 
 @dataclass
 class EarlySignalEntry:
-    """「Early Signal Detection」の1テーマ分（v1.1）。
+    """「Early Signal Detection」の1テーマ分（v1.1、v1.4で営業トークを追加）。
 
     本日の見出し件数はまだ少ないが、causal_rules該当・durable_themes該当・
     恩恵銘柄が解決できる、という条件をすべて満たすテーマを「初動シグナル」
     として抽出する。
+    sales_talk は、関連セクター・関連銘柄という既存の実データのみから機械的に
+    組み立てた営業向けの話しかけポイント（v1.4で追加、デフォルト値付きの
+    ため既存の呼び出し箇所にも影響しない。具体的な数値の断定はしない）。
     """
 
     label: str
@@ -422,6 +431,7 @@ class EarlySignalEntry:
     reason: str
     related_sector: str
     beneficiary_names: List[str] = field(default_factory=list)
+    sales_talk: str = ""
 
 
 @dataclass

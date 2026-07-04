@@ -27,6 +27,19 @@ v1.2で以下を追加した:
     まま表示。日本/米国/中国/EU/インド/中東の6地域固定。AIによる補助金額・
     政策内容の生成は行わない）
 
+v1.4で以下を改善した:
+    Theme Momentum Score: 本日の見出し密度・重要ニュースとの一致・causal_rules
+    該当・durable_themes該当に加えて、Executive Summary（executive_summary.py
+    が同じnews_ranking_itemsから抽出した最重要ニュース）との一致、および
+    causal_rulesの恩恵銘柄ロジックから導ける関連セクター・関連銘柄の有無、
+    という既存シグナルを追加した。あわせて、世界のメガトレンド評価（フェーズ
+    ・★）を理由欄に文脈情報として明記する。関連セクター・関連銘柄も表示する。
+    Early Signal Detection: 既存の判定条件（見出しが少ない・causal_rules該当
+    ・durable_themes該当・恩恵銘柄が解決できる）は変更せず、恩恵銘柄が解決
+    できるという既存条件を「営業利用価値がある」ことの根拠として明記した
+    うえで、関連セクター・関連銘柄という実データのみから機械的に組み立てた
+    営業向けの話しかけポイント（sales_talk）を追加した。
+
 v1.3で以下を改善した:
     テーマ成熟度メモ／国家戦略メモとも、config.yamlへの手動登録がある場合は
     引き続きそれを最優先表示する（source_label="登録情報"）。手動登録が
@@ -52,6 +65,7 @@ from ..collectors.news import Headline
 from ..report.format_utils import stars
 from .models import (
     EarlySignalEntry,
+    ExecutiveSummaryItem,
     FutureIntelligenceBundle,
     HorizonThemeGroup,
     IndustryMomentumEntry,
@@ -148,17 +162,30 @@ def _why_growing(rule: Optional[CausalRule]) -> str:
     return "本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。"
 
 
-def _momentum_score(headline_count: int, causal_matched: bool, durable: bool, top_news_matched: bool) -> int:
-    """本日の見出し密度・重要ニュースとの一致・causal_rules一致・durable_themes
-    一致という既存シグナルのみから、0〜100の定性スコアを機械的に算出する。
+def _momentum_score(
+    headline_count: int,
+    causal_matched: bool,
+    durable: bool,
+    top_news_matched: bool,
+    exec_summary_matched: bool,
+    has_beneficiary: bool,
+) -> int:
+    """本日の見出し密度・重要ニュースとの一致・Executive Summaryとの一致・
+    causal_rules一致・durable_themes一致・関連セクター/関連銘柄の有無という
+    既存シグナルのみから、0〜100の定性スコアを機械的に算出する（v1.4で
+    Executive Summaryとの一致・関連セクター/関連銘柄の有無を追加）。
     履歴データを保持していないため、前日比・週次比較は行わない。
     """
-    score = min(headline_count, 5) * 10
+    score = min(headline_count, 5) * 6
     if causal_matched:
-        score += 20
+        score += 15
     if durable:
         score += 15
     if top_news_matched:
+        score += 10
+    if exec_summary_matched:
+        score += 15
+    if has_beneficiary:
         score += 15
     return min(100, score)
 
@@ -173,18 +200,31 @@ def _momentum_label(score: int) -> str:
     return "減速"
 
 
-def _momentum_reason(headline_count: int, causal_matched: bool, durable: bool, top_news_matched: bool) -> str:
+def _momentum_reason(
+    headline_count: int,
+    causal_matched: bool,
+    durable: bool,
+    top_news_matched: bool,
+    exec_summary_matched: bool,
+    has_beneficiary: bool,
+    megatrend: MegatrendEntry,
+) -> str:
     parts = []
     if headline_count > 0:
         parts.append(f"本日{headline_count}件の関連見出しが確認されています")
-    if top_news_matched:
+    if exec_summary_matched:
+        parts.append("本日のExecutive Summary（最重要ニュース）にも関連しています")
+    elif top_news_matched:
         parts.append("本日の重要ニュースにも関連しています")
     if causal_matched:
         parts.append("既存の因果チェーン（causal_rules）にも該当します")
     if durable:
         parts.append("継続性の高い構造的テーマに位置づけられています")
+    if has_beneficiary:
+        parts.append("関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます")
     if not parts:
         parts.append("本日時点では目立った関連ニュースは確認されていません")
+    parts.append(f"Future Intelligenceのテーマ評価は{megatrend.stars}・{megatrend.phase}です")
     return "、".join(parts) + "。"
 
 
@@ -205,6 +245,20 @@ def _early_signal_stars(durable: bool, beneficiary_tickers: List[str]) -> int:
     if len(beneficiary_tickers) >= 2:
         score += 1
     return min(5, score)
+
+
+def _early_signal_sales_talk(label: str, beneficiary_sectors: List[str], beneficiary_names: List[str]) -> str:
+    """初動シグナルの「営業で話すポイント」。関連セクター・関連銘柄という
+    既存の実データのみから機械的に組み立て、具体的な数値の断定はしない。
+    """
+    parts = [f"「{label}」はまだ大きく報道されていませんが、早めに話題に出すと関心を引きやすいテーマと考えられます。"]
+    if beneficiary_sectors:
+        parts.append(f"関連業種として{'、'.join(beneficiary_sectors)}が挙げられます。")
+    if beneficiary_names:
+        names_txt = "、".join(n for n in beneficiary_names if n != "など")
+        if names_txt:
+            parts.append(f"具体的には{names_txt}などが関連銘柄として意識されやすいと考えられます。")
+    return "".join(parts)
 
 
 _MATURITY_REGISTERED_KEYS = (
@@ -418,12 +472,14 @@ def build_future_intelligence(
     sectors: Dict,
     ticker_lookup: Dict,
     news_ranking_items: Optional[List[NewsRankingItem]] = None,
+    executive_summary_items: Optional[List[ExecutiveSummaryItem]] = None,
 ) -> FutureIntelligenceBundle:
     macro_themes_cfg = config.get("macro_themes", [])
     durable_themes = config.get("durable_themes", [])
     causal_rules = parse_causal_rules(config.get("causal_rules", []))
 
     top_news_titles = [item.headline.title for item in (news_ranking_items or [])[:TOP_NEWS_FOR_MOMENTUM]]
+    exec_summary_titles = [item.headline.title for item in (executive_summary_items or [])]
 
     megatrends: List[MegatrendEntry] = []
     theme_momentum: List[ThemeMomentumEntry] = []
@@ -452,14 +508,30 @@ def build_future_intelligence(
             )
         )
 
+        # Theme Momentum Scoreの「関連セクター・関連銘柄の有無」判定用に、
+        # 既存のcausal_rules恩恵銘柄ロジックをそのまま再利用する（v1.4）。
+        related_sector_text = "、".join(rule.beneficiary_sectors) if rule and rule.beneficiary_sectors else ""
+        momentum_beneficiary_names: List[str] = []
+        if rule and rule.beneficiary_sectors:
+            momentum_names = ticker_names(resolve_tickers(rule.beneficiary_sectors, sectors), ticker_lookup)
+            momentum_beneficiary_names = momentum_names[:MAX_TICKERS_DISPLAYED]
+            if len(momentum_names) > MAX_TICKERS_DISPLAYED:
+                momentum_beneficiary_names = momentum_beneficiary_names + ["など"]
+
         top_news_matched = any(kw in title for kw in keywords for title in top_news_titles)
-        score = _momentum_score(count, rule is not None, durable, top_news_matched)
+        exec_summary_matched = any(kw in title for kw in keywords for title in exec_summary_titles)
+        has_beneficiary = bool(momentum_beneficiary_names)
+        score = _momentum_score(count, rule is not None, durable, top_news_matched, exec_summary_matched, has_beneficiary)
         theme_momentum.append(
             ThemeMomentumEntry(
                 label=label,
                 momentum_score=score,
                 momentum_label=_momentum_label(score),
-                reason=_momentum_reason(count, rule is not None, durable, top_news_matched),
+                reason=_momentum_reason(
+                    count, rule is not None, durable, top_news_matched, exec_summary_matched, has_beneficiary, megatrends[-1]
+                ),
+                related_sector=related_sector_text,
+                beneficiary_names=momentum_beneficiary_names,
             )
         )
 
@@ -506,6 +578,7 @@ def build_future_intelligence(
                     ),
                     related_sector="、".join(rule.beneficiary_sectors),
                     beneficiary_names=names_display,
+                    sales_talk=_early_signal_sales_talk(m.label, rule.beneficiary_sectors, names_display),
                 )
             )
 

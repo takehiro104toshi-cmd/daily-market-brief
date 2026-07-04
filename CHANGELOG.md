@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.11 (2026-07-04)
+
+改善
+・Future Intelligence Engine v1.4: Theme Momentum Score・Early Signal Detectionの
+  判定材料を拡張
+  - Theme Momentum Score: 本日の関連見出し件数・重要ニュースとの一致・
+    causal_rules該当・durable_themes該当に加えて、Executive Summary
+    （executive_summary.pyが算出した本日最重要ニュース）との一致、および
+    既存のcausal_rules恩恵銘柄ロジックから導ける関連セクター・関連銘柄の
+    有無という既存シグナルを追加（0〜100点への配分を6シグナル分に再配分）。
+    理由欄には、世界のメガトレンド評価（★・フェーズ）を文脈として明記する。
+    関連セクター・関連銘柄も新たに表示する
+  - Early Signal Detection: 判定条件（見出しが少ない・causal_rules該当・
+    durable_themes該当・恩恵銘柄が解決できる）は変更せず、恩恵銘柄が
+    解決できるという既存条件を「営業利用価値がある」ことの根拠として明記した
+    うえで、関連セクター・関連銘柄という実データのみから機械的に組み立てた
+    「営業で話すポイント」を追加
+  - いずれも具体的な市場規模・件数以外の断定的な数値は生成しない
+  - Markdown・モバイル版・HTML版すべてに反映（既存のFuture Intelligence
+    Engineセクション内。他のセクション構成は変更していない）
+
+変更ファイル
+・main.py
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/mobile_builder.py
+・src/report/html_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+111 passed
+
+コミット
+（下記参照）
+
 ## v1.10 (2026-07-04)
 
 改善

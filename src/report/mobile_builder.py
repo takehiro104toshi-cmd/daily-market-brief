@@ -115,9 +115,15 @@ def _section_future_intelligence(bundle) -> str:
         lines.append(f"注目業界: {top.label}（関連見出し{top.headline_count}件）")
     if bundle.theme_momentum:
         top_momentum = max(bundle.theme_momentum, key=lambda tm: tm.momentum_score)
-        lines.append(f"Momentum Score上位: {top_momentum.label} {top_momentum.momentum_score}/100（{top_momentum.momentum_label}）")
+        momentum_line = f"Momentum Score上位: {top_momentum.label} {top_momentum.momentum_score}/100（{top_momentum.momentum_label}）"
+        if top_momentum.related_sector:
+            momentum_line += f"／関連セクター: {top_momentum.related_sector}"
+        lines.append(momentum_line)
     if bundle.early_signals:
+        top_signal = bundle.early_signals[0]
         lines.append(f"初動シグナル: {'、'.join(es.label for es in bundle.early_signals)}")
+        if top_signal.sales_talk:
+            lines.append(f"営業トーク例（{top_signal.label}）: {first_sentence(top_signal.sales_talk)}")
 
     available_maturity = [tn for tn in bundle.theme_maturity_notes if tn.source_label != "分析材料不足"]
     if available_maturity:

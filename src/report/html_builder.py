@@ -599,10 +599,14 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     parts.append("<h3>Theme Momentum Score</h3>")
     if bundle.theme_momentum:
         for tm in bundle.theme_momentum:
+            sector_html = ""
+            if tm.related_sector:
+                names_txt = "、".join(tm.beneficiary_names) if tm.beneficiary_names else "該当なし"
+                sector_html = f"<br>関連セクター: {_esc(tm.related_sector)} ／ 関連銘柄: {_esc(names_txt)}"
             parts.append(
                 f"<div class='row'><span>{_esc(tm.label)}</span>"
                 f"<span>{tm.momentum_score}/100（{_esc(tm.momentum_label)}）</span></div>"
-                f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>{_esc(tm.reason)}</p>"
+                f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>{_esc(tm.reason)}{sector_html}</p>"
             )
     else:
         parts.append(f"<p>本日算出できるモメンタムスコアがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
@@ -646,11 +650,12 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     if bundle.early_signals:
         for es in bundle.early_signals:
             names_txt = "、".join(es.beneficiary_names) if es.beneficiary_names else "該当なし"
+            sales_talk_html = f"<br>営業で話すポイント: {_esc(es.sales_talk)}" if es.sales_talk else ""
             parts.append(
                 f"<div class='row'><span>{_esc(es.label)} {_esc(es.stars)}</span>"
                 f"<span>関連セクター: {_esc(es.related_sector)}</span></div>"
                 f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-                f"{_esc(es.reason)} ／ 代表的な関連銘柄: {_esc(names_txt)}</p>"
+                f"{_esc(es.reason)} ／ 代表的な関連銘柄: {_esc(names_txt)}{sales_talk_html}</p>"
             )
     else:
         parts.append(f"<p>本日該当する初動シグナルはありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")

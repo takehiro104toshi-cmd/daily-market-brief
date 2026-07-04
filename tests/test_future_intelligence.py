@@ -137,6 +137,22 @@ def _news_ranking_item(rank, title):
     return NewsRankingItem(rank=rank, stars="★★★☆☆", headline=_headline(title))
 
 
+def _executive_summary_item(rank, title):
+    from src.analysis.models import ExecutiveSummaryItem
+
+    return ExecutiveSummaryItem(
+        rank=rank,
+        headline=_headline(title),
+        stars="★★★☆☆",
+        conclusion="",
+        reason="",
+        jp_stock_impact="",
+        usdjpy_impact="",
+        rate_impact="",
+        sales_talk="",
+    )
+
+
 def test_momentum_score_combines_headline_density_causal_durable_and_top_news():
     headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
     news_ranking_items = [_news_ranking_item(1, "AI投資拡大が続く")]
@@ -145,11 +161,39 @@ def test_momentum_score_combines_headline_density_causal_durable_and_top_news():
     )
 
     ai_momentum = next(tm for tm in bundle.theme_momentum if tm.label == "AI")
-    # headline_count=2 -> 20点、causal_rules該当 +20、durable_themes該当 +15、
-    # 重要ニュース一致 +15 = 70点（急加速の閾値）
-    assert ai_momentum.momentum_score == 70
-    assert ai_momentum.momentum_label == "急加速"
+    # headline_count=2 -> 12点、causal_rules該当 +15、durable_themes該当 +15、
+    # 重要ニュース一致 +10、関連セクター・関連銘柄あり +15 = 67点（v1.4の重み付け）
+    assert ai_momentum.momentum_score == 67
+    assert ai_momentum.momentum_label == "加速"
     assert "残り" not in ai_momentum.reason
+    # v1.4: 関連セクター・関連銘柄も表示される
+    assert ai_momentum.related_sector == "半導体・電子部品"
+    assert "東京エレクトロン" in ai_momentum.beneficiary_names
+
+
+def test_momentum_score_reaches_0_to_100_range_and_reaches_top_label_with_exec_summary_match():
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    news_ranking_items = [_news_ranking_item(1, "AI投資拡大が続く")]
+    executive_summary_items = [_executive_summary_item(1, "AI投資拡大が続く")]
+    bundle = future_intelligence.build_future_intelligence(
+        headlines,
+        CONFIG,
+        SECTORS,
+        TICKER_LOOKUP,
+        news_ranking_items=news_ranking_items,
+        executive_summary_items=executive_summary_items,
+    )
+
+    for tm in bundle.theme_momentum:
+        assert 0 <= tm.momentum_score <= 100
+        assert tm.momentum_label in ("急加速", "加速", "横ばい", "減速")
+
+    ai_momentum = next(tm for tm in bundle.theme_momentum if tm.label == "AI")
+    # headline_count=2 -> 12点、causal_rules該当 +15、durable_themes該当 +15、
+    # 重要ニュース一致 +10、Executive Summary一致 +15、関連セクター・関連銘柄あり +15 = 82点
+    assert ai_momentum.momentum_score == 82
+    assert ai_momentum.momentum_label == "急加速"
+    assert "Executive Summary" in ai_momentum.reason
 
 
 def test_momentum_score_is_zero_and_label_slows_down_with_no_signals():
@@ -158,6 +202,8 @@ def test_momentum_score_is_zero_and_label_slows_down_with_no_signals():
     space_momentum = next(tm for tm in bundle.theme_momentum if tm.label == "宇宙")
     assert space_momentum.momentum_score == 0
     assert space_momentum.momentum_label == "減速"
+    assert space_momentum.related_sector == ""
+    assert space_momentum.beneficiary_names == []
 
 
 def test_early_signal_detected_for_low_volume_durable_theme_with_supply_chain():
@@ -168,6 +214,11 @@ def test_early_signal_detected_for_low_volume_durable_theme_with_supply_chain():
     assert defense_signal.stars.count("★") == 4  # 基礎3 + durable分1（銘柄1件のため+1は付かない）
     assert "川崎重工業" in defense_signal.beneficiary_names
     assert "重工業・防衛" in defense_signal.related_sector
+    # v1.4: 営業で話すポイントが関連セクター・関連銘柄という実データのみから生成される
+    assert "重工業・防衛" in defense_signal.sales_talk
+    assert "川崎重工業" in defense_signal.sales_talk
+    assert "円" not in defense_signal.sales_talk
+    assert "%" not in defense_signal.sales_talk
 
 
 def test_early_signal_not_detected_when_headline_volume_is_high():
@@ -177,6 +228,31 @@ def test_early_signal_not_detected_when_headline_volume_is_high():
     bundle = future_intelligence.build_future_intelligence(headlines, CONFIG, SECTORS, TICKER_LOOKUP)
 
     assert not any(es.label == "AI" for es in bundle.early_signals)
+
+
+def test_early_signal_not_detected_when_evidence_is_weak():
+    # 宇宙は見出しが少なくてもdurable_themes非該当・causal_rules非該当のため、
+    # 根拠が弱く初動シグナル扱いにはしない
+    headlines = [_headline("宇宙開発の話題")]
+    bundle = future_intelligence.build_future_intelligence(headlines, CONFIG, SECTORS, TICKER_LOOKUP)
+
+    assert not any(es.label == "宇宙" for es in bundle.early_signals)
+
+
+def test_theme_momentum_and_early_signal_appear_in_markdown_and_html_output():
+    headlines = [_headline("防衛費増額の議論が進展")]
+    bundle = future_intelligence.build_future_intelligence(headlines, CONFIG, SECTORS, TICKER_LOOKUP)
+
+    markdown_text = render_future_intelligence(bundle)
+    assert "Theme Momentum Score" in markdown_text
+    assert "Early Signal Detection" in markdown_text
+    assert "営業で話すポイント" in markdown_text
+    assert "関連セクター" in markdown_text
+
+    html_text = _future_intelligence_html(bundle)
+    assert "Theme Momentum Score" in html_text
+    assert "Early Signal Detection" in html_text
+    assert "営業で話すポイント" in html_text
 
 
 def test_theme_maturity_notes_generate_ai_analysis_when_unregistered_but_signal_exists():
