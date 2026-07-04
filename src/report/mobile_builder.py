@@ -102,17 +102,50 @@ def _section_strategist_views(views: list) -> str:
 
 TOP_N_MEGATRENDS = 3
 
+FI_BLOCK_TOC = [
+    ("Today's Future Signals", "★★★★★"),
+    ("Theme Intelligence", "★★★★★"),
+    ("Industry Intelligence", "★★★★☆"),
+    ("Stock Intelligence", "★★★★★"),
+    ("Long-term Strategy", "★★★★☆"),
+]
+
+
+def _fi_top_change_highlight(bundle) -> str:
+    """「今日もっとも重要な変化」。新たな分析は行わず、既に算出済みの
+    Theme Momentum Scoreが最も高いテーマの理由をそのまま抜粋するだけの
+    機械的なハイライト表示（v2.1）。
+    """
+    if not bundle.theme_momentum:
+        return f"本日算出できる変化のハイライトがありませんでした（{NOT_AVAILABLE}）。"
+    top = max(bundle.theme_momentum, key=lambda tm: tm.momentum_score)
+    return f"**{top.label}**（Momentum {top.momentum_score}/100・{top.momentum_label}）— {first_sentence(top.reason)}"
+
 
 def _section_future_intelligence(bundle) -> str:
+    """Future Intelligence Engineのモバイル短縮表示。
+
+    v2.1: 既存項目の分析ロジック・データは変更せず、「世界→テーマ→業界→銘柄→
+    長期戦略」の5ブロック（Information Architecture）へ再構成して表示する。
+    折りたたみは使わず、見出し（###）を大きくしてスクロールで読める形にする。
+    """
     if not bundle.megatrends:
         return f"本日算出できるテーマがありませんでした（{NOT_AVAILABLE}）。\n"
     ranked = sorted(bundle.megatrends, key=lambda m: m.headline_count, reverse=True)
-    lines = []
+
+    lines = ["**Future Intelligence 目次**"]
+    for i, (name, stars) in enumerate(FI_BLOCK_TOC):
+        prefix = "└" if i == len(FI_BLOCK_TOC) - 1 else "├"
+        lines.append(f"{prefix} {name} {stars}")
+    lines.append("")
+
+    # ① Today's Future Signals（最重要ブロック・毎朝最初に見る場所）
+    lines.append("### 🌍 Today's Future Signals ★★★★★")
+    lines.append("今日世界で何が変化したかを、3分で最初に把握するブロックです。")
+    lines.append("")
+    lines.append(f"今日もっとも重要な変化: {_fi_top_change_highlight(bundle)}")
     for m in ranked[:TOP_N_MEGATRENDS]:
         lines.append(f"**{m.label}** {m.stars}（{m.phase} ／ 継続性: {m.continuity}）")
-    if bundle.industry_momentum:
-        top = bundle.industry_momentum[0]
-        lines.append(f"注目業界: {top.label}（関連見出し{top.headline_count}件）")
     if bundle.theme_momentum:
         top_momentum = max(bundle.theme_momentum, key=lambda tm: tm.momentum_score)
         momentum_line = f"Momentum Score上位: {top_momentum.label} {top_momentum.momentum_score}/100（{top_momentum.momentum_label}）"
@@ -124,25 +157,21 @@ def _section_future_intelligence(bundle) -> str:
         lines.append(f"初動シグナル: {'、'.join(es.label for es in bundle.early_signals)}")
         if top_signal.sales_talk:
             lines.append(f"営業トーク例（{top_signal.label}）: {first_sentence(top_signal.sales_talk)}")
+    if bundle.capital_flow_notes:
+        flow_txt = "／".join(f"{cf.label}:{cf.direction_label}" for cf in bundle.capital_flow_notes)
+        lines.append(f"世界のお金の流れ（市場シグナルベース、実際の資金流入額は未取得）: {flow_txt}")
+    lines.append("")
 
+    # ② Theme Intelligence（テーマ分析専用）
+    lines.append("### 🧭 Theme Intelligence ★★★★★")
+    lines.append("個別テーマの成熟度・勢い・強み弱みを深掘りするブロックです。")
+    lines.append("")
     available_maturity = [tn for tn in bundle.theme_maturity_notes if tn.source_label != "分析材料不足"]
     if available_maturity:
         top_maturity = available_maturity[0]
         lines.append(f"テーマ成熟度メモ［{top_maturity.source_label}］: {top_maturity.label}（{top_maturity.market_stage}）")
     else:
         lines.append(f"テーマ成熟度メモ: 分析材料不足（{NOT_AVAILABLE}）")
-
-    available_strategy = [ns for ns in bundle.national_strategy_notes if ns.source_label != "分析材料不足"]
-    if available_strategy:
-        top_strategy = available_strategy[0]
-        lines.append(f"国家戦略メモ［{top_strategy.source_label}］: {top_strategy.region}（{first_sentence(top_strategy.policy_note)}）")
-    else:
-        lines.append(f"国家戦略メモ: 分析材料不足（{NOT_AVAILABLE}）")
-
-    if bundle.capital_flow_notes:
-        flow_txt = "／".join(f"{cf.label}:{cf.direction_label}" for cf in bundle.capital_flow_notes)
-        lines.append(f"世界のお金の流れ（市場シグナルベース、実際の資金流入額は未取得）: {flow_txt}")
-
     if bundle.theme_diagnosis:
         top_diagnosis = max(bundle.theme_diagnosis, key=lambda td: td.confidence_score)
         catalyst_txt = top_diagnosis.catalysts[0] if top_diagnosis.catalysts else NOT_AVAILABLE
@@ -154,7 +183,27 @@ def _section_future_intelligence(bundle) -> str:
             f"Confidence {top_diagnosis.confidence_score}%）{related_txt}"
         )
         lines.append(f"Catalyst［AI分析］: {catalyst_txt} ／ Risk［AI分析］: {risk_txt}")
+    lines.append("")
 
+    # ③ Industry Intelligence（業界分析）
+    lines.append("### 🏭 Industry Intelligence ★★★★☆")
+    lines.append("業界単位でどこに追い風が吹いているかを整理するブロックです。")
+    lines.append("")
+    if bundle.industry_momentum:
+        top = bundle.industry_momentum[0]
+        lines.append(f"注目業界: {top.label}（関連見出し{top.headline_count}件）")
+    available_strategy = [ns for ns in bundle.national_strategy_notes if ns.source_label != "分析材料不足"]
+    if available_strategy:
+        top_strategy = available_strategy[0]
+        lines.append(f"国家戦略メモ［{top_strategy.source_label}］: {top_strategy.region}（{first_sentence(top_strategy.policy_note)}）")
+    else:
+        lines.append(f"国家戦略メモ: 分析材料不足（{NOT_AVAILABLE}）")
+    lines.append("")
+
+    # ④ Stock Intelligence（銘柄分析）
+    lines.append("### 📈 Stock Intelligence ★★★★★")
+    lines.append("監視銘柄を1銘柄ごとの投資判断まで落とし込むブロックです。")
+    lines.append("")
     matched_watchlist = [w for w in bundle.watchlist_intelligence if w.related_themes]
     if matched_watchlist:
         top_watch = max(matched_watchlist, key=lambda w: w.confidence_score)
@@ -164,7 +213,6 @@ def _section_future_intelligence(bundle) -> str:
         )
     elif bundle.watchlist_intelligence:
         lines.append("Watchlist Intelligence: 本日一致するテーマ診断のある監視銘柄はありませんでした（判断材料不足）")
-
     if bundle.stock_intelligence:
         top_stock = max(bundle.stock_intelligence, key=lambda s: s.confidence_score)
         lines.append(
@@ -172,6 +220,18 @@ def _section_future_intelligence(bundle) -> str:
             f"関連テーマ{len(top_stock.related_themes)}件・現在の判断「{top_stock.judgment_label}」"
         )
         lines.append(f"投資ストーリー: {' → '.join(top_stock.investment_story)}")
+    lines.append("")
+
+    # ⑤ Long-term Strategy（長期戦略）
+    lines.append("### 📅 Long-term Strategy ★★★★☆")
+    lines.append("半年〜10年の時間軸で、どのテーマをどの時間軸で見るべきかを整理するブロックです。")
+    lines.append("")
+    if bundle.horizon_groups:
+        for hg in bundle.horizon_groups:
+            themes_txt = "、".join(hg.themes) if hg.themes else "該当なし"
+            lines.append(f"{hg.horizon}: {themes_txt}")
+    else:
+        lines.append(f"長期戦略の分析材料がありませんでした（{NOT_AVAILABLE}）。")
 
     return "\n".join(lines) + "\n"
 
@@ -191,29 +251,30 @@ def build_mobile_report(report_date: datetime, market: dict, analysis: AnalysisB
     date_str = report_date.strftime("%Y年%m月%d日")
     point = first_sentence(analysis.ai_summary_text) or f"本日は主要データが不足しています（{NOT_AVAILABLE}）。"
 
+    # v2.1: 「投資家が毎朝見る順番」＝重要度順に再配置（分析ロジック・表示内容は変更なし）。
     sections = [
         f"# Morning Market Brief Mobile — {date_str}",
         "",
         "> スマホでの閲覧に最適化した短縮版です。詳細は `latest_market_brief.md` をご覧ください。"
         "投資助言ではありません。",
         "",
-        "## 1. 今日の結論",
+        "## 1. 今日の結論　★★★★★",
         render_conclusion(market, analysis.scenario),
-        "## 2. 岡三ストラテジスト視点",
+        "## 2. 岡三ストラテジスト視点　★★★★★",
         _section_strategist_views(analysis.strategist_views),
-        "## 3. 今日の相場シナリオ",
-        _section2_scenario(analysis.scenario),
-        "## 4. 注目テーマ TOP3",
-        _section3_themes(analysis.theme_forecasts),
-        "## 5. 注目業界 TOP3",
-        _section4_sectors(analysis.sector_ranking),
-        "## 6. 監視銘柄チェック",
-        _section5_watchlist(analysis.stock_ranking),
-        "## 7. 今日の営業トーク",
-        _section6_sales_talk(analysis.sales_talk_bullets),
-        "## 8. 今日の最重要ポイント",
-        point + "\n",
-        "## 9. Future Intelligence Engine",
+        "## 3. Future Intelligence Engine　★★★★★",
         _section_future_intelligence(analysis.future_intelligence),
+        "## 4. 今日の相場シナリオ　★★★★☆",
+        _section2_scenario(analysis.scenario),
+        "## 5. 注目テーマ TOP3　★★★★☆",
+        _section3_themes(analysis.theme_forecasts),
+        "## 6. 注目業界 TOP3　★★★★☆",
+        _section4_sectors(analysis.sector_ranking),
+        "## 7. 監視銘柄チェック　★★★★☆",
+        _section5_watchlist(analysis.stock_ranking),
+        "## 8. 今日の営業トーク　★★★☆☆",
+        _section6_sales_talk(analysis.sales_talk_bullets),
+        "## 9. 今日の最重要ポイント　★★☆☆☆",
+        point + "\n",
     ]
     return "\n".join(sections) + "\n"

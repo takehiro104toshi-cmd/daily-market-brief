@@ -6,37 +6,37 @@ from src.utils import SourceRegistry
 from tests.factories import empty_bundle, full_bundle, full_market
 
 REQUIRED_HEADINGS = [
-    "## 1. AI Executive Summary",
-    "## 2. 岡三ストラテジスト視点",
-    "## 3. 今日の結論",
-    "## 4. 今日の注目5銘柄",
-    "## 5. 主要指標",
-    "## 6. 為替・金利",
-    "## 7. 今日の相場シナリオ",
-    "## 8. 日経平均・ドル円・米国市場 個別シナリオ",
-    "## 9. 今日の重要ニュースランキング",
-    "## 10. マーケットインパクト",
-    "## 11. セクターランキング",
-    "## 12. 今日見るべき指標",
-    "## 13. マーケット分析",
+    "## 1. 今日の結論",
+    "## 2. AI Executive Summary",
+    "## 3. 岡三ストラテジスト視点",
+    "## 4. Future Intelligence Engine",
+    "## 5. 今日の相場シナリオ",
+    "## 6. 日経平均・ドル円・米国市場 個別シナリオ",
+    "## 7. マーケットインパクト",
+    "## 8. セクターランキング",
+    "## 9. マーケット分析",
+    "## 10. 主要指標",
+    "## 11. 為替・金利",
+    "## 12. 今日の重要ニュースランキング",
+    "## 13. 今日見るべき指標",
     "## 14. テーマ分析",
     "## 15. 業界ランキング TOP10",
     "## 16. 個別株ランキング",
-    "## 17. 今日のウォッチリスト",
-    "## 18. 保有・監視銘柄分析",
-    "## 19. 長期投資アイデア TOP5",
-    "## 20. 今日電話すべき顧客",
-    "## 21. 営業準備",
-    "## 22. 営業トーク",
-    "## 23. 営業向けコメント",
-    "## 24. 想定質問と回答例",
+    "## 17. 今日の注目5銘柄",
+    "## 18. 今日のウォッチリスト",
+    "## 19. 保有・監視銘柄分析",
+    "## 20. 長期投資アイデア TOP5",
+    "## 21. 今日電話すべき顧客",
+    "## 22. 営業準備",
+    "## 23. 営業トーク",
+    "## 24. 営業向けコメント",
     "## 25. 岡三証券営業向けコメント",
     "## 26. 朝会コメント",
     "## 27. 今日の会話ネタ",
-    "## 28. イベント",
-    "## 29. AIまとめ",
-    "## 30. 引用",
-    "## 31. Future Intelligence Engine",
+    "## 28. 想定質問と回答例",
+    "## 29. イベント",
+    "## 30. AIまとめ",
+    "## 31. 引用",
 ]
 
 
@@ -142,6 +142,31 @@ def test_build_report_with_full_data():
     assert "30秒バージョン" in report
     assert "1分バージョン" in report
     assert "3分バージョン" in report
+
+
+def test_v2_1_toc_and_section_order_follow_investor_priority():
+    # v2.1: 目次・セクション順序を「投資家が毎朝見る順番」（重要度順）へ再構成。
+    # 今日の結論→AI Executive Summary→岡三ストラテジスト視点→
+    # Future Intelligence Engineの順で並ぶことを確認する（表示内容・分析ロジックは不変）。
+    report = build_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+    )
+
+    assert "## 目次" in report
+    assert "1. 今日の結論 ★★★★★" in report
+    assert "2. AI Executive Summary ★★★★★" in report
+    assert "3. 岡三ストラテジスト視点 ★★★★★" in report
+    assert "4. Future Intelligence Engine ★★★★★" in report
+
+    pos_conclusion = report.index("## 1. 今日の結論")
+    pos_exec_summary = report.index("## 2. AI Executive Summary")
+    pos_strategist = report.index("## 3. 岡三ストラテジスト視点")
+    pos_future_intel = report.index("## 4. Future Intelligence Engine")
+    pos_scenario = report.index("## 5. 今日の相場シナリオ")
+    assert pos_conclusion < pos_exec_summary < pos_strategist < pos_future_intel < pos_scenario
 
 
 def test_build_report_handles_missing_data():

@@ -4,6 +4,62 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.1 (2026-07-04)
+
+追加・改善（情報設計・UIのみ。新しい分析ロジック・スコアリング・判定は追加していない）
+・Future Intelligence Engine v2.1: 既存14項目（世界のメガトレンド／Theme
+  Momentum Score／Early Signal Detection／世界のお金の流れ／テーマ成熟度
+  メモ／テーマ別診断／次に来る業界／サプライチェーン分析／国家戦略メモ／
+  Future Map／日本株への波及／Watchlist Intelligence／Stock Intelligence／
+  中長期テーマ）を「世界→テーマ→業界→銘柄→長期戦略」の5ブロック
+  （Information Architecture）へ再構成
+  - ① Today's Future Signals ★★★★★（世界のメガトレンド／Theme Momentum
+    Score／Early Signal Detection／世界のお金の流れ／今日もっとも重要な
+    変化＝既存Theme Momentum Score最上位の理由をそのまま抜粋するハイライト）
+  - ② Theme Intelligence ★★★★★（テーマ成熟度メモ／テーマ別診断＝
+    Momentum→Lifecycle→Catalyst→Risk→Confidence→関連テーマ）
+  - ③ Industry Intelligence ★★★★☆（次に来る業界／サプライチェーン分析／
+    国家戦略メモ／Future Map）
+  - ④ Stock Intelligence ★★★★★（日本株への波及／Watchlist Intelligence／
+    Stock Intelligence＝銘柄別投資ストーリー）
+  - ⑤ Long-term Strategy ★★★★☆（中長期テーマ＝半年〜10年の時間軸）
+  - 各ブロック冒頭に「このブロックで分かること」を1〜2行で表示、重要度★を
+    表示、Future Intelligence専用の内部目次を追加
+  - HTML版: 各大ブロックをカード化し、Today's Future Signals=青／Theme
+    Intelligence=紫／Industry Intelligence=緑／Stock Intelligence=
+    オレンジ／Long-term Strategy=ゴールドに色分け。目次から各ブロックへ
+    ジャンプ可能
+  - モバイル版: 折りたたみは使わず、見出し（###）を大きくしてスクロール
+    で読める形に変更（内容は既存の条件付きハイライトのまま。Long-term
+    Strategyのみ既存bundle.horizon_groupsを新たに表示に追加）
+・レポート全体の目次を「投資家が毎朝見る順番」＝重要度順に再構成
+  （今日の結論→AI Executive Summary→岡三ストラテジスト視点→Future
+  Intelligence Engine→今日の相場シナリオ→…の順）。Future Intelligence
+  Engineは全体目次では1項目のみ表示し、内部の5ブロック専用目次を別途持つ。
+  HTML・Markdown・モバイルの3形式すべてで同じ順序・重要度★表示に統一
+・Markdown版に目次（`## 目次`）を新規追加（HTML版は既存の目次カードの並びを
+  変更、モバイル版はセクション番号を並び替え）
+
+これにより、毎朝「上から順番に読むだけ」で世界情勢→マーケット→テーマ→
+業界→銘柄→投資判断へ自然につながる構成になった。分析ロジック・
+スコアリング・各セクションの表示内容そのものは一切変更していない。
+
+変更ファイル
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・src/report/builder.py
+・tests/test_future_intelligence.py
+・tests/test_report_builder.py
+・tests/test_html_builder.py
+・tests/test_mobile_builder.py
+
+pytest
+142 passed
+
+コミット
+（下記参照）
+
 ## v2.0 (2026-07-04)
 
 追加

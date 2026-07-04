@@ -7,13 +7,13 @@ from tests.factories import empty_bundle, full_bundle, full_market
 REQUIRED_HEADINGS = [
     "## 1. 今日の結論",
     "## 2. 岡三ストラテジスト視点",
-    "## 3. 今日の相場シナリオ",
-    "## 4. 注目テーマ TOP3",
-    "## 5. 注目業界 TOP3",
-    "## 6. 監視銘柄チェック",
-    "## 7. 今日の営業トーク",
-    "## 8. 今日の最重要ポイント",
-    "## 9. Future Intelligence Engine",
+    "## 3. Future Intelligence Engine",
+    "## 4. 今日の相場シナリオ",
+    "## 5. 注目テーマ TOP3",
+    "## 6. 注目業界 TOP3",
+    "## 7. 監視銘柄チェック",
+    "## 8. 今日の営業トーク",
+    "## 9. 今日の最重要ポイント",
 ]
 
 
@@ -65,3 +65,16 @@ def test_mobile_report_handles_missing_data_without_breaking_structure():
     assert "取得不可" in report
     for heading in REQUIRED_HEADINGS:
         assert heading in report
+
+
+def test_v2_1_future_intelligence_engine_moved_to_third_position_with_stars():
+    # v2.1: モバイル版も「投資家が毎朝見る順番」へ再構成。今日の結論→
+    # 岡三ストラテジスト視点→Future Intelligence Engineの順で並ぶ。
+    report = build_mobile_report(report_date=datetime(2026, 7, 1), market=full_market(), analysis=full_bundle())
+
+    pos_conclusion = report.index("## 1. 今日の結論")
+    pos_strategist = report.index("## 2. 岡三ストラテジスト視点")
+    pos_future_intel = report.index("## 3. Future Intelligence Engine")
+    pos_scenario = report.index("## 4. 今日の相場シナリオ")
+    assert pos_conclusion < pos_strategist < pos_future_intel < pos_scenario
+    assert "★★★★★" in report and "★★★★☆" in report

@@ -550,17 +550,42 @@ def render_strategist_views(views: List[StrategistView]) -> str:
     return "\n".join(lines)
 
 
-def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
-    """「Future Intelligence Engine」をレンダリングする。
+def _fi_top_change_highlight(bundle: FutureIntelligenceBundle) -> str:
+    """「今日もっとも重要な変化」。新たな分析は行わず、既に算出済みの
+    Theme Momentum Scoreが最も高いテーマの理由をそのまま抜粋するだけの
+    機械的なハイライト表示（v2.1）。
+    """
+    if not bundle.theme_momentum:
+        return f"本日算出できる変化のハイライトがありませんでした（{NOT_AVAILABLE}）。"
+    top = max(bundle.theme_momentum, key=lambda tm: tm.momentum_score)
+    return f"**{top.label}**（Momentum {top.momentum_score}/100・{top.momentum_label}）— {top.reason}"
 
-    世界のメガトレンド／Theme Momentum Score／次に来る業界／
-    サプライチェーン分析／中長期テーマ／日本株への波及／
-    Early Signal Detection／テーマ成熟度メモ／国家戦略メモ／
-    世界のお金の流れ（市場シグナルベース）／テーマ別診断（Momentum→
-    Lifecycle→Catalyst→Risk→Confidence）／Future Map／Watchlist
-    Intelligence（監視銘柄×テーマ診断）／Stock Intelligence（Watchlist
-    Intelligenceで一致した銘柄のみの投資判断）を1セクションにまとめて
-    表示する。具体的な残り年数・市場規模・補助金額・資金流入額・目標株価・
+
+# Future Intelligence Engine 内の目次（Information Architecture、v2.1）。
+# 分析ロジックの変更ではなく、既存の分析結果を「世界→テーマ→業界→銘柄→
+# 長期戦略」という投資家の思考順に並べ替えるための表示構成のみを定義する。
+FI_BLOCK_TOC = [
+    ("Today's Future Signals", "★★★★★"),
+    ("Theme Intelligence", "★★★★★"),
+    ("Industry Intelligence", "★★★★☆"),
+    ("Stock Intelligence", "★★★★★"),
+    ("Long-term Strategy", "★★★★☆"),
+]
+
+
+def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
+    """「Future Intelligence Engine」をレンダリングする（v2.1でInformation
+    Architectureを整理）。
+
+    新しい分析ロジックは追加せず、既存の分析結果（世界のメガトレンド／
+    Theme Momentum Score／Early Signal Detection／世界のお金の流れ／
+    テーマ成熟度メモ／テーマ別診断／次に来る業界／サプライチェーン分析／
+    国家戦略メモ／Future Map／日本株への波及／Watchlist Intelligence／
+    Stock Intelligence／中長期テーマ）を、「世界→テーマ→業界→銘柄→
+    長期戦略」という投資家の思考順に沿って
+    Today's Future Signals／Theme Intelligence／Industry Intelligence／
+    Stock Intelligence／Long-term Strategy の5ブロックへ整理して表示する。
+    具体的な残り年数・市場規模・補助金額・資金流入額・目標株価・
     PER/EPS予想等は生成せず、本日の関連見出し件数・重要ニュースとの一致・
     durable_themes・causal_rules・公開市場データから導いた定性的なラベル、
     または既存シグナルの機械的な組み立て、あるいはconfig.yamlへ手動登録した
@@ -573,14 +598,28 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         "> 本セクションは具体的な残り年数・市場規模・補助金額等の断定的な数値は使用せず、"
         "本日の関連ニュース件数と既存の継続性フラグから導いた定性的な考察です。",
         "",
-        "### 世界のメガトレンド",
+        "**Future Intelligence 目次**",
     ]
+    for name, stars in FI_BLOCK_TOC:
+        lines.append(f"- {name} {stars}")
+    lines.append("")
+
+    # ① Today's Future Signals ---------------------------------------
+    lines.append("### 🌍 Today's Future Signals ★★★★★")
+    lines.append("> 今日世界で何が変化したかを、3分で最初に把握するブロックです。")
+    lines.append("")
+
+    lines.append("#### 今日もっとも重要な変化")
+    lines.append(_fi_top_change_highlight(bundle))
+    lines.append("")
+
+    lines.append("#### 世界のメガトレンド")
     for m in bundle.megatrends:
         lines.append(f"- **{m.label}** {m.stars}（フェーズ: {m.phase} ／ 継続性: {m.continuity}）")
         lines.append(f"  本日の関連見出し: {m.headline_count}件／{m.why_growing}")
     lines.append("")
 
-    lines.append("### Theme Momentum Score")
+    lines.append("#### Theme Momentum Score")
     if bundle.theme_momentum:
         for tm in bundle.theme_momentum:
             lines.append(f"- **{tm.label}**: {tm.momentum_score}/100（{tm.momentum_label}）— {tm.reason}")
@@ -591,37 +630,7 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         lines.append(f"本日算出できるモメンタムスコアがありませんでした（{NOT_AVAILABLE}）。")
     lines.append("")
 
-    lines.append("### 次に来る業界（本日のモメンタム順）")
-    if bundle.industry_momentum:
-        for e in bundle.industry_momentum:
-            lines.append(f"{e.rank}. **{e.label}**（関連見出し{e.headline_count}件）— {e.reason}")
-    else:
-        lines.append(f"本日、モメンタムが確認できるテーマはありませんでした（{NOT_AVAILABLE}）。")
-    lines.append("")
-
-    lines.append("### サプライチェーン分析")
-    if bundle.supply_chains:
-        for sc in bundle.supply_chains:
-            lines.append(f"- {sc.chain_text}")
-    else:
-        lines.append(f"本日抽出できるサプライチェーンの連鎖はありませんでした（{NOT_AVAILABLE}）。")
-    lines.append("")
-
-    lines.append("### 中長期テーマ")
-    for hg in bundle.horizon_groups:
-        themes_txt = "、".join(hg.themes) if hg.themes else "該当なし"
-        lines.append(f"- **{hg.horizon}:** {themes_txt}")
-    lines.append("")
-
-    lines.append("### 日本株への波及")
-    if bundle.jp_stock_impact:
-        for e in bundle.jp_stock_impact:
-            lines.append(f"- **{e.theme}:** {'、'.join(e.beneficiary_names)}（{e.cap_note}）")
-    else:
-        lines.append(f"本日算出できる日本株への波及がありませんでした（{NOT_AVAILABLE}）。")
-    lines.append("")
-
-    lines.append("### Early Signal Detection（初動シグナル）")
+    lines.append("#### Early Signal Detection（初動シグナル）")
     if bundle.early_signals:
         for es in bundle.early_signals:
             names_txt = "、".join(es.beneficiary_names) if es.beneficiary_names else "該当なし"
@@ -633,39 +642,7 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         lines.append(f"本日該当する初動シグナルはありませんでした（{NOT_AVAILABLE}）。")
     lines.append("")
 
-    lines.append("### テーマ成熟度メモ")
-    lines.append(
-        "> config.yamlへの手動登録があれば「登録情報」として最優先表示、"
-        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
-        "判断材料が無い場合のみ「分析材料不足」と表示します。"
-    )
-    for tn in bundle.theme_maturity_notes:
-        lines.append(f"- **{tn.label}**［{tn.source_label}］（現在フェーズ: {tn.market_stage}）")
-        lines.append(f"  市場ステージ: {tn.market_size_note}")
-        lines.append(f"  普及状況: {tn.adoption_note}")
-        lines.append(f"  競争環境: {tn.competition_note} ／ 参入障壁: {tn.barrier_note}")
-        lines.append(f"  主なリスク: {tn.risk_note}")
-        if tn.basis:
-            lines.append(f"  判断根拠: {tn.basis}")
-    lines.append("")
-
-    lines.append("### 国家戦略メモ")
-    lines.append(
-        "> config.yamlへの手動登録があれば「登録情報」として最優先表示、"
-        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
-        "判断材料が無い場合のみ「分析材料不足」と表示します。"
-    )
-    for ns in bundle.national_strategy_notes:
-        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "分析材料不足"
-        lines.append(f"- **{ns.region}**［{ns.source_label}］（重点分野: {focus_txt}）")
-        lines.append(f"  政策方向: {ns.policy_note}")
-        lines.append(f"  規制・リスク: {ns.regulation_note}")
-        lines.append(f"  日本株への波及: {ns.market_impact_note}")
-        if ns.basis:
-            lines.append(f"  判断根拠: {ns.basis}")
-    lines.append("")
-
-    lines.append("### 世界のお金の流れ（市場シグナルベース）")
+    lines.append("#### 世界のお金の流れ（市場シグナルベース）")
     lines.append(
         "> 実際の資金流入額ではなく、公開市場データとニューステーマから見た「資金の向かいやすさ」です"
         "（機関投資家のポジションや実際の資金フローは取得していません。断定的な資金フローは表示しません）。"
@@ -683,14 +660,35 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
             lines.append(f"  営業で話すポイント: {cf.sales_talk}")
     lines.append("")
 
-    lines.append("### テーマ別診断（Momentum → Lifecycle → Catalyst → Risk → Confidence）")
+    # ② Theme Intelligence --------------------------------------------
+    lines.append("### 🧭 Theme Intelligence ★★★★★")
+    lines.append("> 個別テーマの成熟度・勢い・強み弱みを深掘りするブロックです。")
+    lines.append("")
+
+    lines.append("#### テーマ成熟度メモ")
+    lines.append(
+        "> config.yamlへの手動登録があれば「登録情報」として最優先表示、"
+        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
+        "判断材料が無い場合のみ「分析材料不足」と表示します。"
+    )
+    for tn in bundle.theme_maturity_notes:
+        lines.append(f"- **{tn.label}**［{tn.source_label}］（現在フェーズ: {tn.market_stage}）")
+        lines.append(f"  市場ステージ: {tn.market_size_note}")
+        lines.append(f"  普及状況: {tn.adoption_note}")
+        lines.append(f"  競争環境: {tn.competition_note} ／ 参入障壁: {tn.barrier_note}")
+        lines.append(f"  主なリスク: {tn.risk_note}")
+        if tn.basis:
+            lines.append(f"  判断根拠: {tn.basis}")
+    lines.append("")
+
+    lines.append("#### テーマ別診断（Momentum → Lifecycle → Catalyst → Risk → Confidence）")
     lines.append(
         "> 投資家が世界の変化をいち早く察知し、長期の資産形成・投資判断に役立てることを"
         "目的とした分析です。CatalystとRiskは既存シグナルのみから導いた「AI分析」であり、"
         "断定はしません。Confidenceは「未来が当たる確率」ではなく、分析根拠の充実度です。"
     )
     for td in bundle.theme_diagnosis:
-        lines.append(f"**{td.label}**")
+        lines.append(f"##### {td.label}")
         lines.append(f"- Momentum: {td.momentum_score}/100（{td.momentum_label}）")
         lines.append(f"- Lifecycle: {td.phase} ／ 継続性: {td.continuity}")
         if td.related_themes:
@@ -702,12 +700,62 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
             lines.append(f"  根拠: {'、'.join(td.confidence_basis)}")
         lines.append("")
 
-    lines.append("### Future Map（テーマ一覧）")
+    # ③ Industry Intelligence ------------------------------------------
+    lines.append("### 🏭 Industry Intelligence ★★★★☆")
+    lines.append("> 業界単位でどこに追い風が吹いているかを整理するブロックです。")
+    lines.append("")
+
+    lines.append("#### 次に来る業界（本日のモメンタム順）")
+    if bundle.industry_momentum:
+        for e in bundle.industry_momentum:
+            lines.append(f"{e.rank}. **{e.label}**（関連見出し{e.headline_count}件）— {e.reason}")
+    else:
+        lines.append(f"本日、モメンタムが確認できるテーマはありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("#### サプライチェーン分析")
+    if bundle.supply_chains:
+        for sc in bundle.supply_chains:
+            lines.append(f"- {sc.chain_text}")
+    else:
+        lines.append(f"本日抽出できるサプライチェーンの連鎖はありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("#### 国家戦略メモ")
+    lines.append(
+        "> config.yamlへの手動登録があれば「登録情報」として最優先表示、"
+        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
+        "判断材料が無い場合のみ「分析材料不足」と表示します。"
+    )
+    for ns in bundle.national_strategy_notes:
+        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "分析材料不足"
+        lines.append(f"- **{ns.region}**［{ns.source_label}］（重点分野: {focus_txt}）")
+        lines.append(f"  政策方向: {ns.policy_note}")
+        lines.append(f"  規制・リスク: {ns.regulation_note}")
+        lines.append(f"  日本株への波及: {ns.market_impact_note}")
+        if ns.basis:
+            lines.append(f"  判断根拠: {ns.basis}")
+    lines.append("")
+
+    lines.append("#### Future Map（テーマ一覧）")
     for m in bundle.megatrends:
         lines.append(f"- {m.stars} **{m.label}**（{m.phase}）")
     lines.append("")
 
-    lines.append("### Watchlist Intelligence（監視銘柄 × テーマ診断）")
+    # ④ Stock Intelligence ----------------------------------------------
+    lines.append("### 📈 Stock Intelligence ★★★★★")
+    lines.append("> 監視銘柄を1銘柄ごとの投資判断まで落とし込むブロックです。")
+    lines.append("")
+
+    lines.append("#### 日本株への波及")
+    if bundle.jp_stock_impact:
+        for e in bundle.jp_stock_impact:
+            lines.append(f"- **{e.theme}:** {'、'.join(e.beneficiary_names)}（{e.cap_note}）")
+    else:
+        lines.append(f"本日算出できる日本株への波及がありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("#### Watchlist Intelligence（監視銘柄 × テーマ診断）")
     lines.append(
         "> config.yamlのwatchlist銘柄と、Future Intelligence Engineのテーマ診断"
         "（Momentum・Lifecycle・Catalyst・Risk・Confidence）を照合した、自分自身の"
@@ -727,7 +775,7 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         lines.append(f"  判断理由: {w.judgment_reason}")
     lines.append("")
 
-    lines.append("## Stock Intelligence")
+    lines.append("#### Stock Intelligence（銘柄別・投資ストーリー）")
     lines.append(
         "> Watchlist Intelligenceで一致した銘柄のみを対象に、Future Intelligence Engineの"
         "分析結果を1銘柄ごとの投資判断まで落とし込みます。目標株価・PER/EPS予想・"
@@ -736,7 +784,7 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         "組み立てたものであり、AIによる作文ではありません。"
     )
     for s in bundle.stock_intelligence:
-        lines.append(f"### {s.name}（{s.ticker}）")
+        lines.append(f"##### {s.name}（{s.ticker}）")
         lines.append(f"- 関連テーマ: {'、'.join(s.related_themes)}（{len(s.related_themes)}件）")
         lines.append(f"- Momentum: {s.momentum_score}/100（{s.momentum_label}）")
         lines.append(f"- Lifecycle: {s.phase} ／ 継続性: {s.continuity}")
@@ -750,5 +798,16 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
             lines.append(f"- 関連するテーマ: {' → '.join([s.primary_theme] + s.cross_theme_chain)}")
         lines.append(f"- 投資ストーリー: {' → '.join(s.investment_story)}")
         lines.append("")
+
+    # ⑤ Long-term Strategy ----------------------------------------------
+    lines.append("### 📅 Long-term Strategy ★★★★☆")
+    lines.append("> 半年〜10年の時間軸で、どのテーマをどの時間軸で見るべきかを整理するブロックです。")
+    lines.append("")
+
+    lines.append("#### 中長期テーマ")
+    for hg in bundle.horizon_groups:
+        themes_txt = "、".join(hg.themes) if hg.themes else "該当なし"
+        lines.append(f"- **{hg.horizon}:** {themes_txt}")
+    lines.append("")
 
     return "\n".join(lines)

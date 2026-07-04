@@ -930,3 +930,68 @@ def test_existing_watchlist_intelligence_unaffected_by_stock_intelligence_additi
     defense_watch = next(w for w in bundle.watchlist_intelligence if w.ticker == "7012.T")
     assert defense_watch.related_themes == ["防衛"]
     assert defense_watch.judgment_label in future_intelligence._WATCHLIST_JUDGMENT_LABELS
+
+
+# --- v2.1: Information Architecture（5ブロック再構成）の表示確認 ---
+# 新しい分析ロジックは追加せず、既存14項目を「Today's Future Signals /
+# Theme Intelligence / Industry Intelligence / Stock Intelligence /
+# Long-term Strategy」の5ブロックへ再構成しただけであることを確認する。
+
+_FI_BLOCK_NAMES = [
+    "Today's Future Signals",
+    "Theme Intelligence",
+    "Industry Intelligence",
+    "Stock Intelligence",
+    "Long-term Strategy",
+]
+
+
+def _v21_bundle():
+    headlines = [_headline("AI投資拡大が続く"), _headline("防衛費増額の議論が進展")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    return future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+
+def test_v2_1_markdown_shows_all_five_blocks_in_order():
+    bundle = _v21_bundle()
+    markdown_text = render_future_intelligence(bundle)
+
+    positions = [markdown_text.index(name) for name in _FI_BLOCK_NAMES]
+    assert positions == sorted(positions)  # 世界→テーマ→業界→銘柄→長期戦略の順
+
+    assert "Future Intelligence 目次" in markdown_text
+    assert "今日もっとも重要な変化" in markdown_text
+    assert "★★★★★" in markdown_text and "★★★★☆" in markdown_text
+
+
+def test_v2_1_html_shows_all_five_blocks_as_color_coded_cards():
+    bundle = _v21_bundle()
+    html_text = _future_intelligence_html(bundle)
+
+    for name in _FI_BLOCK_NAMES:
+        assert name in html_text
+    for anchor in ["fi-signals", "fi-theme", "fi-industry", "fi-stock", "fi-longterm"]:
+        assert f"id='{anchor}'" in html_text
+        assert f'href="#{anchor}"' in html_text
+    for css_class in [
+        "fi-block-signals",
+        "fi-block-theme",
+        "fi-block-industry",
+        "fi-block-stock",
+        "fi-block-longterm",
+    ]:
+        assert css_class in html_text
+
+
+def test_v2_1_mobile_shows_all_five_blocks_with_bigger_headings_no_collapse():
+    from src.report.mobile_builder import _section_future_intelligence
+
+    bundle = _v21_bundle()
+    mobile_text = _section_future_intelligence(bundle)
+
+    for name in _FI_BLOCK_NAMES:
+        assert f"### " in mobile_text  # 折りたたみではなく見出し（###）を使用
+        assert name in mobile_text
+    assert "<details" not in mobile_text and "<summary" not in mobile_text  # 折りたたみ禁止
+    assert "Future Intelligence 目次" in mobile_text

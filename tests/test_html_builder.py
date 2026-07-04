@@ -142,3 +142,30 @@ def test_html_report_escapes_headline_titles_to_avoid_broken_markup():
 
     assert "<script>alert(1)</script>" not in report
     assert "&lt;script&gt;" in report
+
+
+def test_v2_1_toc_reordered_by_investor_priority_with_stars():
+    # v2.1: 目次を「投資家が毎朝見る順番」（重要度順）へ再構成。
+    # AI Executive Summary → 岡三ストラテジスト視点 → Future Intelligence Engine の順に
+    # 並び、各項目に重要度★が表示されることを確認する（分析ロジック・内容は不変）。
+    report = build_html_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+    )
+
+    pos_exec_summary = report.index('id="executive-summary"')
+    pos_strategist = report.index('id="strategist-views"')
+    pos_future_intel = report.index('id="future-intelligence"')
+    pos_scenario = report.index('id="scenario"')
+    assert pos_exec_summary < pos_strategist < pos_future_intel < pos_scenario
+
+    toc_start = report.index("目次")
+    toc_end = report.index("</ul>", toc_start)
+    toc_html = report[toc_start:toc_end]
+    assert "AI Executive Summary ★★★★★" in toc_html
+    assert "Future Intelligence Engine ★★★★★" in toc_html
+    assert "今日の相場シナリオ ★★★★☆" in toc_html
+    # Future Intelligence Engineは目次では1項目のみ（内部5ブロックの専用目次はセクション内）
+    assert toc_html.count("Future Intelligence Engine") == 1
