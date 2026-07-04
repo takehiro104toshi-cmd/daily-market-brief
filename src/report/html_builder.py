@@ -682,3 +682,4 @@ def build_html_report(
 </body>
 </html>
 """
+
