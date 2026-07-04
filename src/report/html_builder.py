@@ -97,6 +97,13 @@ table th { color: #666; font-weight: 600; font-size: 0.78rem; }
 .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .row:last-child { border-bottom: none; }
 .legend { font-size: 0.8rem; color: #555; background: #fffbe6; border: 1px solid #f0e2a4; border-radius: 8px; padding: 10px 12px; }
+.refresh-btn {
+  display: block; text-align: center; margin: 0 0 14px 0; padding: 14px 16px;
+  background: #2563eb; color: #fff; border-radius: 10px; font-weight: 600;
+  font-size: 0.95rem; text-decoration: none;
+}
+.refresh-btn:active { background: #1d4ed8; }
+.refresh-note { font-size: 0.75rem; color: #6b7280; text-align: center; margin: -8px 0 14px 0; }
 .digest { background: #eef4ff; border: 1px solid #c9dcff; }
 ul.plain { padding-left: 18px; margin: 6px 0; }
 ul.plain li { margin-bottom: 4px; font-size: 0.9rem; }
@@ -565,13 +572,35 @@ def _source_list_html(sources: SourceRegistry) -> str:
     return "".join(parts)
 
 
-def build_html_report(report_date: datetime, market: dict, sources: SourceRegistry, analysis: AnalysisBundle) -> str:
+def _refresh_button_html(actions_url: Optional[str]) -> str:
+    """「最新情報に更新」ボタン。GitHub Actions の workflow_dispatch 実行ページへのリンク。
+
+    actions_url が未設定（None または空文字＝取得不可）の場合は、押しても
+    機能しないリンクを表示しないよう、ボタン自体を出さない。
+    """
+    if not actions_url:
+        return ""
+    return (
+        f'<a class="refresh-btn" href="{_esc(actions_url)}" target="_blank" rel="noopener">'
+        "🔄 最新情報に更新</a>"
+        '<p class="refresh-note">GitHubのActions画面で「Run workflow」を押すと再生成されます</p>'
+    )
+
+
+def build_html_report(
+    report_date: datetime,
+    market: dict,
+    sources: SourceRegistry,
+    analysis: AnalysisBundle,
+    actions_url: Optional[str] = None,
+) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。"""
     date_str = report_date.strftime("%Y年%m月%d日")
     updated_str = report_date.strftime("%Y-%m-%d %H:%M")
     tz_label = report_date.tzname() or "現地時間"
 
     top_cards = [
+        _refresh_button_html(actions_url),
         _dashboard_html(market, analysis),
         _digest_card(market, analysis),
         _card(

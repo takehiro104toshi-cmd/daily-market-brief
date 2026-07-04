@@ -30,6 +30,9 @@ def test_html_report_is_well_formed_and_color_coded():
     # 投資助言ではない旨の明記
     assert "投資助言ではありません" in report
 
+    # actions_url未指定時は「最新情報に更新」ボタンを表示しない
+    assert 'class="refresh-btn"' not in report
+
     # 新規セクションもHTML側に反映されていること
     assert "今日の重要ニュースランキング" in report
     assert "今日見るべき指標" in report
@@ -96,6 +99,34 @@ def test_html_report_handles_missing_data_without_breaking_structure():
     assert report.strip().startswith("<!DOCTYPE html>")
     assert report.count("<div") == report.count("</div>")
     assert "取得不可" in report
+
+
+def test_html_report_hides_refresh_button_when_actions_url_is_none():
+    report = build_html_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+        actions_url=None,
+    )
+
+    assert 'class="refresh-btn"' not in report
+    assert report.count("<div") == report.count("</div>")
+
+
+def test_html_report_shows_refresh_button_when_actions_url_given():
+    report = build_html_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+        actions_url="https://github.com/example/daily-market-brief/actions/workflows/daily-market-brief.yml",
+    )
+
+    assert 'class="refresh-btn"' in report
+    assert 'href="https://github.com/example/daily-market-brief/actions/workflows/daily-market-brief.yml"' in report
+    assert "最新情報に更新" in report
+    assert report.count("<div") == report.count("</div>")
 
 
 def test_html_report_escapes_headline_titles_to_avoid_broken_markup():

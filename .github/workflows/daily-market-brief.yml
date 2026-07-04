@@ -121,9 +121,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          # deployment_queued のまま止まって見える現象に対応するため、
-          # デプロイ完了待ちのポーリング設定を緩める（ミリ秒単位）。
-          timeout: 1200000
-          error_count: 10
-          reporting_interval: 10000
