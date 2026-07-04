@@ -572,11 +572,11 @@ def _source_list_html(sources: SourceRegistry) -> str:
     return "".join(parts)
 
 
-def _refresh_button_html(actions_url: str) -> str:
+def _refresh_button_html(actions_url: Optional[str]) -> str:
     """「最新情報に更新」ボタン。GitHub Actions の workflow_dispatch 実行ページへのリンク。
 
-    actions_url が未設定（取得不可）の場合は、押しても機能しないリンクを
-    表示しないよう、ボタン自体を出さない。
+    actions_url が未設定（None または空文字＝取得不可）の場合は、押しても
+    機能しないリンクを表示しないよう、ボタン自体を出さない。
     """
     if not actions_url:
         return ""
@@ -592,7 +592,7 @@ def build_html_report(
     market: dict,
     sources: SourceRegistry,
     analysis: AnalysisBundle,
-    actions_url: str = "",
+    actions_url: Optional[str] = None,
 ) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。"""
     date_str = report_date.strftime("%Y年%m月%d日")

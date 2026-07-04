@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.4 (2026-07-04)
+
+修正
+・`build_html_report()` に `actions_url` キーワード引数が定義されておらず、
+  GitHub Actions実行時に `got an unexpected keyword argument 'actions_url'`
+  という警告が出ていた不整合を修正。`actions_url: Optional[str] = None` を
+  明示的に追加し、`main.py` からの呼び出しと整合させた
+・`actions_url` が `None`（または空文字）の場合は「最新情報に更新」ボタンを
+  表示しない挙動を維持（既存ロジックのまま、型ヒントのみ明確化）
+
+変更ファイル
+・src/report/html_builder.py
+・tests/test_html_builder.py
+
+pytest
+91 passed
+
+コミット
+（下記参照）
+
 ## v1.3 (2026-07-04)
 
 追加

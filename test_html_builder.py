@@ -101,6 +101,19 @@ def test_html_report_handles_missing_data_without_breaking_structure():
     assert "取得不可" in report
 
 
+def test_html_report_hides_refresh_button_when_actions_url_is_none():
+    report = build_html_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+        actions_url=None,
+    )
+
+    assert 'class="refresh-btn"' not in report
+    assert report.count("<div") == report.count("</div>")
+
+
 def test_html_report_shows_refresh_button_when_actions_url_given():
     report = build_html_report(
         report_date=datetime(2026, 7, 1),
