@@ -302,6 +302,13 @@ output:
   # "https://<owner>.github.io/<repo>/" を組み立てる。ローカル実行時などで
   # 明示したい場合はここに記載するか、環境変数 PAGES_URL を設定する。
   pages_url: ""
+  # HTMLレポート上部の「最新情報に更新」ボタンから飛ぶ、GitHub Actions
+  # workflowページのURL。空欄の場合、GitHub Actions実行時は環境変数
+  # GITHUB_REPOSITORY から自動的に
+  # "https://github.com/<owner>/<repo>/actions/workflows/daily-market-brief.yml"
+  # を組み立てる。ローカル実行時などで明示したい場合はここに記載するか、
+  # 環境変数 ACTIONS_URL を設定する。いずれも未設定の場合はボタン自体を表示しない。
+  actions_url: ""
 
 # 通知機能のON/OFF切り替え。
 # enabled: false にすると、対応する環境変数が設定されていても通知を送らない。

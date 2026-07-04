@@ -140,6 +140,22 @@ def _resolve_pages_url(config: dict) -> str:
     return config.get("output", {}).get("pages_url", "") or ""
 
 
+def _resolve_actions_url(config: dict) -> str:
+    """HTMLレポートの「最新情報に更新」ボタンから飛ぶ、GitHub Actions workflowページのURL。
+
+    優先順位: 環境変数 ACTIONS_URL > GITHUB_REPOSITORY（GitHub Actionsが自動設定）から
+    ".github/workflows/daily-market-brief.yml" 実行ページのURLを組み立て >
+    config.yaml の output.actions_url > 空文字（未設定時はボタン自体を表示しない）。
+    """
+    explicit = os.environ.get("ACTIONS_URL")
+    if explicit:
+        return explicit
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    if repo and "/" in repo:
+        return f"https://github.com/{repo}/actions/workflows/daily-market-brief.yml"
+    return config.get("output", {}).get("actions_url", "") or ""
+
+
 def _build_notification_summary(market: dict, analysis: AnalysisBundle) -> str:
     """メール・LINE通知の本文（今日の結論＋重要ニュース3件）を組み立てる。"""
     from src.report.sections import render_conclusion
@@ -524,7 +540,13 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     )
     html_report = _safe_call(
         "html_report",
-        lambda: build_html_report(report_date=now, market=market, sources=sources, analysis=analysis_bundle),
+        lambda: build_html_report(
+            report_date=now,
+            market=market,
+            sources=sources,
+            analysis=analysis_bundle,
+            actions_url=_resolve_actions_url(config),
+        ),
         "<html><body><p>HTML版レポートの生成に失敗しました（取得不可）。</p></body></html>",
     )
 
