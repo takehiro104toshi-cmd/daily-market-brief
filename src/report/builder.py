@@ -35,6 +35,7 @@
   28. イベント（今日／今週／今月）（事実）
   29. AIまとめ（300文字以内）（AI分析）
   30. 引用（参照URL一覧）（事実）
+  31. Future Intelligence Engine（AI分析・世界の長期テーマの定性分析。v1.0はグループAのみ）
 
 本ツールにおける「AI分析」「AI考察」とは、ルールベース（決定論的な数値
 ロジック）による機械的な考察を指す。ANTHROPIC_API_KEYが設定されている
@@ -113,6 +114,7 @@ def build_report(
         "## 28. イベント\n" + sections.render_events(analysis.events),
         "## 29. AIまとめ\n> " + analysis.ai_summary_text + "\n",
         "## 30. 引用\n*事実*\n\n" + sections.render_source_list(sources),
+        "## 31. Future Intelligence Engine\n" + sections.render_future_intelligence(analysis.future_intelligence),
     ]
 
     return front_matter + MOBILE_SEPARATOR + MOBILE_SEPARATOR.join(blocks) + "\n"

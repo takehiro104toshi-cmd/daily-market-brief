@@ -342,6 +342,73 @@ class SalesComments:
 
 
 @dataclass
+class MegatrendEntry:
+    """「Future Intelligence Engine」の「世界のメガトレンド」1テーマ分。
+
+    stars / phase / continuity は、本日の関連見出し件数と durable_themes
+    への該当有無から機械的に導いた定性的なラベルであり、具体的な残り年数・
+    市場規模等の断定的な数値は含まない。
+    """
+
+    label: str
+    stars: str
+    headline_count: int
+    why_growing: str
+    phase: str  # 黎明期 / 成長初期 / 急成長期 / 成熟期 / 減速期
+    continuity: str  # 高い / 中程度 / 限定的
+
+
+@dataclass
+class IndustryMomentumEntry:
+    """「次に来る業界」ランキングの1件（本日のモメンタム順）。"""
+
+    rank: int
+    label: str
+    headline_count: int
+    reason: str
+
+
+@dataclass
+class SupplyChainNote:
+    """「サプライチェーン分析」の1件（causal_rulesの因果チェーンをそのまま表示）。"""
+
+    theme: str
+    chain_text: str
+
+
+@dataclass
+class HorizonThemeGroup:
+    """「中長期テーマ」の1期間分（半年／1年／3年／5年／10年）。"""
+
+    horizon: str
+    themes: List[str] = field(default_factory=list)
+
+
+@dataclass
+class JpStockImpactEntry:
+    """「日本株への波及」の1テーマ分（恩恵銘柄。大型/中小型は区分不明として明記）。"""
+
+    theme: str
+    beneficiary_names: List[str] = field(default_factory=list)
+    cap_note: str = "大型・中小型の区分は時価総額データ未取得のため区分不明です。"
+
+
+@dataclass
+class FutureIntelligenceBundle:
+    """「Future Intelligence Engine v1.0」の計算結果一式（グループAのみ）。
+
+    テーマ成熟度・国家戦略分析・世界のお金の流れはv1.1以降に見送り、
+    本バンドルには含まない。
+    """
+
+    megatrends: List[MegatrendEntry] = field(default_factory=list)
+    industry_momentum: List[IndustryMomentumEntry] = field(default_factory=list)
+    supply_chains: List[SupplyChainNote] = field(default_factory=list)
+    horizon_groups: List[HorizonThemeGroup] = field(default_factory=list)
+    jp_stock_impact: List[JpStockImpactEntry] = field(default_factory=list)
+
+
+@dataclass
 class AnalysisBundle:
     """全AI分析モジュールの計算結果をまとめ、builder.pyへ渡すための入れ物。"""
 
@@ -373,3 +440,4 @@ class AnalysisBundle:
     sector_strength: List[SectorStrengthEntry] = field(default_factory=list)
     morning_meeting_comment: MorningMeetingComment = field(default_factory=MorningMeetingComment)
     strategist_views: List[StrategistView] = field(default_factory=list)
+    future_intelligence: FutureIntelligenceBundle = field(default_factory=FutureIntelligenceBundle)

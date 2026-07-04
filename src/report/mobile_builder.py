@@ -100,6 +100,22 @@ def _section_strategist_views(views: list) -> str:
     return "\n".join(lines)
 
 
+TOP_N_MEGATRENDS = 3
+
+
+def _section_future_intelligence(bundle) -> str:
+    if not bundle.megatrends:
+        return f"本日算出できるテーマがありませんでした（{NOT_AVAILABLE}）。\n"
+    ranked = sorted(bundle.megatrends, key=lambda m: m.headline_count, reverse=True)
+    lines = []
+    for m in ranked[:TOP_N_MEGATRENDS]:
+        lines.append(f"**{m.label}** {m.stars}（{m.phase} ／ 継続性: {m.continuity}）")
+    if bundle.industry_momentum:
+        top = bundle.industry_momentum[0]
+        lines.append(f"注目業界: {top.label}（関連見出し{top.headline_count}件）")
+    return "\n".join(lines) + "\n"
+
+
 def _section6_sales_talk(bullets) -> str:
     corp = bullets.corporate[0] if bullets.corporate else f"本日は営業トークを生成できませんでした（{NOT_AVAILABLE}）。"
     retail = bullets.retail[0] if bullets.retail else f"本日は営業トークを生成できませんでした（{NOT_AVAILABLE}）。"
@@ -137,5 +153,7 @@ def build_mobile_report(report_date: datetime, market: dict, analysis: AnalysisB
         _section6_sales_talk(analysis.sales_talk_bullets),
         "## 8. 今日の最重要ポイント",
         point + "\n",
+        "## 9. Future Intelligence Engine",
+        _section_future_intelligence(analysis.future_intelligence),
     ]
     return "\n".join(sections) + "\n"

@@ -251,6 +251,34 @@ causal_rules:
     durable: false
     note: "円高方向への動きは輸出関連の採算悪化懸念につながりやすい"
 
+# 「Future Intelligence Engine」（世界の構造変化テーマの定性分析）向けの
+# 長期テーマ一覧。label: テーマ名、keywords: ニュース見出しの判定キーワード
+# （省略時はlabelのみで判定）。
+# 具体的な残り年数・市場規模・補助金額等は生成せず、本日の関連見出し件数と
+# durable_themes・causal_rulesへの該当有無から、定性的な★評価・フェーズ・
+# 継続性ラベルのみを機械的に導出する（src/analysis/future_intelligence.py）。
+macro_themes:
+  - { label: "AI", keywords: ["AI", "生成AI", "人工知能"] }
+  - { label: "半導体", keywords: ["半導体", "半導体製造装置"] }
+  - { label: "電力", keywords: ["電力", "送配電", "発電"] }
+  - { label: "GX", keywords: ["GX", "脱炭素", "カーボンニュートラル"] }
+  - { label: "DX", keywords: ["DX", "デジタル化", "デジタルトランスフォーメーション"] }
+  - { label: "防衛", keywords: ["防衛", "防衛費", "防衛装備"] }
+  - { label: "宇宙", keywords: ["宇宙", "衛星", "ロケット"] }
+  - { label: "量子", keywords: ["量子", "量子コンピュータ"] }
+  - { label: "核融合", keywords: ["核融合", "フュージョン"] }
+  - { label: "ロボット", keywords: ["ロボット", "自動化", "省人化"] }
+  - { label: "医療", keywords: ["医療", "創薬", "医薬品"] }
+  - { label: "バイオ", keywords: ["バイオ", "バイオテクノロジー"] }
+  - { label: "サイバーセキュリティ", keywords: ["サイバーセキュリティ", "サイバー攻撃", "情報セキュリティ"] }
+  - { label: "水インフラ", keywords: ["水インフラ", "上下水道", "水資源"] }
+  - { label: "物流", keywords: ["物流", "倉庫", "配送"] }
+  - { label: "資源", keywords: ["資源", "レアアース", "レアメタル"] }
+  - { label: "食料", keywords: ["食料", "食料安全保障", "農業"] }
+  - { label: "人口減少", keywords: ["人口減少", "少子化"] }
+  - { label: "高齢化", keywords: ["高齢化", "介護"] }
+  - { label: "自動運転", keywords: ["自動運転", "自動運転車"] }
+
 # 「今日見るべき指標」セクション向けの節目ライン設定。
 # name は indices/forex/rates/commodities の name と一致させる。
 # lines: 節目として表示する値（現在値に最も近いラインを自動選択）

@@ -26,6 +26,7 @@ from src.analysis import (
     chat_topics,
     events,
     executive_summary,
+    future_intelligence,
     instrument_scenarios,
     key_levels,
     llm_enhancer,
@@ -494,6 +495,11 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         lambda: strategist_engine.build_strategist_views(news_ranking_items, config, lookup),
         [],
     )
+    future_intelligence_result = _safe_call(
+        "future_intelligence",
+        lambda: future_intelligence.build_future_intelligence(headlines, config, config.get("sectors", {}), lookup),
+        future_intelligence.FutureIntelligenceBundle(),
+    )
 
     analysis_bundle = AnalysisBundle(
         scenario=scenario_forecast,
@@ -524,6 +530,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         sector_strength=sector_strength_result,
         morning_meeting_comment=morning_meeting_comment_result,
         strategist_views=strategist_views_result,
+        future_intelligence=future_intelligence_result,
     )
 
     logger.info("Markdownレポートを生成しています...")

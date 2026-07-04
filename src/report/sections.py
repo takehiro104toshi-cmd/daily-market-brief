@@ -14,6 +14,7 @@ from ..analysis.models import (
     CallPriorityEntry,
     EventsBreakdown,
     ExecutiveSummaryItem,
+    FutureIntelligenceBundle,
     InstrumentScenario,
     KeyLevelEntry,
     LongTermPick,
@@ -546,4 +547,64 @@ def render_strategist_views(views: List[StrategistView]) -> str:
                 f"今後数週間重要か{s.weeks_ahead}"
             )
         lines.append("")
+    return "\n".join(lines)
+
+
+def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
+    """「Future Intelligence Engine v1.0」をレンダリングする（グループAのみ）。
+
+    世界のメガトレンド／次に来る業界／サプライチェーン分析／中長期テーマ／
+    日本株への波及／Future Mapを1セクションにまとめて表示する。
+    具体的な残り年数・市場規模・補助金額等は生成せず、本日の関連見出し件数
+    ・durable_themes・causal_rulesから導いた定性的なラベルのみを表示する
+    （テーマ成熟度・国家戦略分析・世界のお金の流れはv1.1以降に見送り）。
+    """
+    if not bundle.megatrends:
+        return f"本日算出できるテーマがありませんでした（{NOT_AVAILABLE}）。\n"
+
+    lines = [
+        "> 本セクションは具体的な残り年数・市場規模・補助金額等の断定的な数値は使用せず、"
+        "本日の関連ニュース件数と既存の継続性フラグから導いた定性的な考察です。",
+        "",
+        "### 世界のメガトレンド",
+    ]
+    for m in bundle.megatrends:
+        lines.append(f"- **{m.label}** {m.stars}（フェーズ: {m.phase} ／ 継続性: {m.continuity}）")
+        lines.append(f"  本日の関連見出し: {m.headline_count}件／{m.why_growing}")
+    lines.append("")
+
+    lines.append("### 次に来る業界（本日のモメンタム順）")
+    if bundle.industry_momentum:
+        for e in bundle.industry_momentum:
+            lines.append(f"{e.rank}. **{e.label}**（関連見出し{e.headline_count}件）— {e.reason}")
+    else:
+        lines.append(f"本日、モメンタムが確認できるテーマはありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("### サプライチェーン分析")
+    if bundle.supply_chains:
+        for sc in bundle.supply_chains:
+            lines.append(f"- {sc.chain_text}")
+    else:
+        lines.append(f"本日抽出できるサプライチェーンの連鎖はありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("### 中長期テーマ")
+    for hg in bundle.horizon_groups:
+        themes_txt = "、".join(hg.themes) if hg.themes else "該当なし"
+        lines.append(f"- **{hg.horizon}:** {themes_txt}")
+    lines.append("")
+
+    lines.append("### 日本株への波及")
+    if bundle.jp_stock_impact:
+        for e in bundle.jp_stock_impact:
+            lines.append(f"- **{e.theme}:** {'、'.join(e.beneficiary_names)}（{e.cap_note}）")
+    else:
+        lines.append(f"本日算出できる日本株への波及がありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("### Future Map（テーマ一覧）")
+    for m in bundle.megatrends:
+        lines.append(f"- {m.stars} **{m.label}**（{m.phase}）")
+
     return "\n".join(lines)

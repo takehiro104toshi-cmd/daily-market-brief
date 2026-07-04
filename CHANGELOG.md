@@ -4,6 +4,48 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.7 (2026-07-04)
+
+追加
+・Future Intelligence Engine v1.0（グループAのみ）を新設。世界の長期テーマ
+  （config.yaml `macro_themes`。AI/半導体/電力/GX/DX/防衛/宇宙/量子/核融合/
+  ロボット/医療/バイオ/サイバーセキュリティ/水インフラ/物流/資源/食料/
+  人口減少/高齢化/自動運転の20テーマ）を、既存の
+  `durable_themes`・`causal_rules`・本日の関連見出し件数・恩恵銘柄ロジックの
+  みから定性的に評価する新モジュール `src/analysis/future_intelligence.py`
+  - 世界のメガトレンド（★・フェーズ［黎明期/成長初期/急成長期/成熟期/減速期］・
+    継続性［高い/中程度/限定的］・なぜ伸びるか）
+  - 次に来る業界ランキング（本日のモメンタム順）
+  - サプライチェーン分析（causal_rulesの因果チェーンを再利用）
+  - 中長期テーマ（半年/1年/3年/5年/10年への定性的な割り付け）
+  - 日本株への波及（恩恵銘柄。大型/中小型は区分不明として明記）
+  - Future Map（テーマ一覧）
+  - 詳細版・モバイル版・HTML版すべてに「Future Intelligence Engine」として
+    1セクションにまとめて追加（既存セクション番号は変更せず末尾に追加）
+・具体的な残り年数・市場規模・補助金額等は一切生成しない（実データの裏付けが
+  ない数値は使わない方針を徹底）。テーマ成熟度・国家戦略分析・世界のお金の
+  流れはv1.1以降に見送り（設計提案書のグループB/Cに該当）
+
+変更ファイル
+・config.yaml
+・main.py
+・src/analysis/models.py
+・src/analysis/future_intelligence.py【新規】
+・src/report/builder.py
+・src/report/sections.py
+・src/report/mobile_builder.py
+・src/report/html_builder.py
+・tests/test_future_intelligence.py【新規】
+・tests/test_report_builder.py
+・tests/test_mobile_builder.py
+・tests/test_html_builder.py
+
+pytest
+97 passed
+
+コミット
+（下記参照）
+
 ## v1.6 (2026-07-04)
 
 改善

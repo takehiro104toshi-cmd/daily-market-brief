@@ -33,6 +33,7 @@ from ..analysis.models import (
     SectorRankingEntry,
     SectorStrengthEntry,
     StockRankingEntry,
+    FutureIntelligenceBundle,
     StrategistView,
     ThemeForecast,
     TopPickEntry,
@@ -572,6 +573,73 @@ def _source_list_html(sources: SourceRegistry) -> str:
     return "".join(parts)
 
 
+def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
+    """「Future Intelligence Engine v1.0」をレンダリングする（グループAのみ）。
+
+    具体的な残り年数・市場規模・補助金額等は生成せず、本日の関連見出し件数・
+    durable_themes・causal_rulesから導いた定性的なラベルのみを表示する。
+    """
+    if not bundle.megatrends:
+        return f"<p>本日算出できるテーマがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+
+    parts = [
+        "<p class='legend'>本セクションは具体的な残り年数・市場規模・補助金額等の断定的な数値は使用せず、"
+        "本日の関連ニュース件数と既存の継続性フラグから導いた定性的な考察です。</p>",
+        "<h3>世界のメガトレンド</h3>",
+    ]
+    for m in bundle.megatrends:
+        parts.append(
+            f"<div class='row'><span>{_esc(m.label)} {_esc(m.stars)}</span>"
+            f"<span>{_esc(m.phase)} ／ 継続性: {_esc(m.continuity)}</span></div>"
+            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+            f"本日の関連見出し: {m.headline_count}件／{_esc(m.why_growing)}</p>"
+        )
+
+    parts.append("<h3>次に来る業界（本日のモメンタム順）</h3>")
+    if bundle.industry_momentum:
+        for e in bundle.industry_momentum:
+            parts.append(
+                f"<p style='font-size:0.85rem;'>{e.rank}. <strong>{_esc(e.label)}</strong>"
+                f"（関連見出し{e.headline_count}件）— {_esc(e.reason)}</p>"
+            )
+    else:
+        parts.append(f"<p>本日、モメンタムが確認できるテーマはありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
+
+    parts.append("<h3>サプライチェーン分析</h3>")
+    if bundle.supply_chains:
+        parts.append(
+            "<ul class='plain'>"
+            + "".join(f"<li>{_esc(sc.chain_text)}</li>" for sc in bundle.supply_chains)
+            + "</ul>"
+        )
+    else:
+        parts.append(f"<p>本日抽出できるサプライチェーンの連鎖はありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
+
+    parts.append("<h3>中長期テーマ</h3>")
+    for hg in bundle.horizon_groups:
+        themes_txt = "、".join(hg.themes) if hg.themes else "該当なし"
+        parts.append(f"<p style='font-size:0.85rem;'><strong>{_esc(hg.horizon)}:</strong> {_esc(themes_txt)}</p>")
+
+    parts.append("<h3>日本株への波及</h3>")
+    if bundle.jp_stock_impact:
+        for e in bundle.jp_stock_impact:
+            parts.append(
+                f"<p style='font-size:0.85rem;'><strong>{_esc(e.theme)}:</strong> "
+                f"{_esc('、'.join(e.beneficiary_names))}（{_esc(e.cap_note)}）</p>"
+            )
+    else:
+        parts.append(f"<p>本日算出できる日本株への波及がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
+
+    parts.append("<h3>Future Map（テーマ一覧）</h3>")
+    parts.append(
+        "<ul class='plain'>"
+        + "".join(f"<li>{_esc(m.stars)} <strong>{_esc(m.label)}</strong>（{_esc(m.phase)}）</li>" for m in bundle.megatrends)
+        + "</ul>"
+    )
+
+    return "".join(parts)
+
+
 def _refresh_button_html() -> str:
     """「最新表示に更新」ボタン。ページを再読み込みするだけの単純なボタン。
 
@@ -647,6 +715,7 @@ def build_html_report(
         ("events", "イベント", _events_html(analysis.events)),
         ("ai-summary", "AIまとめ", f"<p>{_esc(analysis.ai_summary_text)}</p>"),
         ("sources", "引用（参照URL一覧）", _source_list_html(sources)),
+        ("future-intelligence", "Future Intelligence Engine", _future_intelligence_html(analysis.future_intelligence)),
     ]
 
     toc_items = "".join(f'<li><a href="#{anchor}">{_esc(title)}</a></li>' for anchor, title, _ in sections)

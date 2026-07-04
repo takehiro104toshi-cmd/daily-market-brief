@@ -36,6 +36,7 @@ REQUIRED_HEADINGS = [
     "## 28. イベント",
     "## 29. AIまとめ",
     "## 30. 引用",
+    "## 31. Future Intelligence Engine",
 ]
 
 

@@ -88,6 +88,10 @@ def test_html_report_is_well_formed_and_color_coded():
     assert "朝会コメント" in report
     assert "30秒バージョン" in report and "1分バージョン" in report and "3分バージョン" in report
 
+    # Future Intelligence Engine v1.0（グループAのみ）
+    assert "Future Intelligence Engine" in report
+    assert 'id="future-intelligence"' in report
+
 
 def test_html_report_handles_missing_data_without_breaking_structure():
     empty_market = {"indices": [], "forex": [], "rates": [], "commodities": []}

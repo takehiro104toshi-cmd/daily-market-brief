@@ -13,6 +13,7 @@ REQUIRED_HEADINGS = [
     "## 6. 監視銘柄チェック",
     "## 7. 今日の営業トーク",
     "## 8. 今日の最重要ポイント",
+    "## 9. Future Intelligence Engine",
 ]
 
 
