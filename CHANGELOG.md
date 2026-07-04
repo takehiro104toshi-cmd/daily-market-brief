@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.5 (2026-07-04)
+
+修正
+・`deploy-pages` ジョブの `actions/deploy-pages@v4` ステップから
+  `timeout: 1200000 / error_count: 10 / reporting_interval: 10000` の指定を削除。
+  `timeout` の許容上限（60000ミリ秒）を超えていたため警告が出ており、
+  デプロイ失敗（`エラー：展開に失敗しました。後で再挑戦してください。`）と
+  合わせて発生していた。既定動作（アクション側のデフォルト設定）に戻すことで解消
+・`generate-report` ジョブ、`deploy-pages` ジョブの `timeout-minutes: 20`、
+  GitHub Pages の Source/Environment 設定は変更していない
+
+変更ファイル
+・.github/workflows/daily-market-brief.yml
+
+pytest
+91 passed
+
+コミット
+（下記参照）
+
 ## v1.4 (2026-07-04)
 
 修正
