@@ -531,6 +531,34 @@ class ThemeDiagnosisEntry:
 
 
 @dataclass
+class WatchlistIntelligenceEntry:
+    """「Watchlist Intelligence」の1銘柄分（v1.7）。
+
+    config.yaml の watchlist（jp_stocks / us_stocks）銘柄と、Future
+    Intelligence Engineが算出したテーマ診断（Momentum・Lifecycle・
+    Catalyst・Risk・Confidence）を、既存のcausal_rules恩恵銘柄ロジック
+    （テーマ→beneficiary_sectors→related_tickers）だけを使って照合し、
+    長期の資産形成・投資判断のために「今見るべき銘柄」を整理する。
+    営業利用ではなく自分自身の投資判断を最優先目的とし、断定的な売買助言
+    （「買い」「売り」）は一切行わない。judgment_labelは注目継続／押し目待ち
+    ／過熱警戒／材料待ち／判断材料不足のいずれかのみを用いる。
+    """
+
+    name: str
+    ticker: str
+    related_themes: List[str] = field(default_factory=list)
+    momentum_score: int = 0
+    momentum_label: str = ""
+    phase: str = ""
+    continuity: str = ""
+    catalysts: List[str] = field(default_factory=list)
+    risks: List[str] = field(default_factory=list)
+    confidence_score: int = 0
+    judgment_label: str = "判断材料不足"
+    judgment_reason: str = ""
+
+
+@dataclass
 class FutureIntelligenceBundle:
     """「Future Intelligence Engine」の計算結果一式。
 
@@ -558,6 +586,10 @@ class FutureIntelligenceBundle:
     AI分析）→Confidence Score（分析根拠の充実度、0〜100。未来が当たる
     確率ではない）を1テーマずつまとめて提示する、投資家向けの長期分析を
     最優先目的とする機能。
+    v1.7: Watchlist Intelligence（watchlist_intelligence）を追加。
+    config.yamlのwatchlist銘柄とtheme_diagnosisを、既存のcausal_rules
+    恩恵銘柄ロジックだけで照合し、長期の資産形成・投資判断のために
+    「今見るべき銘柄」を整理する。断定的な売買助言は行わない。
     """
 
     megatrends: List[MegatrendEntry] = field(default_factory=list)
@@ -572,6 +604,7 @@ class FutureIntelligenceBundle:
     capital_flow_notes: List[CapitalFlowNote] = field(default_factory=list)
     capital_flow_market_mood: str = ""
     theme_diagnosis: List[ThemeDiagnosisEntry] = field(default_factory=list)
+    watchlist_intelligence: List[WatchlistIntelligenceEntry] = field(default_factory=list)
 
 
 @dataclass

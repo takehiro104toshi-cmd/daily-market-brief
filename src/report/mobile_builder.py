@@ -154,6 +154,16 @@ def _section_future_intelligence(bundle) -> str:
         )
         lines.append(f"Catalyst［AI分析］: {catalyst_txt} ／ Risk［AI分析］: {risk_txt}")
 
+    matched_watchlist = [w for w in bundle.watchlist_intelligence if w.related_themes]
+    if matched_watchlist:
+        top_watch = max(matched_watchlist, key=lambda w: w.confidence_score)
+        lines.append(
+            f"Watchlist Intelligence（監視銘柄×テーマ診断）: {top_watch.name}（{top_watch.ticker}）"
+            f"は「{top_watch.judgment_label}」（断定的な売買判断ではありません）"
+        )
+    elif bundle.watchlist_intelligence:
+        lines.append("Watchlist Intelligence: 本日一致するテーマ診断のある監視銘柄はありませんでした（判断材料不足）")
+
     return "\n".join(lines) + "\n"
 
 

@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.14 (2026-07-04)
+
+追加
+・Future Intelligence Engine v1.7: 「Watchlist Intelligence（監視銘柄×
+  テーマ診断）」を追加（既存のFuture Intelligence Engineセクション内に
+  小見出しとして追加）
+  - config.yamlのwatchlist銘柄（jp_stocks/us_stocks）と、v1.6のテーマ別
+    診断（Momentum・Lifecycle・Catalyst・Risk・Confidence）を、既存の
+    causal_rules恩恵銘柄ロジック（テーマ→beneficiary_sectors→
+    related_tickers）だけを使って照合し、長期の資産形成・投資判断のために
+    「今見るべき銘柄」を整理する。営業利用ではなく自分自身の投資判断を
+    最優先目的とする
+  - 表示項目: 銘柄名・ティッカー・関連テーマ・Momentum・Lifecycle・
+    Catalyst・Risk・Confidence・現在の判断ラベル・判断理由
+  - 判断ラベルは「注目継続／押し目待ち／過熱警戒／材料待ち／判断材料不足」
+    のみを使用し、「買い」「売り」等の断定的な売買助言は一切行わない
+  - Markdown・モバイル版・HTML版すべてに反映（既存のFuture Intelligence
+    Engineセクション内。他のセクション構成は変更していない）
+
+変更ファイル
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+123 passed
+
+コミット
+（下記参照）
+
 ## v1.13 (2026-07-04)
 
 追加

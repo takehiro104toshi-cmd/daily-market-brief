@@ -557,9 +557,10 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
     サプライチェーン分析／中長期テーマ／日本株への波及／
     Early Signal Detection／テーマ成熟度メモ／国家戦略メモ／
     世界のお金の流れ（市場シグナルベース）／テーマ別診断（Momentum→
-    Lifecycle→Catalyst→Risk→Confidence）／Future Mapを1セクションに
-    まとめて表示する。具体的な残り年数・市場規模・補助金額・資金流入額等は
-    生成せず、本日の関連見出し件数・重要ニュースとの一致・durable_themes・
+    Lifecycle→Catalyst→Risk→Confidence）／Future Map／Watchlist
+    Intelligence（監視銘柄×テーマ診断）を1セクションにまとめて表示する。
+    具体的な残り年数・市場規模・補助金額・資金流入額等は生成せず、
+    本日の関連見出し件数・重要ニュースとの一致・durable_themes・
     causal_rules・公開市場データから導いた定性的なラベル、または
     config.yamlへ手動登録した参考情報のそのまま表示のみを行う。
     """
@@ -700,5 +701,25 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
     lines.append("### Future Map（テーマ一覧）")
     for m in bundle.megatrends:
         lines.append(f"- {m.stars} **{m.label}**（{m.phase}）")
+    lines.append("")
+
+    lines.append("### Watchlist Intelligence（監視銘柄 × テーマ診断）")
+    lines.append(
+        "> config.yamlのwatchlist銘柄と、Future Intelligence Engineのテーマ診断"
+        "（Momentum・Lifecycle・Catalyst・Risk・Confidence）を照合した、自分自身の"
+        "長期の資産形成・投資判断のための整理です。断定的な売買助言（「買い」「売り」）"
+        "ではなく、注目継続／押し目待ち／過熱警戒／材料待ち／判断材料不足という"
+        "非断定的なラベルのみを使用します。"
+    )
+    for w in bundle.watchlist_intelligence:
+        lines.append(f"- **{w.name}（{w.ticker}）**: {w.judgment_label}")
+        if w.related_themes:
+            lines.append(f"  関連テーマ: {'、'.join(w.related_themes)}")
+            lines.append(f"  Momentum: {w.momentum_score}/100（{w.momentum_label}）／Lifecycle: {w.phase}（継続性: {w.continuity}）／Confidence: {w.confidence_score}%")
+            if w.catalysts:
+                lines.append(f"  Catalyst［AI分析］: {'／'.join(w.catalysts)}")
+            if w.risks:
+                lines.append(f"  Risk［AI分析］: {'／'.join(w.risks)}")
+        lines.append(f"  判断理由: {w.judgment_reason}")
 
     return "\n".join(lines)

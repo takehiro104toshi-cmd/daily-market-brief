@@ -742,6 +742,32 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         + "</ul>"
     )
 
+    parts.append("<h3>Watchlist Intelligence（監視銘柄 × テーマ診断）</h3>")
+    parts.append(
+        "<p class='legend'>config.yamlのwatchlist銘柄と、Future Intelligence Engineのテーマ診断"
+        "（Momentum・Lifecycle・Catalyst・Risk・Confidence）を照合した、自分自身の長期の資産形成"
+        "・投資判断のための整理です。断定的な売買助言（「買い」「売り」）ではなく、注目継続／"
+        "押し目待ち／過熱警戒／材料待ち／判断材料不足という非断定的なラベルのみを使用します。</p>"
+    )
+    for w in bundle.watchlist_intelligence:
+        detail_html = ""
+        if w.related_themes:
+            catalysts_html = "、".join(_esc(c) for c in w.catalysts)
+            risks_html = "、".join(_esc(r) for r in w.risks)
+            detail_html = (
+                f"関連テーマ: {_esc('、'.join(w.related_themes))}<br>"
+                f"Momentum: {w.momentum_score}/100（{_esc(w.momentum_label)}）／"
+                f"Lifecycle: {_esc(w.phase)}（継続性: {_esc(w.continuity)}）／"
+                f"Confidence: {w.confidence_score}%<br>"
+                + (f"Catalyst［AI分析］: {catalysts_html}<br>" if catalysts_html else "")
+                + (f"Risk［AI分析］: {risks_html}<br>" if risks_html else "")
+            )
+        parts.append(
+            f"<div class='row'><span>{_esc(w.name)}（{_esc(w.ticker)}）</span><span>{_esc(w.judgment_label)}</span></div>"
+            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+            f"{detail_html}判断理由: {_esc(w.judgment_reason)}</p>"
+        )
+
     return "".join(parts)
 
 

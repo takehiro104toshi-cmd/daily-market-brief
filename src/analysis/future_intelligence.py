@@ -79,6 +79,16 @@ v1.6で以下を追加した:
     （0〜100）は「未来が当たる確率」ではなく、上記シグナルのうち実際に
     確認できたものの数（＝分析根拠の充実度）を表す。
 
+v1.7で以下を追加した:
+    Watchlist Intelligence。config.yaml の watchlist（jp_stocks/us_stocks）
+    銘柄と、テーマ別診断（v1.6のtheme_diagnosis）を、既存のcausal_rules
+    恩恵銘柄ロジック（テーマ→beneficiary_sectors→related_tickers）だけを
+    使って照合し、長期の資産形成・投資判断のために「今見るべき銘柄」を
+    整理する。営業利用ではなく自分自身の投資判断を最優先目的とし、
+    「買い」「売り」等の断定的な売買助言は一切行わない。判断ラベルは
+    注目継続／押し目待ち／過熱警戒／材料待ち／判断材料不足のいずれかのみ
+    を、Momentum・Lifecycle・Confidenceという既存シグナルから機械的に導く。
+
 具体的な残り年数・市場規模・補助金額・政策内容・資金流入額等、実データの
 裏付けがない数値・情報は一切生成しない（決定論的なルールベースの定性ラベル、
 config.yamlの手動登録内容のそのまま表示、または既存シグナルからの定性的な
@@ -106,6 +116,7 @@ from .models import (
     ThemeDiagnosisEntry,
     ThemeMaturityNote,
     ThemeMomentumEntry,
+    WatchlistIntelligenceEntry,
 )
 from .strategist_engine import CausalRule, parse_causal_rules, resolve_tickers, ticker_names
 
@@ -964,6 +975,112 @@ def _build_theme_diagnosis(
     return entries
 
 
+_WATCHLIST_JUDGMENT_LABELS = ("注目継続", "押し目待ち", "過熱警戒", "材料待ち", "判断材料不足")
+
+
+def _ticker_theme_map(theme_rule_map: Dict[str, Optional[CausalRule]], sectors: Dict) -> Dict[str, List[str]]:
+    """テーマ→beneficiary_sectors→related_tickers という既存のcausal_rules
+    恩恵銘柄ロジックだけを使って、ティッカー→関連テーマの対応表を作る
+    （新たな銘柄・因果関係の推定は行わない）。
+    """
+    mapping: Dict[str, List[str]] = {}
+    for label, rule in theme_rule_map.items():
+        if rule is None or not rule.beneficiary_sectors:
+            continue
+        for ticker in resolve_tickers(rule.beneficiary_sectors, sectors):
+            mapping.setdefault(ticker, []).append(label)
+    return mapping
+
+
+def _watchlist_judgment_label(momentum_label: str, phase: str, continuity: str, confidence_score: int) -> str:
+    """断定的な売買助言（「買い」「売り」）は行わず、Momentum・Lifecycle・
+    Confidenceという既存シグナルのみから、注目継続／押し目待ち／過熱警戒／
+    材料待ち／判断材料不足のいずれかを機械的に判定する。
+    """
+    if confidence_score < 20:
+        return "判断材料不足"
+    if momentum_label == "急加速" and phase in ("成熟期", "減速期"):
+        return "過熱警戒"
+    if momentum_label in ("急加速", "加速"):
+        return "注目継続"
+    if momentum_label in ("横ばい", "減速") and continuity == "高い":
+        return "押し目待ち"
+    return "材料待ち"
+
+
+def _watchlist_judgment_reason(
+    judgment_label: str, momentum_score: int, momentum_label: str, phase: str, continuity: str, confidence_score: int
+) -> str:
+    return (
+        f"Momentumは{momentum_label}（{momentum_score}/100）、Lifecycleは{phase}"
+        f"（継続性: {continuity}）、Confidenceは{confidence_score}%であることから、"
+        f"「{judgment_label}」と考えられます（断定的な売買判断ではありません）。"
+    )
+
+
+def _build_watchlist_intelligence(
+    config: dict,
+    sectors: Dict,
+    theme_rule_map: Dict[str, Optional[CausalRule]],
+    theme_diagnosis: List[ThemeDiagnosisEntry],
+) -> List[WatchlistIntelligenceEntry]:
+    """Watchlist Intelligence: config.yaml の watchlist 銘柄とテーマ別診断
+    （v1.6）を、既存のcausal_rules恩恵銘柄ロジックだけで照合する。
+    営業利用ではなく自分自身の長期投資判断を最優先目的とし、
+    「買い」「売り」等の断定的な売買助言は一切行わない。
+    """
+    watchlist_cfg = config.get("watchlist", {})
+    stocks = list(watchlist_cfg.get("jp_stocks", [])) + list(watchlist_cfg.get("us_stocks", []))
+    if not stocks:
+        return []
+
+    ticker_theme_map = _ticker_theme_map(theme_rule_map, sectors)
+    diagnosis_map = {td.label: td for td in theme_diagnosis}
+
+    entries: List[WatchlistIntelligenceEntry] = []
+    for stock in stocks:
+        ticker = stock.get("ticker", "")
+        name = stock.get("name", ticker)
+        related_labels = ticker_theme_map.get(ticker, [])
+        candidates = [diagnosis_map[label] for label in related_labels if label in diagnosis_map]
+
+        if not candidates:
+            entries.append(
+                WatchlistIntelligenceEntry(
+                    name=name,
+                    ticker=ticker,
+                    related_themes=related_labels,
+                    judgment_label="判断材料不足",
+                    judgment_reason="現時点で一致するFuture Intelligenceのテーマ診断が確認できませんでした。",
+                )
+            )
+            continue
+
+        # 複数テーマに一致する場合は、Confidence（分析根拠の充実度）が
+        # 最も高いテーマを代表として採用する。
+        top = max(candidates, key=lambda td: td.confidence_score)
+        judgment_label = _watchlist_judgment_label(top.momentum_label, top.phase, top.continuity, top.confidence_score)
+        entries.append(
+            WatchlistIntelligenceEntry(
+                name=name,
+                ticker=ticker,
+                related_themes=[c.label for c in candidates],
+                momentum_score=top.momentum_score,
+                momentum_label=top.momentum_label,
+                phase=top.phase,
+                continuity=top.continuity,
+                catalysts=top.catalysts,
+                risks=top.risks,
+                confidence_score=top.confidence_score,
+                judgment_label=judgment_label,
+                judgment_reason=_watchlist_judgment_reason(
+                    judgment_label, top.momentum_score, top.momentum_label, top.phase, top.continuity, top.confidence_score
+                ),
+            )
+        )
+    return entries
+
+
 def build_future_intelligence(
     headlines: List[Headline],
     config: dict,
@@ -1139,6 +1256,10 @@ def build_future_intelligence(
         theme_top_news_matched_map,
     )
 
+    # Watchlist Intelligence: watchlist銘柄とテーマ別診断の照合（v1.7）。
+    # 営業利用ではなく自分自身の長期投資判断を最優先目的とする。
+    watchlist_intelligence = _build_watchlist_intelligence(config, sectors, theme_rule_map, theme_diagnosis)
+
     return FutureIntelligenceBundle(
         megatrends=megatrends,
         industry_momentum=industry_momentum,
@@ -1152,4 +1273,5 @@ def build_future_intelligence(
         capital_flow_notes=capital_flow_notes,
         capital_flow_market_mood=capital_flow_market_mood,
         theme_diagnosis=theme_diagnosis,
+        watchlist_intelligence=watchlist_intelligence,
     )

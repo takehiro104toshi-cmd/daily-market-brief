@@ -568,3 +568,58 @@ def test_theme_diagnosis_appears_in_markdown_html_and_mobile_output():
     assert "テーマ別診断" in mobile_text
     assert "Catalyst［AI分析］" in mobile_text
     assert "Risk［AI分析］" in mobile_text
+
+
+def test_watchlist_intelligence_matches_watchlist_stock_to_theme():
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    config = dict(CONFIG)
+    config["watchlist"] = {
+        "jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}, {"ticker": "9999.T", "name": "無関係株"}],
+        "us_stocks": [],
+    }
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    assert bundle.watchlist_intelligence
+    tel = next(w for w in bundle.watchlist_intelligence if w.ticker == "8035.T")
+    assert "AI" in tel.related_themes
+    assert tel.judgment_label in future_intelligence._WATCHLIST_JUDGMENT_LABELS
+    assert tel.momentum_score >= 0
+
+    unrelated = next(w for w in bundle.watchlist_intelligence if w.ticker == "9999.T")
+    assert unrelated.judgment_label == "判断材料不足"
+    assert unrelated.related_themes == []
+
+
+def test_watchlist_intelligence_shows_judgment_label_and_never_uses_buy_sell_advisory_language():
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    assert bundle.watchlist_intelligence
+    for w in bundle.watchlist_intelligence:
+        assert w.judgment_label in future_intelligence._WATCHLIST_JUDGMENT_LABELS
+        assert w.judgment_reason
+        assert "買い" not in w.judgment_reason
+        assert "売り" not in w.judgment_reason
+        assert "買え" not in w.judgment_reason
+        assert "売れ" not in w.judgment_reason
+
+
+def test_watchlist_intelligence_appears_in_markdown_html_and_mobile_output():
+    from src.report.mobile_builder import _section_future_intelligence
+
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    markdown_text = render_future_intelligence(bundle)
+    assert "Watchlist Intelligence" in markdown_text
+    assert "東京エレクトロン" in markdown_text
+
+    html_text = _future_intelligence_html(bundle)
+    assert "Watchlist Intelligence" in html_text
+
+    mobile_text = _section_future_intelligence(bundle)
+    assert "Watchlist Intelligence" in mobile_text
