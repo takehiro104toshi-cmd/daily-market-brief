@@ -4,6 +4,45 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.12 (2026-07-04)
+
+追加
+・Future Intelligence Engine v1.5:「世界のお金の流れ（市場シグナルベース）」を
+  安全な縮小版として追加（既存のFuture Intelligence Engineセクション内に
+  小見出しとして追加）
+  - 実際の機関投資家ポジション・資金流入額は取得していないため、具体的な
+    資金フローは断定しない旨を冒頭に明記（「実際の資金流入額ではなく、
+    公開市場データとニューステーマから見た資金の向かいやすさです」）
+  - 公開市場データ（日経平均・TOPIX・NASDAQ・SOX・VIX・米10年金利・
+    ドル円・WTI・金）とTheme Momentum Score・Early Signal Detection・
+    Sector Ranking・causal_rules・durable_themesという既存シグナルのみ
+    から、「AI・半導体」「金融・銀行」「防衛・電力・インフラ」「内需・消費」
+    「コモディティ・資源」の5テーマについて、資金方向ラベル（流入しやすい／
+    中立／流出しやすい／判断材料不足）・理由・関連テーマ・関連セクター・
+    営業で話すポイントを機械的に算出
+  - リスクオン/オフ・グロース優位/バリュー優位の参考情報も、VIX指数・
+    NASDAQ対TOPIXという既存の市場データのみから算出し、文脈情報として付記
+  - 「資金が流入している」「機関投資家が買っている」「海外勢が買っている」
+    「◯億円流入」等の断定・捏造表現は一切使わず、「資金が向かいやすい」
+    「物色されやすい」「市場シグナル上は追い風」等の非断定表現に統一
+  - Markdown・モバイル版・HTML版すべてに反映（既存のFuture Intelligence
+    Engineセクション内。他のセクション構成は変更していない）
+
+変更ファイル
+・main.py
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+116 passed
+
+コミット
+（下記参照）
+
 ## v1.11 (2026-07-04)
 
 改善

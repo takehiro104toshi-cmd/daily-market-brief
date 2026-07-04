@@ -52,18 +52,33 @@ v1.3で以下を改善した:
     いずれの場合も具体的な市場規模・補助金額・政策名・法案名は生成しない
     （断定を避けた「〜と考えられます」等の表現で統一する）。
 
-世界のお金の流れは今後の版に見送る。具体的な残り年数・市場規模・
-補助金額・政策内容等、実データの裏付けがない数値・情報は一切生成しない
-（決定論的なルールベースの定性ラベル、config.yamlの手動登録内容のそのまま
-表示、または既存シグナルからの定性的なAI分析のみ）。
+v1.5で以下を安全な縮小版として追加した:
+    「世界のお金の流れ（市場シグナルベース）」。実際の機関投資家ポジション
+    ・資金流入額は取得していないため、具体的な資金フローは断定しない。
+    公開市場データ（日経平均・TOPIX・NASDAQ・SOX・VIX・米10年金利・
+    ドル円・WTI・金）とTheme Momentum Score・Early Signal Detection・
+    Sector Ranking・causal_rules・durable_themesという既存シグナルのみ
+    から、「AI・半導体」「金融・銀行」「防衛・電力・インフラ」「内需・消費」
+    「コモディティ・資源」の5テーマについて、資金の「向かいやすさ」（流入
+    しやすい／中立／流出しやすい／判断材料不足）を機械的に推定する。
+    「資金が流入している」「機関投資家が買っている」「海外勢が買っている」
+    「◯億円流入」等の断定・捏造表現は一切使わず、「資金が向かいやすい」
+    「物色されやすい」「関心が高まりやすい」「相対的に選好されやすい」
+    「市場シグナル上は追い風」等の非断定表現に統一する。
+
+具体的な残り年数・市場規模・補助金額・政策内容・資金流入額等、実データの
+裏付けがない数値・情報は一切生成しない（決定論的なルールベースの定性ラベル、
+config.yamlの手動登録内容のそのまま表示、または既存シグナルからの定性的な
+AI分析のみ）。
 """
 from __future__ import annotations
 
 from typing import Dict, List, Optional
 
 from ..collectors.news import Headline
-from ..report.format_utils import stars
+from ..report.format_utils import find_quote, stars
 from .models import (
+    CapitalFlowNote,
     EarlySignalEntry,
     ExecutiveSummaryItem,
     FutureIntelligenceBundle,
@@ -73,6 +88,7 @@ from .models import (
     MegatrendEntry,
     NationalStrategyNote,
     NewsRankingItem,
+    SectorRankingEntry,
     SupplyChainNote,
     ThemeMaturityNote,
     ThemeMomentumEntry,
@@ -100,6 +116,20 @@ NATIONAL_FOCUS_AREAS: Dict[str, List[str]] = {
     "EU": ["GX", "電力", "サイバーセキュリティ", "食料"],
     "インド": ["AI", "半導体", "物流", "自動運転", "食料"],
     "中東": ["資源", "GX", "水インフラ", "食料"],
+}
+
+# 「世界のお金の流れ（市場シグナルベース）」の対象5テーマとmacro_themesの
+# 対応付け（人手による参考情報。AIが生成したものではない）。「金融・銀行」
+# 「内需・消費」はmacro_themesに対応するテーマが無いため、Sector Ranking
+# ・市場データのみから判定する。
+CAPITAL_FLOW_MACRO_LABELS: Dict[str, List[str]] = {
+    "AI・半導体": ["AI", "半導体"],
+    "防衛・電力・インフラ": ["防衛", "電力", "水インフラ"],
+    "コモディティ・資源": ["資源"],
+}
+CAPITAL_FLOW_SECTOR_KEYWORDS: Dict[str, List[str]] = {
+    "金融・銀行": ["銀行", "金融", "保険"],
+    "内需・消費": ["内需", "小売", "食品", "消費"],
 }
 
 # 本日の関連見出し件数から3段階（none/low/high）に区分し、durable_themes
@@ -466,6 +496,269 @@ def _build_national_strategy_notes(
     return notes
 
 
+def _quote_change_pct(quotes: List, keyword: str) -> Optional[float]:
+    q = find_quote(quotes, keyword)
+    if q is None or q.change_pct is None:
+        return None
+    return q.change_pct
+
+
+def _quote_price(quotes: List, keyword: str) -> Optional[float]:
+    q = find_quote(quotes, keyword)
+    if q is None or q.price is None:
+        return None
+    return q.price
+
+
+def _capital_flow_market_mood(market: Dict) -> str:
+    """リスクオン/オフ・グロース/バリュー優位の参考情報を、既存の慣例
+    （本コードベースの他モジュールと同じくVIX20を警戒的水準の目安とする）
+    に沿って機械的に組み立てる。実際の資金フローの断定はしない。
+    """
+    indices = market.get("indices", [])
+    vix_price = _quote_price(indices, "VIX")
+    if vix_price is None:
+        mood_txt = "リスクオン/オフの判断材料（VIX指数）が確認できません。"
+    elif vix_price < 20:
+        mood_txt = f"VIX指数は{vix_price:.2f}と落ち着いた水準で、リスクオン優勢の目安です。"
+    else:
+        mood_txt = f"VIX指数は{vix_price:.2f}と警戒的な水準で、リスクオフ優勢の目安です。"
+
+    nasdaq = _quote_change_pct(indices, "ナスダック")
+    topix = _quote_change_pct(indices, "TOPIX")
+    if nasdaq is None or topix is None:
+        style_txt = "グロース優位/バリュー優位の判断材料（NASDAQ・TOPIX）が確認できません。"
+    else:
+        diff = nasdaq - topix
+        if diff > 0.3:
+            style_txt = "NASDAQがTOPIXを上回っており、グロース優位の目安です。"
+        elif diff < -0.3:
+            style_txt = "TOPIXがNASDAQを上回っており、バリュー優位の目安です。"
+        else:
+            style_txt = "グロースとバリューは拮抗している目安です。"
+    return mood_txt + " " + style_txt
+
+
+def _capital_flow_direction_label(score: int) -> str:
+    if score >= 2:
+        return "流入しやすい"
+    if score <= -2:
+        return "流出しやすい"
+    return "中立"
+
+
+def _capital_flow_note(
+    label: str,
+    contributions: List[tuple],
+    related_themes: List[str],
+    related_sectors: List[str],
+) -> CapitalFlowNote:
+    """判断材料（(得点, 理由の断片)のリスト）から、資金方向ラベル・理由・
+    営業で話すポイントを機械的に組み立てる。判断材料が何も無い場合のみ
+    「判断材料不足」とする。実際の資金流入・機関投資家の売買は断定しない。
+    """
+    if not contributions:
+        return CapitalFlowNote(
+            label=label,
+            direction_label="判断材料不足",
+            reason=f"{label}について、市場データ・テーマシグナルのいずれも確認できませんでした。",
+            related_themes=related_themes,
+            related_sectors=related_sectors,
+        )
+
+    score = sum(delta for delta, _ in contributions)
+    direction = _capital_flow_direction_label(score)
+    fragments = "、".join(fragment for _, fragment in contributions)
+
+    if direction == "流入しやすい":
+        tail = f"ことから、「{label}」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。"
+        talk_tail = f"「{label}」は市場シグナル上、物色されやすい局面とお伝えできます。"
+    elif direction == "流出しやすい":
+        tail = f"ことから、「{label}」は市場シグナル上は向かい風で、資金が離れやすい地合いと考えられます。"
+        talk_tail = f"「{label}」は市場シグナル上、関心が高まりにくい局面とお伝えできます。"
+    else:
+        tail = f"ことから、「{label}」への資金動向は方向感に乏しく、中立的と考えられます。"
+        talk_tail = f"「{label}」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。"
+
+    return CapitalFlowNote(
+        label=label,
+        direction_label=direction,
+        reason=fragments + tail,
+        related_themes=related_themes,
+        related_sectors=related_sectors,
+        sales_talk=talk_tail,
+    )
+
+
+def _momentum_entries_for(theme_momentum: List[ThemeMomentumEntry], labels: List[str]) -> List[ThemeMomentumEntry]:
+    return [tm for tm in theme_momentum if tm.label in labels]
+
+
+def _early_signal_entries_for(early_signals: List[EarlySignalEntry], labels: List[str]) -> List[EarlySignalEntry]:
+    return [es for es in early_signals if es.label in labels]
+
+
+def _related_sectors_from_momentum(momentum_entries: List[ThemeMomentumEntry]) -> List[str]:
+    sectors: List[str] = []
+    for tm in momentum_entries:
+        for s in tm.related_sector.split("、"):
+            if s and s not in sectors:
+                sectors.append(s)
+    return sectors
+
+
+def _capital_flow_ai_semicon(
+    market: Dict, theme_momentum: List[ThemeMomentumEntry], early_signals: List[EarlySignalEntry]
+) -> CapitalFlowNote:
+    label = "AI・半導体"
+    macro_labels = CAPITAL_FLOW_MACRO_LABELS[label]
+    contributions: List[tuple] = []
+
+    sox = _quote_change_pct(market.get("indices", []), "SOX")
+    if sox is not None:
+        contributions.append((1 if sox >= 0 else -1, f"SOX指数が前日比{sox:+.2f}%"))
+
+    nasdaq = _quote_change_pct(market.get("indices", []), "ナスダック")
+    if nasdaq is not None:
+        contributions.append((1 if nasdaq >= 0 else -1, f"NASDAQが前日比{nasdaq:+.2f}%"))
+
+    momentum_entries = _momentum_entries_for(theme_momentum, macro_labels)
+    accel = [tm for tm in momentum_entries if tm.momentum_label in ("急加速", "加速")]
+    slow = [tm for tm in momentum_entries if tm.momentum_label == "減速"]
+    if accel:
+        contributions.append((1, f"{'、'.join(tm.label for tm in accel)}のTheme Momentum Scoreが高め"))
+    elif slow:
+        contributions.append((-1, f"{'、'.join(tm.label for tm in slow)}のTheme Momentum Scoreが減速基調"))
+
+    signal_entries = _early_signal_entries_for(early_signals, macro_labels)
+    if signal_entries:
+        contributions.append((1, f"{'、'.join(es.label for es in signal_entries)}がEarly Signal Detectionにも該当"))
+
+    return _capital_flow_note(
+        label, contributions, [tm.label for tm in momentum_entries], _related_sectors_from_momentum(momentum_entries)
+    )
+
+
+def _capital_flow_financials(market: Dict, sector_ranking_entries: List[SectorRankingEntry]) -> CapitalFlowNote:
+    label = "金融・銀行"
+    contributions: List[tuple] = []
+
+    tnx_q = find_quote(market.get("rates", []), "10年")
+    if tnx_q is not None and tnx_q.change is not None:
+        contributions.append(
+            (1 if tnx_q.change > 0 else (-1 if tnx_q.change < 0 else 0), f"米10年金利が前日比{tnx_q.change:+.3f}")
+        )
+
+    usdjpy_pct = _quote_change_pct(market.get("forex", []), "米ドル/円")
+    if usdjpy_pct is not None:
+        contributions.append((1 if usdjpy_pct >= 0 else -1, f"ドル円が前日比{usdjpy_pct:+.2f}%"))
+
+    matched_sectors = [
+        e.label for e in sector_ranking_entries if any(kw in e.label for kw in CAPITAL_FLOW_SECTOR_KEYWORDS[label])
+    ]
+    if matched_sectors:
+        contributions.append((1, f"Sector Rankingでも{'、'.join(matched_sectors)}が上位に確認できる"))
+
+    return _capital_flow_note(label, contributions, [], matched_sectors)
+
+
+def _capital_flow_defense_infra(
+    theme_momentum: List[ThemeMomentumEntry],
+    early_signals: List[EarlySignalEntry],
+    megatrend_map: Dict[str, MegatrendEntry],
+) -> CapitalFlowNote:
+    label = "防衛・電力・インフラ"
+    macro_labels = CAPITAL_FLOW_MACRO_LABELS[label]
+    contributions: List[tuple] = []
+
+    momentum_entries = _momentum_entries_for(theme_momentum, macro_labels)
+    accel = [tm for tm in momentum_entries if tm.momentum_label in ("急加速", "加速")]
+    if accel:
+        contributions.append((1, f"{'、'.join(tm.label for tm in accel)}のTheme Momentum Scoreが高め"))
+
+    signal_entries = _early_signal_entries_for(early_signals, macro_labels)
+    if signal_entries:
+        contributions.append((1, f"{'、'.join(es.label for es in signal_entries)}がEarly Signal Detectionにも該当"))
+
+    durable_labels = [lbl for lbl in macro_labels if megatrend_map.get(lbl) and megatrend_map[lbl].continuity == "高い"]
+    if durable_labels:
+        contributions.append((1, f"{'、'.join(durable_labels)}は継続性の高い構造的テーマに位置づけられる"))
+
+    return _capital_flow_note(
+        label, contributions, [tm.label for tm in momentum_entries], _related_sectors_from_momentum(momentum_entries)
+    )
+
+
+def _capital_flow_domestic_demand(market: Dict, sector_ranking_entries: List[SectorRankingEntry]) -> CapitalFlowNote:
+    label = "内需・消費"
+    contributions: List[tuple] = []
+
+    usdjpy_pct = _quote_change_pct(market.get("forex", []), "米ドル/円")
+    if usdjpy_pct is not None:
+        direction_txt = "円高" if usdjpy_pct < 0 else "円安"
+        contributions.append((1 if usdjpy_pct < 0 else -1, f"ドル円が前日比{usdjpy_pct:+.2f}%（{direction_txt}方向）"))
+
+    matched_sectors = [
+        e.label for e in sector_ranking_entries if any(kw in e.label for kw in CAPITAL_FLOW_SECTOR_KEYWORDS[label])
+    ]
+    if matched_sectors:
+        contributions.append((1, f"Sector Rankingでも{'、'.join(matched_sectors)}が上位に確認できる"))
+
+    return _capital_flow_note(label, contributions, [], matched_sectors)
+
+
+def _capital_flow_commodities(
+    market: Dict, theme_momentum: List[ThemeMomentumEntry], early_signals: List[EarlySignalEntry]
+) -> CapitalFlowNote:
+    label = "コモディティ・資源"
+    macro_labels = CAPITAL_FLOW_MACRO_LABELS[label]
+    contributions: List[tuple] = []
+
+    wti_pct = _quote_change_pct(market.get("commodities", []), "WTI")
+    if wti_pct is not None:
+        contributions.append((1 if wti_pct >= 0 else -1, f"WTI原油が前日比{wti_pct:+.2f}%"))
+
+    gold_pct = _quote_change_pct(market.get("commodities", []), "金")
+    if gold_pct is not None:
+        contributions.append((1 if gold_pct >= 0 else -1, f"金先物が前日比{gold_pct:+.2f}%"))
+
+    momentum_entries = _momentum_entries_for(theme_momentum, macro_labels)
+    accel = [tm for tm in momentum_entries if tm.momentum_label in ("急加速", "加速")]
+    if accel:
+        contributions.append((1, f"{'、'.join(tm.label for tm in accel)}のTheme Momentum Scoreが高め"))
+
+    signal_entries = _early_signal_entries_for(early_signals, macro_labels)
+    if signal_entries:
+        contributions.append((1, f"{'、'.join(es.label for es in signal_entries)}がEarly Signal Detectionにも該当"))
+
+    return _capital_flow_note(
+        label, contributions, [tm.label for tm in momentum_entries], _related_sectors_from_momentum(momentum_entries)
+    )
+
+
+def _build_capital_flow_notes(
+    market: Dict,
+    theme_momentum: List[ThemeMomentumEntry],
+    early_signals: List[EarlySignalEntry],
+    sector_ranking_entries: List[SectorRankingEntry],
+    megatrend_map: Dict[str, MegatrendEntry],
+) -> List[CapitalFlowNote]:
+    """「世界のお金の流れ（市場シグナルベース）」の5テーマ分を組み立てる。
+
+    実際の資金流入額・機関投資家ポジションは取得していないため、公開市場
+    データ（指数・為替・金利・コモディティ）とTheme Momentum Score・
+    Early Signal Detection・Sector Ranking・durable_themesという既存
+    シグナルのみから、資金の「向かいやすさ」を機械的に推定する。
+    """
+    return [
+        _capital_flow_ai_semicon(market, theme_momentum, early_signals),
+        _capital_flow_financials(market, sector_ranking_entries),
+        _capital_flow_defense_infra(theme_momentum, early_signals, megatrend_map),
+        _capital_flow_domestic_demand(market, sector_ranking_entries),
+        _capital_flow_commodities(market, theme_momentum, early_signals),
+    ]
+
+
 def build_future_intelligence(
     headlines: List[Headline],
     config: dict,
@@ -473,7 +766,11 @@ def build_future_intelligence(
     ticker_lookup: Dict,
     news_ranking_items: Optional[List[NewsRankingItem]] = None,
     executive_summary_items: Optional[List[ExecutiveSummaryItem]] = None,
+    market: Optional[Dict] = None,
+    sector_ranking_entries: Optional[List[SectorRankingEntry]] = None,
 ) -> FutureIntelligenceBundle:
+    market = market or {}
+    sector_ranking_entries = sector_ranking_entries or []
     macro_themes_cfg = config.get("macro_themes", [])
     durable_themes = config.get("durable_themes", [])
     causal_rules = parse_causal_rules(config.get("causal_rules", []))
@@ -612,6 +909,12 @@ def build_future_intelligence(
         config.get("national_strategy_notes", {}), megatrend_map, theme_rule_map
     )
 
+    # 世界のお金の流れ（市場シグナルベース。実際の資金流入額は取得していないため断定しない）
+    capital_flow_notes = _build_capital_flow_notes(
+        market, theme_momentum, early_signals, sector_ranking_entries, megatrend_map
+    )
+    capital_flow_market_mood = _capital_flow_market_mood(market)
+
     return FutureIntelligenceBundle(
         megatrends=megatrends,
         industry_momentum=industry_momentum,
@@ -622,4 +925,6 @@ def build_future_intelligence(
         early_signals=early_signals,
         theme_maturity_notes=theme_maturity_notes,
         national_strategy_notes=national_strategy_notes,
+        capital_flow_notes=capital_flow_notes,
+        capital_flow_market_mood=capital_flow_market_mood,
     )

@@ -696,6 +696,24 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             f"日本株への波及: {_esc(ns.market_impact_note)}{basis_html}</p>"
         )
 
+    parts.append("<h3>世界のお金の流れ（市場シグナルベース）</h3>")
+    parts.append(
+        "<p class='legend'>実際の資金流入額ではなく、公開市場データとニューステーマから見た"
+        "「資金の向かいやすさ」です（機関投資家のポジションや実際の資金フローは取得していません。"
+        "断定的な資金フローは表示しません）。</p>"
+    )
+    if bundle.capital_flow_market_mood:
+        parts.append(f"<p style='font-size:0.8rem;color:#666;'>参考情報: {_esc(bundle.capital_flow_market_mood)}</p>")
+    for cf in bundle.capital_flow_notes:
+        themes_html = f"<br>関連テーマ: {_esc('、'.join(cf.related_themes))}" if cf.related_themes else ""
+        sectors_html = f"<br>関連セクター: {_esc('、'.join(cf.related_sectors))}" if cf.related_sectors else ""
+        talk_html = f"<br>営業で話すポイント: {_esc(cf.sales_talk)}" if cf.sales_talk else ""
+        parts.append(
+            f"<div class='row'><span>{_esc(cf.label)}</span><span>{_esc(cf.direction_label)}</span></div>"
+            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+            f"{_esc(cf.reason)}{themes_html}{sectors_html}{talk_html}</p>"
+        )
+
     parts.append("<h3>Future Map（テーマ一覧）</h3>")
     parts.append(
         "<ul class='plain'>"

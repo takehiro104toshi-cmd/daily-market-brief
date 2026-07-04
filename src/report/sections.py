@@ -555,12 +555,12 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
 
     世界のメガトレンド／Theme Momentum Score／次に来る業界／
     サプライチェーン分析／中長期テーマ／日本株への波及／
-    Early Signal Detection／テーマ成熟度メモ／国家戦略メモ／Future Mapを
-    1セクションにまとめて表示する。
-    具体的な残り年数・市場規模・補助金額等は生成せず、本日の関連見出し件数
-    ・重要ニュースとの一致・durable_themes・causal_rulesから導いた定性的な
-    ラベル、またはconfig.yamlへ手動登録した参考情報のそのまま表示のみを
-    行う（世界のお金の流れは今後の版に見送り）。
+    Early Signal Detection／テーマ成熟度メモ／国家戦略メモ／
+    世界のお金の流れ（市場シグナルベース）／Future Mapを1セクションにまとめて
+    表示する。具体的な残り年数・市場規模・補助金額・資金流入額等は生成せず、
+    本日の関連見出し件数・重要ニュースとの一致・durable_themes・
+    causal_rules・公開市場データから導いた定性的なラベル、または
+    config.yamlへ手動登録した参考情報のそのまま表示のみを行う。
     """
     if not bundle.megatrends:
         return f"本日算出できるテーマがありませんでした（{NOT_AVAILABLE}）。\n"
@@ -659,6 +659,24 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         lines.append(f"  日本株への波及: {ns.market_impact_note}")
         if ns.basis:
             lines.append(f"  判断根拠: {ns.basis}")
+    lines.append("")
+
+    lines.append("### 世界のお金の流れ（市場シグナルベース）")
+    lines.append(
+        "> 実際の資金流入額ではなく、公開市場データとニューステーマから見た「資金の向かいやすさ」です"
+        "（機関投資家のポジションや実際の資金フローは取得していません。断定的な資金フローは表示しません）。"
+    )
+    if bundle.capital_flow_market_mood:
+        lines.append(f"参考情報: {bundle.capital_flow_market_mood}")
+    for cf in bundle.capital_flow_notes:
+        lines.append(f"- **{cf.label}**: {cf.direction_label}")
+        lines.append(f"  {cf.reason}")
+        if cf.related_themes:
+            lines.append(f"  関連テーマ: {'、'.join(cf.related_themes)}")
+        if cf.related_sectors:
+            lines.append(f"  関連セクター: {'、'.join(cf.related_sectors)}")
+        if cf.sales_talk:
+            lines.append(f"  営業で話すポイント: {cf.sales_talk}")
     lines.append("")
 
     lines.append("### Future Map（テーマ一覧）")

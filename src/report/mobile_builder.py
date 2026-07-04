@@ -139,6 +139,10 @@ def _section_future_intelligence(bundle) -> str:
     else:
         lines.append(f"国家戦略メモ: 分析材料不足（{NOT_AVAILABLE}）")
 
+    if bundle.capital_flow_notes:
+        flow_txt = "／".join(f"{cf.label}:{cf.direction_label}" for cf in bundle.capital_flow_notes)
+        lines.append(f"世界のお金の流れ（市場シグナルベース、実際の資金流入額は未取得）: {flow_txt}")
+
     return "\n".join(lines) + "\n"
 
 

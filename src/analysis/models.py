@@ -481,6 +481,27 @@ class NationalStrategyNote:
 
 
 @dataclass
+class CapitalFlowNote:
+    """「世界のお金の流れ（市場シグナルベース）」の1テーマ分（v1.5）。
+
+    実際の資金流入額・機関投資家ポジションは取得していないため、公開市場
+    データ（指数・為替・金利・コモディティ）とTheme Momentum Score・
+    Early Signal Detection・Sector Ranking・causal_rules・durable_themesと
+    いう既存シグナルのみから、資金の「向かいやすさ」を機械的に推定する
+    （実際の資金フローの断定はしない。「資金が向かいやすい」「物色されやすい」
+    等の非断定表現に統一し、「資金が流入している」「◯億円流入」等の断定・
+    捏造した金額は生成しない）。
+    """
+
+    label: str
+    direction_label: str  # 流入しやすい／中立／流出しやすい／判断材料不足
+    reason: str
+    related_themes: List[str] = field(default_factory=list)
+    related_sectors: List[str] = field(default_factory=list)
+    sales_talk: str = ""
+
+
+@dataclass
 class FutureIntelligenceBundle:
     """「Future Intelligence Engine」の計算結果一式。
 
@@ -494,7 +515,15 @@ class FutureIntelligenceBundle:
     （見出し件数・durable_themes・causal_rules・恩恵銘柄・national_focus_areas）
     からのAI分析（断定はしない）、または信号が無い場合の「分析材料不足」を
     表示するよう改善。いずれも具体的な市場規模・補助金額・政策名は生成しない。
-    世界のお金の流れはさらに先の版に見送り、本バンドルには含まない。
+    v1.4: Theme Momentum ScoreにExecutive Summaryとの一致・関連セクター/
+    関連銘柄の有無を追加。Early Signal Detectionに営業で話すポイントを追加。
+    v1.5: 「世界のお金の流れ（市場シグナルベース）」を安全な縮小版として追加。
+    実際の資金流入額は取得していないため断定せず、公開市場データ（指数・
+    為替・金利・コモディティ）とTheme Momentum Score・Early Signal
+    Detection・Sector Ranking・causal_rules・durable_themesという既存
+    シグナルのみから、資金の「向かいやすさ」を定性的に推定する。
+    market_mood（リスクオン/オフ・グロース/バリュー優位の参考情報）は
+    文脈情報としてcapital_flow_notesとは別に保持する。
     """
 
     megatrends: List[MegatrendEntry] = field(default_factory=list)
@@ -506,6 +535,8 @@ class FutureIntelligenceBundle:
     early_signals: List[EarlySignalEntry] = field(default_factory=list)
     theme_maturity_notes: List[ThemeMaturityNote] = field(default_factory=list)
     national_strategy_notes: List[NationalStrategyNote] = field(default_factory=list)
+    capital_flow_notes: List[CapitalFlowNote] = field(default_factory=list)
+    capital_flow_market_mood: str = ""
 
 
 @dataclass
