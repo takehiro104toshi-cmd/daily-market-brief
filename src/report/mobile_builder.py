@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from ..analysis.models import AnalysisBundle
-from .format_utils import NOT_AVAILABLE, first_sentence, fmt_change_compact, fmt_price
+from .format_utils import NOT_AVAILABLE, first_sentence, fmt_change_compact, fmt_price, todays_action_items
 from .sections import render_conclusion
 
 TOP_N_THEMES = 3
@@ -247,6 +247,16 @@ def _section6_sales_talk(bullets) -> str:
     )
 
 
+def _todays_action_mobile(market: dict, analysis: AnalysisBundle) -> str:
+    """「Today's Action」。Future Intelligence Engineの最上部に表示する、
+    その日確認すべき事項（既存データのみから機械的に生成。新規予測なし）。
+    """
+    items = todays_action_items(market, analysis)
+    if not items:
+        return f"本日提示できるToday's Actionがありませんでした（{NOT_AVAILABLE}）。\n"
+    return "**🎯 Today's Action（今日確認すべきこと）**\n" + "\n".join(f"- {i}" for i in items) + "\n"
+
+
 def build_mobile_report(report_date: datetime, market: dict, analysis: AnalysisBundle) -> str:
     date_str = report_date.strftime("%Y年%m月%d日")
     point = first_sentence(analysis.ai_summary_text) or f"本日は主要データが不足しています（{NOT_AVAILABLE}）。"
@@ -263,7 +273,7 @@ def build_mobile_report(report_date: datetime, market: dict, analysis: AnalysisB
         "## 2. 岡三ストラテジスト視点　★★★★★",
         _section_strategist_views(analysis.strategist_views),
         "## 3. Future Intelligence Engine　★★★★★",
-        _section_future_intelligence(analysis.future_intelligence),
+        _todays_action_mobile(market, analysis) + _section_future_intelligence(analysis.future_intelligence),
         "## 4. 今日の相場シナリオ　★★★★☆",
         _section2_scenario(analysis.scenario),
         "## 5. 注目テーマ TOP3　★★★★☆",

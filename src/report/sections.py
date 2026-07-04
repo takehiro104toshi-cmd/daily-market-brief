@@ -45,6 +45,7 @@ from .format_utils import (
     fmt_price,
     headline_list,
     quote_table,
+    todays_action_items,
     truncate_to_chars,
 )
 
@@ -548,6 +549,16 @@ def render_strategist_views(views: List[StrategistView]) -> str:
             )
         lines.append("")
     return "\n".join(lines)
+
+
+def render_todays_action(market: dict, analysis: AnalysisBundle) -> str:
+    """「Today's Action」。Future Intelligence Engineの最上部に表示する、
+    その日確認すべき事項3〜5件（既存データのみから機械的に生成。新規予測なし）。
+    """
+    items = todays_action_items(market, analysis)
+    if not items:
+        return f"本日提示できるToday's Actionがありませんでした（{NOT_AVAILABLE}）。\n\n"
+    return "**🎯 Today's Action（今日確認すべきこと）**\n\n" + "\n".join(f"- {i}" for i in items) + "\n\n"
 
 
 def _fi_top_change_highlight(bundle: FutureIntelligenceBundle) -> str:

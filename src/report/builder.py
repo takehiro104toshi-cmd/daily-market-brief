@@ -137,7 +137,9 @@ def build_report(
         "## 1. 今日の結論　★★★★★\n" + sections.render_conclusion(market, analysis.scenario),
         "## 2. AI Executive Summary　★★★★★\n" + sections.render_executive_summary(analysis.executive_summary),
         "## 3. 岡三ストラテジスト視点　★★★★★\n" + sections.render_strategist_views(analysis.strategist_views),
-        "## 4. Future Intelligence Engine　★★★★★\n" + sections.render_future_intelligence(analysis.future_intelligence),
+        "## 4. Future Intelligence Engine　★★★★★\n"
+        + sections.render_todays_action(market, analysis)
+        + sections.render_future_intelligence(analysis.future_intelligence),
         "## 5. 今日の相場シナリオ　★★★★☆\n" + sections.render_scenario(analysis.scenario),
         "## 6. 日経平均・ドル円・米国市場 個別シナリオ　★★★★☆\n" + sections.render_instrument_scenarios(analysis.instrument_scenarios),
         "## 7. マーケットインパクト　★★★★☆\n" + sections.render_market_impact(analysis.market_impact),

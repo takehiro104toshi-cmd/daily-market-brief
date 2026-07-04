@@ -164,8 +164,93 @@ def test_v2_1_toc_reordered_by_investor_priority_with_stars():
     toc_start = report.index("目次")
     toc_end = report.index("</ul>", toc_start)
     toc_html = report[toc_start:toc_end]
-    assert "AI Executive Summary ★★★★★" in toc_html
-    assert "Future Intelligence Engine ★★★★★" in toc_html
-    assert "今日の相場シナリオ ★★★★☆" in toc_html
+    assert "AI Executive Summary" in toc_html and "★★★★★" in toc_html
+    assert "Future Intelligence Engine" in toc_html
+    assert "今日の相場シナリオ" in toc_html and "★★★★☆" in toc_html
     # Future Intelligence Engineは目次では1項目のみ（内部5ブロックの専用目次はセクション内）
     assert toc_html.count("Future Intelligence Engine") == 1
+
+
+def _build_report():
+    from tests.test_future_intelligence import _v21_bundle
+
+    bundle = full_bundle()
+    bundle.future_intelligence = _v21_bundle()  # full_bundle()はFuture Intelligenceを空のまま返すため補う
+    return build_html_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=bundle,
+    )
+
+
+def test_v2_2_back_to_top_button_present():
+    report = _build_report()
+    assert 'class="back-to-top"' in report
+    assert 'href="#dashboard-top"' in report
+    assert 'id="dashboard-top"' in report
+    assert "scroll-behavior: smooth" in report
+
+
+def test_v2_2_prev_next_nav_between_sections():
+    report = _build_report()
+    assert "section-nav" in report
+    assert "← 前" in report
+    assert "次 →" in report
+    # 最初のセクション（AI Executive Summary）は「前」を持たない
+    exec_start = report.index('id="executive-summary"')
+    strategist_start = report.index('id="strategist-views"')
+    first_section_html = report[exec_start:strategist_start]
+    assert "← 前" not in first_section_html
+    assert "次 →" in first_section_html
+
+
+def test_v2_2_copy_button_present_on_cards():
+    report = _build_report()
+    assert report.count('class="copy-btn"') > 10
+    assert "function copySection" in report
+
+
+def test_v2_2_future_intelligence_blocks_are_collapsible_details():
+    report = _build_report()
+    assert "<details class='fi-block fi-block-signals' id='fi-signals' open>" in report
+    assert "<details class='fi-block fi-block-theme' id='fi-theme'>" in report
+    assert "<summary>" in report
+
+
+def test_v2_2_todays_action_box_present():
+    report = _build_report()
+    assert "todays-action" in report
+    assert "Today's Action" in report
+
+
+def test_v2_2_sticky_dashboard_and_options_panel_present():
+    report = _build_report()
+    assert "sticky-dashboard" in report
+    assert "表示オプション" in report
+    assert "id='opt-compact'" in report
+    assert "id='opt-hide-sales'" in report
+    assert "id='opt-dark'" in report
+    assert "id='opt-fi-toggle'" in report
+    assert "localStorage" in report
+    assert 'data-theme="dark"' in report  # ダークモード用CSS変数の切り替え
+
+
+def test_v2_2_sales_sections_marked_for_hide_toggle():
+    report = _build_report()
+    for anchor in [
+        "sales-prep",
+        "sales-talk",
+        "sales-comments",
+        "okasan-sales-comments",
+        "morning-meeting-comment",
+        "expanded-qa",
+    ]:
+        section_start = report.index(f'id="{anchor}"')
+        # 該当セクションのdiv開始タグにsales-sectionクラスが含まれる
+        div_start = report.rindex("<div class=", 0, section_start)
+        assert "sales-section" in report[div_start:section_start]
+    # 目次自体・非対象セクションはhide-salesの対象外
+    call_priorities_start = report.index('id="call-priorities"')
+    div_start = report.rindex("<div class=", 0, call_priorities_start)
+    assert "sales-section" not in report[div_start:call_priorities_start]

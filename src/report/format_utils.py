@@ -114,6 +114,41 @@ def first_sentence(text: str) -> str:
     return text[: idx + 1]
 
 
+def todays_action_items(market: dict, analysis) -> List[str]:
+    """「Today's Action」用の当日確認事項リスト（最大5件）。
+
+    新たな分析・予測は一切行わず、既に計算済みのTheme Momentum Score最上位
+    テーマ・events.today・ドル円レートの有無・industry_momentum最上位・
+    「決算」を含む既存ニュース見出しの有無だけから、機械的に「確認事項」を
+    組み立てる（断定的な将来予測ではない）。
+    """
+    items: List[str] = []
+
+    fi = analysis.future_intelligence
+    if fi.theme_momentum:
+        top_theme = max(fi.theme_momentum, key=lambda tm: tm.momentum_score)
+        items.append(f"「{top_theme.label}」関連ニュースを確認")
+
+    if find_quote(market.get("forex", []), "米ドル/円") is not None:
+        items.append("ドル円の値動きを確認")
+
+    if analysis.events.today:
+        items.append(f"{analysis.events.today[0]}に注目")
+
+    if fi.industry_momentum:
+        top_industry = fi.industry_momentum[0]
+        items.append(f"「{top_industry.label}」関連指標を確認")
+
+    earnings_news = next(
+        (item.headline.title for item in analysis.news_ranking if "決算" in item.headline.title),
+        None,
+    )
+    if earnings_news:
+        items.append(f"{earnings_news}を確認")
+
+    return items[:5]
+
+
 def truncate_to_chars(text: str, max_chars: int) -> str:
     """文字数で切り詰める。可能なら文の区切り（「。」）で自然に切る。
 

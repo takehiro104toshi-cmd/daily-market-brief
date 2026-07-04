@@ -995,3 +995,54 @@ def test_v2_1_mobile_shows_all_five_blocks_with_bigger_headings_no_collapse():
         assert name in mobile_text
     assert "<details" not in mobile_text and "<summary" not in mobile_text  # 折りたたみ禁止
     assert "Future Intelligence 目次" in mobile_text
+
+
+# --- v2.2: UX改善（毎朝ストレスなく使える投資ダッシュボード化）の表示確認 ---
+# 分析ロジック・スコアリングは一切変更せず、既存スコアに対する機械的な
+# 閾値判定（NEWバッジ）・色分け・関連リンクの表示だけを追加したことを確認する。
+
+
+def test_v2_2_new_badge_appears_only_for_high_momentum_and_confidence():
+    bundle = _v21_bundle()
+    # 既存のTheme Momentum Score／Confidenceスコアをしきい値以上に設定するだけで、
+    # 新しいスコア算出ロジックには手を加えない。
+    bundle.theme_momentum[0].momentum_score = 90
+    bundle.theme_diagnosis[0].confidence_score = 95
+    html_text = _future_intelligence_html(bundle)
+
+    assert html_text.count("new-badge") >= 2
+
+    # しきい値未満のテーマにはNEWバッジが付かないことも確認する
+    low_bundle = _v21_bundle()
+    assert all(tm.momentum_score < 80 for tm in low_bundle.theme_momentum)
+    assert all(td.confidence_score < 80 for td in low_bundle.theme_diagnosis)
+    low_html = _future_intelligence_html(low_bundle)
+    assert "new-badge" not in low_html
+
+
+def test_v2_2_star_ratings_are_color_coded_by_count():
+    bundle = _v21_bundle()
+    html_text = _future_intelligence_html(bundle)
+    assert "stars-5" in html_text  # Today's Future Signals / Stock Intelligence ★★★★★
+    assert "stars-4" in html_text  # Industry Intelligence / Long-term Strategy ★★★★☆
+
+
+def test_v2_2_related_theme_labels_link_to_theme_intelligence_anchor():
+    bundle = _v21_bundle()
+    html_text = _future_intelligence_html(bundle)
+    # AIテーマはtheme_diagnosisにも存在するため、メガトレンド側からジャンプリンク化される
+    assert "href=\"#theme-AI\"" in html_text
+    assert "id='theme-AI'" in html_text
+
+
+def test_v2_2_watchlist_names_link_to_stock_intelligence_anchor_when_matched():
+    from src.report.mobile_builder import _section_future_intelligence  # noqa: F401 (importable, unused here)
+
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    html_text = _future_intelligence_html(bundle)
+    assert "href=\"#stock-8035.T\"" in html_text
+    assert "id='stock-8035.T'" in html_text

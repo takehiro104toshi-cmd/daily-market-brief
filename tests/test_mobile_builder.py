@@ -78,3 +78,13 @@ def test_v2_1_future_intelligence_engine_moved_to_third_position_with_stars():
     pos_scenario = report.index("## 4. 今日の相場シナリオ")
     assert pos_conclusion < pos_strategist < pos_future_intel < pos_scenario
     assert "★★★★★" in report and "★★★★☆" in report
+
+
+def test_v2_2_todays_action_appears_atop_future_intelligence():
+    # v2.2: Future Intelligence Engineの最上部に「Today's Action」（既存データのみ
+    # から機械的に生成した確認事項）を表示することを確認する。
+    report = build_mobile_report(report_date=datetime(2026, 7, 1), market=full_market(), analysis=full_bundle())
+    fi_start = report.index("## 3. Future Intelligence Engine")
+    fi_end = report.index("## 4. 今日の相場シナリオ")
+    fi_section = report[fi_start:fi_end]
+    assert "Today's Action" in fi_section

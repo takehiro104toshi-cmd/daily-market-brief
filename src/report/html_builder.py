@@ -15,6 +15,7 @@ Markdown版（builder.py / mobile_builder.py）と同じ AnalysisBundle を
 from __future__ import annotations
 
 import html
+import re
 from datetime import datetime
 from typing import List, Optional
 
@@ -41,7 +42,7 @@ from ..analysis.models import (
 )
 from ..collectors.market_data import Quote
 from ..utils import SourceRegistry
-from .format_utils import NOT_AVAILABLE, find_quote, fmt_change_compact, fmt_price
+from .format_utils import NOT_AVAILABLE, find_quote, fmt_change_compact, fmt_price, todays_action_items
 
 STYLE = """
 :root {
@@ -50,6 +51,25 @@ STYLE = """
   --flat: #616161; --flat-bg: #eeeeee;
   --card-bg: #ffffff; --page-bg: #f5f6f8; --border: #e0e0e0; --text: #1f2328;
 }
+:root[data-theme="dark"] {
+  --card-bg: #1c1f26; --page-bg: #0f1115; --border: #33363d; --text: #e5e7eb;
+  --up-bg: #123420; --down-bg: #401414; --flat-bg: #2a2d33;
+}
+:root[data-theme="dark"] .toc,
+:root[data-theme="dark"] .fi-toc,
+:root[data-theme="dark"] .todays-action,
+:root[data-theme="dark"] .options-card,
+:root[data-theme="dark"] .legend,
+:root[data-theme="dark"] .digest,
+:root[data-theme="dark"] .fi-block-signals,
+:root[data-theme="dark"] .fi-block-theme,
+:root[data-theme="dark"] .fi-block-industry,
+:root[data-theme="dark"] .fi-block-stock,
+:root[data-theme="dark"] .fi-block-longterm {
+  background: var(--card-bg); color: var(--text); border-color: var(--border);
+}
+:root[data-theme="dark"] .legend { color: #cbd5e1; }
+html { scroll-behavior: smooth; }
 * { box-sizing: border-box; }
 body {
   margin: 0; padding: 0 0 32px 0; background: var(--page-bg); color: var(--text);
@@ -84,6 +104,58 @@ body {
 .fi-block-industry { background: #eaf7ee; border-color: #b7e4c7; }
 .fi-block-stock { background: #fff1e6; border-color: #ffcc99; }
 .fi-block-longterm { background: #fdf6e3; border-color: #f0dfa1; }
+.todays-action { background: #fff7e6; border: 1px solid #f3d98a; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-head h2 { margin: 0 0 10px 0; }
+.copy-btn {
+  border: none; background: transparent; cursor: pointer; font-size: 1rem; line-height: 1;
+  padding: 6px 8px; border-radius: 6px; color: #6b7280; flex-shrink: 0;
+}
+.copy-btn:active { background: var(--flat-bg); }
+.section-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }
+.section-nav a {
+  flex: 1; text-align: center; padding: 10px 8px; border-radius: 8px; text-decoration: none;
+  background: var(--flat-bg); color: var(--text); font-size: 0.82rem; font-weight: 600;
+}
+.section-nav a:only-child { margin-left: auto; }
+.back-to-top {
+  position: fixed; right: 14px; bottom: 18px; z-index: 60; width: 48px; height: 48px;
+  border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center;
+  justify-content: center; text-align: center; font-size: 0.68rem; line-height: 1.1;
+  text-decoration: none; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.sticky-dashboard {
+  position: sticky; top: 0; z-index: 55; background: #111827; color: #fff;
+  padding: 6px 10px; display: flex; gap: 10px; align-items: center; overflow-x: auto;
+  white-space: nowrap; font-size: 0.72rem; box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+.sticky-tile { display: inline-flex; gap: 4px; align-items: center; flex-shrink: 0; }
+.sticky-tile b { color: #cbd5e1; font-weight: 600; }
+.sticky-link { color: #93c5fd; text-decoration: none; margin-left: auto; flex-shrink: 0; }
+.fi-block summary { cursor: pointer; list-style: none; padding: 2px 0; }
+.fi-block summary::-webkit-details-marker { display: none; }
+.fi-block summary h3 { display: inline-block; margin: 0; }
+.fi-block summary::after { content: '\\25B8'; float: right; color: #666; }
+.fi-block[open] > summary::after { content: '\\25BE'; }
+.new-badge {
+  display: inline-block; background: #c62828; color: #fff; font-size: 0.68rem; font-weight: 700;
+  border-radius: 999px; padding: 1px 6px; margin-left: 4px; vertical-align: middle;
+}
+.stars-5 { color: #c62828; font-weight: 700; }
+.stars-4 { color: #e67e22; font-weight: 700; }
+.stars-3 { color: #1f6feb; font-weight: 700; }
+.stars-2 { color: #757575; font-weight: 700; }
+.options-card { background: #f9fafb; }
+.options-grid { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.option-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+.option-toggle input { width: 18px; height: 18px; }
+.option-btn {
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--card-bg); color: var(--text); font-size: 0.82rem; cursor: pointer;
+}
+.compact-mode .legend { display: none; }
+.compact-mode p[style*="font-size:0."] { display: none; }
+.hide-sales .sales-section { display: none; }
 .dashboard { background: #111827; color: #fff; }
 .dashboard h2 { color: #fff; }
 .dash-news-block { margin-bottom: 10px; }
@@ -129,7 +201,72 @@ a { color: #1f6feb; }
 @media (max-width: 420px) {
   .header h1 { font-size: 1.1rem; }
   .card { padding: 12px; }
+  .back-to-top { width: 44px; height: 44px; right: 10px; bottom: 14px; }
+  .section-nav a { padding: 12px 8px; font-size: 0.8rem; }
+  .copy-btn { min-width: 36px; min-height: 36px; }
+  .sticky-dashboard { font-size: 0.68rem; padding: 5px 8px; }
+  .options-grid { flex-direction: column; gap: 8px; }
 }
+"""
+
+SCRIPT = """
+function copySection(btn) {
+  var card = btn.closest('.card');
+  if (!card) { return; }
+  var clone = card.cloneNode(true);
+  var toRemove = clone.querySelectorAll('.copy-btn, .section-nav');
+  for (var i = 0; i < toRemove.length; i++) { toRemove[i].remove(); }
+  var text = (clone.innerText || clone.textContent || '').trim();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text);
+  }
+  var original = btn.textContent;
+  btn.textContent = '\\u2705';
+  setTimeout(function () { btn.textContent = original; }, 1200);
+}
+
+(function () {
+  var root = document.documentElement;
+  var compactBox = document.getElementById('opt-compact');
+  var salesBox = document.getElementById('opt-hide-sales');
+  var darkBox = document.getElementById('opt-dark');
+  var fiToggleBtn = document.getElementById('opt-fi-toggle');
+  if (!compactBox || !salesBox || !darkBox) { return; }
+
+  function apply() {
+    document.body.classList.toggle('compact-mode', compactBox.checked);
+    document.body.classList.toggle('hide-sales', salesBox.checked);
+    root.setAttribute('data-theme', darkBox.checked ? 'dark' : 'light');
+  }
+
+  compactBox.checked = localStorage.getItem('mkt_compact') === '1';
+  salesBox.checked = localStorage.getItem('mkt_hideSales') === '1';
+  darkBox.checked = localStorage.getItem('mkt_theme') === 'dark';
+  apply();
+
+  compactBox.addEventListener('change', function () {
+    localStorage.setItem('mkt_compact', compactBox.checked ? '1' : '0');
+    apply();
+  });
+  salesBox.addEventListener('change', function () {
+    localStorage.setItem('mkt_hideSales', salesBox.checked ? '1' : '0');
+    apply();
+  });
+  darkBox.addEventListener('change', function () {
+    localStorage.setItem('mkt_theme', darkBox.checked ? 'dark' : 'light');
+    apply();
+  });
+  if (fiToggleBtn) {
+    fiToggleBtn.addEventListener('click', function () {
+      var blocks = document.querySelectorAll('.fi-block');
+      var anyClosed = false;
+      for (var i = 0; i < blocks.length; i++) {
+        if (!blocks[i].open) { anyClosed = true; break; }
+      }
+      for (var j = 0; j < blocks.length; j++) { blocks[j].open = anyClosed; }
+    });
+  }
+})();
 """
 
 
@@ -151,9 +288,16 @@ def _badge(text: str, css_class: str) -> str:
     return f'<span class="badge {css_class}">{_esc(text)}</span>'
 
 
-def _card(title: str, body_html: str, extra_class: str = "", anchor: Optional[str] = None) -> str:
+def _copy_button_html() -> str:
+    return '<button type="button" class="copy-btn" onclick="copySection(this)" aria-label="このセクションをコピー">📋</button>'
+
+
+def _card(title: str, body_html: str, extra_class: str = "", anchor: Optional[str] = None, nav_html: str = "") -> str:
     id_attr = f' id="{_esc(anchor)}"' if anchor else ""
-    return f'<div class="card {extra_class}"{id_attr}><h2>{_esc(title)}</h2>{body_html}</div>'
+    label, stars_txt = _split_title_stars(title)
+    title_html = _esc(label) + (f" {_stars_span(stars_txt)}" if stars_txt else "")
+    head_html = f'<div class="card-head"><h2>{title_html}</h2>{_copy_button_html()}</div>'
+    return f'<div class="card {extra_class}"{id_attr}>{head_html}{body_html}{nav_html}</div>'
 
 
 def _quote_row(quote: Quote) -> str:
@@ -183,7 +327,7 @@ def _digest_card(market: dict, analysis: AnalysisBundle) -> str:
     return _card("📱 今日の5分要約", body_html, extra_class="digest")
 
 
-def _scenario_card(scenario) -> str:
+def _scenario_card(scenario, nav_html: str = "") -> str:
     rows = "".join(
         f'<div class="row"><span>{label}</span><span>{pct}%（注目指標: {_esc(indicator or NOT_AVAILABLE)}）</span></div>'
         for label, pct, indicator in [
@@ -198,7 +342,7 @@ def _scenario_card(scenario) -> str:
         f"<p><strong>中立の理由:</strong> {_esc(scenario.neutral_reason or NOT_AVAILABLE)}</p>"
         f"<p><strong>弱気の理由:</strong> {_esc(scenario.bear_reason or NOT_AVAILABLE)}</p>"
     )
-    return _card("今日の相場シナリオ", rows + reasons, anchor="scenario")
+    return _card("今日の相場シナリオ", rows + reasons, anchor="scenario", nav_html=nav_html)
 
 
 def _news_ranking_html(items: List[NewsRankingItem]) -> str:
@@ -481,7 +625,93 @@ def _dashboard_html(market: dict, analysis: AnalysisBundle) -> str:
     ]
 
     body = f'<div class="dash-news-block"><h3>重要ニュース3件</h3>{news_html}</div>' f'<div class="dashboard-grid">{"".join(tiles)}</div>'
-    return _card("Today's Dashboard", body, extra_class="dashboard")
+    return _card("Today's Dashboard", body, extra_class="dashboard", anchor="dashboard-top")
+
+
+def _sticky_dashboard_html(market: dict) -> str:
+    """スクロール中も画面上部に小さく残す、Today's Dashboardの簡易版。"""
+    indices = market.get("indices", [])
+    forex = market.get("forex", [])
+
+    def _mini(label: str, quote: Optional[Quote]) -> str:
+        if quote is None or quote.price is None:
+            return f'<span class="sticky-tile"><b>{_esc(label)}</b> {_esc(NOT_AVAILABLE)}</span>'
+        cls = _trend_class(quote.change_pct)
+        return (
+            f'<span class="sticky-tile"><b>{_esc(label)}</b> {_esc(fmt_price(quote.price))} '
+            f'<span class="badge {cls}">{_esc(fmt_change_compact(quote.change_pct))}</span></span>'
+        )
+
+    tiles = [
+        _mini("ドル円", find_quote(forex, "米ドル/円")),
+        _mini("日経平均", find_quote(indices, "日経")),
+        _mini("NYダウ", find_quote(indices, "ダウ")),
+    ]
+    return f'<div class="sticky-dashboard">{"".join(tiles)}<a href="#dashboard-top" class="sticky-link">Dashboard ↑</a></div>'
+
+
+def _section_nav_html(prev_anchor: Optional[str], next_anchor: Optional[str]) -> str:
+    """各大項目の最後に表示する「← 前」「次 →」ワンタップ移動リンク。"""
+    prev_html = f'<a class="nav-prev" href="#{_esc(prev_anchor)}">← 前</a>' if prev_anchor else ""
+    next_html = f'<a class="nav-next" href="#{_esc(next_anchor)}">次 →</a>' if next_anchor else ""
+    if not prev_html and not next_html:
+        return ""
+    return f'<div class="section-nav">{prev_html}{next_html}</div>'
+
+
+def _stars_span(stars_text: str) -> str:
+    """★の数に応じて色分けする（★5=赤／★4=オレンジ／★3=青／★2以下=グレー）。"""
+    count = stars_text.count("★")
+    css_class = "stars-5" if count >= 5 else "stars-4" if count == 4 else "stars-3" if count == 3 else "stars-2"
+    return f'<span class="{css_class}">{_esc(stars_text)}</span>'
+
+
+_STARS_SUFFIX_RE = re.compile(r"\s*([★☆]+)$")
+
+
+def _split_title_stars(title: str) -> tuple:
+    """タイトル末尾の「★★★★★」等の重要度表記を切り出す（表示色分け用）。"""
+    m = _STARS_SUFFIX_RE.search(title)
+    if not m:
+        return title, ""
+    return title[: m.start()].rstrip(), m.group(1)
+
+
+def _toc_item_html(anchor: str, title: str) -> str:
+    label, stars_txt = _split_title_stars(title)
+    stars_html = f" {_stars_span(stars_txt)}" if stars_txt else ""
+    return f'<li><a href="#{anchor}">{_esc(label)}{stars_html}</a></li>'
+
+
+def _options_panel_html() -> str:
+    """表示オプション（コンパクト表示／営業セクション非表示／Future Intelligence
+    一括開閉／ライト・ダーク切替）。localStorageに保存し次回表示時も維持する。
+    分析ロジックには一切関与しない、表示切り替えのみのUIコントロール。
+    """
+    body = (
+        "<div class='options-grid'>"
+        "<label class='option-toggle'><input type='checkbox' id='opt-compact'> コンパクト表示</label>"
+        "<label class='option-toggle'><input type='checkbox' id='opt-hide-sales'> 営業セクションを非表示</label>"
+        "<label class='option-toggle'><input type='checkbox' id='opt-dark'> ダークモード</label>"
+        "<button type='button' id='opt-fi-toggle' class='option-btn'>Future Intelligenceを全て開閉</button>"
+        "</div>"
+    )
+    return _card("表示オプション", body, extra_class="options-card")
+
+
+def _slug(text: str) -> str:
+    """アンカーID用に空白・スラッシュを置換する（関連リンクのジャンプ先生成用）。"""
+    return re.sub(r"[\s/]+", "-", text.strip())
+
+
+NEW_BADGE_THRESHOLD = 80
+
+
+def _new_badge(score: int) -> str:
+    """既存のMomentum/Confidenceスコアがしきい値以上のときだけ表示するNEWバッジ
+    （新たな分析ではなく、既存スコアに対する機械的な閾値判定のみ）。
+    """
+    return " <span class='new-badge'>NEW</span>" if score >= NEW_BADGE_THRESHOLD else ""
 
 
 def _executive_summary_html(items: List[ExecutiveSummaryItem]) -> str:
@@ -594,6 +824,27 @@ FI_BLOCK_TOC_HTML = [
     ("fi-longterm", "Long-term Strategy", "★★★★☆"),
 ]
 
+# 表示オプション「営業セクションを非表示」でまとめて隠す対象（v2.2）。
+SALES_SECTION_ANCHORS = {
+    "sales-prep",
+    "sales-talk",
+    "sales-comments",
+    "okasan-sales-comments",
+    "morning-meeting-comment",
+    "expanded-qa",
+}
+
+
+def _todays_action_html(market: dict, analysis: AnalysisBundle) -> str:
+    """「Today's Action」。Future Intelligence Engineの最上部に表示する、
+    その日確認すべき事項（既存データのみから機械的に生成。新規予測なし）。
+    """
+    items = todays_action_items(market, analysis)
+    if not items:
+        return f"<p>本日提示できるToday's Actionがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    lis = "".join(f"<li>{_esc(i)}</li>" for i in items)
+    return f"<div class='todays-action'><strong>🎯 Today's Action（今日確認すべきこと）</strong><ul class='plain'>{lis}</ul></div>"
+
 
 def _fi_top_change_highlight_html(bundle: FutureIntelligenceBundle) -> str:
     """「今日もっとも重要な変化」。新たな分析は行わず、既に算出済みの
@@ -622,7 +873,25 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     if not bundle.megatrends:
         return f"<p>本日算出できるテーマがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
 
-    toc_html = "".join(f'<li><a href="#{anchor}">{_esc(title)} {_esc(stars)}</a></li>' for anchor, title, stars in FI_BLOCK_TOC_HTML)
+    # 関連リンク（⑨）用の照合セット。新たな関連付けロジックではなく、既存の
+    # theme_diagnosis.label／stock_intelligence.ticker と一致する場合のみ
+    # ジャンプリンク化する（一致しない場合は通常テキストのまま）。
+    theme_anchor_labels = {td.label for td in bundle.theme_diagnosis}
+    stock_anchor_tickers = {s.ticker for s in bundle.stock_intelligence}
+
+    def _theme_link(label: str) -> str:
+        if label in theme_anchor_labels:
+            return f'<a href="#theme-{_esc(_slug(label))}">{_esc(label)}</a>'
+        return _esc(label)
+
+    def _stock_link(ticker: str, text: str) -> str:
+        if ticker in stock_anchor_tickers:
+            return f'<a href="#stock-{_esc(_slug(ticker))}">{_esc(text)}</a>'
+        return _esc(text)
+
+    toc_html = "".join(
+        f'<li><a href="#{anchor}">{_esc(title)} {_stars_span(stars)}</a></li>' for anchor, title, stars in FI_BLOCK_TOC_HTML
+    )
     parts = [
         "<p class='legend'>本セクションは具体的な残り年数・市場規模・補助金額等の断定的な数値は使用せず、"
         "本日の関連ニュース件数と既存の継続性フラグから導いた定性的な考察です。</p>",
@@ -631,8 +900,8 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
 
     # ① Today's Future Signals（最重要ブロック・毎朝最初に見る場所）
     parts.append(
-        "<div class='fi-block fi-block-signals' id='fi-signals'>"
-        "<h3>🌍 Today's Future Signals <span class='fi-stars'>★★★★★</span></h3>"
+        "<details class='fi-block fi-block-signals' id='fi-signals' open>"
+        f"<summary><h3>🌍 Today's Future Signals {_stars_span('★★★★★')}</h3></summary>"
         "<p class='fi-block-desc'>今日世界で何が変化したかを、3分で最初に把握するブロックです。</p>"
     )
     parts.append("<h4>今日もっとも重要な変化</h4>")
@@ -640,7 +909,7 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     parts.append("<h4>世界のメガトレンド</h4>")
     for m in bundle.megatrends:
         parts.append(
-            f"<div class='row'><span>{_esc(m.label)} {_esc(m.stars)}</span>"
+            f"<div class='row'><span>{_theme_link(m.label)} {_esc(m.stars)}</span>"
             f"<span>{_esc(m.phase)} ／ 継続性: {_esc(m.continuity)}</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
             f"本日の関連見出し: {m.headline_count}件／{_esc(m.why_growing)}</p>"
@@ -654,7 +923,7 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
                 names_txt = "、".join(tm.beneficiary_names) if tm.beneficiary_names else "該当なし"
                 sector_html = f"<br>関連セクター: {_esc(tm.related_sector)} ／ 関連銘柄: {_esc(names_txt)}"
             parts.append(
-                f"<div class='row'><span>{_esc(tm.label)}</span>"
+                f"<div class='row'><span>{_theme_link(tm.label)}{_new_badge(tm.momentum_score)}</span>"
                 f"<span>{tm.momentum_score}/100（{_esc(tm.momentum_label)}）</span></div>"
                 f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>{_esc(tm.reason)}{sector_html}</p>"
             )
@@ -692,12 +961,13 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
             f"{_esc(cf.reason)}{themes_html}{sectors_html}{talk_html}</p>"
         )
-    parts.append("</div>")
+    parts.append(_section_nav_html(None, "fi-theme"))
+    parts.append("</details>")
 
     # ② Theme Intelligence（テーマ分析専用）
     parts.append(
-        "<div class='fi-block fi-block-theme' id='fi-theme'>"
-        "<h3>🧭 Theme Intelligence <span class='fi-stars'>★★★★★</span></h3>"
+        "<details class='fi-block fi-block-theme' id='fi-theme'>"
+        f"<summary><h3>🧭 Theme Intelligence {_stars_span('★★★★★')}</h3></summary>"
         "<p class='fi-block-desc'>個別テーマの成熟度・勢い・強み弱みを深掘りするブロックです。</p>"
     )
     parts.append("<h4>テーマ成熟度メモ</h4>")
@@ -709,7 +979,7 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     for tn in bundle.theme_maturity_notes:
         basis_html = f"<br>判断根拠: {_esc(tn.basis)}" if tn.basis else ""
         parts.append(
-            f"<div class='row'><span>{_esc(tn.label)}［{_esc(tn.source_label)}］</span>"
+            f"<div class='row'><span>{_theme_link(tn.label)}［{_esc(tn.source_label)}］</span>"
             f"<span>現在フェーズ: {_esc(tn.market_stage)}</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
             f"市場ステージ: {_esc(tn.market_size_note)}<br>"
@@ -731,7 +1001,7 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         basis_html = f"<br>根拠: {_esc('、'.join(td.confidence_basis))}" if td.confidence_basis else ""
         related_html = f"<br>関連テーマ: {_esc('、'.join(td.related_themes))}" if td.related_themes else ""
         parts.append(
-            f"<h5>{_esc(td.label)}</h5>"
+            f"<h5 id='theme-{_esc(_slug(td.label))}'>{_esc(td.label)}{_new_badge(td.confidence_score)}</h5>"
             f"<div class='row'><span>Confidence</span>"
             f"<span>{td.confidence_score}%</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
@@ -740,19 +1010,20 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             f"Catalyst［AI分析］: {catalysts_html}<br>"
             f"Risk［AI分析］: {risks_html}{basis_html}</p>"
         )
-    parts.append("</div>")
+    parts.append(_section_nav_html("fi-signals", "fi-industry"))
+    parts.append("</details>")
 
     # ③ Industry Intelligence（業界分析）
     parts.append(
-        "<div class='fi-block fi-block-industry' id='fi-industry'>"
-        "<h3>🏭 Industry Intelligence <span class='fi-stars'>★★★★☆</span></h3>"
+        "<details class='fi-block fi-block-industry' id='fi-industry'>"
+        f"<summary><h3>🏭 Industry Intelligence {_stars_span('★★★★☆')}</h3></summary>"
         "<p class='fi-block-desc'>業界単位でどこに追い風が吹いているかを整理するブロックです。</p>"
     )
     parts.append("<h4>次に来る業界（本日のモメンタム順）</h4>")
     if bundle.industry_momentum:
         for e in bundle.industry_momentum:
             parts.append(
-                f"<p style='font-size:0.85rem;'>{e.rank}. <strong>{_esc(e.label)}</strong>"
+                f"<p style='font-size:0.85rem;'>{e.rank}. <strong>{_theme_link(e.label)}</strong>"
                 f"（関連見出し{e.headline_count}件）— {_esc(e.reason)}</p>"
             )
     else:
@@ -789,22 +1060,23 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     parts.append("<h4>Future Map（テーマ一覧）</h4>")
     parts.append(
         "<ul class='plain'>"
-        + "".join(f"<li>{_esc(m.stars)} <strong>{_esc(m.label)}</strong>（{_esc(m.phase)}）</li>" for m in bundle.megatrends)
+        + "".join(f"<li>{_esc(m.stars)} <strong>{_theme_link(m.label)}</strong>（{_esc(m.phase)}）</li>" for m in bundle.megatrends)
         + "</ul>"
     )
-    parts.append("</div>")
+    parts.append(_section_nav_html("fi-theme", "fi-stock"))
+    parts.append("</details>")
 
     # ④ Stock Intelligence（銘柄分析）
     parts.append(
-        "<div class='fi-block fi-block-stock' id='fi-stock'>"
-        "<h3>📈 Stock Intelligence <span class='fi-stars'>★★★★★</span></h3>"
+        "<details class='fi-block fi-block-stock' id='fi-stock'>"
+        f"<summary><h3>📈 Stock Intelligence {_stars_span('★★★★★')}</h3></summary>"
         "<p class='fi-block-desc'>監視銘柄を1銘柄ごとの投資判断まで落とし込むブロックです。</p>"
     )
     parts.append("<h4>日本株への波及</h4>")
     if bundle.jp_stock_impact:
         for e in bundle.jp_stock_impact:
             parts.append(
-                f"<p style='font-size:0.85rem;'><strong>{_esc(e.theme)}:</strong> "
+                f"<p style='font-size:0.85rem;'><strong>{_theme_link(e.theme)}:</strong> "
                 f"{_esc('、'.join(e.beneficiary_names))}（{_esc(e.cap_note)}）</p>"
             )
     else:
@@ -831,7 +1103,7 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
                 + (f"Risk［AI分析］: {risks_html}<br>" if risks_html else "")
             )
         parts.append(
-            f"<div class='row'><span>{_esc(w.name)}（{_esc(w.ticker)}）</span><span>{_esc(w.judgment_label)}</span></div>"
+            f"<div class='row'><span>{_stock_link(w.ticker, f'{w.name}（{w.ticker}）')}</span><span>{_esc(w.judgment_label)}</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
             f"{detail_html}判断理由: {_esc(w.judgment_reason)}</p>"
         )
@@ -853,7 +1125,7 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             else ""
         )
         parts.append(
-            f"<h5>{_esc(s.name)}（{_esc(s.ticker)}）</h5>"
+            f"<h5 id='stock-{_esc(_slug(s.ticker))}'>{_esc(s.name)}（{_esc(s.ticker)}）{_new_badge(s.confidence_score)}</h5>"
             f"<div class='row'><span>関連テーマ: {_esc('、'.join(s.related_themes))}"
             f"（{len(s.related_themes)}件）</span><span>{_esc(s.judgment_label)}</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
@@ -866,19 +1138,21 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             f"{chain_html}"
             f"投資ストーリー: {_esc(' → '.join(s.investment_story))}</p>"
         )
-    parts.append("</div>")
+    parts.append(_section_nav_html("fi-industry", "fi-longterm"))
+    parts.append("</details>")
 
     # ⑤ Long-term Strategy（長期戦略）
     parts.append(
-        "<div class='fi-block fi-block-longterm' id='fi-longterm'>"
-        "<h3>📅 Long-term Strategy <span class='fi-stars'>★★★★☆</span></h3>"
+        "<details class='fi-block fi-block-longterm' id='fi-longterm'>"
+        f"<summary><h3>📅 Long-term Strategy {_stars_span('★★★★☆')}</h3></summary>"
         "<p class='fi-block-desc'>半年〜10年の時間軸で、どのテーマをどの時間軸で見るべきかを整理するブロックです。</p>"
     )
     parts.append("<h4>中長期テーマ</h4>")
     for hg in bundle.horizon_groups:
         themes_txt = "、".join(hg.themes) if hg.themes else "該当なし"
         parts.append(f"<p style='font-size:0.85rem;'><strong>{_esc(hg.horizon)}:</strong> {_esc(themes_txt)}</p>")
-    parts.append("</div>")
+    parts.append(_section_nav_html("fi-stock", None))
+    parts.append("</details>")
 
     return "".join(parts)
 
@@ -912,6 +1186,7 @@ def build_html_report(
     top_cards = [
         _refresh_button_html(),
         _dashboard_html(market, analysis),
+        _options_panel_html(),
         _digest_card(market, analysis),
         _card(
             "本レポートについて",
@@ -927,7 +1202,11 @@ def build_html_report(
     sections = [
         ("executive-summary", "AI Executive Summary ★★★★★", _executive_summary_html(analysis.executive_summary)),
         ("strategist-views", "岡三ストラテジスト視点 ★★★★★", _strategist_views_html(analysis.strategist_views)),
-        ("future-intelligence", "Future Intelligence Engine ★★★★★", _future_intelligence_html(analysis.future_intelligence)),
+        (
+            "future-intelligence",
+            "Future Intelligence Engine ★★★★★",
+            _todays_action_html(market, analysis) + _future_intelligence_html(analysis.future_intelligence),
+        ),
         ("scenario", "今日の相場シナリオ ★★★★☆", None),  # _scenario_card は専用ヘルパーのため下で個別処理
         ("instrument-scenarios", "日経平均・ドル円・米国市場 個別シナリオ ★★★★☆", _instrument_scenarios_html(analysis.instrument_scenarios)),
         ("market-impact", "マーケットインパクト ★★★★☆", _market_impact_html(analysis.market_impact)),
@@ -962,17 +1241,22 @@ def build_html_report(
         ("sources", "引用（参照URL一覧） ★★☆☆☆", _source_list_html(sources)),
     ]
 
-    toc_items = "".join(f'<li><a href="#{anchor}">{_esc(title)}</a></li>' for anchor, title, _ in sections)
+    toc_items = "".join(_toc_item_html(anchor, title) for anchor, title, _ in sections)
     toc_card = _card("目次", f"<ul class='toc-list'>{toc_items}</ul>", extra_class="toc")
 
     rendered_sections = []
-    for anchor, title, body_html in sections:
+    for i, (anchor, title, body_html) in enumerate(sections):
+        prev_anchor = sections[i - 1][0] if i > 0 else None
+        next_anchor = sections[i + 1][0] if i < len(sections) - 1 else None
+        nav_html = _section_nav_html(prev_anchor, next_anchor)
         if anchor == "scenario":
-            rendered_sections.append(_scenario_card(analysis.scenario))
+            rendered_sections.append(_scenario_card(analysis.scenario, nav_html=nav_html))
         else:
-            rendered_sections.append(_card(title, body_html, anchor=anchor))
+            extra_class = "sales-section" if anchor in SALES_SECTION_ANCHORS else ""
+            rendered_sections.append(_card(title, body_html, extra_class=extra_class, anchor=anchor, nav_html=nav_html))
 
     body = "".join(top_cards) + toc_card + "".join(rendered_sections)
+    back_to_top_html = '<a href="#dashboard-top" class="back-to-top" aria-label="TOPへ戻る">↑<br>TOP</a>'
 
     return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -983,6 +1267,7 @@ def build_html_report(
 <style>{STYLE}</style>
 </head>
 <body>
+{_sticky_dashboard_html(market)}
 <div class="header">
   <h1>Market Intelligence System v4</h1>
   <p>朝レポート {_esc(date_str)}（投資助言ではありません）</p>
@@ -991,6 +1276,8 @@ def build_html_report(
 <div class="container">
 {body}
 </div>
+{back_to_top_html}
+<script>{SCRIPT}</script>
 </body>
 </html>
 """

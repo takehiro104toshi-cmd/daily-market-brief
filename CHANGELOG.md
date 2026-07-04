@@ -4,6 +4,72 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.2 (2026-07-04)
+
+追加・改善（UI・操作性のみ。分析ロジック・スコアリング・Future Intelligence／
+Watchlist Intelligence／Stock Intelligenceの判定には一切変更を加えていない）
+
+・Today's Action（HTML／Markdown／モバイル共通）: Future Intelligence Engine
+  の最上部に、その日確認すべき事項を3〜5件表示。既存のTheme Momentum Score
+  最上位テーマ・ドル円レートの有無・本日のイベント・業界モメンタム最上位・
+  「決算」を含む既存ニュース見出しの有無だけから機械的に組み立てる
+  （`format_utils.todays_action_items()`。新しい予測・分析は行わない）
+
+・HTML版 UI改善
+  - 画面右下に常時表示の「↑ TOP」ボタンを追加（Today's Dashboardへスムーズ
+    スクロール。`scroll-behavior: smooth`のみ、追加JSなし）
+  - 各セクション末尾に「← 前」「次 →」のワンタップ移動ボタンを追加
+  - Future Intelligenceの5大ブロック（Today's Future Signals／Theme
+    Intelligence／Industry Intelligence／Stock Intelligence／Long-term
+    Strategy）を`<details>/<summary>`による開閉式に変更
+    （デフォルトはToday's Future Signalsのみ展開、他は折りたたみ。追加JS不要）
+  - 既存のMomentum Score・Confidence Scoreが80以上のテーマにのみ「NEW」
+    バッジを表示（新しいスコア算出ロジックではなく、既存スコアへの機械的な
+    閾値判定のみ）
+  - 目次・Future Intelligenceの重要度★表示を★の数に応じて色分け
+    （★5=赤／★4=オレンジ／★3=青／★2以下=グレー）
+  - 各セクション右上に📋コピー ボタンを追加（そのセクションのテキストのみを
+    クリップボードにコピー）
+  - Future Intelligence内のテーマ名・銘柄名について、Theme Intelligence／
+    Stock Intelligenceの該当項目が存在する場合のみジャンプリンク化
+    （既存のtheme_diagnosis.label／stock_intelligence.tickerとの一致判定の
+    みで、新たな関連付けロジックは追加していない）
+  - Today's Dashboardの主要指標を画面上部に小さく残す
+    sticky（position: sticky）ミニバーを追加
+  - モバイル向けにボタン・タップ領域のサイズを拡大
+
+・HTML版 表示オプションパネル（レポート上部に新規カード）
+  - コンパクト表示 / 詳細表示切替（コンパクト時は各セクションの詳細説明
+    文・凡例のみを非表示にし、見出し・数値・★評価等の要点は残す）
+  - 営業セクション一括非表示（営業準備／営業トーク／営業向けコメント／
+    岡三証券営業向けコメント／朝会コメント／想定質問と回答例）
+  - Future Intelligenceの全ブロック一括開閉ボタン
+  - ライト／ダークモード切替（CSS変数の上書きのみ。既存の色分け配色は
+    そのまま維持）
+  - 上記4設定はlocalStorageに保存し、次回表示時も維持する
+  - 外部ライブラリ・フレームワークは使用せず、素のJavaScriptのみで実装
+
+・Markdown版・モバイル版はTable of Contents/表示内容そのものは変更せず、
+  Today's Actionの追加のみ反映（表示オプション・折りたたみ等のUI操作は
+  HTML版のみ対応）
+
+変更ファイル
+・src/report/format_utils.py
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・src/report/builder.py
+・tests/test_future_intelligence.py
+・tests/test_html_builder.py
+・tests/test_report_builder.py
+・tests/test_mobile_builder.py
+
+pytest
+155 passed
+
+コミット
+（下記参照）
+
 ## v2.1 (2026-07-04)
 
 追加・改善（情報設計・UIのみ。新しい分析ロジック・スコアリング・判定は追加していない）

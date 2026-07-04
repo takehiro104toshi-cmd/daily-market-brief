@@ -169,6 +169,21 @@ def test_v2_1_toc_and_section_order_follow_investor_priority():
     assert pos_conclusion < pos_exec_summary < pos_strategist < pos_future_intel < pos_scenario
 
 
+def test_v2_2_todays_action_appears_atop_future_intelligence():
+    # v2.2: Future Intelligence Engineの最上部に「Today's Action」（既存データのみ
+    # から機械的に生成した確認事項）を表示することを確認する。
+    report = build_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+    )
+    fi_start = report.index("## 4. Future Intelligence Engine")
+    fi_end = report.index("## 5. 今日の相場シナリオ")
+    fi_section = report[fi_start:fi_end]
+    assert "Today's Action" in fi_section
+
+
 def test_build_report_handles_missing_data():
     empty_market = {"indices": [], "forex": [], "rates": [], "commodities": []}
 
