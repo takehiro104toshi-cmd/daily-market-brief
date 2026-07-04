@@ -714,6 +714,27 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             f"{_esc(cf.reason)}{themes_html}{sectors_html}{talk_html}</p>"
         )
 
+    parts.append("<h3>テーマ別診断（Momentum → Lifecycle → Catalyst → Risk → Confidence）</h3>")
+    parts.append(
+        "<p class='legend'>投資家が世界の変化をいち早く察知し、長期の資産形成・投資判断に"
+        "役立てることを目的とした分析です。CatalystとRiskは既存シグナルのみから導いた"
+        "「AI分析」であり、断定はしません。Confidenceは「未来が当たる確率」ではなく、"
+        "分析根拠の充実度です。</p>"
+    )
+    for td in bundle.theme_diagnosis:
+        catalysts_html = "、".join(_esc(c) for c in td.catalysts)
+        risks_html = "、".join(_esc(r) for r in td.risks)
+        basis_html = f"<br>根拠: {_esc('、'.join(td.confidence_basis))}" if td.confidence_basis else ""
+        parts.append(
+            f"<div class='row'><span><strong>{_esc(td.label)}</strong></span>"
+            f"<span>Confidence {td.confidence_score}%</span></div>"
+            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+            f"Momentum: {td.momentum_score}/100（{_esc(td.momentum_label)}）／"
+            f"Lifecycle: {_esc(td.phase)}（継続性: {_esc(td.continuity)}）<br>"
+            f"Catalyst［AI分析］: {catalysts_html}<br>"
+            f"Risk［AI分析］: {risks_html}{basis_html}</p>"
+        )
+
     parts.append("<h3>Future Map（テーマ一覧）</h3>")
     parts.append(
         "<ul class='plain'>"

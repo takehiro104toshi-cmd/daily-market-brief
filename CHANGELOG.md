@@ -4,6 +4,40 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.13 (2026-07-04)
+
+追加
+・Future Intelligence Engine v1.6:「テーマ別診断（Momentum→Lifecycle→
+  Catalyst→Risk→Confidence）」を追加（既存のFuture Intelligence Engine
+  セクション内に小見出しとして追加）
+  - 本システムの最優先目的を「営業ツール」ではなく「世界の変化をいち早く
+    察知し、長期の資産形成・投資判断に役立てる未来分析システム」と位置づけ、
+    macro_themeごとにMomentum→Lifecycle（フェーズ・継続性）→Catalyst
+    （加速要因）→Risk（失速要因）→Confidence（分析根拠の充実度）の順で表示
+  - Catalyst（加速要因）・Risk（失速要因）は、ニュース・Executive Summary・
+    Theme Momentum・Early Signal・causal_rules・durable_themes・
+    サプライチェーン（恩恵銘柄）・国家戦略メモ・世界のお金の流れという
+    既存シグナルのみから機械的に導いた「AI分析」であることを明記し、
+    具体的な数値・政策名・企業業績の断定はしない
+  - Confidence Score（0〜100）は「未来が当たる確率」ではなく、上記シグナル
+    のうち実際に確認できたものの数（＝分析根拠の充実度）を表すことを明記
+  - Markdown・モバイル版・HTML版すべてに反映（既存のFuture Intelligence
+    Engineセクション内。他のセクション構成は変更していない）
+
+変更ファイル
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+120 passed
+
+コミット
+（下記参照）
+
 ## v1.12 (2026-07-04)
 
 追加

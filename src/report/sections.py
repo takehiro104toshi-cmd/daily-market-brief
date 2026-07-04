@@ -556,9 +556,10 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
     世界のメガトレンド／Theme Momentum Score／次に来る業界／
     サプライチェーン分析／中長期テーマ／日本株への波及／
     Early Signal Detection／テーマ成熟度メモ／国家戦略メモ／
-    世界のお金の流れ（市場シグナルベース）／Future Mapを1セクションにまとめて
-    表示する。具体的な残り年数・市場規模・補助金額・資金流入額等は生成せず、
-    本日の関連見出し件数・重要ニュースとの一致・durable_themes・
+    世界のお金の流れ（市場シグナルベース）／テーマ別診断（Momentum→
+    Lifecycle→Catalyst→Risk→Confidence）／Future Mapを1セクションに
+    まとめて表示する。具体的な残り年数・市場規模・補助金額・資金流入額等は
+    生成せず、本日の関連見出し件数・重要ニュースとの一致・durable_themes・
     causal_rules・公開市場データから導いた定性的なラベル、または
     config.yamlへ手動登録した参考情報のそのまま表示のみを行う。
     """
@@ -678,6 +679,23 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         if cf.sales_talk:
             lines.append(f"  営業で話すポイント: {cf.sales_talk}")
     lines.append("")
+
+    lines.append("### テーマ別診断（Momentum → Lifecycle → Catalyst → Risk → Confidence）")
+    lines.append(
+        "> 投資家が世界の変化をいち早く察知し、長期の資産形成・投資判断に役立てることを"
+        "目的とした分析です。CatalystとRiskは既存シグナルのみから導いた「AI分析」であり、"
+        "断定はしません。Confidenceは「未来が当たる確率」ではなく、分析根拠の充実度です。"
+    )
+    for td in bundle.theme_diagnosis:
+        lines.append(f"**{td.label}**")
+        lines.append(f"- Momentum: {td.momentum_score}/100（{td.momentum_label}）")
+        lines.append(f"- Lifecycle: {td.phase} ／ 継続性: {td.continuity}")
+        lines.append(f"- Catalyst［AI分析］: {'／'.join(td.catalysts)}")
+        lines.append(f"- Risk［AI分析］: {'／'.join(td.risks)}")
+        lines.append(f"- Confidence: {td.confidence_score}%")
+        if td.confidence_basis:
+            lines.append(f"  根拠: {'、'.join(td.confidence_basis)}")
+        lines.append("")
 
     lines.append("### Future Map（テーマ一覧）")
     for m in bundle.megatrends:

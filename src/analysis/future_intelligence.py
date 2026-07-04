@@ -66,6 +66,19 @@ v1.5で以下を安全な縮小版として追加した:
     「物色されやすい」「関心が高まりやすい」「相対的に選好されやすい」
     「市場シグナル上は追い風」等の非断定表現に統一する。
 
+v1.6で以下を追加した:
+    テーマ別診断（Momentum→Lifecycle→Catalyst→Risk→Confidence）。
+    本システムの最優先目的は営業ツールではなく「世界の変化をいち早く察知し、
+    長期の資産形成・投資判断に役立てる未来分析システム」であることを踏まえ、
+    macro_themeごとにCatalyst（加速要因）・Risk（失速要因）・Confidence
+    Score（分析根拠の充実度）を追加した。Catalyst/Riskは、ニュース・
+    Executive Summary・Theme Momentum・Early Signal・causal_rules・
+    durable_themes・サプライチェーン（恩恵銘柄）・国家戦略メモ・世界の
+    お金の流れという既存シグナルのみから機械的に導いた「AI分析」であり、
+    具体的な数値・政策名・企業業績の断定はしない。Confidence Score
+    （0〜100）は「未来が当たる確率」ではなく、上記シグナルのうち実際に
+    確認できたものの数（＝分析根拠の充実度）を表す。
+
 具体的な残り年数・市場規模・補助金額・政策内容・資金流入額等、実データの
 裏付けがない数値・情報は一切生成しない（決定論的なルールベースの定性ラベル、
 config.yamlの手動登録内容のそのまま表示、または既存シグナルからの定性的な
@@ -90,6 +103,7 @@ from .models import (
     NewsRankingItem,
     SectorRankingEntry,
     SupplyChainNote,
+    ThemeDiagnosisEntry,
     ThemeMaturityNote,
     ThemeMomentumEntry,
 )
@@ -759,6 +773,197 @@ def _build_capital_flow_notes(
     ]
 
 
+def _catalyst_bullets(
+    rule: Optional[CausalRule],
+    momentum: ThemeMomentumEntry,
+    durable: bool,
+    early_signal_exists: bool,
+    focus_regions: List[str],
+    capital_flow: Optional[CapitalFlowNote],
+) -> List[str]:
+    """Catalyst（加速要因）をAI分析として組み立てる。ニュース・causal_rules・
+    durable_themes・Early Signal Detection・国家戦略メモ・世界のお金の
+    流れという既存シグナルのみから機械的に導き、具体的な数値・企業業績・
+    政策名の断定はしない。
+    """
+    bullets: List[str] = []
+    if rule and rule.note:
+        bullets.append(f"causal_rulesが示す押し上げ要因: {rule.note}")
+    if rule and rule.beneficiary_sectors:
+        bullets.append(f"{'、'.join(rule.beneficiary_sectors)}への設備投資・需要拡大が続くこと")
+    if momentum.momentum_label in ("急加速", "加速"):
+        bullets.append("本日のニュース増加・Theme Momentum Scoreの上昇傾向が続くこと")
+    if early_signal_exists:
+        bullets.append("Early Signal Detectionで捕捉された初動が本格化すること")
+    if durable:
+        bullets.append("構造的テーマとしての継続性が意識され続けること")
+    if focus_regions:
+        bullets.append(f"{'、'.join(focus_regions)}などの政策的な重点分野として位置づけが強まること")
+    if capital_flow is not None and capital_flow.direction_label == "流入しやすい":
+        bullets.append("市場シグナル上、資金が向かいやすい地合いが続くこと")
+    if not bullets:
+        bullets.append("現時点では明確な加速要因は確認できていません（判断材料不足）")
+    return bullets
+
+
+def _risk_bullets(
+    megatrend: MegatrendEntry,
+    momentum: ThemeMomentumEntry,
+    durable: bool,
+    capital_flow: Optional[CapitalFlowNote],
+) -> List[str]:
+    """Risk（失速要因）をAI分析として組み立てる。Theme Momentum・durable_themes
+    ・世界のお金の流れという既存シグナルのみから機械的に導き、具体的な数値・
+    企業業績・政策名の断定はしない。外部環境変化は常に一般的な留意点として
+    明記する（本コードベースの他モジュールと同じ慣例）。
+    """
+    bullets: List[str] = []
+    if momentum.momentum_label == "減速":
+        bullets.append("本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと")
+    if not durable:
+        bullets.append("一過性の話題に留まり、構造的テーマとして定着しない可能性")
+    if megatrend.phase in ("成熟期", "減速期"):
+        bullets.append("テーマの成熟・鈍化に伴う材料出尽くし感")
+    if capital_flow is not None and capital_flow.direction_label == "流出しやすい":
+        bullets.append("市場シグナル上、資金が離れやすい地合いに転じること")
+    bullets.append("金利動向・規制動向など外部環境の変化")
+    return bullets
+
+
+def _confidence_score(
+    headline_count: int,
+    exec_summary_matched: bool,
+    top_news_matched: bool,
+    momentum: ThemeMomentumEntry,
+    early_signal_exists: bool,
+    durable: bool,
+    rule_matched: bool,
+    sector_ranking_matched: bool,
+    supply_chain_resolved: bool,
+    national_strategy_matched: bool,
+    capital_flow_matched: bool,
+) -> tuple:
+    """Confidence Score（0〜100）。「未来が当たる確率」ではなく、既存シグナル
+    のうち実際に確認できたものの数（＝分析根拠の充実度）を機械的に加点する。
+    """
+    score = 0
+    basis: List[str] = []
+    if headline_count >= 2:
+        score += 15
+        basis.append("ニュース多数")
+    elif headline_count == 1:
+        score += 8
+        basis.append("ニュースあり")
+    if exec_summary_matched:
+        score += 15
+        basis.append("Executive Summary一致")
+    elif top_news_matched:
+        score += 8
+        basis.append("重要ニュース一致")
+    if momentum.momentum_label in ("急加速", "加速"):
+        score += 10
+        basis.append("Momentum高")
+    if early_signal_exists:
+        score += 10
+        basis.append("Early Signal該当")
+    if durable:
+        score += 15
+        basis.append("durable_theme")
+    if rule_matched:
+        score += 15
+        basis.append("causal_rules一致")
+    if sector_ranking_matched:
+        score += 5
+        basis.append("Sector Ranking該当")
+    if supply_chain_resolved:
+        score += 5
+        basis.append("サプライチェーン解決")
+    if national_strategy_matched:
+        score += 5
+        basis.append("国家戦略メモ該当")
+    if capital_flow_matched:
+        score += 5
+        basis.append("資金フローシグナル該当")
+    return min(100, score), basis
+
+
+def _build_theme_diagnosis(
+    megatrends: List[MegatrendEntry],
+    theme_momentum: List[ThemeMomentumEntry],
+    theme_rule_map: Dict[str, Optional[CausalRule]],
+    theme_beneficiary_names_map: Dict[str, List[str]],
+    early_signals: List[EarlySignalEntry],
+    national_strategy_notes: List[NationalStrategyNote],
+    capital_flow_notes: List[CapitalFlowNote],
+    sector_ranking_entries: List[SectorRankingEntry],
+    theme_exec_summary_matched_map: Dict[str, bool],
+    theme_top_news_matched_map: Dict[str, bool],
+) -> List[ThemeDiagnosisEntry]:
+    """テーマ別診断（Momentum→Lifecycle→Catalyst→Risk→Confidence）を組み立てる。
+
+    投資家が長期の資産形成・投資判断に使うことを最優先目的とし、
+    macro_themeごとにCatalyst（加速要因）・Risk（失速要因）・Confidence
+    Score（分析根拠の充実度）を、既存シグナルのみから機械的に導出する。
+    """
+    momentum_map = {tm.label: tm for tm in theme_momentum}
+    early_signal_labels = {es.label for es in early_signals}
+    capital_flow_map: Dict[str, CapitalFlowNote] = {}
+    for cf in capital_flow_notes:
+        for t in cf.related_themes:
+            capital_flow_map[t] = cf
+    focus_regions_map: Dict[str, List[str]] = {}
+    for ns in national_strategy_notes:
+        for t in ns.focus_areas:
+            focus_regions_map.setdefault(t, []).append(ns.region)
+
+    entries: List[ThemeDiagnosisEntry] = []
+    for m in megatrends:
+        label = m.label
+        momentum = momentum_map.get(label)
+        if momentum is None:
+            continue
+        rule = theme_rule_map.get(label)
+        durable = m.continuity == "高い"
+        early_signal_exists = label in early_signal_labels
+        beneficiary_names = theme_beneficiary_names_map.get(label, [])
+        capital_flow = capital_flow_map.get(label)
+        focus_regions = focus_regions_map.get(label, [])
+        sector_ranking_matched = bool(
+            rule
+            and rule.beneficiary_sectors
+            and any(any(sec in e.label for sec in rule.beneficiary_sectors) for e in sector_ranking_entries)
+        )
+
+        confidence_score, confidence_basis = _confidence_score(
+            m.headline_count,
+            theme_exec_summary_matched_map.get(label, False),
+            theme_top_news_matched_map.get(label, False),
+            momentum,
+            early_signal_exists,
+            durable,
+            rule is not None,
+            sector_ranking_matched,
+            bool(beneficiary_names),
+            bool(focus_regions),
+            capital_flow is not None,
+        )
+
+        entries.append(
+            ThemeDiagnosisEntry(
+                label=label,
+                momentum_score=momentum.momentum_score,
+                momentum_label=momentum.momentum_label,
+                phase=m.phase,
+                continuity=m.continuity,
+                catalysts=_catalyst_bullets(rule, momentum, durable, early_signal_exists, focus_regions, capital_flow),
+                risks=_risk_bullets(m, momentum, durable, capital_flow),
+                confidence_score=confidence_score,
+                confidence_basis=confidence_basis,
+            )
+        )
+    return entries
+
+
 def build_future_intelligence(
     headlines: List[Headline],
     config: dict,
@@ -782,6 +987,8 @@ def build_future_intelligence(
     theme_momentum: List[ThemeMomentumEntry] = []
     theme_rule_map: Dict[str, Optional[CausalRule]] = {}
     theme_keywords_map: Dict[str, List[str]] = {}
+    theme_exec_summary_matched_map: Dict[str, bool] = {}
+    theme_top_news_matched_map: Dict[str, bool] = {}
 
     for entry in macro_themes_cfg:
         label = entry.get("label", "")
@@ -817,6 +1024,8 @@ def build_future_intelligence(
 
         top_news_matched = any(kw in title for kw in keywords for title in top_news_titles)
         exec_summary_matched = any(kw in title for kw in keywords for title in exec_summary_titles)
+        theme_top_news_matched_map[label] = top_news_matched
+        theme_exec_summary_matched_map[label] = exec_summary_matched
         has_beneficiary = bool(momentum_beneficiary_names)
         score = _momentum_score(count, rule is not None, durable, top_news_matched, exec_summary_matched, has_beneficiary)
         theme_momentum.append(
@@ -915,6 +1124,21 @@ def build_future_intelligence(
     )
     capital_flow_market_mood = _capital_flow_market_mood(market)
 
+    # テーマ別診断（Momentum→Lifecycle→Catalyst→Risk→Confidence）。
+    # 投資家の長期の資産形成・投資判断を最優先目的とする（v1.6）。
+    theme_diagnosis = _build_theme_diagnosis(
+        megatrends,
+        theme_momentum,
+        theme_rule_map,
+        theme_beneficiary_names_map,
+        early_signals,
+        national_strategy_notes,
+        capital_flow_notes,
+        sector_ranking_entries,
+        theme_exec_summary_matched_map,
+        theme_top_news_matched_map,
+    )
+
     return FutureIntelligenceBundle(
         megatrends=megatrends,
         industry_momentum=industry_momentum,
@@ -927,4 +1151,5 @@ def build_future_intelligence(
         national_strategy_notes=national_strategy_notes,
         capital_flow_notes=capital_flow_notes,
         capital_flow_market_mood=capital_flow_market_mood,
+        theme_diagnosis=theme_diagnosis,
     )

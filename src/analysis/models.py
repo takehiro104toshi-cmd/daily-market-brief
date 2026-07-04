@@ -502,6 +502,35 @@ class CapitalFlowNote:
 
 
 @dataclass
+class ThemeDiagnosisEntry:
+    """テーマ別診断（Momentum→Lifecycle→Catalyst→Risk→Confidence）の1テーマ分（v1.6）。
+
+    このシステムの最優先目的は、営業ツールではなく「世界の変化をいち早く
+    察知し、長期の資産形成・投資判断に役立てる未来分析システム」であること
+    を踏まえ、各macro_themeについてMomentum Score・Lifecycle（フェーズ・
+    継続性）に加えて、Catalyst（加速要因）・Risk（失速要因）・Confidence
+    Score（分析根拠の充実度）を提示する。
+
+    Catalyst / Risk は、ニュース・Executive Summary・Theme Momentum・
+    Early Signal・causal_rules・durable_themes・サプライチェーン（恩恵銘柄）
+    ・国家戦略メモ・世界のお金の流れという既存シグナルのみから機械的に
+    導いた「AI分析」であり、具体的な数値・政策名・企業業績の断定はしない。
+    Confidence Score（0〜100）は「未来が当たる確率」ではなく、上記シグナルの
+    うちいくつが実際に確認できたか（＝分析根拠の充実度）を表す。
+    """
+
+    label: str
+    momentum_score: int
+    momentum_label: str
+    phase: str
+    continuity: str
+    catalysts: List[str] = field(default_factory=list)
+    risks: List[str] = field(default_factory=list)
+    confidence_score: int = 0
+    confidence_basis: List[str] = field(default_factory=list)
+
+
+@dataclass
 class FutureIntelligenceBundle:
     """「Future Intelligence Engine」の計算結果一式。
 
@@ -524,6 +553,11 @@ class FutureIntelligenceBundle:
     シグナルのみから、資金の「向かいやすさ」を定性的に推定する。
     market_mood（リスクオン/オフ・グロース/バリュー優位の参考情報）は
     文脈情報としてcapital_flow_notesとは別に保持する。
+    v1.6: テーマ別診断（theme_diagnosis）を追加。macro_themeごとに
+    Momentum→Lifecycle→Catalyst（加速要因・AI分析）→Risk（失速要因・
+    AI分析）→Confidence Score（分析根拠の充実度、0〜100。未来が当たる
+    確率ではない）を1テーマずつまとめて提示する、投資家向けの長期分析を
+    最優先目的とする機能。
     """
 
     megatrends: List[MegatrendEntry] = field(default_factory=list)
@@ -537,6 +571,7 @@ class FutureIntelligenceBundle:
     national_strategy_notes: List[NationalStrategyNote] = field(default_factory=list)
     capital_flow_notes: List[CapitalFlowNote] = field(default_factory=list)
     capital_flow_market_mood: str = ""
+    theme_diagnosis: List[ThemeDiagnosisEntry] = field(default_factory=list)
 
 
 @dataclass

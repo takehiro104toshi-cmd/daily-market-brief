@@ -491,3 +491,80 @@ def test_capital_flow_appears_in_markdown_mobile_and_html_output():
 
     mobile_text = _section_future_intelligence(bundle)
     assert "世界のお金の流れ" in mobile_text
+
+
+def test_theme_diagnosis_confidence_score_is_within_0_to_100():
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    news_ranking_items = [_news_ranking_item(1, "AI投資拡大が続く")]
+    executive_summary_items = [_executive_summary_item(1, "AI投資拡大が続く")]
+    bundle = future_intelligence.build_future_intelligence(
+        headlines,
+        CONFIG,
+        SECTORS,
+        TICKER_LOOKUP,
+        news_ranking_items=news_ranking_items,
+        executive_summary_items=executive_summary_items,
+    )
+
+    assert bundle.theme_diagnosis
+    for td in bundle.theme_diagnosis:
+        assert 0 <= td.confidence_score <= 100
+
+    ai_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "AI")
+    assert ai_diagnosis.confidence_score > 0
+    assert ai_diagnosis.confidence_basis
+
+
+def test_theme_diagnosis_shows_catalyst_and_risk_with_ai_analysis_label():
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    bundle = future_intelligence.build_future_intelligence(headlines, CONFIG, SECTORS, TICKER_LOOKUP)
+
+    ai_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "AI")
+    assert ai_diagnosis.catalysts
+    assert ai_diagnosis.risks
+    # 具体的な数値・補助金額等は生成しない
+    for text in ai_diagnosis.catalysts + ai_diagnosis.risks:
+        assert "円" not in text
+        assert "%" not in text
+
+    markdown_text = render_future_intelligence(bundle)
+    assert "Catalyst［AI分析］" in markdown_text
+    assert "Risk［AI分析］" in markdown_text
+    assert "Confidence" in markdown_text
+    assert "Momentum" in markdown_text
+    assert "Lifecycle" in markdown_text
+
+    html_text = _future_intelligence_html(bundle)
+    assert "Catalyst［AI分析］" in html_text
+    assert "Risk［AI分析］" in html_text
+    assert "Confidence" in html_text
+
+
+def test_theme_diagnosis_weak_theme_has_generic_risk_and_low_confidence():
+    # 宇宙はcausal_rules非該当・durable_themes非該当・見出しも無いため、
+    # 加速要因は「判断材料不足」寄りの内容になり、Confidenceは低めになる
+    bundle = future_intelligence.build_future_intelligence([], CONFIG, SECTORS, TICKER_LOOKUP)
+
+    space_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "宇宙")
+    assert space_diagnosis.risks  # 外部環境リスクは常に明記される
+    assert space_diagnosis.confidence_score < 50
+
+
+def test_theme_diagnosis_appears_in_markdown_html_and_mobile_output():
+    from src.report.mobile_builder import _section_future_intelligence
+
+    headlines = [_headline("防衛費増額の議論が進展")]
+    bundle = future_intelligence.build_future_intelligence(headlines, CONFIG, SECTORS, TICKER_LOOKUP)
+
+    markdown_text = render_future_intelligence(bundle)
+    assert "テーマ別診断" in markdown_text
+    for td in bundle.theme_diagnosis:
+        assert td.label in markdown_text
+
+    html_text = _future_intelligence_html(bundle)
+    assert "テーマ別診断" in html_text
+
+    mobile_text = _section_future_intelligence(bundle)
+    assert "テーマ別診断" in mobile_text
+    assert "Catalyst［AI分析］" in mobile_text
+    assert "Risk［AI分析］" in mobile_text
