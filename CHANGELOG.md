@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.10 (2026-07-04)
+
+改善
+・Future Intelligence Engine v1.3: 「テーマ成熟度メモ」「国家戦略メモ」を
+  「未登録」中心の表示から、既存シグナルからのAI分析を優先表示する方式に改善
+  - 表示の優先順位: ① `config.yaml` への手動登録があれば最優先で「登録情報」
+    として表示 → ② 手動登録が無くても、本日の関連見出し件数・durable_themes
+    該当・causal_rules該当・恩恵銘柄という既存シグナルがあれば、そこから
+    導いたルールベースの定性的な「AI分析」を表示 → ③ 判断材料となる信号が
+    何も無い場合のみ「分析材料不足」と表示（「未登録」だけで終わる表示を削減）
+  - 国家戦略メモは、国・地域とmacro_themesの重点分野を対応付けた人手による
+    参考情報（`NATIONAL_FOCUS_AREAS`。AIが生成したものではない）を追加し、
+    未登録の国・地域でも本日のテーマ動向からAI分析を導けるようにした
+  - いずれの表示も「登録情報」「AI分析」「分析材料不足」のラベルと判断根拠
+    （どの既存シグナルから導いたか）を明記し、具体的な市場規模・補助金額・
+    政策名・法案名は一切生成しない（「〜と考えられます」等の非断定表現に統一）
+  - Markdown・モバイル版・HTML版すべてに反映（既存のFuture Intelligence
+    Engineセクション内。他のセクション構成は変更していない）
+
+変更ファイル
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/mobile_builder.py
+・src/report/html_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+108 passed
+
+コミット
+（下記参照）
+
 ## v1.9 (2026-07-04)
 
 追加

@@ -657,30 +657,38 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
 
     parts.append("<h3>テーマ成熟度メモ</h3>")
     parts.append(
-        "<p class='legend'>config.yamlへ手動登録した参考情報をそのまま表示します"
-        "（AIによる生成・推定は行いません）。</p>"
+        "<p class='legend'>config.yamlへの手動登録があれば「登録情報」として最優先表示、"
+        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
+        "判断材料が無い場合のみ「分析材料不足」と表示します。</p>"
     )
     for tn in bundle.theme_maturity_notes:
+        basis_html = f"<br>判断根拠: {_esc(tn.basis)}" if tn.basis else ""
         parts.append(
-            f"<div class='row'><span>{_esc(tn.label)}</span><span>{_esc(tn.market_stage)}</span></div>"
+            f"<div class='row'><span>{_esc(tn.label)}［{_esc(tn.source_label)}］</span>"
+            f"<span>現在フェーズ: {_esc(tn.market_stage)}</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-            f"市場規模: {_esc(tn.market_size_note)} ／ 普及状況: {_esc(tn.adoption_note)}<br>"
-            f"競争環境: {_esc(tn.competition_note)} ／ 参入障壁: {_esc(tn.barrier_note)} ／ "
-            f"リスク: {_esc(tn.risk_note)}</p>"
+            f"市場ステージ: {_esc(tn.market_size_note)}<br>"
+            f"普及状況: {_esc(tn.adoption_note)}<br>"
+            f"競争環境: {_esc(tn.competition_note)} ／ 参入障壁: {_esc(tn.barrier_note)}<br>"
+            f"主なリスク: {_esc(tn.risk_note)}{basis_html}</p>"
         )
 
     parts.append("<h3>国家戦略メモ</h3>")
     parts.append(
-        "<p class='legend'>config.yamlへ手動登録した参考情報をそのまま表示します"
-        "（AIによる生成・推定は行いません）。</p>"
+        "<p class='legend'>config.yamlへの手動登録があれば「登録情報」として最優先表示、"
+        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
+        "判断材料が無い場合のみ「分析材料不足」と表示します。</p>"
     )
     for ns in bundle.national_strategy_notes:
-        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "未登録"
+        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "分析材料不足"
+        basis_html = f"<br>判断根拠: {_esc(ns.basis)}" if ns.basis else ""
         parts.append(
-            f"<div class='row'><span>{_esc(ns.region)}</span><span>重点分野: {_esc(focus_txt)}</span></div>"
+            f"<div class='row'><span>{_esc(ns.region)}［{_esc(ns.source_label)}］</span>"
+            f"<span>重点分野: {_esc(focus_txt)}</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-            f"政策: {_esc(ns.policy_note)} ／ 規制: {_esc(ns.regulation_note)} ／ "
-            f"市場影響: {_esc(ns.market_impact_note)}</p>"
+            f"政策方向: {_esc(ns.policy_note)}<br>"
+            f"規制・リスク: {_esc(ns.regulation_note)}<br>"
+            f"日本株への波及: {_esc(ns.market_impact_note)}{basis_html}</p>"
         )
 
     parts.append("<h3>Future Map（テーマ一覧）</h3>")

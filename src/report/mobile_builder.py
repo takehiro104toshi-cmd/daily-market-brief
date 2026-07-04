@@ -119,19 +119,19 @@ def _section_future_intelligence(bundle) -> str:
     if bundle.early_signals:
         lines.append(f"初動シグナル: {'、'.join(es.label for es in bundle.early_signals)}")
 
-    registered_maturity = [tn for tn in bundle.theme_maturity_notes if tn.market_stage != "未登録"]
-    if registered_maturity:
-        top_maturity = registered_maturity[0]
-        lines.append(f"テーマ成熟度メモ: {top_maturity.label}（{top_maturity.market_stage}）")
+    available_maturity = [tn for tn in bundle.theme_maturity_notes if tn.source_label != "分析材料不足"]
+    if available_maturity:
+        top_maturity = available_maturity[0]
+        lines.append(f"テーマ成熟度メモ［{top_maturity.source_label}］: {top_maturity.label}（{top_maturity.market_stage}）")
     else:
-        lines.append(f"テーマ成熟度メモ: 未登録（{NOT_AVAILABLE}）")
+        lines.append(f"テーマ成熟度メモ: 分析材料不足（{NOT_AVAILABLE}）")
 
-    registered_strategy = [ns for ns in bundle.national_strategy_notes if ns.policy_note != "未登録"]
-    if registered_strategy:
-        top_strategy = registered_strategy[0]
-        lines.append(f"国家戦略メモ: {top_strategy.region}（{top_strategy.policy_note}）")
+    available_strategy = [ns for ns in bundle.national_strategy_notes if ns.source_label != "分析材料不足"]
+    if available_strategy:
+        top_strategy = available_strategy[0]
+        lines.append(f"国家戦略メモ［{top_strategy.source_label}］: {top_strategy.region}（{first_sentence(top_strategy.policy_note)}）")
     else:
-        lines.append(f"国家戦略メモ: 未登録（{NOT_AVAILABLE}）")
+        lines.append(f"国家戦略メモ: 分析材料不足（{NOT_AVAILABLE}）")
 
     return "\n".join(lines) + "\n"
 

@@ -426,36 +426,48 @@ class EarlySignalEntry:
 
 @dataclass
 class ThemeMaturityNote:
-    """「テーマ成熟度メモ」の1テーマ分（v1.2）。
+    """「テーマ成熟度メモ」の1テーマ分。
 
-    config.yaml の theme_maturity_notes に手動登録された内容を、そのまま
-    表示するだけの入れ物（AIによる生成・推定・補完は一切行わない）。
-    未登録の項目はすべて「未登録」と明記する。
+    config.yaml の theme_maturity_notes に手動登録があればそれを優先表示する
+    （source_label="登録情報"）。未登録の場合は、本日の関連見出し件数・
+    durable_themes該当・causal_rules該当・恩恵銘柄という既存シグナルのみから
+    ルールベースで導いた定性的なAI分析を表示する（source_label="AI分析"、
+    具体的な市場規模・補助金額・企業名の断定はしない）。根拠となる信号が
+    何もない場合は source_label="分析材料不足" とする（v1.3）。
     """
 
     label: str
-    market_stage: str = "未登録"
-    market_size_note: str = "未登録"
-    adoption_note: str = "未登録"
-    competition_note: str = "未登録"
-    barrier_note: str = "未登録"
-    risk_note: str = "未登録"
+    market_stage: str = "分析材料不足"
+    market_size_note: str = "分析材料不足"
+    adoption_note: str = "分析材料不足"
+    competition_note: str = "分析材料不足"
+    barrier_note: str = "分析材料不足"
+    risk_note: str = "分析材料不足"
+    basis: str = ""
+    source_label: str = "分析材料不足"
 
 
 @dataclass
 class NationalStrategyNote:
-    """「国家戦略メモ」の1国・地域分（v1.2）。
+    """「国家戦略メモ」の1国・地域分。
 
-    config.yaml の national_strategy_notes に手動登録された内容を、そのまま
-    表示するだけの入れ物（AIによる生成・推定・補完は一切行わない）。
-    対象は日本／米国／中国／EU／インド／中東の6地域固定。未登録は「未登録」。
+    config.yaml の national_strategy_notes に手動登録があればそれを優先表示
+    する（source_label="登録情報"）。未登録の場合は、config.yaml の
+    national_focus_areas（人手による重点分野の対応付け・AIによる生成では
+    ない参考情報）と、本日のテーマ動向（既存シグナル）から、ルールベースで
+    導いた定性的なAI分析を表示する（source_label="AI分析"、具体的な政策名・
+    法案名・補助金額の断定はしない）。対象は日本／米国／中国／EU／インド／
+    中東の6地域固定。根拠となる信号が何もない場合は source_label="分析材料不足"
+    とする（v1.3）。
     """
 
     region: str
     focus_areas: List[str] = field(default_factory=list)
-    policy_note: str = "未登録"
-    regulation_note: str = "未登録"
-    market_impact_note: str = "未登録"
+    policy_note: str = "分析材料不足"
+    regulation_note: str = "分析材料不足"
+    market_impact_note: str = "分析材料不足"
+    basis: str = ""
+    source_label: str = "分析材料不足"
 
 
 @dataclass
@@ -467,9 +479,11 @@ class FutureIntelligenceBundle:
     v1.1: theme_momentum（Theme Momentum Score）/ early_signals
     （Early Signal Detection）を追加。
     v1.2: theme_maturity_notes（テーマ成熟度メモ）/ national_strategy_notes
-    （国家戦略メモ）を追加。いずれもconfig.yamlへ手動登録した参考情報を
-    そのまま表示するだけで、AIによる市場規模・補助金額・政策内容の生成は
-    行わない（未登録は「未登録」と明記）。
+    （国家戦略メモ）を追加。config.yamlへの手動登録があればそれを表示。
+    v1.3: 手動登録がない場合に「未登録」で終わらせず、既存シグナル
+    （見出し件数・durable_themes・causal_rules・恩恵銘柄・national_focus_areas）
+    からのAI分析（断定はしない）、または信号が無い場合の「分析材料不足」を
+    表示するよう改善。いずれも具体的な市場規模・補助金額・政策名は生成しない。
     世界のお金の流れはさらに先の版に見送り、本バンドルには含まない。
     """
 

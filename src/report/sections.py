@@ -625,19 +625,35 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
     lines.append("")
 
     lines.append("### テーマ成熟度メモ")
-    lines.append("> config.yamlへ手動登録した参考情報をそのまま表示します（AIによる生成・推定は行いません）。")
+    lines.append(
+        "> config.yamlへの手動登録があれば「登録情報」として最優先表示、"
+        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
+        "判断材料が無い場合のみ「分析材料不足」と表示します。"
+    )
     for tn in bundle.theme_maturity_notes:
-        lines.append(f"- **{tn.label}**（市場ステージ: {tn.market_stage}）")
-        lines.append(f"  市場規模: {tn.market_size_note} ／ 普及状況: {tn.adoption_note}")
-        lines.append(f"  競争環境: {tn.competition_note} ／ 参入障壁: {tn.barrier_note} ／ リスク: {tn.risk_note}")
+        lines.append(f"- **{tn.label}**［{tn.source_label}］（現在フェーズ: {tn.market_stage}）")
+        lines.append(f"  市場ステージ: {tn.market_size_note}")
+        lines.append(f"  普及状況: {tn.adoption_note}")
+        lines.append(f"  競争環境: {tn.competition_note} ／ 参入障壁: {tn.barrier_note}")
+        lines.append(f"  主なリスク: {tn.risk_note}")
+        if tn.basis:
+            lines.append(f"  判断根拠: {tn.basis}")
     lines.append("")
 
     lines.append("### 国家戦略メモ")
-    lines.append("> config.yamlへ手動登録した参考情報をそのまま表示します（AIによる生成・推定は行いません）。")
+    lines.append(
+        "> config.yamlへの手動登録があれば「登録情報」として最優先表示、"
+        "無ければ既存シグナルからの「AI分析」（断定はしません）、"
+        "判断材料が無い場合のみ「分析材料不足」と表示します。"
+    )
     for ns in bundle.national_strategy_notes:
-        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "未登録"
-        lines.append(f"- **{ns.region}**（重点分野: {focus_txt}）")
-        lines.append(f"  政策: {ns.policy_note} ／ 規制: {ns.regulation_note} ／ 市場影響: {ns.market_impact_note}")
+        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "分析材料不足"
+        lines.append(f"- **{ns.region}**［{ns.source_label}］（重点分野: {focus_txt}）")
+        lines.append(f"  政策方向: {ns.policy_note}")
+        lines.append(f"  規制・リスク: {ns.regulation_note}")
+        lines.append(f"  日本株への波及: {ns.market_impact_note}")
+        if ns.basis:
+            lines.append(f"  判断根拠: {ns.basis}")
     lines.append("")
 
     lines.append("### Future Map（テーマ一覧）")
