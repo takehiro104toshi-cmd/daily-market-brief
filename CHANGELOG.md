@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.6 (2026-07-04)
+
+改善
+・HTML上部の「最新情報に更新」ボタンの仕様を変更。GitHub Actionsの
+  workflow_dispatch実行ページへ遷移する方式から、`javascript:location.reload()`
+  によるページ再読み込みのみのボタン（「🔄 最新表示に更新」）へ変更。
+  外部JS不要・常時表示（`actions_url`の有無に依存しない）
+・毎朝の自動生成・自動デプロイを基本運用とし、手動でのワークフロー実行は
+  README上で補足的な案内に位置づけ直した
+
+修正
+・（なし）
+
+判断: `config.yaml` の `output.actions_url` と `main.py` の
+`_resolve_actions_url()` は削除せず残した。html_builder.py側では
+未使用になったが、main.pyからbuild_html_reportへの`actions_url`引数は
+削除するとmain.py・config.yamlの2ファイルに追加の変更が必要になり、
+現時点で機能上のメリットがない削除のために変更範囲を広げるのは
+「最小差分」の方針に反すると判断したため。将来この設定を使う機能
+（例: 別ボタンでのActions画面誘導を復活させる等）を追加する際に
+そのまま再利用できる。
+
+変更ファイル
+・src/report/html_builder.py
+・tests/test_html_builder.py
+・README.md
+
+pytest
+90 passed
+
+コミット
+（下記参照）
+
 ## v1.5 (2026-07-04)
 
 修正

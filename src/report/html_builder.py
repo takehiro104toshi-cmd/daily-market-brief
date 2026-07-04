@@ -572,18 +572,17 @@ def _source_list_html(sources: SourceRegistry) -> str:
     return "".join(parts)
 
 
-def _refresh_button_html(actions_url: Optional[str]) -> str:
-    """「最新情報に更新」ボタン。GitHub Actions の workflow_dispatch 実行ページへのリンク。
+def _refresh_button_html() -> str:
+    """「最新表示に更新」ボタン。ページを再読み込みするだけの単純なボタン。
 
-    actions_url が未設定（None または空文字＝取得不可）の場合は、押しても
-    機能しないリンクを表示しないよう、ボタン自体を出さない。
+    毎朝のGitHub Actions自動生成・自動デプロイを基本運用とし、GitHub Actionsの
+    実行画面へは遷移しない（外部JS不要・HTML内で完結するjavascript:スキーム）。
+    常時表示する。
     """
-    if not actions_url:
-        return ""
     return (
-        f'<a class="refresh-btn" href="{_esc(actions_url)}" target="_blank" rel="noopener">'
-        "🔄 最新情報に更新</a>"
-        '<p class="refresh-note">GitHubのActions画面で「Run workflow」を押すと再生成されます</p>'
+        '<a class="refresh-btn" href="javascript:location.reload()">'
+        "🔄 最新表示に更新</a>"
+        '<p class="refresh-note">最新の自動生成済みレポートを再読み込みします</p>'
     )
 
 
@@ -600,7 +599,7 @@ def build_html_report(
     tz_label = report_date.tzname() or "現地時間"
 
     top_cards = [
-        _refresh_button_html(actions_url),
+        _refresh_button_html(),
         _dashboard_html(market, analysis),
         _digest_card(market, analysis),
         _card(
@@ -682,4 +681,3 @@ def build_html_report(
 </body>
 </html>
 """
-
