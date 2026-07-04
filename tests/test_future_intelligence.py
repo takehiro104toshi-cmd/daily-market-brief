@@ -821,3 +821,112 @@ def test_existing_theme_diagnosis_unaffected_by_v1_9_additions():
     assert ai_diagnosis.momentum_label == "加速"
     assert ai_diagnosis.phase == "急成長期"
     assert ai_diagnosis.continuity == "高い"
+
+
+_FORBIDDEN_STOCK_INTELLIGENCE_PHRASES = (
+    "目標株価",
+    "PER",
+    "EPS",
+    "買い推奨",
+    "売り推奨",
+    "期待リターン",
+    "強気目標",
+    "利益率予想",
+)
+
+
+def test_stock_intelligence_generated_for_matched_watchlist_stock():
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    assert bundle.stock_intelligence
+    tel = next(s for s in bundle.stock_intelligence if s.ticker == "8035.T")
+    assert tel.related_themes == ["AI"]
+    assert tel.primary_theme == "AI"
+    assert tel.judgment_label in future_intelligence._WATCHLIST_JUDGMENT_LABELS
+
+    # Watchlist Intelligenceとの整合性（同じ値をそのまま引き継ぐ）
+    watch = next(w for w in bundle.watchlist_intelligence if w.ticker == "8035.T")
+    assert tel.momentum_score == watch.momentum_score
+    assert tel.momentum_label == watch.momentum_label
+    assert tel.confidence_score == watch.confidence_score
+    assert tel.judgment_label == watch.judgment_label
+
+
+def test_stock_intelligence_not_generated_for_unmatched_watchlist_stock():
+    # Stock Intelligenceは「Watchlist Intelligenceで一致した銘柄のみ」対象とする
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "9999.T", "name": "無関係株"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence([], config, SECTORS, TICKER_LOOKUP)
+
+    assert bundle.stock_intelligence == []
+    unmatched = next(w for w in bundle.watchlist_intelligence if w.ticker == "9999.T")
+    assert unmatched.judgment_label == "判断材料不足"
+
+
+def test_stock_intelligence_shows_related_theme_count_and_cross_theme_chain():
+    config = dict(CONFIG)
+    config["theme_relations"] = {"AI": ["防衛", "宇宙"]}
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    tel = next(s for s in bundle.stock_intelligence if s.ticker == "8035.T")
+    assert len(tel.related_themes) == 1  # 関連テーマ数
+    assert tel.cross_theme_chain == ["防衛", "宇宙"]  # Cross Theme Mapping（theme_relations）
+
+
+def test_stock_intelligence_investment_story_uses_only_existing_signals_no_forecast_language():
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    tel = next(s for s in bundle.stock_intelligence if s.ticker == "8035.T")
+    assert tel.investment_story
+    assert tel.investment_story[0] == tel.primary_theme
+    assert tel.why_long_term
+    assert tel.watch_events
+
+    story_text = " ".join(tel.investment_story + [tel.why_long_term] + tel.watch_events)
+    for phrase in _FORBIDDEN_STOCK_INTELLIGENCE_PHRASES:
+        assert phrase not in story_text
+    assert "円" not in story_text
+    assert "億" not in story_text
+
+
+def test_stock_intelligence_appears_in_markdown_html_and_mobile_output():
+    from src.report.mobile_builder import _section_future_intelligence
+
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "8035.T", "name": "東京エレクトロン"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    markdown_text = render_future_intelligence(bundle)
+    assert "Stock Intelligence" in markdown_text
+    assert "東京エレクトロン" in markdown_text
+    assert "投資ストーリー" in markdown_text
+    assert "なぜ長期で見るのか" in markdown_text
+    assert "今後注目するイベント" in markdown_text
+
+    html_text = _future_intelligence_html(bundle)
+    assert "Stock Intelligence" in html_text
+
+    mobile_text = _section_future_intelligence(bundle)
+    assert "Stock Intelligence" in mobile_text
+
+
+def test_existing_watchlist_intelligence_unaffected_by_stock_intelligence_addition():
+    # v2.0のStock Intelligence追加が既存のWatchlist Intelligenceの
+    # 出力内容（judgment_label等）を変えないことを確認する（後方互換）
+    headlines = [_headline("防衛費増額の議論が進展")]
+    config = dict(CONFIG)
+    config["watchlist"] = {"jp_stocks": [{"ticker": "7012.T", "name": "川崎重工業"}], "us_stocks": []}
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    defense_watch = next(w for w in bundle.watchlist_intelligence if w.ticker == "7012.T")
+    assert defense_watch.related_themes == ["防衛"]
+    assert defense_watch.judgment_label in future_intelligence._WATCHLIST_JUDGMENT_LABELS

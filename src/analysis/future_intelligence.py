@@ -100,6 +100,23 @@ v1.8で以下を改善した:
     対応付け）をテーマ別診断の「関連テーマ」としてそのまま表示する
     （新たな未来予測ロジックではない）。
 
+v1.9で以下を改善した:
+    macro_themesを17拡張（自動車／EV／蓄電池／金融／金利／為替／消費／
+    人材／広告／SaaS／スマートフォン／クラウド／決済／旅行／住宅／建設／
+    インバウンド）し、Watchlist Intelligenceの一致率をさらに向上させた
+    （新しい分析ロジックは追加せず、config.yamlの辞書・マッピング拡張のみ）。
+
+v2.0で以下を追加した:
+    Stock Intelligence。Watchlist Intelligenceで一致した銘柄のみを対象に、
+    Future Intelligence Engineの分析結果（テーマ・Momentum・Lifecycle・
+    Catalyst・Risk・Confidence・関連テーマ）を1銘柄ごとの投資判断まで
+    落とし込む。momentum_score等はWatchlist Intelligenceと同じ値を
+    そのまま引き継ぎ整合性を保つ。「なぜ長期で見るのか」「今後注目する
+    イベント」「関連するテーマ」「投資ストーリー」は、いずれも既存シグナル
+    のみから機械的に組み立てたものであり、AIによる作文・新たな未来予測
+    ではない。目標株価・PER/EPS予想・「買い」「売り」等の推奨・期待
+    リターンは一切生成しない。
+
 具体的な残り年数・市場規模・補助金額・政策内容・資金流入額等、実データの
 裏付けがない数値・情報は一切生成しない（決定論的なルールベースの定性ラベル、
 config.yamlの手動登録内容のそのまま表示、または既存シグナルからの定性的な
@@ -123,6 +140,7 @@ from .models import (
     NationalStrategyNote,
     NewsRankingItem,
     SectorRankingEntry,
+    StockIntelligenceEntry,
     SupplyChainNote,
     ThemeDiagnosisEntry,
     ThemeMaturityNote,
@@ -1036,26 +1054,89 @@ def _watchlist_judgment_reason(
     )
 
 
+def _stock_why_long_term(theme_label: str, catalysts: List[str], phase: str, momentum_label: str) -> str:
+    """「なぜ長期で見るのか」。テーマ名・Catalyst・Lifecycle・Momentumという
+    既存シグナルのみから機械的に組み立てる（AIによる作文ではない）。
+    """
+    driver = catalysts[0] if catalysts else f"「{theme_label}」に関連する構造的な需要"
+    return (
+        f"「{theme_label}」というテーマの拡大が続く限り、{driver}ことから、"
+        f"関連需要は構造的に増える可能性があると考えられます"
+        f"（現在のフェーズ: {phase}、Momentum: {momentum_label}）。"
+    )
+
+
+# 「今後注目するイベント」の機械的な対応表（人手による参考情報。AIが
+# 予測したものではない）。macro_themeのラベルと一致する場合のみ追加する。
+_STOCK_EVENT_THEME_MAP: Dict[str, str] = {
+    "半導体": "半導体市況",
+    "電力": "電力需給",
+    "金利": "金利動向",
+    "為替": "為替動向",
+    "GX": "政府政策（GX関連）",
+    "防衛": "政府政策（防衛予算）",
+    "資源": "資源価格動向",
+    "EV": "EV需要動向",
+    "自動車": "自動車販売動向",
+    "資源・エネルギー": "資源価格動向",
+}
+
+
+def _stock_watch_events(primary_label: str, related_themes: List[str]) -> List[str]:
+    """「今後注目するイベント」。既存テーマから機械的に導けるイベントのみを
+    列挙し、AIによる新たな予測は行わない。決算・設備投資動向はどの銘柄
+    にも共通する一般的な確認事項として常に含める。
+    """
+    events = ["決算", "設備投資動向"]
+    for label in [primary_label] + related_themes:
+        event = _STOCK_EVENT_THEME_MAP.get(label)
+        if event and event not in events:
+            events.append(event)
+    return events
+
+
+def _stock_investment_story(primary_label: str, catalysts: List[str], cross_theme_chain: List[str]) -> List[str]:
+    """「投資ストーリー」。既存のテーマ名・Catalyst・関連テーマ（cross theme
+    mapping）だけを時系列の因果チェーンとして並べる。目標株価・PER/EPS
+    予想・売買推奨・期待リターンなど新たな未来予測は一切生成しない。
+    """
+    steps = [primary_label]
+    for c in catalysts[:2]:
+        steps.append(c)
+    if cross_theme_chain:
+        steps.append(f"{'・'.join(cross_theme_chain)}への波及")
+    steps.append(
+        "関連需要の増加を通じて、収益機会につながる可能性があると考えられます"
+        "（将来の株価・業績を保証するものではありません）"
+    )
+    return steps
+
+
 def _build_watchlist_intelligence(
     config: dict,
     sectors: Dict,
     theme_rule_map: Dict[str, Optional[CausalRule]],
     theme_diagnosis: List[ThemeDiagnosisEntry],
-) -> List[WatchlistIntelligenceEntry]:
+) -> tuple:
     """Watchlist Intelligence: config.yaml の watchlist 銘柄とテーマ別診断
     （v1.6）を、既存のcausal_rules恩恵銘柄ロジックだけで照合する。
     営業利用ではなく自分自身の長期投資判断を最優先目的とし、
     「買い」「売り」等の断定的な売買助言は一切行わない。
+
+    あわせて、一致した銘柄のみを対象にStock Intelligence（v2.0）を
+    組み立てる。Watchlist Intelligenceと同じmomentum_score等をそのまま
+    引き継ぐことで、両セクション間の整合性を保つ。
     """
     watchlist_cfg = config.get("watchlist", {})
     stocks = list(watchlist_cfg.get("jp_stocks", [])) + list(watchlist_cfg.get("us_stocks", []))
     if not stocks:
-        return []
+        return [], []
 
     ticker_theme_map = _ticker_theme_map(theme_rule_map, sectors)
     diagnosis_map = {td.label: td for td in theme_diagnosis}
 
-    entries: List[WatchlistIntelligenceEntry] = []
+    watchlist_entries: List[WatchlistIntelligenceEntry] = []
+    stock_entries: List[StockIntelligenceEntry] = []
     for stock in stocks:
         ticker = stock.get("ticker", "")
         name = stock.get("name", ticker)
@@ -1063,7 +1144,7 @@ def _build_watchlist_intelligence(
         candidates = [diagnosis_map[label] for label in related_labels if label in diagnosis_map]
 
         if not candidates:
-            entries.append(
+            watchlist_entries.append(
                 WatchlistIntelligenceEntry(
                     name=name,
                     ticker=ticker,
@@ -1078,11 +1159,12 @@ def _build_watchlist_intelligence(
         # 最も高いテーマを代表として採用する。
         top = max(candidates, key=lambda td: td.confidence_score)
         judgment_label = _watchlist_judgment_label(top.momentum_label, top.phase, top.continuity, top.confidence_score)
-        entries.append(
+        related_theme_labels = [c.label for c in candidates]
+        watchlist_entries.append(
             WatchlistIntelligenceEntry(
                 name=name,
                 ticker=ticker,
-                related_themes=[c.label for c in candidates],
+                related_themes=related_theme_labels,
                 momentum_score=top.momentum_score,
                 momentum_label=top.momentum_label,
                 phase=top.phase,
@@ -1096,7 +1178,35 @@ def _build_watchlist_intelligence(
                 ),
             )
         )
-    return entries
+
+        # Stock Intelligence（v2.0）: Watchlist Intelligenceで一致した
+        # 銘柄のみを対象に、既存シグナルの機械的な組み立てのみで構成する。
+        expanded_risks: List[str] = []
+        for c in candidates:
+            for r in c.risks:
+                if r not in expanded_risks:
+                    expanded_risks.append(r)
+        stock_entries.append(
+            StockIntelligenceEntry(
+                name=name,
+                ticker=ticker,
+                related_themes=related_theme_labels,
+                primary_theme=top.label,
+                momentum_score=top.momentum_score,
+                momentum_label=top.momentum_label,
+                phase=top.phase,
+                continuity=top.continuity,
+                catalysts=top.catalysts,
+                risks=expanded_risks,
+                confidence_score=top.confidence_score,
+                judgment_label=judgment_label,
+                why_long_term=_stock_why_long_term(top.label, top.catalysts, top.phase, top.momentum_label),
+                watch_events=_stock_watch_events(top.label, related_theme_labels),
+                cross_theme_chain=top.related_themes,
+                investment_story=_stock_investment_story(top.label, top.catalysts, top.related_themes),
+            )
+        )
+    return watchlist_entries, stock_entries
 
 
 def build_future_intelligence(
@@ -1277,7 +1387,10 @@ def build_future_intelligence(
 
     # Watchlist Intelligence: watchlist銘柄とテーマ別診断の照合（v1.7）。
     # 営業利用ではなく自分自身の長期投資判断を最優先目的とする。
-    watchlist_intelligence = _build_watchlist_intelligence(config, sectors, theme_rule_map, theme_diagnosis)
+    # あわせて、一致した銘柄のみを対象にStock Intelligence（v2.0）を組み立てる。
+    watchlist_intelligence, stock_intelligence = _build_watchlist_intelligence(
+        config, sectors, theme_rule_map, theme_diagnosis
+    )
 
     return FutureIntelligenceBundle(
         megatrends=megatrends,
@@ -1293,4 +1406,5 @@ def build_future_intelligence(
         capital_flow_market_mood=capital_flow_market_mood,
         theme_diagnosis=theme_diagnosis,
         watchlist_intelligence=watchlist_intelligence,
+        stock_intelligence=stock_intelligence,
     )

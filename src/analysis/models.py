@@ -563,6 +563,44 @@ class WatchlistIntelligenceEntry:
 
 
 @dataclass
+class StockIntelligenceEntry:
+    """「Stock Intelligence」の1銘柄分（v2.0）。
+
+    Watchlist Intelligenceで一致した銘柄のみを対象に、Future Intelligence
+    Engineの分析結果（テーマ・Momentum・Lifecycle・Catalyst・Risk・
+    Confidence・関連テーマ）を1銘柄ごとの投資判断まで落とし込む。
+    momentum_score/momentum_label/phase/continuity/catalysts/risks/
+    confidence_score/judgment_labelは、WatchlistIntelligenceEntryと
+    同じ値をそのまま引き継ぎ、Future Intelligence／Watchlist
+    Intelligenceとの整合性を保つ（新たに再計算・再推定はしない）。
+
+    why_long_term（なぜ長期で見るのか）・watch_events（今後注目する
+    イベント）・cross_theme_chain（関連するテーマ）・investment_story
+    （投資ストーリー）は、いずれも既存シグナル（テーマ名・Catalyst・
+    Lifecycle・Momentum・theme_relations）のみから機械的に組み立てた
+    ものであり、AIによる作文・新たな未来予測ではない。目標株価・PER予想・
+    EPS予想・「買い」「売り」等の推奨・期待リターンは一切生成しない。
+    """
+
+    name: str
+    ticker: str
+    related_themes: List[str] = field(default_factory=list)
+    primary_theme: str = ""
+    momentum_score: int = 0
+    momentum_label: str = ""
+    phase: str = ""
+    continuity: str = ""
+    catalysts: List[str] = field(default_factory=list)
+    risks: List[str] = field(default_factory=list)
+    confidence_score: int = 0
+    judgment_label: str = "判断材料不足"
+    why_long_term: str = ""
+    watch_events: List[str] = field(default_factory=list)
+    cross_theme_chain: List[str] = field(default_factory=list)
+    investment_story: List[str] = field(default_factory=list)
+
+
+@dataclass
 class FutureIntelligenceBundle:
     """「Future Intelligence Engine」の計算結果一式。
 
@@ -594,6 +632,11 @@ class FutureIntelligenceBundle:
     config.yamlのwatchlist銘柄とtheme_diagnosisを、既存のcausal_rules
     恩恵銘柄ロジックだけで照合し、長期の資産形成・投資判断のために
     「今見るべき銘柄」を整理する。断定的な売買助言は行わない。
+    v2.0: Stock Intelligence（stock_intelligence）を追加。Watchlist
+    Intelligenceで一致した銘柄のみを対象に、なぜ長期で見るのか・今後
+    注目するイベント・関連するテーマ・投資ストーリーを、既存シグナルの
+    みから機械的に組み立てる。目標株価・PER/EPS予想・売買推奨・期待
+    リターンなど新たな未来予測は一切行わない。
     """
 
     megatrends: List[MegatrendEntry] = field(default_factory=list)
@@ -609,6 +652,7 @@ class FutureIntelligenceBundle:
     capital_flow_market_mood: str = ""
     theme_diagnosis: List[ThemeDiagnosisEntry] = field(default_factory=list)
     watchlist_intelligence: List[WatchlistIntelligenceEntry] = field(default_factory=list)
+    stock_intelligence: List[StockIntelligenceEntry] = field(default_factory=list)
 
 
 @dataclass

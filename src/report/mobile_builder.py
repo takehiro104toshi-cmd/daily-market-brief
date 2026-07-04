@@ -165,6 +165,14 @@ def _section_future_intelligence(bundle) -> str:
     elif bundle.watchlist_intelligence:
         lines.append("Watchlist Intelligence: 本日一致するテーマ診断のある監視銘柄はありませんでした（判断材料不足）")
 
+    if bundle.stock_intelligence:
+        top_stock = max(bundle.stock_intelligence, key=lambda s: s.confidence_score)
+        lines.append(
+            f"Stock Intelligence（{top_stock.name}／{top_stock.ticker}）: "
+            f"関連テーマ{len(top_stock.related_themes)}件・現在の判断「{top_stock.judgment_label}」"
+        )
+        lines.append(f"投資ストーリー: {' → '.join(top_stock.investment_story)}")
+
     return "\n".join(lines) + "\n"
 
 

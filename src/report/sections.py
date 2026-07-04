@@ -558,11 +558,13 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
     Early Signal Detection／テーマ成熟度メモ／国家戦略メモ／
     世界のお金の流れ（市場シグナルベース）／テーマ別診断（Momentum→
     Lifecycle→Catalyst→Risk→Confidence）／Future Map／Watchlist
-    Intelligence（監視銘柄×テーマ診断）を1セクションにまとめて表示する。
-    具体的な残り年数・市場規模・補助金額・資金流入額等は生成せず、
-    本日の関連見出し件数・重要ニュースとの一致・durable_themes・
-    causal_rules・公開市場データから導いた定性的なラベル、または
-    config.yamlへ手動登録した参考情報のそのまま表示のみを行う。
+    Intelligence（監視銘柄×テーマ診断）／Stock Intelligence（Watchlist
+    Intelligenceで一致した銘柄のみの投資判断）を1セクションにまとめて
+    表示する。具体的な残り年数・市場規模・補助金額・資金流入額・目標株価・
+    PER/EPS予想等は生成せず、本日の関連見出し件数・重要ニュースとの一致・
+    durable_themes・causal_rules・公開市場データから導いた定性的なラベル、
+    または既存シグナルの機械的な組み立て、あるいはconfig.yamlへ手動登録した
+    参考情報のそのまま表示のみを行う。
     """
     if not bundle.megatrends:
         return f"本日算出できるテーマがありませんでした（{NOT_AVAILABLE}）。\n"
@@ -723,5 +725,30 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
             if w.risks:
                 lines.append(f"  Risk［AI分析］: {'／'.join(w.risks)}")
         lines.append(f"  判断理由: {w.judgment_reason}")
+    lines.append("")
+
+    lines.append("## Stock Intelligence")
+    lines.append(
+        "> Watchlist Intelligenceで一致した銘柄のみを対象に、Future Intelligence Engineの"
+        "分析結果を1銘柄ごとの投資判断まで落とし込みます。目標株価・PER/EPS予想・"
+        "「買い」「売り」等の推奨・期待リターンは一切生成しません。「なぜ長期で見るのか」"
+        "「今後注目するイベント」「投資ストーリー」は、既存シグナルのみから機械的に"
+        "組み立てたものであり、AIによる作文ではありません。"
+    )
+    for s in bundle.stock_intelligence:
+        lines.append(f"### {s.name}（{s.ticker}）")
+        lines.append(f"- 関連テーマ: {'、'.join(s.related_themes)}（{len(s.related_themes)}件）")
+        lines.append(f"- Momentum: {s.momentum_score}/100（{s.momentum_label}）")
+        lines.append(f"- Lifecycle: {s.phase} ／ 継続性: {s.continuity}")
+        lines.append(f"- Catalyst［AI分析］: {'／'.join(s.catalysts)}")
+        lines.append(f"- Risk［AI分析］: {'／'.join(s.risks)}")
+        lines.append(f"- Confidence: {s.confidence_score}%")
+        lines.append(f"- 現在の判断: {s.judgment_label}")
+        lines.append(f"- なぜ長期で見るのか: {s.why_long_term}")
+        lines.append(f"- 今後注目するイベント: {'、'.join(s.watch_events)}")
+        if s.cross_theme_chain:
+            lines.append(f"- 関連するテーマ: {' → '.join([s.primary_theme] + s.cross_theme_chain)}")
+        lines.append(f"- 投資ストーリー: {' → '.join(s.investment_story)}")
+        lines.append("")
 
     return "\n".join(lines)

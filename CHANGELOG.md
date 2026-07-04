@@ -4,6 +4,49 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.0 (2026-07-04)
+
+追加
+・Future Intelligence Engine v2.0: 「Stock Intelligence」を追加（既存の
+  Future Intelligence Engineセクション内に追加。Watchlist Intelligenceで
+  一致した銘柄のみを対象）
+  - 表示項目: 銘柄名・ティッカー・関連テーマ・関連テーマ数・Momentum・
+    Lifecycle・Catalyst・Risk・Confidence・現在の判断（注目継続／押し目待ち
+    ／過熱警戒／材料待ち／判断材料不足。既存のWatchlist Intelligenceの
+    判定ルールをそのまま流用し整合性を維持）
+  - 新規項目①なぜ長期で見るのか: テーマ名・Catalyst・Lifecycle・Momentum
+    のみから機械的に組み立てた定性文
+  - 新規項目②今後注目するイベント: 決算・設備投資動向に加え、関連テーマ
+    （半導体市況・電力需給・金利動向・為替動向等）から機械的に導出。
+    AIによる新たな予測はしない
+  - 新規項目③注意すべきリスク: 既存Riskを複数テーマ分まとめて拡張表示
+  - 新規項目④関連するテーマ: config.yamlのtheme_relations（Cross Theme
+    Mapping）をそのまま利用
+  - 新規項目⑤投資ストーリー: テーマ名→Catalyst→関連テーマへの波及→
+    非断定的な結び、という時系列の因果チェーンのみで構成。目標株価・
+    PER/EPS予想・「買い」「売り」等の推奨・期待リターンは一切生成しない
+  - Markdown・モバイル版・HTML版すべてに反映（既存のFuture Intelligence
+    Engineセクション内。他のセクション構成・既存のWatchlist Intelligence
+    のロジックは変更していない）
+
+これにより、Future Intelligence → Watchlist Intelligence → Stock
+Intelligence まで一気通貫で分析できるようになった
+（世界の変化→テーマ→企業→長期投資ストーリー）。
+
+変更ファイル
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+136 passed
+
+コミット
+（下記参照）
+
 ## v1.16 (2026-07-04)
 
 追加

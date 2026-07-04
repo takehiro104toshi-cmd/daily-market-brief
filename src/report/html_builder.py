@@ -769,6 +769,37 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             f"{detail_html}判断理由: {_esc(w.judgment_reason)}</p>"
         )
 
+    parts.append("<h2>Stock Intelligence</h2>")
+    parts.append(
+        "<p class='legend'>Watchlist Intelligenceで一致した銘柄のみを対象に、Future Intelligence "
+        "Engineの分析結果を1銘柄ごとの投資判断まで落とし込みます。目標株価・PER/EPS予想・"
+        "「買い」「売り」等の推奨・期待リターンは一切生成しません。「なぜ長期で見るのか」"
+        "「今後注目するイベント」「投資ストーリー」は、既存シグナルのみから機械的に組み立てた"
+        "ものであり、AIによる作文ではありません。</p>"
+    )
+    for s in bundle.stock_intelligence:
+        catalysts_html = "、".join(_esc(c) for c in s.catalysts)
+        risks_html = "、".join(_esc(r) for r in s.risks)
+        chain_html = (
+            f"関連するテーマ: {_esc(' → '.join([s.primary_theme] + s.cross_theme_chain))}<br>"
+            if s.cross_theme_chain
+            else ""
+        )
+        parts.append(
+            f"<h3>{_esc(s.name)}（{_esc(s.ticker)}）</h3>"
+            f"<div class='row'><span>関連テーマ: {_esc('、'.join(s.related_themes))}"
+            f"（{len(s.related_themes)}件）</span><span>{_esc(s.judgment_label)}</span></div>"
+            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+            f"Momentum: {s.momentum_score}/100（{_esc(s.momentum_label)}）／"
+            f"Lifecycle: {_esc(s.phase)}（継続性: {_esc(s.continuity)}）／Confidence: {s.confidence_score}%<br>"
+            f"Catalyst［AI分析］: {catalysts_html}<br>"
+            f"Risk［AI分析］: {risks_html}<br>"
+            f"なぜ長期で見るのか: {_esc(s.why_long_term)}<br>"
+            f"今後注目するイベント: {_esc('、'.join(s.watch_events))}<br>"
+            f"{chain_html}"
+            f"投資ストーリー: {_esc(' → '.join(s.investment_story))}</p>"
+        )
+
     return "".join(parts)
 
 
