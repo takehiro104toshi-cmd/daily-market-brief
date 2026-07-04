@@ -497,7 +497,9 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     )
     future_intelligence_result = _safe_call(
         "future_intelligence",
-        lambda: future_intelligence.build_future_intelligence(headlines, config, config.get("sectors", {}), lookup),
+        lambda: future_intelligence.build_future_intelligence(
+            headlines, config, config.get("sectors", {}), lookup, news_ranking_items
+        ),
         future_intelligence.FutureIntelligenceBundle(),
     )
 

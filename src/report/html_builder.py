@@ -574,10 +574,11 @@ def _source_list_html(sources: SourceRegistry) -> str:
 
 
 def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
-    """「Future Intelligence Engine v1.0」をレンダリングする（グループAのみ）。
+    """「Future Intelligence Engine」をレンダリングする。
 
     具体的な残り年数・市場規模・補助金額等は生成せず、本日の関連見出し件数・
-    durable_themes・causal_rulesから導いた定性的なラベルのみを表示する。
+    重要ニュースとの一致・durable_themes・causal_rulesから導いた定性的な
+    ラベルのみを表示する。
     """
     if not bundle.megatrends:
         return f"<p>本日算出できるテーマがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
@@ -594,6 +595,17 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
             f"本日の関連見出し: {m.headline_count}件／{_esc(m.why_growing)}</p>"
         )
+
+    parts.append("<h3>Theme Momentum Score</h3>")
+    if bundle.theme_momentum:
+        for tm in bundle.theme_momentum:
+            parts.append(
+                f"<div class='row'><span>{_esc(tm.label)}</span>"
+                f"<span>{tm.momentum_score}/100（{_esc(tm.momentum_label)}）</span></div>"
+                f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>{_esc(tm.reason)}</p>"
+            )
+    else:
+        parts.append(f"<p>本日算出できるモメンタムスコアがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
 
     parts.append("<h3>次に来る業界（本日のモメンタム順）</h3>")
     if bundle.industry_momentum:
@@ -629,6 +641,19 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
             )
     else:
         parts.append(f"<p>本日算出できる日本株への波及がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
+
+    parts.append("<h3>Early Signal Detection（初動シグナル）</h3>")
+    if bundle.early_signals:
+        for es in bundle.early_signals:
+            names_txt = "、".join(es.beneficiary_names) if es.beneficiary_names else "該当なし"
+            parts.append(
+                f"<div class='row'><span>{_esc(es.label)} {_esc(es.stars)}</span>"
+                f"<span>関連セクター: {_esc(es.related_sector)}</span></div>"
+                f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+                f"{_esc(es.reason)} ／ 代表的な関連銘柄: {_esc(names_txt)}</p>"
+            )
+    else:
+        parts.append(f"<p>本日該当する初動シグナルはありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
 
     parts.append("<h3>Future Map（テーマ一覧）</h3>")
     parts.append(

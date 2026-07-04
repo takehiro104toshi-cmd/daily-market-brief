@@ -394,10 +394,45 @@ class JpStockImpactEntry:
 
 
 @dataclass
-class FutureIntelligenceBundle:
-    """「Future Intelligence Engine v1.0」の計算結果一式（グループAのみ）。
+class ThemeMomentumEntry:
+    """「Theme Momentum Score」の1テーマ分（v1.1）。
 
-    テーマ成熟度・国家戦略分析・世界のお金の流れはv1.1以降に見送り、
+    momentum_score（0〜100）は、本日の関連見出し件数・重要ニュースとの一致・
+    causal_rules該当・durable_themes該当という既存シグナルのみから機械的に
+    算出する。前日比・週次比較は行わない（履歴データを保持していないため）。
+    """
+
+    label: str
+    momentum_score: int
+    momentum_label: str  # 急加速 / 加速 / 横ばい / 減速
+    reason: str
+
+
+@dataclass
+class EarlySignalEntry:
+    """「Early Signal Detection」の1テーマ分（v1.1）。
+
+    本日の見出し件数はまだ少ないが、causal_rules該当・durable_themes該当・
+    恩恵銘柄が解決できる、という条件をすべて満たすテーマを「初動シグナル」
+    として抽出する。
+    """
+
+    label: str
+    stars: str
+    reason: str
+    related_sector: str
+    beneficiary_names: List[str] = field(default_factory=list)
+
+
+@dataclass
+class FutureIntelligenceBundle:
+    """「Future Intelligence Engine」の計算結果一式。
+
+    v1.0: megatrends / industry_momentum / supply_chains / horizon_groups /
+    jp_stock_impact（グループAのみ）。
+    v1.1: theme_momentum（Theme Momentum Score）/ early_signals
+    （Early Signal Detection）を追加。
+    テーマ成熟度・国家戦略分析・世界のお金の流れはさらに先の版に見送り、
     本バンドルには含まない。
     """
 
@@ -406,6 +441,8 @@ class FutureIntelligenceBundle:
     supply_chains: List[SupplyChainNote] = field(default_factory=list)
     horizon_groups: List[HorizonThemeGroup] = field(default_factory=list)
     jp_stock_impact: List[JpStockImpactEntry] = field(default_factory=list)
+    theme_momentum: List[ThemeMomentumEntry] = field(default_factory=list)
+    early_signals: List[EarlySignalEntry] = field(default_factory=list)
 
 
 @dataclass

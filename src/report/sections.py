@@ -551,13 +551,15 @@ def render_strategist_views(views: List[StrategistView]) -> str:
 
 
 def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
-    """「Future Intelligence Engine v1.0」をレンダリングする（グループAのみ）。
+    """「Future Intelligence Engine」をレンダリングする。
 
-    世界のメガトレンド／次に来る業界／サプライチェーン分析／中長期テーマ／
-    日本株への波及／Future Mapを1セクションにまとめて表示する。
+    世界のメガトレンド／Theme Momentum Score／次に来る業界／
+    サプライチェーン分析／中長期テーマ／日本株への波及／
+    Early Signal Detection／Future Mapを1セクションにまとめて表示する。
     具体的な残り年数・市場規模・補助金額等は生成せず、本日の関連見出し件数
-    ・durable_themes・causal_rulesから導いた定性的なラベルのみを表示する
-    （テーマ成熟度・国家戦略分析・世界のお金の流れはv1.1以降に見送り）。
+    ・重要ニュースとの一致・durable_themes・causal_rulesから導いた定性的な
+    ラベルのみを表示する（テーマ成熟度・国家戦略分析・世界のお金の流れは
+    今後の版に見送り）。
     """
     if not bundle.megatrends:
         return f"本日算出できるテーマがありませんでした（{NOT_AVAILABLE}）。\n"
@@ -571,6 +573,14 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
     for m in bundle.megatrends:
         lines.append(f"- **{m.label}** {m.stars}（フェーズ: {m.phase} ／ 継続性: {m.continuity}）")
         lines.append(f"  本日の関連見出し: {m.headline_count}件／{m.why_growing}")
+    lines.append("")
+
+    lines.append("### Theme Momentum Score")
+    if bundle.theme_momentum:
+        for tm in bundle.theme_momentum:
+            lines.append(f"- **{tm.label}**: {tm.momentum_score}/100（{tm.momentum_label}）— {tm.reason}")
+    else:
+        lines.append(f"本日算出できるモメンタムスコアがありませんでした（{NOT_AVAILABLE}）。")
     lines.append("")
 
     lines.append("### 次に来る業界（本日のモメンタム順）")
@@ -601,6 +611,16 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
             lines.append(f"- **{e.theme}:** {'、'.join(e.beneficiary_names)}（{e.cap_note}）")
     else:
         lines.append(f"本日算出できる日本株への波及がありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("### Early Signal Detection（初動シグナル）")
+    if bundle.early_signals:
+        for es in bundle.early_signals:
+            names_txt = "、".join(es.beneficiary_names) if es.beneficiary_names else "該当なし"
+            lines.append(f"- **{es.label}** {es.stars}（関連セクター: {es.related_sector}）")
+            lines.append(f"  {es.reason} ／ 代表的な関連銘柄: {names_txt}")
+    else:
+        lines.append(f"本日該当する初動シグナルはありませんでした（{NOT_AVAILABLE}）。")
     lines.append("")
 
     lines.append("### Future Map（テーマ一覧）")

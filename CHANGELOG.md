@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.8 (2026-07-04)
+
+追加
+・Future Intelligence Engine v1.1: Theme Momentum Score と Early Signal
+  Detection を追加（既存のFuture Intelligence Engineセクション内に小見出しとして追加）
+  - Theme Momentum Score: 各macro_themeについて、本日の関連見出し密度・
+    本日の重要ニュース（news_ranking）との一致・causal_rules該当・
+    durable_themes該当という既存シグナルのみから0〜100の定性スコアを算出。
+    前日比・週次比較は行わない（履歴データを保持していないため）。
+    急加速／加速／横ばい／減速の4段階ラベルと理由を付与
+  - Early Signal Detection: 本日の見出し件数はまだ少ない（1件以下）ものの、
+    causal_rules該当・durable_themes該当・恩恵銘柄が解決できる、という
+    条件をすべて満たすテーマを「初動シグナル」として抽出（★・理由・
+    関連セクター・代表的な関連銘柄を表示）
+・詳細版・モバイル版・HTML版すべてに反映（既存のFuture Intelligence Engine
+  セクション内。他のセクション構成は変更していない）
+
+変更ファイル
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・main.py
+・src/report/sections.py
+・src/report/mobile_builder.py
+・src/report/html_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+101 passed
+
+コミット
+（下記参照）
+
 ## v1.7 (2026-07-04)
 
 追加

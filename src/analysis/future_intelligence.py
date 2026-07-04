@@ -1,11 +1,11 @@
-"""Future Intelligence Engine v1.0（世界の構造変化テーマの定性分析）。
+"""Future Intelligence Engine（世界の構造変化テーマの定性分析）。
 
 「今日のニュース」ではなく、config.yaml の macro_themes に登録した長期テーマ
 （AI・半導体・電力・防衛・宇宙・量子・自動運転など）を、既存の仕組み
-（本日の関連見出し件数・durable_themes・causal_rules・恩恵銘柄ロジック）
-だけを使って定性的に評価する。
+（本日の関連見出し件数・durable_themes・causal_rules・恩恵銘柄ロジック・
+news_ranking の重要ニュース）だけを使って定性的に評価する。
 
-v1.0はグループAのみを実装する:
+v1.0はグループAのみを実装した:
     ①総合（本モジュールの出力をまとめて1セクションとして表示）
     ②世界のメガトレンド（★・フェーズ・継続性・なぜ伸びるか）
     ③テーマの寿命（フェーズ＋継続性の定性ラベル。具体的な残り年数は出さない）
@@ -15,9 +15,14 @@ v1.0はグループAのみを実装する:
     ⑩日本株への波及（恩恵銘柄。大型/中小型は区分不明として明記）
     ⑪Future Map（②〜⑨の集約一覧）
 
-テーマ成熟度（④）・国家戦略分析（⑧）・世界のお金の流れ（⑦）はv1.1以降に
-見送る。具体的な残り年数・市場規模・補助金額等、実データの裏付けがない
-数値は一切生成しない（決定論的なルールベースの定性ラベルのみ）。
+v1.1で以下を追加した:
+    Theme Momentum Score（0〜100の定性スコア。前日比・週次比較は行わない）
+    Early Signal Detection（見出し件数はまだ少ないが、causal_rules該当・
+    durable_themes該当・恩恵銘柄が解決できるテーマを「初動シグナル」として抽出）
+
+テーマ成熟度・国家戦略分析・世界のお金の流れは今後の版に見送る。
+具体的な残り年数・市場規模・補助金額等、実データの裏付けがない数値は
+一切生成しない（決定論的なルールベースの定性ラベルのみ）。
 """
 from __future__ import annotations
 
@@ -26,17 +31,22 @@ from typing import Dict, List, Optional
 from ..collectors.news import Headline
 from ..report.format_utils import stars
 from .models import (
+    EarlySignalEntry,
     FutureIntelligenceBundle,
     HorizonThemeGroup,
     IndustryMomentumEntry,
     JpStockImpactEntry,
     MegatrendEntry,
+    NewsRankingItem,
     SupplyChainNote,
+    ThemeMomentumEntry,
 )
 from .strategist_engine import CausalRule, parse_causal_rules, resolve_tickers, ticker_names
 
 TOP_INDUSTRY_MOMENTUM = 5
 MAX_TICKERS_DISPLAYED = 5
+TOP_NEWS_FOR_MOMENTUM = 5
+EARLY_SIGNAL_MAX_HEADLINES = 1
 
 # 本日の関連見出し件数から3段階（none/low/high）に区分し、durable_themes
 # 該当有無と組み合わせて★・フェーズ・継続性を機械的に決定する。
@@ -92,11 +102,69 @@ def _matched_causal_rule(keywords: List[str], causal_rules: List[CausalRule]) ->
     return None
 
 
-def _why_growing(keywords: List[str], causal_rules: List[CausalRule]) -> str:
-    rule = _matched_causal_rule(keywords, causal_rules)
+def _why_growing(rule: Optional[CausalRule]) -> str:
     if rule and rule.note:
         return rule.note
     return "本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。"
+
+
+def _momentum_score(headline_count: int, causal_matched: bool, durable: bool, top_news_matched: bool) -> int:
+    """本日の見出し密度・重要ニュースとの一致・causal_rules一致・durable_themes
+    一致という既存シグナルのみから、0〜100の定性スコアを機械的に算出する。
+    履歴データを保持していないため、前日比・週次比較は行わない。
+    """
+    score = min(headline_count, 5) * 10
+    if causal_matched:
+        score += 20
+    if durable:
+        score += 15
+    if top_news_matched:
+        score += 15
+    return min(100, score)
+
+
+def _momentum_label(score: int) -> str:
+    if score >= 70:
+        return "急加速"
+    if score >= 45:
+        return "加速"
+    if score >= 20:
+        return "横ばい"
+    return "減速"
+
+
+def _momentum_reason(headline_count: int, causal_matched: bool, durable: bool, top_news_matched: bool) -> str:
+    parts = []
+    if headline_count > 0:
+        parts.append(f"本日{headline_count}件の関連見出しが確認されています")
+    if top_news_matched:
+        parts.append("本日の重要ニュースにも関連しています")
+    if causal_matched:
+        parts.append("既存の因果チェーン（causal_rules）にも該当します")
+    if durable:
+        parts.append("継続性の高い構造的テーマに位置づけられています")
+    if not parts:
+        parts.append("本日時点では目立った関連ニュースは確認されていません")
+    return "、".join(parts) + "。"
+
+
+def _is_early_signal(headline_count: int, rule: Optional[CausalRule], durable: bool, beneficiary_tickers: List[str]) -> bool:
+    return (
+        headline_count <= EARLY_SIGNAL_MAX_HEADLINES
+        and rule is not None
+        and bool(rule.beneficiary_sectors)
+        and durable
+        and len(beneficiary_tickers) > 0
+    )
+
+
+def _early_signal_stars(durable: bool, beneficiary_tickers: List[str]) -> int:
+    score = 3
+    if durable:
+        score += 1
+    if len(beneficiary_tickers) >= 2:
+        score += 1
+    return min(5, score)
 
 
 def build_future_intelligence(
@@ -104,13 +172,19 @@ def build_future_intelligence(
     config: dict,
     sectors: Dict,
     ticker_lookup: Dict,
+    news_ranking_items: Optional[List[NewsRankingItem]] = None,
 ) -> FutureIntelligenceBundle:
     macro_themes_cfg = config.get("macro_themes", [])
     durable_themes = config.get("durable_themes", [])
     causal_rules = parse_causal_rules(config.get("causal_rules", []))
 
+    top_news_titles = [item.headline.title for item in (news_ranking_items or [])[:TOP_NEWS_FOR_MOMENTUM]]
+
     megatrends: List[MegatrendEntry] = []
+    theme_momentum: List[ThemeMomentumEntry] = []
+    theme_rule_map: Dict[str, Optional[CausalRule]] = {}
     theme_keywords_map: Dict[str, List[str]] = {}
+
     for entry in macro_themes_cfg:
         label = entry.get("label", "")
         keywords = entry.get("keywords") or [label]
@@ -119,15 +193,28 @@ def build_future_intelligence(
         count = _matched_headline_count(headlines, keywords)
         level = _hit_level(count)
         durable = any(kw in durable_themes for kw in keywords) or label in durable_themes
+        rule = _matched_causal_rule(keywords, causal_rules)
+        theme_rule_map[label] = rule
 
         megatrends.append(
             MegatrendEntry(
                 label=label,
                 stars=stars(_STAR_TABLE[(durable, level)], max_stars=5),
                 headline_count=count,
-                why_growing=_why_growing(keywords, causal_rules),
+                why_growing=_why_growing(rule),
                 phase=_PHASE_TABLE[(durable, level)],
                 continuity=_continuity_label(durable, level),
+            )
+        )
+
+        top_news_matched = any(kw in title for kw in keywords for title in top_news_titles)
+        score = _momentum_score(count, rule is not None, durable, top_news_matched)
+        theme_momentum.append(
+            ThemeMomentumEntry(
+                label=label,
+                momentum_score=score,
+                momentum_label=_momentum_label(score),
+                reason=_momentum_reason(count, rule is not None, durable, top_news_matched),
             )
         )
 
@@ -140,10 +227,12 @@ def build_future_intelligence(
     ]
 
     # ⑥ サプライチェーン分析／⑩ 日本株への波及（既存causal_rulesの恩恵銘柄をそのまま利用）
+    # ／Early Signal Detection（見出しが少ない段階の初動シグナル抽出）
     supply_chains: List[SupplyChainNote] = []
     jp_stock_impact: List[JpStockImpactEntry] = []
+    early_signals: List[EarlySignalEntry] = []
     for m in megatrends:
-        rule = _matched_causal_rule(theme_keywords_map.get(m.label, [m.label]), causal_rules)
+        rule = theme_rule_map.get(m.label)
         if rule is None or not rule.beneficiary_sectors:
             continue
         beneficiary_tickers = resolve_tickers(rule.beneficiary_sectors, sectors)
@@ -155,6 +244,23 @@ def build_future_intelligence(
         supply_chains.append(SupplyChainNote(theme=m.label, chain_text=" → ".join(chain_parts)))
         if names:
             jp_stock_impact.append(JpStockImpactEntry(theme=m.label, beneficiary_names=names_display))
+
+        durable = m.continuity == "高い"
+        if _is_early_signal(m.headline_count, rule, durable, beneficiary_tickers):
+            early_signals.append(
+                EarlySignalEntry(
+                    label=m.label,
+                    stars=stars(_early_signal_stars(durable, beneficiary_tickers), max_stars=5),
+                    reason=(
+                        f"本日の関連見出しは{m.headline_count}件とまだ少ないものの、"
+                        "既存の因果チェーン（causal_rules）・継続性の高い構造的テーマ・"
+                        "サプライチェーンへの波及先（恩恵銘柄）がいずれも確認できるため、"
+                        "初動シグナルとして注目できると考えられます。"
+                    ),
+                    related_sector="、".join(rule.beneficiary_sectors),
+                    beneficiary_names=names_display,
+                )
+            )
 
     # ⑨ 中長期テーマ（半年/1年/3年/5年/10年への定性的な割り付け）
     horizon_labels = ["半年", "1年", "3年", "5年", "10年"]
@@ -179,4 +285,6 @@ def build_future_intelligence(
         supply_chains=supply_chains,
         horizon_groups=horizon_groups,
         jp_stock_impact=jp_stock_impact,
+        theme_momentum=theme_momentum,
+        early_signals=early_signals,
     )

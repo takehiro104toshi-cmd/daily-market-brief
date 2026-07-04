@@ -113,6 +113,11 @@ def _section_future_intelligence(bundle) -> str:
     if bundle.industry_momentum:
         top = bundle.industry_momentum[0]
         lines.append(f"注目業界: {top.label}（関連見出し{top.headline_count}件）")
+    if bundle.theme_momentum:
+        top_momentum = max(bundle.theme_momentum, key=lambda tm: tm.momentum_score)
+        lines.append(f"Momentum Score上位: {top_momentum.label} {top_momentum.momentum_score}/100（{top_momentum.momentum_label}）")
+    if bundle.early_signals:
+        lines.append(f"初動シグナル: {'、'.join(es.label for es in bundle.early_signals)}")
     return "\n".join(lines) + "\n"
 
 
