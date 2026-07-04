@@ -127,6 +127,8 @@ def test_build_future_intelligence_empty_when_no_macro_themes_configured():
     assert bundle.jp_stock_impact == []
     assert bundle.theme_momentum == []
     assert bundle.early_signals == []
+    assert bundle.theme_maturity_notes == []  # macro_themesが空のためテーマ成熟度メモも0件
+    assert len(bundle.national_strategy_notes) == 6  # 国家戦略メモは6地域固定で常に生成される
 
 
 def _news_ranking_item(rank, title):
@@ -173,3 +175,72 @@ def test_early_signal_not_detected_when_headline_volume_is_high():
     bundle = future_intelligence.build_future_intelligence(headlines, CONFIG, SECTORS, TICKER_LOOKUP)
 
     assert not any(es.label == "AI" for es in bundle.early_signals)
+
+
+def test_theme_maturity_notes_default_to_not_registered_when_config_missing():
+    # theme_maturity_notesキー自体が無い場合も、macro_themesの数だけ
+    # 「未登録」のエントリが生成されること（AIによる補完は行わない）
+    bundle = future_intelligence.build_future_intelligence([], CONFIG, SECTORS, TICKER_LOOKUP)
+
+    assert len(bundle.theme_maturity_notes) == len(CONFIG["macro_themes"])
+    for note in bundle.theme_maturity_notes:
+        assert note.market_stage == "未登録"
+        assert note.market_size_note == "未登録"
+        assert note.adoption_note == "未登録"
+        assert note.competition_note == "未登録"
+        assert note.barrier_note == "未登録"
+        assert note.risk_note == "未登録"
+
+
+def test_theme_maturity_notes_reflect_registered_config_and_leave_others_unregistered():
+    config = dict(CONFIG)
+    config["theme_maturity_notes"] = {
+        "AI": {
+            "market_stage": "急成長期",
+            "market_size_note": "データセンター投資と生成AI活用拡大が追い風",
+            "adoption_note": "企業導入は拡大中だが、収益化は選別局面",
+            "competition_note": "米大手テック企業を中心に競争が激化",
+            "barrier_note": "半導体・データ・人材・電力が参入障壁",
+            "risk_note": "投資過熱、規制動向、電力供給制約",
+        }
+    }
+    bundle = future_intelligence.build_future_intelligence([], config, SECTORS, TICKER_LOOKUP)
+
+    ai_note = next(n for n in bundle.theme_maturity_notes if n.label == "AI")
+    assert ai_note.market_stage == "急成長期"
+    assert ai_note.risk_note == "投資過熱、規制動向、電力供給制約"
+
+    defense_note = next(n for n in bundle.theme_maturity_notes if n.label == "防衛")
+    assert defense_note.market_stage == "未登録"  # 未登録のテーマは補完しない
+
+
+def test_national_strategy_notes_always_cover_six_fixed_regions():
+    bundle = future_intelligence.build_future_intelligence([], CONFIG, SECTORS, TICKER_LOOKUP)
+
+    regions = [n.region for n in bundle.national_strategy_notes]
+    assert regions == ["日本", "米国", "中国", "EU", "インド", "中東"]
+    for note in bundle.national_strategy_notes:
+        assert note.policy_note == "未登録"
+        assert note.regulation_note == "未登録"
+        assert note.market_impact_note == "未登録"
+        assert note.focus_areas == []
+
+
+def test_national_strategy_notes_reflect_registered_config_and_leave_others_unregistered():
+    config = dict(CONFIG)
+    config["national_strategy_notes"] = {
+        "日本": {
+            "focus_areas": ["AI", "半導体", "防衛", "GX"],
+            "policy_note": "官民投資・経済安全保障・省力化投資が注目される",
+            "regulation_note": "規制緩和と安全保障管理の両面に注意",
+            "market_impact_note": "半導体、電力、防衛、省力化関連に波及しやすい",
+        }
+    }
+    bundle = future_intelligence.build_future_intelligence([], config, SECTORS, TICKER_LOOKUP)
+
+    japan_note = next(n for n in bundle.national_strategy_notes if n.region == "日本")
+    assert japan_note.focus_areas == ["AI", "半導体", "防衛", "GX"]
+    assert japan_note.policy_note == "官民投資・経済安全保障・省力化投資が注目される"
+
+    us_note = next(n for n in bundle.national_strategy_notes if n.region == "米国")
+    assert us_note.policy_note == "未登録"  # 未登録の国は補完しない

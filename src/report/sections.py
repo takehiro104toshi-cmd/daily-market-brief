@@ -555,11 +555,12 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
 
     世界のメガトレンド／Theme Momentum Score／次に来る業界／
     サプライチェーン分析／中長期テーマ／日本株への波及／
-    Early Signal Detection／Future Mapを1セクションにまとめて表示する。
+    Early Signal Detection／テーマ成熟度メモ／国家戦略メモ／Future Mapを
+    1セクションにまとめて表示する。
     具体的な残り年数・市場規模・補助金額等は生成せず、本日の関連見出し件数
     ・重要ニュースとの一致・durable_themes・causal_rulesから導いた定性的な
-    ラベルのみを表示する（テーマ成熟度・国家戦略分析・世界のお金の流れは
-    今後の版に見送り）。
+    ラベル、またはconfig.yamlへ手動登録した参考情報のそのまま表示のみを
+    行う（世界のお金の流れは今後の版に見送り）。
     """
     if not bundle.megatrends:
         return f"本日算出できるテーマがありませんでした（{NOT_AVAILABLE}）。\n"
@@ -621,6 +622,22 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
             lines.append(f"  {es.reason} ／ 代表的な関連銘柄: {names_txt}")
     else:
         lines.append(f"本日該当する初動シグナルはありませんでした（{NOT_AVAILABLE}）。")
+    lines.append("")
+
+    lines.append("### テーマ成熟度メモ")
+    lines.append("> config.yamlへ手動登録した参考情報をそのまま表示します（AIによる生成・推定は行いません）。")
+    for tn in bundle.theme_maturity_notes:
+        lines.append(f"- **{tn.label}**（市場ステージ: {tn.market_stage}）")
+        lines.append(f"  市場規模: {tn.market_size_note} ／ 普及状況: {tn.adoption_note}")
+        lines.append(f"  競争環境: {tn.competition_note} ／ 参入障壁: {tn.barrier_note} ／ リスク: {tn.risk_note}")
+    lines.append("")
+
+    lines.append("### 国家戦略メモ")
+    lines.append("> config.yamlへ手動登録した参考情報をそのまま表示します（AIによる生成・推定は行いません）。")
+    for ns in bundle.national_strategy_notes:
+        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "未登録"
+        lines.append(f"- **{ns.region}**（重点分野: {focus_txt}）")
+        lines.append(f"  政策: {ns.policy_note} ／ 規制: {ns.regulation_note} ／ 市場影響: {ns.market_impact_note}")
     lines.append("")
 
     lines.append("### Future Map（テーマ一覧）")

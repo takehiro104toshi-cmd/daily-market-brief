@@ -279,6 +279,36 @@ macro_themes:
   - { label: "高齢化", keywords: ["高齢化", "介護"] }
   - { label: "自動運転", keywords: ["自動運転", "自動運転車"] }
 
+# 「Future Intelligence Engine」の「テーマ成熟度メモ」向け、手動登録の参考情報。
+# AIは市場規模・普及率・競争環境・参入障壁・リスクを生成・推定しない。
+# ここに書いた内容をそのまま表示するだけで、未登録のテーマ・項目は
+# すべて「未登録」と表示される。キーは macro_themes の label と一致させる。
+# 記入例（コメントアウトしています。実データの裏付けがある場合のみ、
+# コメントを外してご自身の分析内容に置き換えて登録してください）:
+# theme_maturity_notes:
+#   AI:
+#     market_stage: "急成長期"
+#     market_size_note: "データセンター投資と生成AI活用拡大が追い風"
+#     adoption_note: "企業導入は拡大中だが、収益化は選別局面"
+#     competition_note: "米大手テック企業を中心に競争が激化"
+#     barrier_note: "半導体・データ・人材・電力が参入障壁"
+#     risk_note: "投資過熱、規制動向、電力供給制約"
+theme_maturity_notes: {}
+
+# 「Future Intelligence Engine」の「国家戦略メモ」向け、手動登録の参考情報。
+# AIは補助金額・政策内容・規制内容を生成・推定しない。ここに書いた内容を
+# そのまま表示するだけで、未登録の国・地域・項目はすべて「未登録」と表示
+# される。対象は日本／米国／中国／EU／インド／中東の6地域固定。
+# 記入例（コメントアウトしています。実データの裏付けがある場合のみ、
+# コメントを外してご自身の分析内容に置き換えて登録してください）:
+# national_strategy_notes:
+#   日本:
+#     focus_areas: ["AI", "半導体", "防衛", "GX"]
+#     policy_note: "官民投資・経済安全保障・省力化投資が注目される"
+#     regulation_note: "規制緩和と安全保障管理の両面に注意"
+#     market_impact_note: "半導体、電力、防衛、省力化関連に波及しやすい"
+national_strategy_notes: {}
+
 # 「今日見るべき指標」セクション向けの節目ライン設定。
 # name は indices/forex/rates/commodities の name と一致させる。
 # lines: 節目として表示する値（現在値に最も近いラインを自動選択）

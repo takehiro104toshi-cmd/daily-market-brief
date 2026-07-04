@@ -20,9 +20,17 @@ v1.1で以下を追加した:
     Early Signal Detection（見出し件数はまだ少ないが、causal_rules該当・
     durable_themes該当・恩恵銘柄が解決できるテーマを「初動シグナル」として抽出）
 
-テーマ成熟度・国家戦略分析・世界のお金の流れは今後の版に見送る。
-具体的な残り年数・市場規模・補助金額等、実データの裏付けがない数値は
-一切生成しない（決定論的なルールベースの定性ラベルのみ）。
+v1.2で以下を追加した:
+    テーマ成熟度メモ（config.yaml の theme_maturity_notes を手動登録内容の
+    まま表示。AIによる市場規模・普及率・競争環境等の生成は行わない）
+    国家戦略メモ（config.yaml の national_strategy_notes を手動登録内容の
+    まま表示。日本/米国/中国/EU/インド/中東の6地域固定。AIによる補助金額・
+    政策内容の生成は行わない）
+
+世界のお金の流れは今後の版に見送る。具体的な残り年数・市場規模・
+補助金額・政策内容等、実データの裏付けがない数値・情報は一切生成しない
+（決定論的なルールベースの定性ラベル、またはconfig.yamlの手動登録内容の
+そのまま表示のみ）。
 """
 from __future__ import annotations
 
@@ -37,8 +45,10 @@ from .models import (
     IndustryMomentumEntry,
     JpStockImpactEntry,
     MegatrendEntry,
+    NationalStrategyNote,
     NewsRankingItem,
     SupplyChainNote,
+    ThemeMaturityNote,
     ThemeMomentumEntry,
 )
 from .strategist_engine import CausalRule, parse_causal_rules, resolve_tickers, ticker_names
@@ -47,6 +57,11 @@ TOP_INDUSTRY_MOMENTUM = 5
 MAX_TICKERS_DISPLAYED = 5
 TOP_NEWS_FOR_MOMENTUM = 5
 EARLY_SIGNAL_MAX_HEADLINES = 1
+NOT_REGISTERED = "未登録"
+
+# 「国家戦略メモ」の対象6地域（固定）。config.yaml の national_strategy_notes
+# に手動登録がない地域も、必ずこの6地域分を「未登録」として表示する。
+NATIONAL_STRATEGY_REGIONS = ["日本", "米国", "中国", "EU", "インド", "中東"]
 
 # 本日の関連見出し件数から3段階（none/low/high）に区分し、durable_themes
 # 該当有無と組み合わせて★・フェーズ・継続性を機械的に決定する。
@@ -167,6 +182,52 @@ def _early_signal_stars(durable: bool, beneficiary_tickers: List[str]) -> int:
     return min(5, score)
 
 
+def _build_theme_maturity_notes(macro_themes_cfg: List[dict], notes_cfg: Dict) -> List[ThemeMaturityNote]:
+    """config.yaml の theme_maturity_notes を、そのまま表示用データへ変換する。
+
+    AIによる市場規模・普及率・競争環境・参入障壁・リスクの生成・推定は
+    一切行わない。未登録のテーマ・項目はすべて「未登録」とする。
+    """
+    notes: List[ThemeMaturityNote] = []
+    for entry in macro_themes_cfg:
+        label = entry.get("label", "")
+        raw = notes_cfg.get(label, {}) if isinstance(notes_cfg, dict) else {}
+        notes.append(
+            ThemeMaturityNote(
+                label=label,
+                market_stage=raw.get("market_stage") or NOT_REGISTERED,
+                market_size_note=raw.get("market_size_note") or NOT_REGISTERED,
+                adoption_note=raw.get("adoption_note") or NOT_REGISTERED,
+                competition_note=raw.get("competition_note") or NOT_REGISTERED,
+                barrier_note=raw.get("barrier_note") or NOT_REGISTERED,
+                risk_note=raw.get("risk_note") or NOT_REGISTERED,
+            )
+        )
+    return notes
+
+
+def _build_national_strategy_notes(notes_cfg: Dict) -> List[NationalStrategyNote]:
+    """config.yaml の national_strategy_notes を、そのまま表示用データへ変換する。
+
+    AIによる補助金額・政策内容・規制内容の生成・推定は一切行わない。
+    対象は日本／米国／中国／EU／インド／中東の6地域固定で、未登録の
+    国・地域・項目はすべて「未登録」とする。
+    """
+    notes: List[NationalStrategyNote] = []
+    for region in NATIONAL_STRATEGY_REGIONS:
+        raw = notes_cfg.get(region, {}) if isinstance(notes_cfg, dict) else {}
+        notes.append(
+            NationalStrategyNote(
+                region=region,
+                focus_areas=list(raw.get("focus_areas", [])),
+                policy_note=raw.get("policy_note") or NOT_REGISTERED,
+                regulation_note=raw.get("regulation_note") or NOT_REGISTERED,
+                market_impact_note=raw.get("market_impact_note") or NOT_REGISTERED,
+            )
+        )
+    return notes
+
+
 def build_future_intelligence(
     headlines: List[Headline],
     config: dict,
@@ -279,6 +340,10 @@ def build_future_intelligence(
                 horizon_map[h].append(m.label)
     horizon_groups = [HorizonThemeGroup(horizon=h, themes=horizon_map[h]) for h in horizon_labels]
 
+    # テーマ成熟度メモ／国家戦略メモ（config.yamlへの手動登録内容をそのまま表示）
+    theme_maturity_notes = _build_theme_maturity_notes(macro_themes_cfg, config.get("theme_maturity_notes", {}))
+    national_strategy_notes = _build_national_strategy_notes(config.get("national_strategy_notes", {}))
+
     return FutureIntelligenceBundle(
         megatrends=megatrends,
         industry_momentum=industry_momentum,
@@ -287,4 +352,6 @@ def build_future_intelligence(
         jp_stock_impact=jp_stock_impact,
         theme_momentum=theme_momentum,
         early_signals=early_signals,
+        theme_maturity_notes=theme_maturity_notes,
+        national_strategy_notes=national_strategy_notes,
     )

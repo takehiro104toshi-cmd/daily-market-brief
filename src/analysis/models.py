@@ -425,6 +425,40 @@ class EarlySignalEntry:
 
 
 @dataclass
+class ThemeMaturityNote:
+    """「テーマ成熟度メモ」の1テーマ分（v1.2）。
+
+    config.yaml の theme_maturity_notes に手動登録された内容を、そのまま
+    表示するだけの入れ物（AIによる生成・推定・補完は一切行わない）。
+    未登録の項目はすべて「未登録」と明記する。
+    """
+
+    label: str
+    market_stage: str = "未登録"
+    market_size_note: str = "未登録"
+    adoption_note: str = "未登録"
+    competition_note: str = "未登録"
+    barrier_note: str = "未登録"
+    risk_note: str = "未登録"
+
+
+@dataclass
+class NationalStrategyNote:
+    """「国家戦略メモ」の1国・地域分（v1.2）。
+
+    config.yaml の national_strategy_notes に手動登録された内容を、そのまま
+    表示するだけの入れ物（AIによる生成・推定・補完は一切行わない）。
+    対象は日本／米国／中国／EU／インド／中東の6地域固定。未登録は「未登録」。
+    """
+
+    region: str
+    focus_areas: List[str] = field(default_factory=list)
+    policy_note: str = "未登録"
+    regulation_note: str = "未登録"
+    market_impact_note: str = "未登録"
+
+
+@dataclass
 class FutureIntelligenceBundle:
     """「Future Intelligence Engine」の計算結果一式。
 
@@ -432,8 +466,11 @@ class FutureIntelligenceBundle:
     jp_stock_impact（グループAのみ）。
     v1.1: theme_momentum（Theme Momentum Score）/ early_signals
     （Early Signal Detection）を追加。
-    テーマ成熟度・国家戦略分析・世界のお金の流れはさらに先の版に見送り、
-    本バンドルには含まない。
+    v1.2: theme_maturity_notes（テーマ成熟度メモ）/ national_strategy_notes
+    （国家戦略メモ）を追加。いずれもconfig.yamlへ手動登録した参考情報を
+    そのまま表示するだけで、AIによる市場規模・補助金額・政策内容の生成は
+    行わない（未登録は「未登録」と明記）。
+    世界のお金の流れはさらに先の版に見送り、本バンドルには含まない。
     """
 
     megatrends: List[MegatrendEntry] = field(default_factory=list)
@@ -443,6 +480,8 @@ class FutureIntelligenceBundle:
     jp_stock_impact: List[JpStockImpactEntry] = field(default_factory=list)
     theme_momentum: List[ThemeMomentumEntry] = field(default_factory=list)
     early_signals: List[EarlySignalEntry] = field(default_factory=list)
+    theme_maturity_notes: List[ThemeMaturityNote] = field(default_factory=list)
+    national_strategy_notes: List[NationalStrategyNote] = field(default_factory=list)
 
 
 @dataclass

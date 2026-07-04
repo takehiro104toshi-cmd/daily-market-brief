@@ -655,6 +655,34 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     else:
         parts.append(f"<p>本日該当する初動シグナルはありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
 
+    parts.append("<h3>テーマ成熟度メモ</h3>")
+    parts.append(
+        "<p class='legend'>config.yamlへ手動登録した参考情報をそのまま表示します"
+        "（AIによる生成・推定は行いません）。</p>"
+    )
+    for tn in bundle.theme_maturity_notes:
+        parts.append(
+            f"<div class='row'><span>{_esc(tn.label)}</span><span>{_esc(tn.market_stage)}</span></div>"
+            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+            f"市場規模: {_esc(tn.market_size_note)} ／ 普及状況: {_esc(tn.adoption_note)}<br>"
+            f"競争環境: {_esc(tn.competition_note)} ／ 参入障壁: {_esc(tn.barrier_note)} ／ "
+            f"リスク: {_esc(tn.risk_note)}</p>"
+        )
+
+    parts.append("<h3>国家戦略メモ</h3>")
+    parts.append(
+        "<p class='legend'>config.yamlへ手動登録した参考情報をそのまま表示します"
+        "（AIによる生成・推定は行いません）。</p>"
+    )
+    for ns in bundle.national_strategy_notes:
+        focus_txt = "、".join(ns.focus_areas) if ns.focus_areas else "未登録"
+        parts.append(
+            f"<div class='row'><span>{_esc(ns.region)}</span><span>重点分野: {_esc(focus_txt)}</span></div>"
+            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+            f"政策: {_esc(ns.policy_note)} ／ 規制: {_esc(ns.regulation_note)} ／ "
+            f"市場影響: {_esc(ns.market_impact_note)}</p>"
+        )
+
     parts.append("<h3>Future Map（テーマ一覧）</h3>")
     parts.append(
         "<ul class='plain'>"

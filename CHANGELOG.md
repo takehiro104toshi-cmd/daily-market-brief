@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.9 (2026-07-04)
+
+追加
+・Future Intelligence Engine v1.2: 「テーマ成熟度メモ」「国家戦略メモ」を追加
+  （既存のFuture Intelligence Engineセクション内に小見出しとして追加）
+  - テーマ成熟度メモ: `config.yaml` の `theme_maturity_notes`（macro_themes
+    の各テーマについて、市場ステージ／市場規模メモ／普及状況メモ／
+    競争環境メモ／参入障壁メモ／リスクメモを手動登録）をそのまま表示。
+    AIによる市場規模・普及率等の生成・推定は一切行わない
+  - 国家戦略メモ: `config.yaml` の `national_strategy_notes`（日本／米国／
+    中国／EU／インド／中東の6地域固定で、重点分野・政策メモ・規制メモ・
+    市場影響メモを手動登録）をそのまま表示。AIによる補助金額・政策内容の
+    生成・推定は一切行わない
+  - いずれも未登録のテーマ・国・項目は「未登録」と明記する
+  - `config.yaml` には空の `theme_maturity_notes: {}` / `national_strategy_notes: {}`
+    と、コメントアウトされた記入例のみを追加（デフォルトはすべて「未登録」）
+
+変更ファイル
+・config.yaml
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/mobile_builder.py
+・src/report/html_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+105 passed
+
+コミット
+（下記参照）
+
 ## v1.8 (2026-07-04)
 
 追加
