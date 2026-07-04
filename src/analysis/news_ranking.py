@@ -19,6 +19,7 @@ from typing import Dict, List, Optional
 from ..collectors.news import Headline
 from ..report.format_utils import stars, truncate_to_chars
 from .models import NewsRankingItem
+from .strategist_engine import CausalRule, match_causal_rule, parse_causal_rules, resolve_tickers
 
 SALES_TALK_MAX_CHARS = 100
 
@@ -42,6 +43,8 @@ class _HeadlineAnalysis:
     reason: str
     affected_market: str
     affected_sector: str
+    beneficiary_tickers: List[str]
+    negative_tickers: List[str]
 
 
 def _matched_theme(headline: Headline, themes: List[str]) -> Optional[str]:
@@ -76,11 +79,18 @@ def _analyze_headline(
     themes: List[str],
     sectors: Dict,
     watchlist_names: List[str],
+    causal_rules: Optional[List[CausalRule]] = None,
+    durable_themes: Optional[List[str]] = None,
 ) -> _HeadlineAnalysis:
     matched_theme = _matched_theme(headline, themes)
     matched_sector = _matched_sector(headline, sectors)
     matched_surprise = _matched_surprise(headline)
     matched_watchlist = _matched_watchlist_name(headline, watchlist_names)
+    causal_rule = match_causal_rule(headline, causal_rules or [])
+
+    beneficiary_tickers = resolve_tickers(causal_rule.beneficiary_sectors, sectors) if causal_rule else []
+    negative_tickers = resolve_tickers(causal_rule.negative_sectors, sectors) if causal_rule else []
+    is_durable = matched_theme in (durable_themes or []) or (causal_rule is not None and causal_rule.durable)
 
     score = 0
     if matched_theme:
@@ -91,6 +101,10 @@ def _analyze_headline(
         score += 1
     if matched_watchlist:
         score += 3
+    if causal_rule:
+        score += 2
+    if is_durable:
+        score += 1
 
     reason_parts = []
     if matched_theme:
@@ -101,6 +115,10 @@ def _analyze_headline(
         reason_parts.append(f"「{matched_surprise}」という材料を含む")
     if matched_watchlist:
         reason_parts.append(f"ウォッチリスト銘柄「{matched_watchlist}」に言及している")
+    if causal_rule:
+        reason_parts.append(f"「{causal_rule.theme}」の因果チェーンに該当する")
+    if is_durable:
+        reason_parts.append("継続性の高い構造的なテーマである")
 
     if reason_parts:
         reason = "、".join(reason_parts) + "ため、重要度が高いと判断しました。"
@@ -112,6 +130,8 @@ def _analyze_headline(
         reason=reason,
         affected_market=_affected_market(headline),
         affected_sector=matched_sector or "特定業種なし",
+        beneficiary_tickers=beneficiary_tickers,
+        negative_tickers=negative_tickers,
     )
 
 
@@ -132,12 +152,24 @@ def build_news_ranking(
     sectors: Dict,
     watchlist_names: List[str],
     limit: int = 10,
+    causal_rules: Optional[List[dict]] = None,
+    durable_themes: Optional[List[str]] = None,
 ) -> List[NewsRankingItem]:
+    """ニュースを重要度順にランキングする。
+
+    causal_rules / durable_themes（config.yaml由来）を指定すると、
+    「岡三ストラテジスト視点」パイプラインと同じ因果チェーン・継続性の
+    判定をスコアリングに反映し、恩恵銘柄・悪影響銘柄も付与する。
+    いずれも省略可能（省略時は従来通りのスコアリングのみ）で、
+    既存の呼び出し箇所にも影響しない。
+    """
     if not headlines:
         return []
 
+    parsed_causal_rules = parse_causal_rules(causal_rules or [])
+
     analyzed = [
-        (headline, _analyze_headline(headline, themes, sectors, watchlist_names))
+        (headline, _analyze_headline(headline, themes, sectors, watchlist_names, parsed_causal_rules, durable_themes))
         for headline in headlines
     ]
     # スコア降順・原順序維持のため安定ソートを利用
@@ -156,6 +188,8 @@ def build_news_ranking(
                 affected_market=analysis.affected_market,
                 affected_sector=analysis.affected_sector,
                 sales_talk=_sales_talk(headline, analysis),
+                beneficiary_tickers=analysis.beneficiary_tickers,
+                negative_tickers=analysis.negative_tickers,
             )
         )
     return items

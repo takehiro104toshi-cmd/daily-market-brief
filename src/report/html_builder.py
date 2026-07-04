@@ -33,6 +33,7 @@ from ..analysis.models import (
     SectorRankingEntry,
     SectorStrengthEntry,
     StockRankingEntry,
+    StrategistView,
     ThemeForecast,
     TopPickEntry,
     WatchlistQuickEntry,
@@ -473,6 +474,8 @@ def _executive_summary_html(items: List[ExecutiveSummaryItem]) -> str:
             f"<p style='font-size:0.82rem;color:#555;'>日本株への影響: {_esc(item.jp_stock_impact)}</p>"
             f"<p style='font-size:0.82rem;color:#555;'>ドル円への影響: {_esc(item.usdjpy_impact)}</p>"
             f"<p style='font-size:0.82rem;color:#555;'>金利への影響: {_esc(item.rate_impact)}</p>"
+            f"<p style='font-size:0.82rem;color:#555;'>恩恵銘柄: {_esc(item.beneficiary_stocks or '該当なし')} ／ "
+            f"悪影響銘柄: {_esc(item.negative_stocks or '該当なし')}</p>"
             f"<p style='font-size:0.85rem;'><strong>営業トーク:</strong> 「{_esc(item.sales_talk)}」</p>"
         )
     return "".join(parts)
@@ -511,6 +514,33 @@ def _sector_strength_html(entries: List[SectorStrengthEntry]) -> str:
         for entry in entries
     )
     return rows
+
+
+def _strategist_views_html(views: List[StrategistView]) -> str:
+    if not views:
+        return f"<p>本日算出できるストラテジスト視点がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    parts = []
+    for i, view in enumerate(views, start=1):
+        score_html = ""
+        if view.score is not None:
+            s = view.score
+            score_html = (
+                "<p style='font-size:0.78rem;color:#666;'>重要度内訳（8軸）: "
+                f"市場インパクト{s.market_impact}／継続性{s.continuity}／営業利用価値{s.sales_value}／"
+                f"日本株影響度{s.jp_impact}／米国株影響度{s.us_impact}／個別株展開{s.stock_expansion}／"
+                f"テーマ株展開{s.theme_expansion}／今後数週間重要か{s.weeks_ahead}</p>"
+            )
+        beneficiary = "、".join(view.beneficiary_names) if view.beneficiary_names else "該当なし"
+        negative = "、".join(view.negative_names) if view.negative_names else "該当なし"
+        parts.append(
+            f"<h3>{i}. {_esc(view.headline.title)} {_esc(view.importance_stars)}</h3>"
+            f"<p style='font-size:0.85rem;'>岡三ストラテジストならどう見るか: {_esc(view.strategist_take)}</p>"
+            f"<p style='font-size:0.82rem;color:#555;'>重要テーマ: {_esc(view.theme)} ／ 関連セクター: {_esc(view.related_sector)}</p>"
+            f"<p style='font-size:0.82rem;color:#555;'>恩恵銘柄: {_esc(beneficiary)} ／ 悪影響銘柄: {_esc(negative)}</p>"
+            f"<p style='font-size:0.85rem;'><strong>営業で話すポイント:</strong> 「{_esc(view.sales_point)}」</p>"
+            f"{score_html}"
+        )
+    return "".join(parts)
 
 
 def _morning_meeting_comment_html(comment: MorningMeetingComment) -> str:
@@ -556,6 +586,7 @@ def build_html_report(report_date: datetime, market: dict, sources: SourceRegist
     # (anchor_id, タイトル, 本文HTML) のリスト。目次カードから各セクションへジャンプできる。
     sections = [
         ("executive-summary", "AI Executive Summary", _executive_summary_html(analysis.executive_summary)),
+        ("strategist-views", "岡三ストラテジスト視点", _strategist_views_html(analysis.strategist_views)),
         ("top-picks", "今日の注目5銘柄", _top_picks_html(analysis.top_picks)),
         ("indices", "主要指標", _quote_table_html(market.get("indices", []) + market.get("commodities", []))),
         ("fx-rates", "為替・金利", _quote_table_html(market.get("forex", []) + market.get("rates", []))),

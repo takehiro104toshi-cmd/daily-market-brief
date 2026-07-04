@@ -28,6 +28,7 @@ from ..analysis.models import (
     SectorRankingEntry,
     SectorStrengthEntry,
     StockRankingEntry,
+    StrategistView,
     ThemeForecast,
     TopPickEntry,
     WatchlistEntry,
@@ -458,6 +459,7 @@ def render_executive_summary(items: List[ExecutiveSummaryItem]) -> str:
         lines.append(f"- **日本株への影響（AI分析）:** {item.jp_stock_impact}")
         lines.append(f"- **ドル円への影響（AI分析）:** {item.usdjpy_impact}")
         lines.append(f"- **金利への影響（AI分析）:** {item.rate_impact}")
+        lines.append(f"- **恩恵銘柄:** {item.beneficiary_stocks or '該当なし'} ／ **悪影響銘柄:** {item.negative_stocks or '該当なし'}")
         lines.append(f"- **営業トーク:** 「{item.sales_talk}」")
         lines.append("")
     return "\n".join(lines)
@@ -510,4 +512,38 @@ def render_morning_meeting_comment(comment: MorningMeetingComment) -> str:
         comment.long_3min or f"（{NOT_AVAILABLE}）",
         "",
     ]
+    return "\n".join(lines)
+
+
+def render_strategist_views(views: List[StrategistView]) -> str:
+    """「岡三ストラテジスト視点」をレンダリングする。
+
+    ニュース→岡三ストラテジストならどう見るか→重要テーマ→関連セクター→
+    恩恵銘柄→悪影響銘柄→営業で話すポイント→重要度、の順に整理する。
+    8軸★スコアの内訳（市場インパクト/継続性/営業利用価値/日本株影響度/
+    米国株影響度/個別株へ展開できるか/テーマ株へ展開できるか/
+    今後数週間重要か）も明記する。
+    """
+    if not views:
+        return f"本日算出できるストラテジスト視点がありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = []
+    for i, view in enumerate(views, start=1):
+        lines.append(f"### {i}. {view.headline.title}　{view.importance_stars}")
+        lines.append(f"- **ニュース:** 「{view.headline.title}」（{view.headline.source}）")
+        lines.append(f"- **岡三ストラテジストならどう見るか:** {view.strategist_take}")
+        lines.append(f"- **重要テーマ:** {view.theme}")
+        lines.append(f"- **関連セクター:** {view.related_sector}")
+        lines.append(f"- **恩恵銘柄:** {'、'.join(view.beneficiary_names) if view.beneficiary_names else '該当なし'}")
+        lines.append(f"- **悪影響銘柄:** {'、'.join(view.negative_names) if view.negative_names else '該当なし'}")
+        lines.append(f"- **営業で話すポイント:** 「{view.sales_point}」")
+        if view.score is not None:
+            s = view.score
+            lines.append(
+                "- **重要度内訳（8軸）:** "
+                f"市場インパクト{s.market_impact} ／ 継続性{s.continuity} ／ 営業利用価値{s.sales_value} ／ "
+                f"日本株影響度{s.jp_impact} ／ 米国株影響度{s.us_impact} ／ "
+                f"個別株へ展開できるか{s.stock_expansion} ／ テーマ株へ展開できるか{s.theme_expansion} ／ "
+                f"今後数週間重要か{s.weeks_ahead}"
+            )
+        lines.append("")
     return "\n".join(lines)

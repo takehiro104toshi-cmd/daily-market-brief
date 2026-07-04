@@ -98,7 +98,12 @@ class InstrumentScenario:
 
 @dataclass
 class ExecutiveSummaryItem:
-    """AI Executive Summary（レポート冒頭・今日最重要ニュース）の1件分。"""
+    """AI Executive Summary（レポート冒頭・今日最重要ニュース）の1件分。
+
+    beneficiary_stocks / negative_stocks / strategist_view は
+    「岡三ストラテジスト視点」パイプライン向けに追加したフィールド
+    （デフォルト値付きのため既存の呼び出し箇所にも影響しない）。
+    """
 
     rank: int
     headline: Headline
@@ -109,6 +114,9 @@ class ExecutiveSummaryItem:
     usdjpy_impact: str
     rate_impact: str
     sales_talk: str
+    beneficiary_stocks: str = ""
+    negative_stocks: str = ""
+    strategist_view: str = ""
 
 
 @dataclass
@@ -184,8 +192,11 @@ class NewsRankingItem:
     """TOPニュースランキングの1件。
 
     reason / affected_market / affected_sector は「② 今日の重要ニュース
-    ランキング」向けに追加したフィールド。デフォルト値付きのため、
-    既存の呼び出し箇所（これらを指定しない構築）にも影響しない。
+    ランキング」向けに追加したフィールド。beneficiary_tickers /
+    negative_tickers は「岡三ストラテジスト視点」パイプライン向けに追加した、
+    このニュースの恩恵銘柄・悪影響銘柄（ティッカー）。
+    いずれもデフォルト値付きのため、既存の呼び出し箇所（これらを指定しない
+    構築）にも影響しない。
     """
 
     rank: int
@@ -196,6 +207,68 @@ class NewsRankingItem:
     affected_market: str = ""
     affected_sector: str = ""
     sales_talk: str = ""
+    beneficiary_tickers: List[str] = field(default_factory=list)
+    negative_tickers: List[str] = field(default_factory=list)
+
+
+@dataclass
+class StarScoreBreakdown:
+    """ニュース重要度の8軸★スコア（各1〜5）。
+
+    「羅針盤」資料から学習したストラテジストの評価軸を一般化し、
+    ①市場インパクト ②継続性 ③営業利用価値 ④日本株影響度 ⑤米国株影響度
+    ⑥個別株へ展開できるか ⑦テーマ株へ展開できるか ⑧今後数週間重要か
+    の8項目でニュースを評価する、ルールベースの機械的スコアリング。
+    """
+
+    market_impact: int
+    continuity: int
+    sales_value: int
+    jp_impact: int
+    us_impact: int
+    stock_expansion: int
+    theme_expansion: int
+    weeks_ahead: int
+
+    @property
+    def total(self) -> int:
+        return (
+            self.market_impact
+            + self.continuity
+            + self.sales_value
+            + self.jp_impact
+            + self.us_impact
+            + self.stock_expansion
+            + self.theme_expansion
+            + self.weeks_ahead
+        )
+
+    @property
+    def overall_stars(self) -> int:
+        avg = self.total / 8
+        return min(5, max(1, round(avg)))
+
+
+@dataclass
+class StrategistView:
+    """「岡三ストラテジスト視点」パイプラインの1ニュース分。
+
+    ニュース → 岡三ストラテジストならどう見るか → 重要テーマ →
+    関連セクター → 恩恵銘柄 → 悪影響銘柄 → 営業で話すポイント → 重要度、
+    という処理順で整理した結果を保持する。あくまで公開見出しとルールベースの
+    因果チェーン設定（config.yaml の causal_rules）から機械的に導いた
+    考察であり、断定的な投資助言ではない。
+    """
+
+    headline: Headline
+    strategist_take: str
+    theme: str
+    related_sector: str
+    beneficiary_names: List[str] = field(default_factory=list)
+    negative_names: List[str] = field(default_factory=list)
+    sales_point: str = ""
+    importance_stars: str = ""
+    score: Optional[StarScoreBreakdown] = None
 
 
 @dataclass
@@ -299,3 +372,4 @@ class AnalysisBundle:
     market_impact: List[MarketImpactEntry] = field(default_factory=list)
     sector_strength: List[SectorStrengthEntry] = field(default_factory=list)
     morning_meeting_comment: MorningMeetingComment = field(default_factory=MorningMeetingComment)
+    strategist_views: List[StrategistView] = field(default_factory=list)

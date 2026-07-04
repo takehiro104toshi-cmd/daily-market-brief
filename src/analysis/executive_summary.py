@@ -69,6 +69,20 @@ def _sales_talk(headline: Headline, affected_sector: str) -> str:
     return truncate_to_chars(text, SALES_TALK_MAX_CHARS)
 
 
+def _resolve_names(tickers: List[str], ticker_lookup: Dict[str, Quote]) -> str:
+    if not tickers:
+        return ""
+    names = [ticker_lookup[t].name if t in ticker_lookup else t for t in tickers]
+    return "、".join(names)
+
+
+def _strategist_view(item: NewsRankingItem, affected_sector: str) -> str:
+    """「岡三ストラテジストならどう見るか」の一言まとめ。"""
+    if affected_sector and affected_sector != "特定業種なし":
+        return f"「{affected_sector}」関連のテーマとして意識されやすいニュースと考えられます。"
+    return "現時点では特定のテーマ・業種との明確な結びつきは確認されていません。"
+
+
 def build_executive_summary(
     news_ranking_items: List[NewsRankingItem],
     market: dict,
@@ -91,6 +105,9 @@ def build_executive_summary(
                 usdjpy_impact=_usdjpy_impact(headline, market),
                 rate_impact=_rate_impact(headline, market),
                 sales_talk=item.sales_talk or _sales_talk(headline, item.affected_sector),
+                beneficiary_stocks=_resolve_names(item.beneficiary_tickers, ticker_lookup),
+                negative_stocks=_resolve_names(item.negative_tickers, ticker_lookup),
+                strategist_view=_strategist_view(item, item.affected_sector),
             )
         )
     return results

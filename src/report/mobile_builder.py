@@ -83,6 +83,23 @@ def _section5_watchlist(stock_ranking: dict) -> str:
     return "\n".join(lines)
 
 
+TOP_N_STRATEGIST_VIEWS = 2
+
+
+def _section_strategist_views(views: list) -> str:
+    if not views:
+        return f"本日算出できるストラテジスト視点がありませんでした（{NOT_AVAILABLE}）。\n"
+    lines = []
+    for view in views[:TOP_N_STRATEGIST_VIEWS]:
+        lines.append(f"**{view.headline.title}** {view.importance_stars}")
+        lines.append(first_sentence(view.strategist_take))
+        beneficiary = "、".join(view.beneficiary_names) if view.beneficiary_names else "該当なし"
+        negative = "、".join(view.negative_names) if view.negative_names else "該当なし"
+        lines.append(f"恩恵: {beneficiary} ／ 悪影響: {negative}")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def _section6_sales_talk(bullets) -> str:
     corp = bullets.corporate[0] if bullets.corporate else f"本日は営業トークを生成できませんでした（{NOT_AVAILABLE}）。"
     retail = bullets.retail[0] if bullets.retail else f"本日は営業トークを生成できませんでした（{NOT_AVAILABLE}）。"
@@ -106,17 +123,19 @@ def build_mobile_report(report_date: datetime, market: dict, analysis: AnalysisB
         "",
         "## 1. 今日の結論",
         render_conclusion(market, analysis.scenario),
-        "## 2. 今日の相場シナリオ",
+        "## 2. 岡三ストラテジスト視点",
+        _section_strategist_views(analysis.strategist_views),
+        "## 3. 今日の相場シナリオ",
         _section2_scenario(analysis.scenario),
-        "## 3. 注目テーマ TOP3",
+        "## 4. 注目テーマ TOP3",
         _section3_themes(analysis.theme_forecasts),
-        "## 4. 注目業界 TOP3",
+        "## 5. 注目業界 TOP3",
         _section4_sectors(analysis.sector_ranking),
-        "## 5. 監視銘柄チェック",
+        "## 6. 監視銘柄チェック",
         _section5_watchlist(analysis.stock_ranking),
-        "## 6. 今日の営業トーク",
+        "## 7. 今日の営業トーク",
         _section6_sales_talk(analysis.sales_talk_bullets),
-        "## 7. 今日の最重要ポイント",
+        "## 8. 今日の最重要ポイント",
         point + "\n",
     ]
     return "\n".join(sections) + "\n"

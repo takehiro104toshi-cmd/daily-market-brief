@@ -40,6 +40,7 @@ from src.analysis import (
     sector_ranking,
     sector_strength,
     stock_ranking,
+    strategist_engine,
     themes_forecast,
     top_picks,
     watchlist_analysis,
@@ -335,7 +336,14 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     )
     news_ranking_items = _safe_call(
         "news_ranking",
-        lambda: news_ranking.build_news_ranking(headlines, config.get("themes", []), config.get("sectors", {}), watchlist_names),
+        lambda: news_ranking.build_news_ranking(
+            headlines,
+            config.get("themes", []),
+            config.get("sectors", {}),
+            watchlist_names,
+            causal_rules=config.get("causal_rules", []),
+            durable_themes=config.get("durable_themes", []),
+        ),
         [],
     )
     causal_chain_text = _safe_call(
@@ -465,6 +473,11 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         ),
         morning_meeting_comment.MorningMeetingComment(),
     )
+    strategist_views_result = _safe_call(
+        "strategist_views",
+        lambda: strategist_engine.build_strategist_views(news_ranking_items, config, lookup),
+        [],
+    )
 
     analysis_bundle = AnalysisBundle(
         scenario=scenario_forecast,
@@ -494,6 +507,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         market_impact=market_impact_result,
         sector_strength=sector_strength_result,
         morning_meeting_comment=morning_meeting_comment_result,
+        strategist_views=strategist_views_result,
     )
 
     logger.info("Markdownレポートを生成しています...")

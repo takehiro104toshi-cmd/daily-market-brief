@@ -175,6 +175,82 @@ sectors:
     keywords: ["電力", "インフラ", "きんでん", "送配電", "データセンター"]
     related_tickers: ["1944.T"]
 
+# 継続性の高い（構造的・政策的な背景を持ち、単発の材料出尽くしで終わりにくい）テーマ。
+# strategist_engine.py の「継続性」「今後数週間重要か」の評価軸で、
+# 単発ニュースより高いスコアを与えるために使う。
+durable_themes:
+  - "半導体"
+  - "生成AI"
+  - "AI"
+  - "防衛"
+  - "データセンター"
+  - "資源"
+  - "電力"
+
+# ニュースを個別業種・関連銘柄へ変換するための「因果チェーン」ルール。
+# 「羅針盤」レポート等から学習した、ストラテジストの一般的な思考プロセス
+# （例: 原油安→航空/運輸のコスト低下→関連銘柄への追い風）を
+# 汎用的なルールとして一般化したものであり、特定資料の文章の引用ではない。
+# trigger_keywords: ニュース見出しに含まれるとルール発動
+# beneficiary_sectors / negative_sectors: sectors: のキー名を指定
+#   （related_tickers はsectors設定から解決する）
+# durable: True の場合、継続性・今後数週間重要か の評価が上がる
+causal_rules:
+  - trigger_keywords: ["原油高", "原油上昇", "原油急騰", "WTI高"]
+    theme: "資源価格"
+    beneficiary_sectors: ["資源・エネルギー"]
+    negative_sectors: ["自動車", "情報通信・生成AI"]
+    durable: false
+    note: "原油価格の上昇は資源関連には追い風、輸送・製造コストの増加を通じて他業種には逆風となりやすい"
+  - trigger_keywords: ["原油安", "原油下落", "原油急落", "WTI安"]
+    theme: "資源価格"
+    beneficiary_sectors: ["自動車"]
+    negative_sectors: ["資源・エネルギー"]
+    durable: false
+    note: "原油価格の下落は燃料・輸送コストの低下を通じて運輸・製造関連には追い風となりやすい"
+  - trigger_keywords: ["半導体投資拡大", "AI投資拡大", "設備投資拡大", "データセンター投資"]
+    theme: "AI・半導体設備投資"
+    beneficiary_sectors: ["半導体・電子部品", "電機・電線・素材", "電力・インフラ"]
+    negative_sectors: []
+    durable: true
+    note: "AI関連の設備投資拡大は、装置・部材・電力インフラなど周辺サプライチェーンへ波及しやすい"
+  - trigger_keywords: ["メモリ価格高騰", "メモリ不足", "部材不足", "発売延期"]
+    theme: "AI投資拡大の負の側面"
+    beneficiary_sectors: []
+    negative_sectors: ["情報通信・生成AI"]
+    durable: false
+    note: "部材価格の高騰や供給制約は、最終製品を手掛ける川下メーカーには一時的な逆風となる可能性がある"
+  - trigger_keywords: ["防衛費", "防衛予算", "防衛装備", "防衛費増額"]
+    theme: "防衛"
+    beneficiary_sectors: ["重工業・防衛"]
+    negative_sectors: []
+    durable: true
+    note: "防衛予算の拡大方針は、防衛関連の受注環境改善につながりやすい"
+  - trigger_keywords: ["利上げ", "タカ派", "追加利上げ観測", "金融引き締め"]
+    theme: "金融政策"
+    beneficiary_sectors: ["金融"]
+    negative_sectors: ["情報通信・生成AI"]
+    durable: false
+    note: "金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい"
+  - trigger_keywords: ["利下げ", "ハト派", "金融緩和", "緩和的"]
+    theme: "金融政策"
+    beneficiary_sectors: ["情報通信・生成AI"]
+    negative_sectors: ["金融"]
+    durable: false
+    note: "金利低下はグロース株のバリュエーションには追い風となる一方、金融機関の利ざやには逆風となりやすい"
+  - trigger_keywords: ["円安"]
+    theme: "為替"
+    beneficiary_sectors: ["自動車", "重工業・防衛"]
+    negative_sectors: []
+    durable: false
+    note: "円安方向への動きは輸出関連の採算改善期待につながりやすい"
+  - trigger_keywords: ["円高"]
+    theme: "為替"
+    beneficiary_sectors: []
+    negative_sectors: ["自動車", "重工業・防衛"]
+    durable: false
+    note: "円高方向への動きは輸出関連の採算悪化懸念につながりやすい"
+
 # 「今日見るべき指標」セクション向けの節目ライン設定。
 # name は indices/forex/rates/commodities の name と一致させる。
 # lines: 節目として表示する値（現在値に最も近いラインを自動選択）
