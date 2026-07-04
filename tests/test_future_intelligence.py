@@ -709,3 +709,115 @@ def test_watchlist_intelligence_richer_sector_mapping_reduces_insufficient_data(
     hitachi = next(w for w in rich_bundle.watchlist_intelligence if w.ticker == "6501.T")
     assert "AI" in hitachi.related_themes
     assert hitachi.judgment_label in future_intelligence._WATCHLIST_JUDGMENT_LABELS
+
+
+def test_v1_9_new_themes_are_recognized_in_theme_diagnosis():
+    # v1.9で追加予定の自動車／EV／蓄電池テーマが、既存のmacro_themes/causal_rules
+    # と同じ仕組みでテーマ別診断に認識されることを確認する（新規ロジックなし）
+    config = dict(CONFIG)
+    config["macro_themes"] = CONFIG["macro_themes"] + [
+        {"label": "自動車", "keywords": ["自動車", "自動車販売"]},
+        {"label": "EV", "keywords": ["EV"]},
+        {"label": "蓄電池", "keywords": ["蓄電池"]},
+    ]
+    config["causal_rules"] = CAUSAL_RULES + [
+        {
+            "trigger_keywords": ["自動車販売", "EV普及", "車載電池"],
+            "theme": "自動車市況・EV・蓄電池",
+            "beneficiary_sectors": ["自動車"],
+            "negative_sectors": [],
+            "durable": True,
+            "note": "自動車・EV・蓄電池の生産販売動向は完成車メーカーの業績に直結しやすい",
+        }
+    ]
+    sectors = dict(SECTORS)
+    sectors["自動車"] = {"keywords": ["自動車", "EV"], "related_tickers": ["7203.T"]}
+
+    bundle = future_intelligence.build_future_intelligence([], config, sectors, TICKER_LOOKUP)
+    labels = {td.label for td in bundle.theme_diagnosis}
+    assert {"自動車", "EV", "蓄電池"} <= labels
+
+    ev_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "EV")
+    assert 0 <= ev_diagnosis.confidence_score <= 100
+    assert ev_diagnosis.momentum_label in ("急加速", "加速", "横ばい", "減速")
+
+
+def test_watchlist_intelligence_v1_9_themes_further_reduce_insufficient_data():
+    # 自動車・金融関連の紐付けを追加するほど、Watchlist Intelligenceで
+    # 「判断材料不足」になる銘柄がさらに減ることを確認する（v1.9）
+    watchlist_stocks = {
+        "jp_stocks": [
+            {"ticker": "8035.T", "name": "東京エレクトロン"},
+            {"ticker": "7012.T", "name": "川崎重工業"},
+            {"ticker": "7203.T", "name": "トヨタ自動車"},
+            {"ticker": "8306.T", "name": "三菱UFJフィナンシャル・グループ"},
+        ],
+        "us_stocks": [{"ticker": "TSLA", "name": "Tesla"}],
+    }
+
+    baseline_config = dict(CONFIG)
+    baseline_config["watchlist"] = watchlist_stocks
+    baseline_bundle = future_intelligence.build_future_intelligence([], baseline_config, SECTORS, TICKER_LOOKUP)
+    baseline_insufficient = sum(
+        1 for w in baseline_bundle.watchlist_intelligence if w.judgment_label == "判断材料不足"
+    )
+    assert baseline_insufficient == 3  # 7203.T・8306.T・TSLAはCONFIG/SECTORSに紐付け先が無い
+
+    expanded_sectors = dict(SECTORS)
+    expanded_sectors["自動車"] = {"keywords": ["自動車", "EV"], "related_tickers": ["7203.T", "TSLA"]}
+    expanded_sectors["金融"] = {"keywords": ["金融", "銀行"], "related_tickers": ["8306.T"]}
+
+    expanded_config = dict(CONFIG)
+    expanded_config["watchlist"] = watchlist_stocks
+    expanded_config["macro_themes"] = CONFIG["macro_themes"] + [
+        {"label": "自動車", "keywords": ["自動車", "自動車販売"]},
+        {"label": "EV", "keywords": ["EV"]},
+        {"label": "金融", "keywords": ["金融"]},
+    ]
+    expanded_config["causal_rules"] = CAUSAL_RULES + [
+        {
+            "trigger_keywords": ["自動車販売", "EV普及"],
+            "theme": "自動車市況・EV",
+            "beneficiary_sectors": ["自動車"],
+            "negative_sectors": [],
+            "durable": True,
+            "note": "自動車・EVの生産販売動向は完成車メーカーの業績に直結しやすい",
+        },
+        {
+            "trigger_keywords": ["利上げ"],
+            "theme": "金融政策",
+            "beneficiary_sectors": ["金融"],
+            "negative_sectors": [],
+            "durable": False,
+            "note": "金利上昇は金融機関の利ざや改善に追い風となりやすい",
+        },
+    ]
+    expanded_bundle = future_intelligence.build_future_intelligence(
+        [], expanded_config, expanded_sectors, TICKER_LOOKUP
+    )
+    expanded_insufficient = sum(
+        1 for w in expanded_bundle.watchlist_intelligence if w.judgment_label == "判断材料不足"
+    )
+
+    assert expanded_insufficient < baseline_insufficient
+    assert expanded_insufficient == 0
+
+    toyota = next(w for w in expanded_bundle.watchlist_intelligence if w.ticker == "7203.T")
+    assert "自動車" in toyota.related_themes
+    tesla = next(w for w in expanded_bundle.watchlist_intelligence if w.ticker == "TSLA")
+    assert "自動車" in tesla.related_themes or "EV" in tesla.related_themes
+    mufg = next(w for w in expanded_bundle.watchlist_intelligence if w.ticker == "8306.T")
+    assert "金融" in mufg.related_themes
+
+
+def test_existing_theme_diagnosis_unaffected_by_v1_9_additions():
+    # v1.9のテーマ拡張が、既存のAIテーマの診断ロジック（Momentum/Lifecycle/
+    # Catalyst/Risk/Confidence）に影響しないことを確認する（後方互換）
+    headlines = [_headline("AI投資拡大が続く"), _headline("生成AI活用が広がる")]
+    bundle = future_intelligence.build_future_intelligence(headlines, CONFIG, SECTORS, TICKER_LOOKUP)
+
+    ai_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "AI")
+    assert ai_diagnosis.momentum_score == 57
+    assert ai_diagnosis.momentum_label == "加速"
+    assert ai_diagnosis.phase == "急成長期"
+    assert ai_diagnosis.continuity == "高い"

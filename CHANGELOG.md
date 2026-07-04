@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.16 (2026-07-04)
+
+追加
+・Future Intelligence Engine v1.9: Macro Themeを17拡張し、Watchlist
+  Intelligenceの一致率をさらに向上（新しい分析ロジックは追加せず、
+  macro_themes／causal_rules／sectors／theme_relationsの辞書拡張のみ）
+  - 追加テーマ: 自動車／EV／蓄電池／金融／金利／為替／消費／人材／広告／
+    SaaS／スマートフォン／クラウド／決済／旅行／住宅／建設／インバウンド
+    （物流は既存テーマのため、causal_rulesのみ追加して強化）
+  - 単純な業種分類ではなく「投資テーマとの経済的な因果関係」を優先して
+    紐付け（例: 自動車→EV→蓄電池→半導体・電力・資源、金利→金融→為替、
+    AI→クラウド→データセンター→電力）
+  - config.yamlのtheme_relationsを拡張し、テーマ別診断の「関連テーマ」
+    表示を強化
+  - Markdown・モバイル版・HTML版すべてに反映（既存のFuture Intelligence
+    Engineセクション内。他のセクション構成・既存の診断ロジックは変更して
+    いない）
+
+Watchlist Intelligence改善効果（手元のconfig.yamlで実測、監視銘柄30件）
+  - 追加前（v1.8時点）: 判断材料不足 6件 ／ 一致率 24/30（80%）
+    （未一致: トヨタ自動車・三菱UFJ・リクルート・デンソー・Apple・Tesla）
+  - 追加後（v1.9）: 判断材料不足 0件 ／ 一致率 30/30（100%）
+    （例: トヨタ自動車→自動車・EV・蓄電池・為替・消費、
+    三菱UFJ→金融・金利・決済、Apple/リクルート→AI・半導体・人材・広告・
+    SaaS・スマートフォン・クラウド・決済、Tesla→自動車・EV・蓄電池・為替・消費）
+
+変更ファイル
+・config.yaml
+・tests/test_future_intelligence.py
+
+pytest
+130 passed
+
+コミット
+（下記参照）
+
 ## v1.15 (2026-07-04)
 
 改善
