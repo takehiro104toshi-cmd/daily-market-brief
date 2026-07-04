@@ -623,3 +623,89 @@ def test_watchlist_intelligence_appears_in_markdown_html_and_mobile_output():
 
     mobile_text = _section_future_intelligence(bundle)
     assert "Watchlist Intelligence" in mobile_text
+
+
+def test_theme_diagnosis_shows_related_themes_from_theme_relations_config():
+    config = dict(CONFIG)
+    config["theme_relations"] = {"AI": ["防衛", "宇宙", "未設定テーマ"], "防衛": ["AI"]}
+    bundle = future_intelligence.build_future_intelligence([], config, SECTORS, TICKER_LOOKUP)
+
+    ai_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "AI")
+    assert ai_diagnosis.related_themes == ["防衛", "宇宙"]  # macro_themesに無いテーマは除外される
+
+    defense_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "防衛")
+    assert defense_diagnosis.related_themes == ["AI"]
+
+    space_diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "宇宙")
+    assert space_diagnosis.related_themes == []  # theme_relationsに未登録のテーマは空のまま
+
+
+def test_theme_diagnosis_related_themes_defaults_to_empty_without_config():
+    # theme_relationsキー自体が無くても、既存のテーマ診断（Momentum/Lifecycle/
+    # Catalyst/Risk/Confidence）は変更なく動作する（後方互換）
+    bundle = future_intelligence.build_future_intelligence([], CONFIG, SECTORS, TICKER_LOOKUP)
+    for td in bundle.theme_diagnosis:
+        assert td.related_themes == []
+        assert 0 <= td.confidence_score <= 100
+        assert td.momentum_label in ("急加速", "加速", "横ばい", "減速")
+
+
+def test_theme_diagnosis_related_themes_appear_in_markdown_and_html_output():
+    config = dict(CONFIG)
+    config["theme_relations"] = {"AI": ["防衛"]}
+    headlines = [_headline("防衛費増額の議論が進展")]
+    bundle = future_intelligence.build_future_intelligence(headlines, config, SECTORS, TICKER_LOOKUP)
+
+    markdown_text = render_future_intelligence(bundle)
+    assert "関連テーマ" in markdown_text
+
+    html_text = _future_intelligence_html(bundle)
+    assert "関連テーマ" in html_text
+
+
+def test_watchlist_intelligence_richer_sector_mapping_reduces_insufficient_data():
+    # macro_themes/causal_rulesの紐付け（sectors.related_tickers /
+    # causal_rules.beneficiary_sectors）を充実させるほど、Watchlist
+    # Intelligenceで「判断材料不足」になる銘柄が減ることを確認する（v1.8）。
+    watchlist_stocks = {
+        "jp_stocks": [
+            {"ticker": "8035.T", "name": "東京エレクトロン"},
+            {"ticker": "7012.T", "name": "川崎重工業"},
+            {"ticker": "6501.T", "name": "日立製作所"},
+        ],
+        "us_stocks": [],
+    }
+
+    sparse_config = dict(CONFIG)
+    sparse_config["watchlist"] = watchlist_stocks
+    sparse_bundle = future_intelligence.build_future_intelligence([], sparse_config, SECTORS, TICKER_LOOKUP)
+    sparse_insufficient = sum(
+        1 for w in sparse_bundle.watchlist_intelligence if w.judgment_label == "判断材料不足"
+    )
+    assert sparse_insufficient == 1  # 6501.Tは現在のSECTORSには紐付け先が無い
+
+    rich_sectors = dict(SECTORS)
+    rich_sectors["電機・電線・素材"] = {"keywords": ["電線", "重電"], "related_tickers": ["6501.T"]}
+    rich_causal_rules = [
+        {
+            "trigger_keywords": ["半導体投資拡大"],
+            "theme": "AI・半導体設備投資",
+            "beneficiary_sectors": ["半導体・電子部品", "電機・電線・素材"],
+            "negative_sectors": [],
+            "durable": True,
+            "note": "AI関連の設備投資拡大は周辺サプライチェーンへ波及しやすい",
+        },
+        CAUSAL_RULES[1],
+    ]
+    rich_config = dict(CONFIG)
+    rich_config["watchlist"] = watchlist_stocks
+    rich_config["causal_rules"] = rich_causal_rules
+    rich_bundle = future_intelligence.build_future_intelligence([], rich_config, rich_sectors, TICKER_LOOKUP)
+    rich_insufficient = sum(1 for w in rich_bundle.watchlist_intelligence if w.judgment_label == "判断材料不足")
+
+    assert rich_insufficient < sparse_insufficient
+    assert rich_insufficient == 0
+
+    hitachi = next(w for w in rich_bundle.watchlist_intelligence if w.ticker == "6501.T")
+    assert "AI" in hitachi.related_themes
+    assert hitachi.judgment_label in future_intelligence._WATCHLIST_JUDGMENT_LABELS

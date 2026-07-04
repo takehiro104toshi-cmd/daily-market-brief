@@ -725,12 +725,13 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         catalysts_html = "、".join(_esc(c) for c in td.catalysts)
         risks_html = "、".join(_esc(r) for r in td.risks)
         basis_html = f"<br>根拠: {_esc('、'.join(td.confidence_basis))}" if td.confidence_basis else ""
+        related_html = f"<br>関連テーマ: {_esc('、'.join(td.related_themes))}" if td.related_themes else ""
         parts.append(
             f"<div class='row'><span><strong>{_esc(td.label)}</strong></span>"
             f"<span>Confidence {td.confidence_score}%</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
             f"Momentum: {td.momentum_score}/100（{_esc(td.momentum_label)}）／"
-            f"Lifecycle: {_esc(td.phase)}（継続性: {_esc(td.continuity)}）<br>"
+            f"Lifecycle: {_esc(td.phase)}（継続性: {_esc(td.continuity)}）{related_html}<br>"
             f"Catalyst［AI分析］: {catalysts_html}<br>"
             f"Risk［AI分析］: {risks_html}{basis_html}</p>"
         )

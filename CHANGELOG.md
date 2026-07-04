@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v1.15 (2026-07-04)
+
+改善
+・Future Intelligence Engine v1.8: Watchlist Intelligenceの精度向上
+  （新しい分析ロジックは追加せず、辞書・マッピングの充実のみ）
+  - config.yamlのsectors（related_tickers）・causal_rules
+    （beneficiary_sectors）を、「投資テーマとの経済的な因果関係」を優先して
+    拡充。例: AI関連の設備投資拡大は、半導体（東京エレクトロン等）だけで
+    なく、データセンター運営主体（NTT・Microsoft・Amazon等）、電力設備・
+    電気工事（きんでん・日立製作所）、電線・素材（古河電工・住友電工等）
+    まで、単純な業種分類ではなくサプライチェーン・設備投資の因果関係で
+    紐付けた
+  - config.yamlに theme_relations（テーマ同士の対応付け。人手による参考
+    情報でAIによる生成ではない）を新設し、テーマ別診断に「関連テーマ」
+    （例: AI→半導体・電力・サイバーセキュリティ・自動運転・量子）を追加
+  - Watchlist Intelligenceで「判断材料不足」になる銘柄をテスト環境で
+    実際に削減できることを確認（テストで検証）
+  - Markdown・モバイル版・HTML版すべてに「関連テーマ」を反映（既存の
+    Future Intelligence Engineセクション内。他のセクション構成・既存の
+    診断ロジックは変更していない）
+
+変更ファイル
+・config.yaml
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+127 passed
+
+コミット
+（下記参照）
+
 ## v1.14 (2026-07-04)
 
 追加

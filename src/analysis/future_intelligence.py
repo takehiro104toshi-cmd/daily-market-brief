@@ -89,6 +89,17 @@ v1.7で以下を追加した:
     注目継続／押し目待ち／過熱警戒／材料待ち／判断材料不足のいずれかのみ
     を、Momentum・Lifecycle・Confidenceという既存シグナルから機械的に導く。
 
+v1.8で以下を改善した:
+    Watchlist Intelligenceの精度向上。新しい分析ロジックは追加せず、
+    config.yamlの sectors（related_tickers）・causal_rules
+    （beneficiary_sectors）を、投資テーマとの経済的な因果関係（例:
+    AI設備投資→半導体・データセンター運営主体・電力設備／電気工事・
+    電線・冷却部材への波及）に沿って拡充し、テーマ→銘柄の紐付け精度を
+    高めた（銘柄・因果関係の辞書充実のみで、AI分析の追加ではない）。
+    あわせて、config.yamlのtheme_relations（人手によるテーマ同士の
+    対応付け）をテーマ別診断の「関連テーマ」としてそのまま表示する
+    （新たな未来予測ロジックではない）。
+
 具体的な残り年数・市場規模・補助金額・政策内容・資金流入額等、実データの
 裏付けがない数値・情報は一切生成しない（決定論的なルールベースの定性ラベル、
 config.yamlの手動登録内容のそのまま表示、または既存シグナルからの定性的な
@@ -909,15 +920,20 @@ def _build_theme_diagnosis(
     sector_ranking_entries: List[SectorRankingEntry],
     theme_exec_summary_matched_map: Dict[str, bool],
     theme_top_news_matched_map: Dict[str, bool],
+    theme_relations_cfg: Dict[str, List[str]],
 ) -> List[ThemeDiagnosisEntry]:
     """テーマ別診断（Momentum→Lifecycle→Catalyst→Risk→Confidence）を組み立てる。
 
     投資家が長期の資産形成・投資判断に使うことを最優先目的とし、
     macro_themeごとにCatalyst（加速要因）・Risk（失速要因）・Confidence
     Score（分析根拠の充実度）を、既存シグナルのみから機械的に導出する。
+    related_themesは、config.yamlのtheme_relations（人手によるテーマ同士の
+    対応付け）をそのまま参照するのみで、新たな未来予測ロジックではない
+    （v1.8）。
     """
     momentum_map = {tm.label: tm for tm in theme_momentum}
     early_signal_labels = {es.label for es in early_signals}
+    configured_labels = {m.label for m in megatrends}
     capital_flow_map: Dict[str, CapitalFlowNote] = {}
     for cf in capital_flow_notes:
         for t in cf.related_themes:
@@ -939,6 +955,7 @@ def _build_theme_diagnosis(
         beneficiary_names = theme_beneficiary_names_map.get(label, [])
         capital_flow = capital_flow_map.get(label)
         focus_regions = focus_regions_map.get(label, [])
+        related_themes = [t for t in theme_relations_cfg.get(label, []) if t in configured_labels and t != label]
         sector_ranking_matched = bool(
             rule
             and rule.beneficiary_sectors
@@ -966,6 +983,7 @@ def _build_theme_diagnosis(
                 momentum_label=momentum.momentum_label,
                 phase=m.phase,
                 continuity=m.continuity,
+                related_themes=related_themes,
                 catalysts=_catalyst_bullets(rule, momentum, durable, early_signal_exists, focus_regions, capital_flow),
                 risks=_risk_bullets(m, momentum, durable, capital_flow),
                 confidence_score=confidence_score,
@@ -1254,6 +1272,7 @@ def build_future_intelligence(
         sector_ranking_entries,
         theme_exec_summary_matched_map,
         theme_top_news_matched_map,
+        config.get("theme_relations", {}),
     )
 
     # Watchlist Intelligence: watchlist銘柄とテーマ別診断の照合（v1.7）。

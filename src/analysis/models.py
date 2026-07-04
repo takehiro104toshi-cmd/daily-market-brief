@@ -517,6 +517,9 @@ class ThemeDiagnosisEntry:
     導いた「AI分析」であり、具体的な数値・政策名・企業業績の断定はしない。
     Confidence Score（0〜100）は「未来が当たる確率」ではなく、上記シグナルの
     うちいくつが実際に確認できたか（＝分析根拠の充実度）を表す。
+    related_themes（v1.8）は、config.yaml の theme_relations（人手による
+    テーマ同士の対応付け。AIによる生成・推定ではない）をそのまま表示する
+    「関連テーマ」であり、新たな未来予測ロジックではない。
     """
 
     label: str
@@ -524,6 +527,7 @@ class ThemeDiagnosisEntry:
     momentum_label: str
     phase: str
     continuity: str
+    related_themes: List[str] = field(default_factory=list)
     catalysts: List[str] = field(default_factory=list)
     risks: List[str] = field(default_factory=list)
     confidence_score: int = 0

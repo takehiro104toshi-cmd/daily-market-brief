@@ -691,6 +691,8 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         lines.append(f"**{td.label}**")
         lines.append(f"- Momentum: {td.momentum_score}/100（{td.momentum_label}）")
         lines.append(f"- Lifecycle: {td.phase} ／ 継続性: {td.continuity}")
+        if td.related_themes:
+            lines.append(f"- 関連テーマ: {'、'.join(td.related_themes)}")
         lines.append(f"- Catalyst［AI分析］: {'／'.join(td.catalysts)}")
         lines.append(f"- Risk［AI分析］: {'／'.join(td.risks)}")
         lines.append(f"- Confidence: {td.confidence_score}%")

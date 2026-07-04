@@ -147,10 +147,11 @@ def _section_future_intelligence(bundle) -> str:
         top_diagnosis = max(bundle.theme_diagnosis, key=lambda td: td.confidence_score)
         catalyst_txt = top_diagnosis.catalysts[0] if top_diagnosis.catalysts else NOT_AVAILABLE
         risk_txt = top_diagnosis.risks[0] if top_diagnosis.risks else NOT_AVAILABLE
+        related_txt = f"／関連テーマ: {'、'.join(top_diagnosis.related_themes)}" if top_diagnosis.related_themes else ""
         lines.append(
             f"テーマ別診断（Confidence上位）: {top_diagnosis.label}"
             f"（Momentum {top_diagnosis.momentum_score}/100・{top_diagnosis.phase}・"
-            f"Confidence {top_diagnosis.confidence_score}%）"
+            f"Confidence {top_diagnosis.confidence_score}%）{related_txt}"
         )
         lines.append(f"Catalyst［AI分析］: {catalyst_txt} ／ Risk［AI分析］: {risk_txt}")
 
