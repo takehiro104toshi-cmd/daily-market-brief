@@ -185,7 +185,7 @@
 | SOX指数（フィラデルフィア半導体指数） | 12,626.22 | -5.44% | ★★★ | [🔗](https://finance.yahoo.com/quote/^SOX) |
 | WTI原油先物 | 68.78 | +0.13% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,187.30 | +1.81% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 62,442.24 | -0.16% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 62,415.00 | -0.21% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 6. 為替・金利
@@ -1049,7 +1049,7 @@ NYダウ上昇
 
 - 「九州豪雨6年 村全体が限界集落化」（Yahoo!ニュース トピックス）
 - 「露のキーウ攻撃 甚大な被害の理由」（Yahoo!ニュース トピックス）
-- 「男性の更年期障害 見える化がカギ」（Yahoo!ニュース トピックス）
+- 「幼なじみ2人 後悔胸に消防隊員に」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -1287,14 +1287,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260703/k10015168311000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260703/k10015168281000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260703/k10015168181000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/tankers-u-turn-in-hormuz-with-some-taking-iran-route-instead)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/russia-said-it-captured-key-ukraine-stronghold-in-donetsk-region)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/extreme-heat-breaks-across-eastern-us-severe-thunderstorms-to-follow)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/modi-says-india-will-continue-to-expand-oil-refining-capacity)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/ecb-is-in-good-position-given-inflation-data-moulin-says)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/total-ceo-sees-mideast-producers-desperate-to-sell-oil-stocks)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/oil-terminal-in-russia-s-st-petersburg-comes-under-drone-attack)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/macron-s-budget-finale-augurs-more-political-chaos-in-france)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-07-04/ebola-vaccine-trials-could-start-this-year)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/china-coast-guard-rotates-patrol-task-group-east-of-taiwan)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-04/energy-hungry-asia-is-already-drawing-lessons-from-iran-crisis)
 - [CNBC Top News](https://www.cnbc.com/2026/07/02/5-takeaways-from-president-donald-trumps-interview-with-cnbc.html)
 - [CNBC Top News](https://www.cnbc.com/2026/07/04/uk-france-agree-with-oman-to-ensure-safety-of-its-territorial-waters.html)
 - [CNBC Top News](https://www.cnbc.com/2026/07/04/macron-modi-ai-infrastructure-tech-ceos.html)
@@ -1335,18 +1335,18 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/koreas-kospi-pe-valuation-falls-to-lowest-since-global-financial-crisis-4775362)
+- [Investing.com News](https://www.investing.com/news/politics-news/trump-to-mark-us-250th-anniversary-with-campaignstyle-rally-on-national-mall-4775359)
 - [Investing.com News](https://www.investing.com/news/politics-news/trump-extols-america-rails-at-communism-in-us-250th-celebration-4775337)
 - [Investing.com News](https://www.investing.com/news/world-news/pope-leo-marks-us-anniversary-with-migrant-appeal-on-lampedusa-4775352)
 - [Investing.com News](https://www.investing.com/news/economy-news/for-one-small-business-ai-was-key-to-a-quick-start-and-expansion-4775360)
 - [Investing.com News](https://www.investing.com/news/world-news/zelenskiy-denies-russian-capture-of-key-eastern-city-kostiantynivka-4775361)
-- [Investing.com News](https://www.investing.com/news/politics-news/trump-to-mark-us-250th-anniversary-with-campaignstyle-rally-on-national-mall-4775359)
 - [Investing.com News](https://www.investing.com/news/politics-news/when-their-interests-align-trump-and-roberts-both-win-at-supreme-court-4775358)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/trump-accounts-to-debut-as-us-kicks-off-250th-independence-day-celebrations-4775357)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/continental-sells-contitech-to-lone-star-funds-for-4-bln-4775356)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586724?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586726?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586712?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586715?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586730?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586731?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586723?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586729?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6586719?source=rss)
