@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from ..analysis.models import (
@@ -47,6 +47,7 @@ from ..analysis.data_freshness import (
     freshness_stars,
 )
 from ..collectors.market_data import Quote
+from ..collectors.news import parse_published_datetime
 from ..utils import SourceRegistry
 from .format_utils import NOT_AVAILABLE, find_quote, fmt_change_compact, fmt_price, todays_action_items
 
@@ -75,6 +76,8 @@ STYLE = """
   background: var(--card-bg); color: var(--text); border-color: var(--border);
 }
 :root[data-theme="dark"] .legend { color: #cbd5e1; }
+:root[data-theme="dark"] .fresh-new { background: #3f1d1d; color: #fca5a5; }
+:root[data-theme="dark"] .fresh-48 { background: #3d2c12; color: #fbbf24; }
 html { scroll-behavior: smooth; }
 * { box-sizing: border-box; }
 body {
@@ -113,19 +116,69 @@ body {
 .todays-action { background: #fff7e6; border: 1px solid #f3d98a; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .card-head h2 { margin: 0 0 10px 0; }
+.card-actions { display: flex; gap: 2px; align-items: center; flex-shrink: 0; }
 .copy-btn {
   border: none; background: transparent; cursor: pointer; font-size: 1rem; line-height: 1;
   padding: 6px 8px; border-radius: 6px; color: #6b7280; flex-shrink: 0;
 }
 .copy-btn:active { background: var(--flat-bg); }
+.fav-btn, .collapse-btn {
+  border: none; background: transparent; cursor: pointer; font-size: 1.05rem; line-height: 1;
+  padding: 6px 6px; border-radius: 6px; color: #9ca3af; min-width: 34px; min-height: 34px;
+}
+.fav-btn.fav-on { color: #f59e0b; }
+.card-collapsed .card-body { display: none; }
+.card-desc { font-size: 0.78rem; color: #6b7280; margin: 0 0 8px 0; }
+.menu-card { padding: 10px 12px; }
+.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.menu-btn {
+  display: block; text-align: center; padding: 12px 4px; border-radius: 10px;
+  background: var(--flat-bg); color: var(--text); text-decoration: none;
+  font-size: 0.78rem; font-weight: 600; border: 1px solid var(--border);
+}
+.menu-btn:active { background: var(--border); }
+.search-box { display: flex; gap: 8px; }
+#search-input {
+  flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 0.9rem; background: var(--card-bg); color: var(--text);
+}
+.search-clear {
+  padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--flat-bg); color: var(--text); font-size: 0.82rem; cursor: pointer;
+}
+.tag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag-chip {
+  padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--flat-bg); color: var(--text); font-size: 0.78rem; cursor: pointer;
+}
+.fav-list-block { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.fav-item { display: block; padding: 8px 4px; text-decoration: none; font-size: 0.85rem; }
+.fav-empty { font-size: 0.8rem; color: #9ca3af; margin: 4px 0; }
+.favorites-only .card:not(.is-fav):not(.no-filter) { display: none; }
+.fresh-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; margin-right: 4px; }
+.fresh-new { background: #fde2e2; color: #c62828; }
+.fresh-24 { background: var(--up-bg); color: var(--up); }
+.fresh-48 { background: #fff3e0; color: #e67e22; }
+.fresh-old { background: var(--flat-bg); color: var(--flat); }
+.fresh-unknown { background: var(--flat-bg); color: #9ca3af; }
+.fresh-time { font-size: 0.72rem; color: #9ca3af; }
 .section-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .section-nav a {
   flex: 1; text-align: center; padding: 10px 8px; border-radius: 8px; text-decoration: none;
   background: var(--flat-bg); color: var(--text); font-size: 0.82rem; font-weight: 600;
 }
 .section-nav a:only-child { margin-left: auto; }
+.float-nav {
+  position: fixed; right: 14px; bottom: 18px; z-index: 60;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.float-btn {
+  width: 40px; height: 40px; border-radius: 50%; background: #374151; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+  text-decoration: none; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
 .back-to-top {
-  position: fixed; right: 14px; bottom: 18px; z-index: 60; width: 48px; height: 48px;
+  width: 48px; height: 48px;
   border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center;
   justify-content: center; text-align: center; font-size: 0.68rem; line-height: 1.1;
   text-decoration: none; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
@@ -216,11 +269,96 @@ a { color: #1f6feb; }
 """
 
 SCRIPT = """
+function toggleCard(btn) {
+  var card = btn.closest('.card');
+  if (!card) { return; }
+  card.classList.toggle('card-collapsed');
+  btn.textContent = card.classList.contains('card-collapsed') ? '\\u25B8' : '\\u25BE';
+}
+
+function getFavs() {
+  try { return JSON.parse(localStorage.getItem('mkt_favs') || '[]'); } catch (e) { return []; }
+}
+function saveFavs(favs) { localStorage.setItem('mkt_favs', JSON.stringify(favs)); }
+
+function renderFavList() {
+  var box = document.getElementById('fav-list');
+  if (!box) { return; }
+  var favs = getFavs();
+  if (!favs.length) {
+    box.innerHTML = '<p class="fav-empty">お気に入りはありません</p>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < favs.length; i++) {
+    var card = document.getElementById(favs[i]);
+    var title = card ? card.querySelector('h2').textContent : favs[i];
+    html += '<a class="fav-item" href="#' + favs[i] + '">\\u2605 ' + title + '</a>';
+  }
+  box.innerHTML = html;
+}
+
+function applyFavStates() {
+  var favs = getFavs();
+  var btns = document.querySelectorAll('.fav-btn');
+  for (var i = 0; i < btns.length; i++) {
+    var id = btns[i].getAttribute('data-card');
+    var on = favs.indexOf(id) >= 0;
+    btns[i].textContent = on ? '\\u2605' : '\\u2606';
+    btns[i].classList.toggle('fav-on', on);
+    var card = document.getElementById(id);
+    if (card) { card.classList.toggle('is-fav', on); }
+  }
+  renderFavList();
+}
+
+function toggleFav(btn) {
+  var id = btn.getAttribute('data-card');
+  if (!id) { return; }
+  var favs = getFavs();
+  var idx = favs.indexOf(id);
+  if (idx >= 0) {
+    favs.splice(idx, 1);  // 登録済みなら確実に解除する
+  } else {
+    favs.push(id);
+  }
+  saveFavs(favs);
+  applyFavStates();
+}
+
+function filterCards() {
+  var input = document.getElementById('search-input');
+  if (!input) { return; }
+  var q = input.value.trim().toLowerCase();
+  var cards = document.querySelectorAll('.card:not(.no-filter)');
+  var hits = 0;
+  for (var i = 0; i < cards.length; i++) {
+    var text = (cards[i].innerText || cards[i].textContent || '').toLowerCase();
+    var show = !q || text.indexOf(q) >= 0;
+    cards[i].style.display = show ? '' : 'none';
+    if (show) { hits++; }
+  }
+  var empty = document.getElementById('search-empty');
+  if (empty) { empty.style.display = (q && !hits) ? '' : 'none'; }
+}
+function applyTag(btn) {
+  var input = document.getElementById('search-input');
+  if (!input) { return; }
+  input.value = btn.textContent.trim();
+  filterCards();
+}
+function clearSearch() {
+  var input = document.getElementById('search-input');
+  if (!input) { return; }
+  input.value = '';
+  filterCards();
+}
+
 function copySection(btn) {
   var card = btn.closest('.card');
   if (!card) { return; }
   var clone = card.cloneNode(true);
-  var toRemove = clone.querySelectorAll('.copy-btn, .section-nav');
+  var toRemove = clone.querySelectorAll('.copy-btn, .section-nav, .fav-btn, .collapse-btn');
   for (var i = 0; i < toRemove.length; i++) { toRemove[i].remove(); }
   var text = (clone.innerText || clone.textContent || '').trim();
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -236,18 +374,22 @@ function copySection(btn) {
   var compactBox = document.getElementById('opt-compact');
   var salesBox = document.getElementById('opt-hide-sales');
   var darkBox = document.getElementById('opt-dark');
+  var favsOnlyBox = document.getElementById('opt-favs-only');
   var fiToggleBtn = document.getElementById('opt-fi-toggle');
+  applyFavStates();  // ページ再読み込み後もお気に入り状態（☆/★・一覧）を復元する
   if (!compactBox || !salesBox || !darkBox) { return; }
 
   function apply() {
     document.body.classList.toggle('compact-mode', compactBox.checked);
     document.body.classList.toggle('hide-sales', salesBox.checked);
+    document.body.classList.toggle('favorites-only', !!(favsOnlyBox && favsOnlyBox.checked));
     root.setAttribute('data-theme', darkBox.checked ? 'dark' : 'light');
   }
 
   compactBox.checked = localStorage.getItem('mkt_compact') === '1';
   salesBox.checked = localStorage.getItem('mkt_hideSales') === '1';
   darkBox.checked = localStorage.getItem('mkt_theme') === 'dark';
+  if (favsOnlyBox) { favsOnlyBox.checked = localStorage.getItem('mkt_favsOnly') === '1'; }
   apply();
 
   compactBox.addEventListener('change', function () {
@@ -262,6 +404,12 @@ function copySection(btn) {
     localStorage.setItem('mkt_theme', darkBox.checked ? 'dark' : 'light');
     apply();
   });
+  if (favsOnlyBox) {
+    favsOnlyBox.addEventListener('change', function () {
+      localStorage.setItem('mkt_favsOnly', favsOnlyBox.checked ? '1' : '0');
+      apply();
+    });
+  }
   if (fiToggleBtn) {
     fiToggleBtn.addEventListener('click', function () {
       var blocks = document.querySelectorAll('.fi-block');
@@ -298,12 +446,47 @@ def _copy_button_html() -> str:
     return '<button type="button" class="copy-btn" onclick="copySection(this)" aria-label="このセクションをコピー">📋</button>'
 
 
-def _card(title: str, body_html: str, extra_class: str = "", anchor: Optional[str] = None, nav_html: str = "") -> str:
+# 各セクションカードの「ひとこと説明」（anchor→説明文の人手による対応表・v2.5）
+SECTION_DESCRIPTIONS = {
+    "dashboard-top": "今日の市場全体を30秒で把握するダッシュボードです。",
+    "executive-summary": "今日最重要のニュース最大3件とその影響を要約します。",
+    "strategist-views": "重要ニュースをストラテジスト視点で深掘りします。",
+    "future-intelligence": "世界→テーマ→業界→銘柄→長期戦略を一気通貫で分析します。",
+    "news-ranking": "本日の重要ニュースを重要度×鮮度で並べたランキングです。",
+    "watchlist": "監視銘柄の本日の評価を一覧で確認できます。",
+    "news-freshness": "本日のニュースがどれだけ新しいかを確認できます。",
+    "data-quality": "今日のレポートが最新データに基づくかを確認できます。",
+    "sales-prep": "営業向けの準備メモです（副次用途）。",
+}
+
+
+def _card(
+    title: str,
+    body_html: str,
+    extra_class: str = "",
+    anchor: Optional[str] = None,
+    nav_html: str = "",
+    description: str = "",
+) -> str:
     id_attr = f' id="{_esc(anchor)}"' if anchor else ""
     label, stars_txt = _split_title_stars(title)
     title_html = _esc(label) + (f" {_stars_span(stars_txt)}" if stars_txt else "")
-    head_html = f'<div class="card-head"><h2>{title_html}</h2>{_copy_button_html()}</div>'
-    return f'<div class="card {extra_class}"{id_attr}>{head_html}{body_html}{nav_html}</div>'
+    # お気に入り（☆⇄★）はアンカーを持つ通常セクションのみ対象（メニュー・目次等のno-filterカードは除く）
+    fav_btn = ""
+    if anchor and "no-filter" not in extra_class:
+        fav_btn = (
+            f'<button type="button" class="fav-btn" data-card="{_esc(anchor)}" '
+            'onclick="toggleFav(this)" aria-label="お気に入りに追加/解除">☆</button>'
+        )
+    collapse_btn = '<button type="button" class="collapse-btn" onclick="toggleCard(this)" aria-label="開く/閉じる">▾</button>'
+    actions_html = f'<div class="card-actions">{fav_btn}{collapse_btn}{_copy_button_html()}</div>'
+    head_html = f'<div class="card-head"><h2>{title_html}</h2>{actions_html}</div>'
+    desc = description or SECTION_DESCRIPTIONS.get(anchor or "", "")
+    desc_html = f'<p class="card-desc">{_esc(desc)}</p>' if desc else ""
+    return (
+        f'<div class="card {extra_class}"{id_attr}>{head_html}{desc_html}'
+        f'<div class="card-body">{body_html}{nav_html}</div></div>'
+    )
 
 
 def _quote_row(quote: Quote) -> str:
@@ -351,7 +534,7 @@ def _scenario_card(scenario, nav_html: str = "") -> str:
     return _card("今日の相場シナリオ", rows + reasons, anchor="scenario", nav_html=nav_html)
 
 
-def _news_ranking_html(items: List[NewsRankingItem]) -> str:
+def _news_ranking_html(items: List[NewsRankingItem], now: Optional[datetime] = None) -> str:
     if not items:
         return f"<p>本日ランキング可能なニュースがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
     parts = []
@@ -360,6 +543,7 @@ def _news_ranking_html(items: List[NewsRankingItem]) -> str:
         parts.append(
             f'<div class="row"><span>{item.rank}位{marker} {_esc(item.stars)} '
             f'<a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a></span></div>'
+            f'<p style="margin:2px 0 0 0;">{_news_freshness_badge(item.headline.published, now)}</p>'
             f'<p style="font-size:0.8rem;color:#666;margin:2px 0 8px 0;">'
             f'理由: {_esc(item.reason or NOT_AVAILABLE)} ／ 影響市場: {_esc(item.affected_market or NOT_AVAILABLE)} '
             f"／ 影響業種: {_esc(item.affected_sector or NOT_AVAILABLE)}</p>"
@@ -601,7 +785,7 @@ def _dashboard_tile(label: str, quote: Optional[Quote]) -> str:
     )
 
 
-def _dashboard_html(market: dict, analysis: AnalysisBundle) -> str:
+def _dashboard_html(market: dict, analysis: AnalysisBundle, now: Optional[datetime] = None) -> str:
     """Today's Dashboard: 重要ニュース3件＋主要指標のカードグリッド（HTML最上部）。"""
     indices = market.get("indices", [])
     forex = market.get("forex", [])
@@ -611,7 +795,8 @@ def _dashboard_html(market: dict, analysis: AnalysisBundle) -> str:
     news_items = analysis.executive_summary[:3] or analysis.news_ranking[:3]
     if news_items:
         news_html = "".join(
-            f'<div class="dash-news"><a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a></div>'
+            f'<div class="dash-news"><a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a>'
+            f"{_news_freshness_badge(item.headline.published, now)}</div>"
             for item in news_items
         )
     else:
@@ -684,9 +869,76 @@ def _split_title_stars(title: str) -> tuple:
 
 
 def _toc_item_html(anchor: str, title: str) -> str:
+    # v2.5: 目次リンクは新しいタブで開く（リンク先は同一HTML内のアンカー）
     label, stars_txt = _split_title_stars(title)
     stars_html = f" {_stars_span(stars_txt)}" if stars_txt else ""
-    return f'<li><a href="#{anchor}">{_esc(label)}{stars_html}</a></li>'
+    return f'<li><a href="#{anchor}" target="_blank" rel="noopener">{_esc(label)}{stars_html}</a></li>'
+
+
+# トップメニューグリッド（v2.5）: 主要セクションへのジャンプボタン
+MENU_GRID_ITEMS = [
+    ("#dashboard-top", "📊 Dashboard"),
+    ("#executive-summary", "📰 Executive Summary"),
+    ("#future-intelligence", "🌍 Future Intelligence"),
+    ("#news-ranking", "🔥 重要ニュース"),
+    ("#watchlist", "👀 Watchlist"),
+    ("#fi-stock", "📈 Stock Intelligence"),
+    ("#fi-signals", "💹 世界のお金"),
+    ("#data-quality", "✅ Data Quality"),
+    ("#sales-prep", "📝 営業メモ"),
+]
+
+
+def _menu_grid_html() -> str:
+    """レポート上部の主要ナビゲーション（AppMedia風のメニューグリッド・v2.5）。"""
+    links = "".join(f'<a class="menu-btn" href="{href}">{_esc(label)}</a>' for href, label in MENU_GRID_ITEMS)
+    return f'<div class="card no-filter menu-card"><div class="menu-grid">{links}</div></div>'
+
+
+SEARCH_TAGS = ["AI", "半導体", "電力", "防衛", "EV", "金利", "為替", "消費"]
+
+
+def _search_card_html() -> str:
+    """簡易検索＋タグUI（v2.5）。セクションタイトル・本文にキーワードが含まれる
+    カードだけを表示する。外部ライブラリ不使用・素のJavaScriptのみ。"""
+    chips = "".join(f'<button type="button" class="tag-chip" onclick="applyTag(this)">{_esc(t)}</button>' for t in SEARCH_TAGS)
+    return (
+        '<div class="card no-filter search-card">'
+        '<div class="search-box">'
+        '<input id="search-input" type="search" placeholder="キーワード検索（セクション本文を含む）" oninput="filterCards()">'
+        '<button type="button" class="search-clear" onclick="clearSearch()">クリア</button>'
+        "</div>"
+        f'<div class="tag-chips">{chips}</div>'
+        '<p id="search-empty" class="fav-empty" style="display:none;">一致するセクションがありません</p>'
+        "</div>"
+    )
+
+
+def _news_freshness_badge(published: str, now: Optional[datetime]) -> str:
+    """ニュース1件ごとの鮮度表示（投稿日時・何時間前か・鮮度ラベル、v2.5）。
+
+    v2.3のFreshness閾値と整合する表示専用バッジで、ランキング順位そのものは
+    変更しない（順位への鮮度反映はv2.3のタイブレークで実装済み）。
+    """
+    dt = parse_published_datetime(published)
+    if dt is None or now is None:
+        return "<span class='fresh-badge fresh-unknown'>日時不明</span>"
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    hours = max(0.0, (now - dt).total_seconds() / 3600.0)
+    time_txt = dt.astimezone(now.tzinfo).strftime("%m/%d %H:%M")
+    if hours <= 6:
+        cls, label = "fresh-new", "最新"
+    elif hours <= 24:
+        cls, label = "fresh-24", "24時間以内"
+    elif hours <= 48:
+        cls, label = "fresh-48", "48時間以内"
+    else:
+        cls, label = "fresh-old", "古い"
+    return (
+        f"<span class='fresh-badge {cls}'>{label}</span>"
+        f"<span class='fresh-time'>投稿: {_esc(time_txt)}（約{int(hours)}時間前）</span>"
+    )
 
 
 def _options_panel_html() -> str:
@@ -699,10 +951,13 @@ def _options_panel_html() -> str:
         "<label class='option-toggle'><input type='checkbox' id='opt-compact'> コンパクト表示</label>"
         "<label class='option-toggle'><input type='checkbox' id='opt-hide-sales'> 営業セクションを非表示</label>"
         "<label class='option-toggle'><input type='checkbox' id='opt-dark'> ダークモード</label>"
+        "<label class='option-toggle'><input type='checkbox' id='opt-favs-only'> お気に入りのみ表示</label>"
         "<button type='button' id='opt-fi-toggle' class='option-btn'>Future Intelligenceを全て開閉</button>"
         "</div>"
+        "<div class='fav-list-block'><strong>★ お気に入り</strong>"
+        "<div id='fav-list'><p class='fav-empty'>お気に入りはありません</p></div></div>"
     )
-    return _card("表示オプション", body, extra_class="options-card")
+    return _card("表示オプション", body, extra_class="options-card no-filter", anchor="display-options")
 
 
 def _slug(text: str) -> str:
@@ -720,13 +975,14 @@ def _new_badge(score: int) -> str:
     return " <span class='new-badge'>NEW</span>" if score >= NEW_BADGE_THRESHOLD else ""
 
 
-def _executive_summary_html(items: List[ExecutiveSummaryItem]) -> str:
+def _executive_summary_html(items: List[ExecutiveSummaryItem], now: Optional[datetime] = None) -> str:
     if not items:
         return f"<p>本日算出できる最重要ニュースがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
     parts = []
     for item in items:
         parts.append(
             f"<h3>{item.rank}. {_esc(item.conclusion)} {_esc(item.stars)}</h3>"
+            f'<p style="margin:0 0 4px 0;">{_news_freshness_badge(item.headline.published, now)}</p>'
             f"<p style='font-size:0.85rem;'>理由: {_esc(item.reason)}</p>"
             f"<p style='font-size:0.82rem;color:#555;'>日本株への影響: {_esc(item.jp_stock_impact)}</p>"
             f"<p style='font-size:0.82rem;color:#555;'>ドル円への影響: {_esc(item.usdjpy_impact)}</p>"
@@ -853,7 +1109,7 @@ def _news_freshness_card(freshness: Optional[DataFreshnessStats]) -> str:
         f"<div class='row'><span>データ鮮度評価</span>"
         f"<span>{_stars_span(freshness_stars(freshness.avg_age_hours))} {_esc(freshness_label(freshness.avg_age_hours))}</span></div>"
     )
-    return _card("News Freshness（データ鮮度）", rows_html + eval_html, extra_class="digest")
+    return _card("News Freshness（データ鮮度）", rows_html + eval_html, extra_class="digest", anchor="news-freshness")
 
 
 def _data_quality_html(freshness: Optional[DataFreshnessStats], market: dict, analysis: AnalysisBundle) -> str:
@@ -1303,7 +1559,9 @@ def build_html_report(
 
     top_cards = [
         _refresh_button_html(),
-        _dashboard_html(market, analysis),
+        _menu_grid_html(),
+        _dashboard_html(market, analysis, now=report_date),
+        _search_card_html(),
         _options_panel_html(),
         _news_freshness_card(freshness),
         _digest_card(market, analysis),
@@ -1319,7 +1577,7 @@ def build_html_report(
     # (anchor_id, タイトル, 本文HTML) のリスト。目次カードから各セクションへジャンプできる。
     # v2.1: 「投資家が毎朝見る順番」＝重要度順に再配置（分析ロジック・表示内容は変更なし）。
     sections = [
-        ("executive-summary", "AI Executive Summary ★★★★★", _executive_summary_html(analysis.executive_summary)),
+        ("executive-summary", "AI Executive Summary ★★★★★", _executive_summary_html(analysis.executive_summary, now=report_date)),
         ("strategist-views", "岡三ストラテジスト視点 ★★★★★", _strategist_views_html(analysis.strategist_views)),
         (
             "future-intelligence",
@@ -1333,7 +1591,7 @@ def build_html_report(
         ("causal-chain", "マーケット分析（因果チェーン） ★★★★☆", _causal_chain_html(analysis.causal_chain_text, analysis.causal_chains)),
         ("indices", "主要指標 ★★★★☆", _quote_table_html(market.get("indices", []) + market.get("commodities", []))),
         ("fx-rates", "為替・金利 ★★★★☆", _quote_table_html(market.get("forex", []) + market.get("rates", []))),
-        ("news-ranking", "今日の重要ニュースランキング ★★★★☆", _news_ranking_html(analysis.news_ranking)),
+        ("news-ranking", "今日の重要ニュースランキング ★★★★☆", _news_ranking_html(analysis.news_ranking, now=report_date)),
         ("key-levels", "今日見るべき指標 ★★★★☆", _key_levels_html(analysis.key_levels)),
         ("themes", "テーマ分析 ★★★★☆", _theme_forecasts_html(analysis.theme_forecasts)),
         ("sector-ranking", "業界ランキング TOP10 ★★★★☆", _sector_ranking_html(analysis.sector_ranking)),
@@ -1364,7 +1622,7 @@ def build_html_report(
         sections.append(("data-quality", "Data Quality ★★☆☆☆", _data_quality_html(freshness, market, analysis)))
 
     toc_items = "".join(_toc_item_html(anchor, title) for anchor, title, _ in sections)
-    toc_card = _card("目次", f"<ul class='toc-list'>{toc_items}</ul>", extra_class="toc")
+    toc_card = _card("目次", f"<ul class='toc-list'>{toc_items}</ul>", extra_class="toc no-filter", anchor="toc")
 
     rendered_sections = []
     for i, (anchor, title, body_html) in enumerate(sections):
@@ -1378,7 +1636,14 @@ def build_html_report(
             rendered_sections.append(_card(title, body_html, extra_class=extra_class, anchor=anchor, nav_html=nav_html))
 
     body = "".join(top_cards) + toc_card + "".join(rendered_sections)
-    back_to_top_html = '<a href="#dashboard-top" class="back-to-top" aria-label="TOPへ戻る">↑<br>TOP</a>'
+    # フローティング操作ボタン（v2.5）: ↑TOP／☰目次／★お気に入り
+    back_to_top_html = (
+        '<div class="float-nav">'
+        '<a href="#toc" class="float-btn" aria-label="目次へ">☰</a>'
+        '<a href="#display-options" class="float-btn" aria-label="お気に入り一覧へ">★</a>'
+        '<a href="#dashboard-top" class="back-to-top" aria-label="TOPへ戻る">↑<br>TOP</a>'
+        "</div>"
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="ja">

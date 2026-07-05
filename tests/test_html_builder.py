@@ -254,3 +254,113 @@ def test_v2_2_sales_sections_marked_for_hide_toggle():
     call_priorities_start = report.index('id="call-priorities"')
     div_start = report.rindex("<div class=", 0, call_priorities_start)
     assert "sales-section" not in report[div_start:call_priorities_start]
+
+
+# --- v2.5: UI/UX & Freshness Upgrade（スマホ最優先のカードUI・お気に入り・検索） ---
+
+
+def test_v2_5_toc_links_open_in_new_tab():
+    report = _build_report()
+    toc_start = report.index("<ul class='toc-list'>")  # CSS定義ではなく目次本体から探す
+    toc_end = report.index("</ul>", toc_start)
+    toc_html = report[toc_start:toc_end]
+    # 目次の全リンクが新しいタブで開く
+    assert toc_html.count('target="_blank"') == toc_html.count("<a ")
+    assert 'rel="noopener"' in toc_html
+
+
+def test_v2_5_favorites_can_register_and_unregister():
+    report = _build_report()
+    # 各カード右上の☆ボタン（data-card=アンカー）
+    assert 'class="fav-btn" data-card="executive-summary"' in report
+    assert report.count('class="fav-btn"') > 10
+    # JSに登録（push）と解除（splice）の両方が存在し、確実にトグルできる
+    assert "function toggleFav" in report
+    assert "favs.push(id)" in report
+    assert "favs.splice(idx, 1)" in report
+    # localStorageへ保存し、再読み込み時に復元する
+    assert "localStorage.setItem('mkt_favs'" in report
+    assert "applyFavStates()" in report
+    # 0件時の表示と一覧
+    assert "お気に入りはありません" in report
+    assert "id='fav-list'" in report
+    assert "id='opt-favs-only'" in report  # お気に入りのみ表示オプション
+
+
+def test_v2_5_floating_nav_buttons():
+    report = _build_report()
+    assert 'class="float-nav"' in report
+    assert 'class="back-to-top"' in report and 'href="#dashboard-top"' in report  # ↑TOP（既存機能維持）
+    assert 'href="#toc"' in report  # ☰ 目次
+    assert 'href="#display-options"' in report  # ★ お気に入り
+
+
+def test_v2_5_news_freshness_badge_and_panel():
+    import pytz
+
+    from tests.test_future_intelligence import _v21_bundle
+
+    bundle = full_bundle()
+    bundle.future_intelligence = _v21_bundle()
+    bundle.news_ranking[0].headline.published = "Sun, 05 Jul 2026 05:30:00 +0900"
+    report = build_html_report(
+        report_date=pytz.timezone("Asia/Tokyo").localize(datetime(2026, 7, 5, 7, 0)),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=bundle,
+    )
+    # ニュースごとの鮮度バッジ（投稿日時・何時間前・鮮度ラベル）
+    assert "fresh-badge" in report
+    assert "投稿: 07/05 05:30" in report
+    assert "時間前" in report
+    assert "最新" in report
+    # 日時不明の記事は「日時不明」と正直に表示（捏造しない）
+    assert "fresh-unknown" in report
+    # 既存のNews Freshnessパネルも維持されている（freshness指定時のみ表示のv2.3仕様どおり）
+    from src.analysis.data_freshness import DataFreshnessStats
+
+    report_with_stats = build_html_report(
+        report_date=datetime(2026, 7, 5),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+        freshness=DataFreshnessStats(generated_at=datetime(2026, 7, 5, 7, 0)),
+    )
+    assert "News Freshness（データ鮮度）" in report_with_stats
+    assert 'id="news-freshness"' in report_with_stats  # メニューグリッドから飛べるアンカー
+
+
+def test_v2_5_search_ui_and_menu_grid():
+    report = _build_report()
+    # 簡易検索: 入力・クリア・0件メッセージ
+    assert 'id="search-input"' in report
+    assert "クリア" in report and "clearSearch" in report
+    assert "function filterCards" in report
+    assert "一致するセクションがありません" in report
+    # タグUI
+    for tag in ["AI", "半導体", "電力", "防衛", "EV", "金利", "為替", "消費"]:
+        assert f'onclick="applyTag(this)">{tag}</button>' in report
+    # トップメニューグリッド（主要セクションへのジャンプ）
+    assert 'class="menu-grid"' in report
+    for href in ["#dashboard-top", "#executive-summary", "#future-intelligence", "#news-ranking", "#data-quality"]:
+        assert f'class="menu-btn" href="{href}"' in report
+
+
+def test_v2_5_card_collapse_and_descriptions():
+    report = _build_report()
+    assert "function toggleCard" in report
+    assert 'class="collapse-btn"' in report
+    assert 'class="card-body"' in report
+    # ひとこと説明（主要セクション）
+    assert "今日最重要のニュース最大3件とその影響を要約します。" in report
+    assert "世界→テーマ→業界→銘柄→長期戦略を一気通貫で分析します。" in report
+
+
+def test_v2_5_existing_html_structure_not_broken():
+    report = _build_report()
+    # 既存機能の維持: div対応・コピー・表示オプション・sticky・TOC順序
+    assert report.count("<div") == report.count("</div>")
+    assert report.count('class="copy-btn"') > 10
+    assert "id='opt-compact'" in report and "id='opt-dark'" in report
+    assert "sticky-dashboard" in report
+    assert report.index('id="executive-summary"') < report.index('id="future-intelligence"')

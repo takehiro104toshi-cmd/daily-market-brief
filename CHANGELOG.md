@@ -4,6 +4,44 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.5 (2026-07-05) — Market Brief UI/UX & Freshness Upgrade
+
+追加・改善（HTML版のみ。分析ロジック・Momentum・Confidence・Watchlist判定は不変。
+外部JS/CSSライブラリなし・素のJavaScriptのみ。Markdown/モバイル版は変更なし）
+
+・ニュース鮮度の表示（①）: 重要ニュースランキング・AI Executive Summary・
+  Today's Dashboardの各ニュースに、投稿日時・約何時間前か・鮮度バッジ
+  （最新≦6h=赤／24時間以内=緑／48時間以内=オレンジ／古い=グレー／
+  日時不明=グレー）を色分き表示。順位ロジックは変更なし
+  （鮮度タイブレークはv2.3で導入済み。日付不明記事が不利になる挙動も同様）
+・トップメニューグリッド（②③）: レポート上部にDashboard／Executive Summary／
+  Future Intelligence／重要ニュース／Watchlist／Stock Intelligence／
+  世界のお金／Data Quality／営業メモへの9ボタンをAppMedia風グリッドで配置
+・目次リンクを新しいタブで開く（④）: 全目次リンクにtarget="_blank"
+  rel="noopener"を付与（リンク先は同一HTML内アンカー）
+・セクションカード強化（⑤）: 各カードに「ひとこと説明」（主要9セクション）・
+  開く/閉じる（▾/▸）・コピー（既存）・お気に入り（☆/★）を追加
+・お気に入り機能（⑥）: ☆で登録→★、★で確実に解除→☆。localStorage
+  （mkt_favs）に保存し再読み込み後も維持。表示オプション内に一覧を表示し、
+  解除すると一覧からも消える。0件時は「お気に入りはありません」。
+  Playwright実機検証で登録→解除→再登録→再読込維持を確認済み
+・フローティング操作ボタン（⑦）: 右下に ☰目次／★お気に入り／↑TOP の3ボタン
+・簡易検索＋タグUI（⑧）: キーワード入力でセクションタイトル・本文を検索し
+  一致しないカードを非表示。クリアボタン・0件メッセージ付き。
+  タグ（AI/半導体/電力/防衛/EV/金利/為替/消費）タップで即絞り込み
+・表示オプション改善（⑨）: 既存4項目に「お気に入りのみ表示」を追加
+  （localStorage保存）
+
+変更ファイル
+・src/report/html_builder.py
+・tests/test_html_builder.py
+
+pytest
+182 passed
+
+コミット
+（下記参照）
+
 ## v2.4 (2026-07-05) — Investment Thesis Engine v2.0
 
 追加（Future Intelligence Engineへの統合のみ。既存の分析ロジック・スコアリング・
