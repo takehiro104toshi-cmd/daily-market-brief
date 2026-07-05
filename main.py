@@ -24,6 +24,7 @@ from src.analysis import (
     call_priority,
     causal_chain,
     chat_topics,
+    data_freshness,
     events,
     executive_summary,
     future_intelligence,
@@ -259,6 +260,10 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
 
     logger.info("追加の公開情報源（日経・Bloomberg・Reuters・CNBC・WSJ・MarketWatch・Investing等）を取得しています（ベストエフォート）...")
     extra_headlines = []
+    # 鮮度統計（v2.3）用: 1件も取得できなかった情報源名を記録する
+    failed_source_names = [
+        s["name"] for s in config.get("news_sources", []) if not any(h.source == s["name"] for h in headlines)
+    ]
     for collector_name, fetch_fn in (
         ("nikkei", lambda: nikkei.fetch_nikkei_headlines(sources, limit, config.get("nikkei_sources"))),
         ("bloomberg", lambda: bloomberg.fetch_bloomberg_headlines(sources, limit, config.get("bloomberg_sources"))),
@@ -270,8 +275,12 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         ("boj", lambda: boj.fetch_boj_headlines(sources, limit, config.get("boj_sources"))),
         ("mof", lambda: mof.fetch_mof_headlines(sources, limit, config.get("mof_sources"))),
     ):
-        extra_headlines.extend(_safe_call(collector_name, fetch_fn, []))
-    headlines = news.dedupe_headlines(headlines + extra_headlines)
+        fetched = _safe_call(collector_name, fetch_fn, [])
+        if not fetched:
+            failed_source_names.append(collector_name)
+        extra_headlines.extend(fetched)
+    raw_headlines = headlines + extra_headlines  # 重複除去前の全見出し（鮮度統計用）
+    headlines = news.dedupe_headlines(raw_headlines)
 
     _safe_call("kabutan_reference", lambda: kabutan.register_reference(sources), None)
     _safe_call("moomoo_reference", lambda: moomoo.register_reference(sources), None)
@@ -542,6 +551,19 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         future_intelligence=future_intelligence_result,
     )
 
+    # v2.3: データ鮮度統計（計測のみ。分析ロジック・ランキング結果には影響しない）
+    freshness_stats = _safe_call(
+        "data_freshness",
+        lambda: data_freshness.build_data_freshness_stats(
+            generated_at=now,
+            raw_headlines=raw_headlines,
+            deduped_headlines=headlines,
+            ranking_items=news_ranking_items,
+            attempted_source_names=failed_source_names,
+        ),
+        None,
+    )
+
     logger.info("Markdownレポートを生成しています...")
     report_md = build_report(
         report_date=now,
@@ -562,6 +584,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             sources=sources,
             analysis=analysis_bundle,
             actions_url=_resolve_actions_url(config),
+            freshness=freshness_stats,
         ),
         "<html><body><p>HTML版レポートの生成に失敗しました（取得不可）。</p></body></html>",
     )
@@ -588,6 +611,9 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     latest_html_path = output_dir / LATEST_HTML_FILENAME
     latest_html_path.write_text(html_report, encoding="utf-8")
     logger.info("最新HTML版レポートを保存しました: %s", latest_html_path)
+
+    # v2.3: Data Freshness Summary＋RSS Source Healthをログ（GitHub Actions実行時はJob Summaryにも）出力
+    _safe_call("data_freshness_summary", lambda: data_freshness.write_job_summary(freshness_stats), None)
 
     logger.info("通知（メール・LINE）の送信を確認しています...")
     _send_notifications(config, now, market, analysis_bundle)

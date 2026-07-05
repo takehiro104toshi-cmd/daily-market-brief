@@ -6,7 +6,10 @@
 - ウォッチリスト銘柄名に言及: 加点
 
 最高スコアの見出しを「AIが本日最重要と判断したニュース」として
-必ず1位に固定する。同点の場合は見出しの出現順を優先する。
+必ず1位に固定する。同点の場合は記事日時（pubDate）が新しいものを優先し、
+日時も同じ（または解析不能）の場合のみ見出しの出現順を優先する
+（v2.3: 鮮度タイブレーク。重要度スコアの算出方法自体は変更していない。
+日時が取得できない記事は同点内で最後尾に回る）。
 
 各見出しには「理由」「影響市場」「影響業種」も付与する
 （②今日の重要ニュースランキング向け）。
@@ -16,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from ..collectors.news import Headline
+from ..collectors.news import Headline, parse_published_datetime
 from ..report.format_utils import stars, truncate_to_chars
 from .models import NewsRankingItem
 from .strategist_engine import CausalRule, match_causal_rule, parse_causal_rules, resolve_tickers
@@ -135,6 +138,12 @@ def _analyze_headline(
     )
 
 
+def _published_timestamp(headline: Headline) -> float:
+    """タイブレーク用: 記事日時をUNIX秒で返す。解析不能時は-inf（同点内で最後尾）。"""
+    dt = parse_published_datetime(headline.published)
+    return dt.timestamp() if dt is not None else float("-inf")
+
+
 def _sales_talk(headline: Headline, analysis: "_HeadlineAnalysis") -> str:
     """営業現場でそのまま読める、100文字以内の営業トークを生成する（断定は避ける）。"""
     if analysis.affected_sector and analysis.affected_sector != "特定業種なし":
@@ -172,8 +181,12 @@ def build_news_ranking(
         (headline, _analyze_headline(headline, themes, sectors, watchlist_names, parsed_causal_rules, durable_themes))
         for headline in headlines
     ]
-    # スコア降順・原順序維持のため安定ソートを利用
-    ranked = sorted(enumerate(analyzed), key=lambda item: (-item[1][1].score, item[0]))
+    # スコア降順 → 記事日時の新しい順 → 出現順（v2.3: 同点時は新しい記事を優先。
+    # 日時を解析できない記事は同点内の最後尾に回す。スコア算出自体は不変）
+    ranked = sorted(
+        enumerate(analyzed),
+        key=lambda item: (-item[1][1].score, -_published_timestamp(item[1][0]), item[0]),
+    )
 
     items: List[NewsRankingItem] = []
     for rank, (_, (headline, analysis)) in enumerate(ranked[:limit], start=1):

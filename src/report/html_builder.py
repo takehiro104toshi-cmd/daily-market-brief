@@ -40,6 +40,12 @@ from ..analysis.models import (
     TopPickEntry,
     WatchlistQuickEntry,
 )
+from ..analysis.data_freshness import (
+    DataFreshnessStats,
+    availability_stars,
+    freshness_label,
+    freshness_stars,
+)
 from ..collectors.market_data import Quote
 from ..utils import SourceRegistry
 from .format_utils import NOT_AVAILABLE, find_quote, fmt_change_compact, fmt_price, todays_action_items
@@ -816,6 +822,80 @@ def _source_list_html(sources: SourceRegistry) -> str:
     return "".join(parts)
 
 
+def _fmt_stats_dt(dt, tz) -> str:
+    if dt is None:
+        return NOT_AVAILABLE
+    if tz is not None:
+        dt = dt.astimezone(tz)
+    return dt.strftime("%m/%d %H:%M")
+
+
+def _news_freshness_card(freshness: Optional[DataFreshnessStats]) -> str:
+    """「News Freshness」カード（v2.3）。本日のニュースの鮮度を一目で確認する。
+
+    表示専用の計測値であり、ランキング・分析ロジックには一切影響しない。
+    """
+    if freshness is None:
+        return ""
+    tz = freshness.generated_at.tzinfo
+    avg_txt = f"{freshness.avg_age_hours:.0f}時間" if freshness.avg_age_hours is not None else NOT_AVAILABLE
+    rows = [
+        ("最新ニュース日時", _fmt_stats_dt(freshness.newest_published, tz)),
+        ("最も古い採用記事日時", _fmt_stats_dt(freshness.oldest_adopted, tz)),
+        ("採用記事平均経過時間", avg_txt),
+        ("採用記事件数", f"{freshness.adopted_count}件"),
+        ("RSS取得件数", f"{freshness.rss_fetched_total}件"),
+        ("ランキング対象件数", f"{freshness.deduped_total}件"),
+        ("レポート生成日時", freshness.generated_at.strftime("%m/%d %H:%M")),
+    ]
+    rows_html = "".join(f"<div class='row'><span>{_esc(k)}</span><span>{_esc(v)}</span></div>" for k, v in rows)
+    eval_html = (
+        f"<div class='row'><span>データ鮮度評価</span>"
+        f"<span>{_stars_span(freshness_stars(freshness.avg_age_hours))} {_esc(freshness_label(freshness.avg_age_hours))}</span></div>"
+    )
+    return _card("News Freshness（データ鮮度）", rows_html + eval_html, extra_class="digest")
+
+
+def _data_quality_html(freshness: Optional[DataFreshnessStats], market: dict, analysis: AnalysisBundle) -> str:
+    """「Data Quality」セクション（v2.3）。今日のレポートが最新データに基づくかを
+    一目で確認するための機械的な可用性・鮮度指標（分析ロジックには不関与）。
+    """
+    all_quotes = (
+        market.get("indices", []) + market.get("forex", []) + market.get("rates", []) + market.get("commodities", [])
+    )
+    market_ok = sum(1 for q in all_quotes if q.price is not None)
+    fi = analysis.future_intelligence
+    fi_ok = sum(1 for xs in (fi.megatrends, fi.theme_momentum, fi.theme_diagnosis) if xs)
+    watch_entries = analysis.watchlist_quicklist.get("jp", []) + analysis.watchlist_quicklist.get("us", [])
+    watch_ok = sum(1 for e in watch_entries if e.quote.price is not None)
+
+    news_stars_txt = freshness_stars(freshness.avg_age_hours) if freshness else "★☆☆☆☆"
+    rows = [
+        ("ニュース取得", _stars_span(news_stars_txt)),
+        ("市場データ", _stars_span(availability_stars(market_ok, len(all_quotes)))),
+        ("Future Intelligence", _stars_span(availability_stars(fi_ok, 3))),
+        ("Watchlist", _stars_span(availability_stars(watch_ok, len(watch_entries)))),
+    ]
+    if freshness is not None:
+        tz = freshness.generated_at.tzinfo
+        avg_txt = f"{freshness.avg_age_hours:.0f}時間" if freshness.avg_age_hours is not None else NOT_AVAILABLE
+        rows.extend(
+            [
+                ("更新日時", _esc(freshness.generated_at.strftime("%H:%M %Z").strip())),
+                ("最新ニュース", _esc(_fmt_stats_dt(freshness.newest_published, tz))),
+                ("平均鮮度", _esc(avg_txt)),
+                ("情報源", _esc(f"{len(freshness.source_health)}")),
+                ("ランキング対象", _esc(f"{freshness.deduped_total}件")),
+            ]
+        )
+    rows_html = "".join(f"<div class='row'><span>{_esc(k)}</span><span>{v}</span></div>" for k, v in rows)
+    legend = (
+        "<p class='legend'>本日のレポートが最新データに基づいているかを確認するための"
+        "機械的な指標です（取得できた項目の割合と記事の経過時間から算出。分析内容の評価ではありません）。</p>"
+    )
+    return legend + rows_html
+
+
 FI_BLOCK_TOC_HTML = [
     ("fi-signals", "Today's Future Signals", "★★★★★"),
     ("fi-theme", "Theme Intelligence", "★★★★★"),
@@ -1177,8 +1257,13 @@ def build_html_report(
     sources: SourceRegistry,
     analysis: AnalysisBundle,
     actions_url: Optional[str] = None,
+    freshness: Optional[DataFreshnessStats] = None,
 ) -> str:
-    """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。"""
+    """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。
+
+    freshness（v2.3・省略可）: データ鮮度統計。指定時のみNews Freshnessカードと
+    Data Qualityセクションを表示する（未指定でも従来通り動作する）。
+    """
     date_str = report_date.strftime("%Y年%m月%d日")
     updated_str = report_date.strftime("%Y-%m-%d %H:%M")
     tz_label = report_date.tzname() or "現地時間"
@@ -1187,6 +1272,7 @@ def build_html_report(
         _refresh_button_html(),
         _dashboard_html(market, analysis),
         _options_panel_html(),
+        _news_freshness_card(freshness),
         _digest_card(market, analysis),
         _card(
             "本レポートについて",
@@ -1240,6 +1326,9 @@ def build_html_report(
         ("ai-summary", "AIまとめ ★★☆☆☆", f"<p>{_esc(analysis.ai_summary_text)}</p>"),
         ("sources", "引用（参照URL一覧） ★★☆☆☆", _source_list_html(sources)),
     ]
+    if freshness is not None:
+        # v2.3: 引用一覧の下にData Qualityを追加（freshness指定時のみ表示）
+        sections.append(("data-quality", "Data Quality ★★☆☆☆", _data_quality_html(freshness, market, analysis)))
 
     toc_items = "".join(_toc_item_html(anchor, title) for anchor, title, _ in sections)
     toc_card = _card("目次", f"<ul class='toc-list'>{toc_items}</ul>", extra_class="toc")

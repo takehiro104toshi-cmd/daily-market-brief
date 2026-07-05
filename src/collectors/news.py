@@ -9,6 +9,7 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Dict, List, Optional
 
 from ..utils import SourceRegistry, safe_get
@@ -30,6 +31,31 @@ class Headline:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def parse_published_datetime(published: str) -> Optional[datetime]:
+    """Headline.published（RSSのpubDate、RFC 2822形式）をdatetimeへ変換する。
+
+    解析できない・空の場合はNoneを返す（推測で埋めない）。ISO 8601形式
+    （fetched_at等）もフォールバックとして受け付ける。v2.3の鮮度タイブレーク・
+    Freshness Score算出で共通利用する。
+    """
+    if not published:
+        return None
+    try:
+        dt = parsedate_to_datetime(published.strip())
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (TypeError, ValueError):
+        pass
+    try:
+        dt = datetime.fromisoformat(published.strip())
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        return None
 
 
 def _parse_rss(xml_text: str, source_name: str, limit: int, reliability: float) -> List[Headline]:

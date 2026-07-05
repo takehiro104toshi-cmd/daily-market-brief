@@ -4,6 +4,50 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.3 (2026-07-05) — Data Freshness & News Quality v2.0
+
+追加・改善（鮮度タイブレーク＋可視化＋ログ強化のみ。重要度スコアの算出・
+Momentum・Confidence・Watchlist判定・Executive Summaryの設計は一切変更なし）
+
+・News Rankingの鮮度タイブレーク（最優先）: 順位決定を
+  「スコア → 記事日時（pubDate）の新しい順 → 取得順」へ変更。
+  スコア自体は不変のため、スコア差がある場合の順位は従来と完全に同じ。
+  同点の場合のみ、新しい記事が古い記事より上位になる
+  （従来は取得順のみで、数日前の高スコア記事が毎日1位に再選出され続ける
+  根本原因になっていた——前回のRoot Cause Investigation v2で実証済み）。
+  日時を解析できない記事は同点内の最後尾に回す。
+・News Freshness Score: 各記事の経過時間から★1〜5を内部算出
+  （24h未満★5／48h未満★4／72h未満★3／96h未満★2／それ以上★1）。
+  表示専用でランキングには影響しない。
+・News Freshnessカード（HTML版・レポート上部）: 最新ニュース日時／最も古い
+  採用記事日時／採用記事平均経過時間／採用記事件数／RSS取得件数／
+  ランキング対象件数／レポート生成日時／データ鮮度評価（★＋ラベル）
+・Data Qualityセクション（HTML版・引用一覧の下）: ニュース取得★／市場データ★／
+  Future Intelligence★／Watchlist★（いずれも取得できた割合からの機械的評価）
+  ＋更新日時・最新ニュース・平均鮮度・情報源数・ランキング対象件数
+・GitHub Actions Job Summaryへ「Data Freshness Summary」を追加:
+  RSS取得件数／重複削除後件数／ランキング1位の記事日時・タイトル／
+  Executive Summary・Dashboard採用記事日時／HTML生成時刻／鮮度評価
+・同じくJob Summaryへ「RSS Source Health」を追加: 情報源ごとに
+  成功／取得失敗（0件）・件数・最新記事日時を一覧表示。
+  ローカル実行時も同内容をINFOログへ出力（取得失敗が初めて可視化される）
+・実装は新設の src/analysis/data_freshness.py に集約（読み取り専用の計測
+  レイヤー。将来の鮮度加点・情報源信頼度・速報フラグはここへ追加できる構造）
+
+変更ファイル
+・src/analysis/data_freshness.py（新規）
+・src/analysis/news_ranking.py
+・src/collectors/news.py
+・src/report/html_builder.py
+・main.py
+・tests/test_data_freshness.py（新規）
+
+pytest
+168 passed
+
+コミット
+（下記参照）
+
 ## v2.2 (2026-07-04)
 
 追加・改善（UI・操作性のみ。分析ロジック・スコアリング・Future Intelligence／
