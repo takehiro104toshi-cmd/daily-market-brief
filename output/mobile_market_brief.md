@@ -17,6 +17,10 @@
 恩恵: 該当なし ／ 悪影響: 該当なし
 
 ## 3. Future Intelligence Engine　★★★★★
+**🎯 Today's Action（今日確認すべきこと）**
+- 「AI」関連ニュースを確認
+- ドル円の値動きを確認
+- 「AI」関連指標を確認
 **Future Intelligence 目次**
 ├ Today's Future Signals ★★★★★
 ├ Theme Intelligence ★★★★★
