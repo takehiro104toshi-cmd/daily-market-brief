@@ -1046,3 +1046,143 @@ def test_v2_2_watchlist_names_link_to_stock_intelligence_anchor_when_matched():
     html_text = _future_intelligence_html(bundle)
     assert "href=\"#stock-8035.T\"" in html_text
     assert "id='stock-8035.T'" in html_text
+
+
+# --- v2.4: Investment Thesis Engine（テーマ別・長期投資仮説）の検証 ---
+# すべて既存シグナル（Theme Momentum・Lifecycle・Catalyst・Risk・Confidence・
+# causal_rules・theme_relations・中長期テーマ割り付け）の転記・機械的な
+# 組み合わせのみで構成されることを確認する。
+
+
+def test_investment_theses_generated_for_each_diagnosed_theme():
+    bundle = _v21_bundle()
+    assert len(bundle.investment_theses) == len(bundle.theme_diagnosis)
+    assert {t.label for t in bundle.investment_theses} == {td.label for td in bundle.theme_diagnosis}
+    # 表示はConfidence（分析根拠の充実度）の高い順
+    scores = [t.confidence_score for t in bundle.investment_theses]
+    assert scores == sorted(scores, reverse=True)
+
+
+def test_investment_thesis_fields_derived_from_existing_signals_only():
+    bundle = _v21_bundle()
+    thesis = next(t for t in bundle.investment_theses if t.label == "AI")
+    diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "AI")
+    momentum = next(tm for tm in bundle.theme_momentum if tm.label == "AI")
+
+    # 現在何が起きているか = Theme Momentum Scoreのreasonの転記
+    assert thesis.current_situation == momentum.reason
+    # 崩れる条件 = テーマ別診断のRisk（失速要因）の転記
+    assert thesis.breakdown_conditions == diagnosis.risks
+    # 恩恵業界 = causal_rules.beneficiary_sectors
+    assert thesis.beneficiary_industries == ["半導体・電子部品"]
+    # 恩恵企業 = 既存の恩恵銘柄ロジックの結果
+    assert "東京エレクトロン" in thesis.beneficiary_names
+    # 今後起こりそうな変化はCatalyst先頭の非断定的な言い換え
+    assert diagnosis.catalysts[0] in thesis.expected_change
+    assert "断定ではありません" in thesis.expected_change
+    # 投資期間は既存の中長期テーマ割り付け（半年/1年/3年/5年/10年）のサブセット
+    assert thesis.horizons and set(thesis.horizons) <= {"半年", "1年", "3年", "5年", "10年"}
+    horizon_map = {hg.horizon: hg.themes for hg in bundle.horizon_groups}
+    for h in thesis.horizons:
+        assert "AI" in horizon_map[h]
+    # 監視指標は本システムのシグナル＋既存のテーマ→イベント対応表のみ
+    assert "Theme Momentum Scoreの推移" in thesis.watch_indicators
+    # 投資仮説まとめはStock Intelligenceと同じ因果チェーンロジック
+    assert thesis.thesis_summary[0] == "AI"
+    assert "将来の株価・業績を保証するものではありません" in thesis.thesis_summary[-1]
+
+
+def test_investment_thesis_secondary_and_less_watched_from_theme_relations():
+    # AI→防衛（1段階）→電力（2段階）というtheme_relationsを組み、
+    # 二次的恩恵企業＝防衛の恩恵企業、まだ注目されにくい企業＝電力の恩恵企業
+    # となることを確認する（新たな銘柄推定ではなく既存マッピングの参照のみ）。
+    config = dict(CONFIG)
+    config["macro_themes"] = CONFIG["macro_themes"] + [{"label": "電力", "keywords": ["電力"]}]
+    config["causal_rules"] = CAUSAL_RULES + [
+        {
+            "trigger_keywords": ["電力"],
+            "theme": "電力",
+            "beneficiary_sectors": ["電力・インフラ"],
+            "negative_sectors": [],
+            "durable": True,
+            "note": "電力需要の増加はインフラ投資につながりやすい",
+        }
+    ]
+    config["theme_relations"] = {"AI": ["防衛"], "防衛": ["電力"]}
+    sectors = dict(SECTORS)
+    sectors["電力・インフラ"] = {"keywords": ["電力"], "related_tickers": ["9501.T"]}
+    lookup = dict(TICKER_LOOKUP)
+    lookup["9501.T"] = _Quote("9501.T", "東京電力")
+
+    headlines = [_headline("AI投資拡大が続く"), _headline("防衛費増額の議論"), _headline("電力需要が増加")]
+    bundle = future_intelligence.build_future_intelligence(headlines, config, sectors, lookup)
+    thesis = next(t for t in bundle.investment_theses if t.label == "AI")
+
+    assert "川崎重工業" in thesis.secondary_beneficiary_names  # 1段階先（防衛）の恩恵企業
+    assert "東京電力" in thesis.less_watched_names  # 2段階先（電力）の恩恵企業
+    assert "東京電力" not in thesis.secondary_beneficiary_names
+    assert not set(thesis.less_watched_names) & set(thesis.beneficiary_names)
+
+
+def test_investment_thesis_never_uses_forbidden_advisory_language():
+    bundle = _v21_bundle()
+    all_text = ""
+    for t in bundle.investment_theses:
+        all_text += t.current_situation + t.expected_change + "".join(t.breakdown_conditions)
+        all_text += "".join(t.watch_indicators) + "".join(t.thesis_summary)
+    for phrase in ["買い推奨", "売り推奨", "目標株価", "期待リターン", "必ず上昇", "確実に"]:
+        assert phrase not in all_text
+    assert "円まで上昇" not in all_text and "倍になる" not in all_text
+
+
+def test_investment_thesis_falls_back_honestly_when_no_signal():
+    # 宇宙テーマ: 見出しなし・causal_ruleなし → 恩恵企業・投資期間を捏造せず、
+    # 「今後起こりそうな変化」は既存Catalystの転記か分析材料不足のどちらかのみ
+    bundle = _v21_bundle()
+    thesis = next(t for t in bundle.investment_theses if t.label == "宇宙")
+    diagnosis = next(td for td in bundle.theme_diagnosis if td.label == "宇宙")
+    assert thesis.beneficiary_industries == []  # causal_rule非該当のため業界を捏造しない
+    assert thesis.beneficiary_names == []
+    assert thesis.horizons == []  # 中長期テーマに未割り付け（見出し0件・非durable）
+    # expected_changeは既存シグナル（Catalyst）の転記のみで構成される
+    assert ("分析材料不足" in thesis.expected_change) or (diagnosis.catalysts[0] in thesis.expected_change)
+
+
+def test_investment_thesis_expected_change_shows_insufficient_when_catalyst_missing():
+    # Catalystが「判断材料不足」の場合は、変化の予測を作らず正直に分析材料不足と表示する
+    from src.analysis.future_intelligence import _thesis_expected_change
+
+    text = _thesis_expected_change("テストテーマ", ["現時点では明確な加速要因は確認できていません（判断材料不足）"])
+    assert "分析材料不足" in text
+    assert "広がりやすくなる" not in text
+    assert _thesis_expected_change("テストテーマ", []) == text
+
+
+def test_investment_thesis_appears_in_markdown_html_and_mobile_output():
+    from src.report.mobile_builder import _section_future_intelligence
+    from src.report.sections import render_future_intelligence as render_md
+
+    bundle = _v21_bundle()
+
+    markdown_text = render_md(bundle)
+    assert "Investment Thesis（テーマ別・長期投資仮説）" in markdown_text
+    for field_label in [
+        "現在何が起きているか",
+        "今後起こりそうな変化",
+        "恩恵を受ける業界",
+        "恩恵企業",
+        "二次的恩恵企業",
+        "まだ注目されにくい企業",
+        "投資期間",
+        "監視指標",
+        "崩れる条件",
+        "投資仮説まとめ",
+    ]:
+        assert field_label in markdown_text
+
+    html_text = _future_intelligence_html(bundle)
+    assert "Investment Thesis（テーマ別・長期投資仮説）" in html_text
+    assert "投資仮説まとめ" in html_text
+
+    mobile_text = _section_future_intelligence(bundle)
+    assert "Investment Thesis（Confidence上位）" in mobile_text

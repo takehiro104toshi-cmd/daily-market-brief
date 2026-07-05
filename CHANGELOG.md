@@ -4,6 +4,50 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.4 (2026-07-05) — Investment Thesis Engine v2.0
+
+追加（Future Intelligence Engineへの統合のみ。既存の分析ロジック・スコアリング・
+判定・新しいAPIの追加はなし。営業利用ではなく自分自身の長期資産形成・投資判断を
+最優先目的とする）
+
+・Investment Thesis（テーマ別・長期投資仮説）: macro_themeごとに以下10項目の
+  投資仮説を生成し、Long-term Strategyブロック（Markdown/HTML/モバイル）へ
+  Confidence（分析根拠の充実度）の高い順に表示
+  - 現在何が起きているか: Theme Momentum Scoreのreason（本日のシグナル説明）を転記
+  - 今後起こりそうな変化［AI分析］: テーマ別診断のCatalyst先頭を非断定的に
+    言い換えるのみ（Catalystが判断材料不足の場合は正直に分析材料不足と表示）
+  - 恩恵を受ける業界: causal_rules.beneficiary_sectors
+  - 恩恵企業: 既存の恩恵銘柄ロジック（beneficiary_sectors→related_tickers）の結果
+  - 二次的恩恵企業: theme_relations（Cross Theme Mapping）で1段階隣接する
+    テーマの恩恵企業
+  - まだ注目されにくい企業: theme_relationsで2段階離れたテーマの恩恵企業
+    （因果チェーン上、直接の恩恵銘柄として言及されにくい銘柄。新たな銘柄推定ではない）
+  - 投資期間: 既存の中長期テーマ割り付け（半年/1年/3年/5年/10年）をそのまま転記
+  - 監視指標: Theme Momentum Scoreの推移・関連ニュース件数＋既存のテーマ→
+    イベント対応表（半導体市況・金利動向等）からの機械的な列挙
+  - 崩れる条件［AI分析］: テーマ別診断のRisk（失速要因）を転記
+  - 投資仮説まとめ: Stock Intelligenceと同じinvestment_storyロジックによる
+    時系列の因果チェーン（テーマ→Catalyst→関連テーマへの波及→非断定的な結び）
+・すべて既存シグナル（Theme Momentum・Lifecycle・Catalyst・Risk・Confidence・
+  causal_rules・theme_relations）の転記・機械的な組み合わせのみで構成。
+  目標株価・PER/EPS予想・「買い」「売り」等の推奨・期待リターンは一切生成しない
+・InvestmentThesisEntry dataclass＋FutureIntelligenceBundle.investment_theses
+  フィールドを追加（デフォルト値付きのため既存の呼び出し箇所に影響なし）
+
+変更ファイル
+・src/analysis/models.py
+・src/analysis/future_intelligence.py
+・src/report/sections.py
+・src/report/html_builder.py
+・src/report/mobile_builder.py
+・tests/test_future_intelligence.py
+
+pytest
+175 passed
+
+コミット
+（下記参照）
+
 ## v2.3 (2026-07-05) — Data Freshness & News Quality v2.0
 
 追加・改善（鮮度タイブレーク＋可視化＋ログ強化のみ。重要度スコアの算出・

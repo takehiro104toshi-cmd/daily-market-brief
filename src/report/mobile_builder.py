@@ -233,6 +233,18 @@ def _section_future_intelligence(bundle) -> str:
     else:
         lines.append(f"長期戦略の分析材料がありませんでした（{NOT_AVAILABLE}）。")
 
+    if bundle.investment_theses:
+        top_thesis = bundle.investment_theses[0]  # Confidence順に整列済み
+        horizons_txt = "・".join(top_thesis.horizons) if top_thesis.horizons else "分析材料不足"
+        industries_txt = (
+            "、".join(top_thesis.beneficiary_industries) if top_thesis.beneficiary_industries else "分析材料不足"
+        )
+        lines.append(
+            f"Investment Thesis（Confidence上位）: {top_thesis.label}"
+            f"（Confidence {top_thesis.confidence_score}%）／投資期間: {horizons_txt}／恩恵業界: {industries_txt}"
+        )
+        lines.append(f"投資仮説まとめ: {' → '.join(top_thesis.thesis_summary)}")
+
     return "\n".join(lines) + "\n"
 
 

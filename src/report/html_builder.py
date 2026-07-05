@@ -1231,6 +1231,39 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     for hg in bundle.horizon_groups:
         themes_txt = "、".join(hg.themes) if hg.themes else "該当なし"
         parts.append(f"<p style='font-size:0.85rem;'><strong>{_esc(hg.horizon)}:</strong> {_esc(themes_txt)}</p>")
+
+    parts.append("<h4>Investment Thesis（テーマ別・長期投資仮説）</h4>")
+    parts.append(
+        "<p class='legend'>既存シグナル（Theme Momentum・Lifecycle・Catalyst・Risk・"
+        "Confidence・causal_rules・theme_relations）のみから機械的に組み立てた長期投資"
+        "仮説です。AIによる新たな未来予測・目標株価・売買推奨・期待リターンは一切生成"
+        "しません。Confidence（分析根拠の充実度）の高い順に表示します。</p>"
+    )
+    if bundle.investment_theses:
+        for t in bundle.investment_theses:
+            industries_txt = "、".join(t.beneficiary_industries) if t.beneficiary_industries else "分析材料不足"
+            names_txt = "、".join(t.beneficiary_names) if t.beneficiary_names else "分析材料不足"
+            secondary_txt = "、".join(t.secondary_beneficiary_names) if t.secondary_beneficiary_names else "該当なし"
+            less_txt = "、".join(t.less_watched_names) if t.less_watched_names else "該当なし"
+            horizons_txt = "・".join(t.horizons) if t.horizons else "分析材料不足"
+            parts.append(
+                f"<h5>{_theme_link(t.label)}{_new_badge(t.confidence_score)}</h5>"
+                f"<div class='row'><span>Confidence {t.confidence_score}%</span>"
+                f"<span>Momentum {t.momentum_score}/100（{_esc(t.momentum_label)}）</span></div>"
+                f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
+                f"現在何が起きているか: {_esc(t.current_situation)}<br>"
+                f"今後起こりそうな変化［AI分析］: {_esc(t.expected_change)}<br>"
+                f"恩恵を受ける業界: {_esc(industries_txt)}<br>"
+                f"恩恵企業: {_esc(names_txt)}<br>"
+                f"二次的恩恵企業（関連テーマ経由）: {_esc(secondary_txt)}<br>"
+                f"まだ注目されにくい企業（因果チェーン2段階先）: {_esc(less_txt)}<br>"
+                f"投資期間: {_esc(horizons_txt)}<br>"
+                f"監視指標: {_esc('、'.join(t.watch_indicators))}<br>"
+                f"崩れる条件［AI分析］: {_esc('、'.join(t.breakdown_conditions))}<br>"
+                f"投資仮説まとめ: {_esc(' → '.join(t.thesis_summary))}</p>"
+            )
+    else:
+        parts.append(f"<p>本日組み立てられる投資仮説がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
     parts.append(_section_nav_html("fi-stock", None))
     parts.append("</details>")
 

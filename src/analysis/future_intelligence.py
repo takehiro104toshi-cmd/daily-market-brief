@@ -135,6 +135,7 @@ from .models import (
     FutureIntelligenceBundle,
     HorizonThemeGroup,
     IndustryMomentumEntry,
+    InvestmentThesisEntry,
     JpStockImpactEntry,
     MegatrendEntry,
     NationalStrategyNote,
@@ -1112,6 +1113,109 @@ def _stock_investment_story(primary_label: str, catalysts: List[str], cross_them
     return steps
 
 
+def _thesis_expected_change(label: str, catalysts: List[str]) -> str:
+    """「今後起こりそうな変化」。テーマ別診断のCatalyst（既存シグナル）を
+    非断定的に言い換えるだけの機械的な整理であり、AIによる新たな未来予測
+    ではない。Catalystが「判断材料不足」の場合はそのまま正直に表示する。
+    """
+    if not catalysts or "判断材料不足" in catalysts[0]:
+        return "本日時点で確認できる加速要因（Catalyst）がないため、分析材料不足です（新たな予測は行いません）。"
+    return (
+        f"Catalyst「{catalysts[0]}」が実現する場合、「{label}」関連の需要・物色が"
+        "広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。"
+    )
+
+
+def _thesis_watch_indicators(label: str, related_themes: List[str]) -> List[str]:
+    """「監視指標」。本システムが毎日算出しているシグナルと、既存の
+    テーマ→イベント対応表（_STOCK_EVENT_THEME_MAP）だけから機械的に列挙する。
+    """
+    indicators = ["Theme Momentum Scoreの推移", "関連ニュース件数の変化"]
+    for theme in [label] + related_themes:
+        event = _STOCK_EVENT_THEME_MAP.get(theme)
+        if event and event not in indicators:
+            indicators.append(event)
+    return indicators
+
+
+def _related_beneficiary_names(
+    related_themes: List[str],
+    theme_beneficiary_names_map: Dict[str, List[str]],
+    exclude: set,
+) -> List[str]:
+    """theme_relationsで隣接するテーマの恩恵企業を集める（既存の恩恵銘柄
+    ロジックの結果を参照するだけで、新たな銘柄推定は行わない）。"""
+    names: List[str] = []
+    for theme in related_themes:
+        for name in theme_beneficiary_names_map.get(theme, []):
+            if name != "など" and name not in exclude and name not in names:
+                names.append(name)
+    return names[:MAX_TICKERS_DISPLAYED]
+
+
+def _build_investment_theses(
+    theme_diagnosis: List[ThemeDiagnosisEntry],
+    theme_momentum: List[ThemeMomentumEntry],
+    theme_rule_map: Dict[str, Optional[CausalRule]],
+    theme_beneficiary_names_map: Dict[str, List[str]],
+    horizon_map: Dict[str, List[str]],
+) -> List[InvestmentThesisEntry]:
+    """Investment Thesis（v2.4）: macro_themeごとの長期投資仮説を組み立てる。
+
+    すべて既存シグナル（Theme Momentum・Lifecycle・Catalyst・Risk・
+    Confidence・causal_rules・theme_relations・中長期テーマ割り付け）の
+    転記・機械的な組み合わせのみで構成し、AIによる新たな未来予測・
+    目標株価・売買推奨・期待リターンは一切生成しない。
+    表示はConfidence（分析根拠の充実度）の高い順とする。
+    """
+    momentum_map = {tm.label: tm for tm in theme_momentum}
+    diagnosis_map = {td.label: td for td in theme_diagnosis}
+
+    theses: List[InvestmentThesisEntry] = []
+    for td in theme_diagnosis:
+        momentum = momentum_map.get(td.label)
+        rule = theme_rule_map.get(td.label)
+        primary_names = [n for n in theme_beneficiary_names_map.get(td.label, []) if n != "など"]
+
+        # 二次的恩恵企業: theme_relationsで1段階隣接するテーマの恩恵企業
+        secondary_names = _related_beneficiary_names(
+            td.related_themes, theme_beneficiary_names_map, exclude=set(primary_names)
+        )
+        # まだ注目されにくい企業: 2段階離れたテーマの恩恵企業（1段階目・直接分は除外）
+        second_hop_themes: List[str] = []
+        for rel in td.related_themes:
+            rel_diag = diagnosis_map.get(rel)
+            for hop2 in rel_diag.related_themes if rel_diag else []:
+                if hop2 != td.label and hop2 not in td.related_themes and hop2 not in second_hop_themes:
+                    second_hop_themes.append(hop2)
+        less_watched = _related_beneficiary_names(
+            second_hop_themes, theme_beneficiary_names_map, exclude=set(primary_names) | set(secondary_names)
+        )
+
+        theses.append(
+            InvestmentThesisEntry(
+                label=td.label,
+                current_situation=momentum.reason if momentum else "本日算出できるシグナルがありませんでした（分析材料不足）。",
+                expected_change=_thesis_expected_change(td.label, td.catalysts),
+                beneficiary_industries=list(rule.beneficiary_sectors) if rule and rule.beneficiary_sectors else [],
+                beneficiary_names=primary_names,
+                secondary_beneficiary_names=secondary_names,
+                less_watched_names=less_watched,
+                horizons=[h for h, themes in horizon_map.items() if td.label in themes],
+                watch_indicators=_thesis_watch_indicators(td.label, td.related_themes),
+                breakdown_conditions=list(td.risks),
+                thesis_summary=_stock_investment_story(td.label, td.catalysts, td.related_themes),
+                momentum_score=td.momentum_score,
+                momentum_label=td.momentum_label,
+                phase=td.phase,
+                continuity=td.continuity,
+                confidence_score=td.confidence_score,
+            )
+        )
+    theses.sort(key=lambda t: -t.confidence_score)
+    return theses
+
+
 def _build_watchlist_intelligence(
     config: dict,
     sectors: Dict,
@@ -1392,6 +1496,12 @@ def build_future_intelligence(
         config, sectors, theme_rule_map, theme_diagnosis
     )
 
+    # Investment Thesis: macro_themeごとの長期投資仮説（v2.4）。
+    # 既存シグナルの転記・機械的な組み合わせのみで、新たな予測は行わない。
+    investment_theses = _build_investment_theses(
+        theme_diagnosis, theme_momentum, theme_rule_map, theme_beneficiary_names_map, horizon_map
+    )
+
     return FutureIntelligenceBundle(
         megatrends=megatrends,
         industry_momentum=industry_momentum,
@@ -1407,4 +1517,5 @@ def build_future_intelligence(
         theme_diagnosis=theme_diagnosis,
         watchlist_intelligence=watchlist_intelligence,
         stock_intelligence=stock_intelligence,
+        investment_theses=investment_theses,
     )

@@ -821,4 +821,35 @@ def render_future_intelligence(bundle: FutureIntelligenceBundle) -> str:
         lines.append(f"- **{hg.horizon}:** {themes_txt}")
     lines.append("")
 
+    lines.append("#### Investment Thesis（テーマ別・長期投資仮説）")
+    lines.append(
+        "> 既存シグナル（Theme Momentum・Lifecycle・Catalyst・Risk・Confidence・"
+        "causal_rules・theme_relations）のみから機械的に組み立てた長期投資仮説です。"
+        "AIによる新たな未来予測・目標株価・売買推奨・期待リターンは一切生成しません。"
+        "Confidence（分析根拠の充実度）の高い順に表示します。"
+    )
+    lines.append("")
+    if bundle.investment_theses:
+        for t in bundle.investment_theses:
+            lines.append(f"##### {t.label}（Confidence {t.confidence_score}%・Momentum {t.momentum_score}/100）")
+            lines.append(f"- **現在何が起きているか:** {t.current_situation}")
+            lines.append(f"- **今後起こりそうな変化［AI分析］:** {t.expected_change}")
+            industries_txt = "、".join(t.beneficiary_industries) if t.beneficiary_industries else "分析材料不足"
+            lines.append(f"- **恩恵を受ける業界:** {industries_txt}")
+            names_txt = "、".join(t.beneficiary_names) if t.beneficiary_names else "分析材料不足"
+            lines.append(f"- **恩恵企業:** {names_txt}")
+            secondary_txt = "、".join(t.secondary_beneficiary_names) if t.secondary_beneficiary_names else "該当なし"
+            lines.append(f"- **二次的恩恵企業（関連テーマ経由）:** {secondary_txt}")
+            less_txt = "、".join(t.less_watched_names) if t.less_watched_names else "該当なし"
+            lines.append(f"- **まだ注目されにくい企業（因果チェーン2段階先）:** {less_txt}")
+            horizons_txt = "・".join(t.horizons) if t.horizons else "分析材料不足"
+            lines.append(f"- **投資期間:** {horizons_txt}")
+            lines.append(f"- **監視指標:** {'、'.join(t.watch_indicators)}")
+            lines.append(f"- **崩れる条件［AI分析］:** {'、'.join(t.breakdown_conditions)}")
+            lines.append(f"- **投資仮説まとめ:** {' → '.join(t.thesis_summary)}")
+            lines.append("")
+    else:
+        lines.append(f"本日組み立てられる投資仮説がありませんでした（{NOT_AVAILABLE}）。")
+        lines.append("")
+
     return "\n".join(lines)

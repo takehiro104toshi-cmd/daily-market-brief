@@ -601,6 +601,52 @@ class StockIntelligenceEntry:
 
 
 @dataclass
+class InvestmentThesisEntry:
+    """「Investment Thesis」の1テーマ分（v2.4）。
+
+    macro_themeごとの長期投資仮説。すべてのフィールドは既存シグナル
+    （Theme Momentum・Lifecycle・Catalyst・Risk・Confidence・causal_rules・
+    theme_relations・中長期テーマの割り付け）のみから機械的に組み立てる。
+    AIによる新たな未来予測・目標株価・PER/EPS予想・「買い」「売り」等の
+    推奨・期待リターンは一切生成しない。
+
+    - current_situation: 現在何が起きているか（Theme Momentum Scoreのreasonを転記）
+    - expected_change: 今後起こりそうな変化（Catalystからの非断定的な整理・AI分析）
+    - beneficiary_industries: 恩恵を受ける業界（causal_rules.beneficiary_sectors）
+    - beneficiary_names: 恩恵企業（既存の恩恵銘柄ロジックの結果を転記）
+    - secondary_beneficiary_names: 二次的恩恵企業（theme_relationsで1段階
+      隣接するテーマの恩恵企業）
+    - less_watched_names: まだ注目されにくい企業（theme_relationsで2段階
+      離れたテーマの恩恵企業＝因果チェーン上、直接の恩恵銘柄として
+      言及されにくい銘柄。新たな銘柄推定ではない）
+    - horizons: 投資期間（既存の中長期テーマ割り付け（半年/1年/3年/5年/10年）
+      のうち、このテーマが属する時間軸をそのまま転記）
+    - watch_indicators: 監視指標（Momentum推移・関連ニュース件数＋既存の
+      テーマ→イベント対応表からの機械的な列挙）
+    - breakdown_conditions: 崩れる条件（テーマ別診断のRisk（失速要因）を転記）
+    - thesis_summary: 投資仮説まとめ（Stock Intelligenceと同じ
+      investment_storyロジックによる時系列の因果チェーン）
+    """
+
+    label: str
+    current_situation: str = ""
+    expected_change: str = ""
+    beneficiary_industries: List[str] = field(default_factory=list)
+    beneficiary_names: List[str] = field(default_factory=list)
+    secondary_beneficiary_names: List[str] = field(default_factory=list)
+    less_watched_names: List[str] = field(default_factory=list)
+    horizons: List[str] = field(default_factory=list)
+    watch_indicators: List[str] = field(default_factory=list)
+    breakdown_conditions: List[str] = field(default_factory=list)
+    thesis_summary: List[str] = field(default_factory=list)
+    momentum_score: int = 0
+    momentum_label: str = ""
+    phase: str = ""
+    continuity: str = ""
+    confidence_score: int = 0
+
+
+@dataclass
 class FutureIntelligenceBundle:
     """「Future Intelligence Engine」の計算結果一式。
 
@@ -637,6 +683,12 @@ class FutureIntelligenceBundle:
     注目するイベント・関連するテーマ・投資ストーリーを、既存シグナルの
     みから機械的に組み立てる。目標株価・PER/EPS予想・売買推奨・期待
     リターンなど新たな未来予測は一切行わない。
+    v2.4: Investment Thesis（investment_theses）を追加。macro_theme
+    ごとの長期投資仮説（現在の状況→今後の変化→恩恵業界→恩恵企業→
+    二次的恩恵企業→まだ注目されにくい企業→投資期間→監視指標→
+    崩れる条件→投資仮説まとめ）を、既存シグナルのみから機械的に
+    組み立てる。営業利用ではなく自分自身の長期資産形成・投資判断を
+    最優先目的とする。
     """
 
     megatrends: List[MegatrendEntry] = field(default_factory=list)
@@ -653,6 +705,7 @@ class FutureIntelligenceBundle:
     theme_diagnosis: List[ThemeDiagnosisEntry] = field(default_factory=list)
     watchlist_intelligence: List[WatchlistIntelligenceEntry] = field(default_factory=list)
     stock_intelligence: List[StockIntelligenceEntry] = field(default_factory=list)
+    investment_theses: List[InvestmentThesisEntry] = field(default_factory=list)
 
 
 @dataclass
