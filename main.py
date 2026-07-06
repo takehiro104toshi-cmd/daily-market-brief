@@ -34,9 +34,14 @@ from src.analysis import (
     long_term_picks,
     market_impact,
     morning_meeting_comment,
+    investment_journal,
     news_ranking,
     okasan_sales_comments,
     rashinban_loader,
+    scenario_v2,
+    theme_learning,
+    translation,
+    why_today,
     sales_comments,
     sales_prep,
     scenario,
@@ -57,6 +62,7 @@ from src.collectors import (
     boj,
     cnbc,
     earnings,
+    economic_calendar,
     edinet,
     investing,
     jpx,
@@ -284,6 +290,12 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     raw_headlines = headlines + extra_headlines  # 重複除去前の全見出し（鮮度統計用）
     headlines = news.dedupe_headlines(raw_headlines)
 
+    # v2.8（④）: 英語見出しの自動翻訳（ANTHROPIC_API_KEYがある時のみ動作。
+    # 未設定・失敗時は原文のまま＝既存動作に影響なし）
+    translation_cfg = config.get("translation", {})
+    if translation_cfg.get("enabled", True):
+        _safe_call("translation", lambda: translation.translate_headlines(headlines), 0)
+
     _safe_call("kabutan_reference", lambda: kabutan.register_reference(sources), None)
     _safe_call("moomoo_reference", lambda: moomoo.register_reference(sources), None)
     _safe_call("jpx_reference", lambda: jpx.register_reference(sources), None)
@@ -431,10 +443,18 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         lambda: events.build_events_breakdown(earnings_events, disclosures, config.get("macro_events", []), now),
         events.EventsBreakdown(),
     )
-    # v2.7: Weekly Event Impact Calendar（直近1週間の重要イベント。登録情報のみ・外部API不使用）
+    # v2.7/v2.8: Weekly Event Impact Calendar（直近1週間の重要イベント）。
+    # config.yamlのmacro_events（登録情報）に、v2.8では経済カレンダーの自動取得分
+    # （economic_calendar.url設定時のみ・失敗時は空）をマージして使う。
+    auto_events = _safe_call(
+        "economic_calendar",
+        lambda: economic_calendar.fetch_economic_calendar(config, sources, now),
+        [],
+    )
+    merged_macro_events = economic_calendar.merge_events(config.get("macro_events", []), auto_events)
     weekly_events_result = _safe_call(
         "weekly_events",
-        lambda: weekly_events.build_weekly_event_calendar(now, config.get("macro_events", []), earnings_events),
+        lambda: weekly_events.build_weekly_event_calendar(now, merged_macro_events, earnings_events),
         [],
     )
     ai_summary_text = _safe_call(
@@ -527,6 +547,10 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         ),
         [],
     )
+    # v2.8（②）: Theme Confidence Learning の過去勝率を読み込み、Confidence実績補正に使う
+    # （データが無ければ空dict＝補正なし・従来通り）
+    theme_learning_dir = config.get("theme_learning", {}).get("dir", theme_learning.DEFAULT_DIR)
+    theme_win_rates_map = _safe_call("theme_win_rates", lambda: theme_learning.win_rates(theme_learning_dir), {})
     future_intelligence_result = _safe_call(
         "future_intelligence",
         lambda: future_intelligence.build_future_intelligence(
@@ -539,8 +563,17 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             market,
             sector_ranking_entries,
             rashinban=rashinban_knowledge,
+            theme_win_rates=theme_win_rates_map,
         ),
         future_intelligence.FutureIntelligenceBundle(),
+    )
+    # v2.8（③）: Scenario Engine v2（期待値の高い最大3シナリオ）
+    scenarios_v2_result = _safe_call(
+        "scenarios_v2",
+        lambda: scenario_v2.build_scenarios_v2(
+            scenario_forecast, sector_matches, watchlist_names, causal_chains_result
+        ),
+        [],
     )
 
     analysis_bundle = AnalysisBundle(
@@ -574,6 +607,35 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         strategist_views=strategist_views_result,
         future_intelligence=future_intelligence_result,
         weekly_events=weekly_events_result,
+        scenarios_v2=scenarios_v2_result,
+    )
+
+    # v2.8（①②）: Investment Journal / Theme Confidence Learning。
+    # 今日のAI判断とテーマ予想を記録し、経過した過去分を現在の市場と答え合わせして
+    # Learning History / テーマ別勝率を組み立てる。市場データが無ければ評価はスキップ。
+    journal_dir = config.get("investment_journal", {}).get("dir", investment_journal.DEFAULT_DIR)
+    date_key = now.strftime("%Y-%m-%d")
+    _safe_call(
+        "journal_record",
+        lambda: investment_journal.record_daily_journal(
+            journal_dir, date_key, investment_journal.build_snapshot(date_key, analysis_bundle, market)
+        ),
+        None,
+    )
+    _safe_call(
+        "theme_learning_record",
+        lambda: theme_learning.record_theme_predictions(
+            theme_learning_dir, date_key, future_intelligence_result.theme_diagnosis, market
+        ),
+        None,
+    )
+    _safe_call("journal_evaluate", lambda: investment_journal.evaluate_journal(journal_dir, market, now), None)
+    _safe_call("theme_learning_evaluate", lambda: theme_learning.evaluate_theme_learning(theme_learning_dir, market, now), None)
+    analysis_bundle.learning_history = _safe_call(
+        "learning_history", lambda: investment_journal.build_learning_history(journal_dir, now), []
+    )
+    analysis_bundle.theme_learning_stats = _safe_call(
+        "theme_learning_stats", lambda: theme_learning.build_theme_learning_stats(theme_learning_dir), []
     )
 
     # v2.3: データ鮮度統計（計測のみ。分析ロジック・ランキング結果には影響しない）
@@ -587,6 +649,13 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             attempted_source_names=failed_source_names,
         ),
         None,
+    )
+
+    # v2.8（⑦）: 各カードの「なぜ今日見るべきか」を既存データから生成（HTMLのみ使用）
+    why_today_map = _safe_call(
+        "why_today",
+        lambda: why_today.build_why_today(analysis_bundle, freshness_stats, weekly_events_result, now),
+        {},
     )
 
     logger.info("Markdownレポートを生成しています...")
@@ -611,6 +680,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             actions_url=_resolve_actions_url(config),
             freshness=freshness_stats,
             rashinban=rashinban_knowledge,
+            why_today=why_today_map,
         ),
         "<html><body><p>HTML版レポートの生成に失敗しました（取得不可）。</p></body></html>",
     )

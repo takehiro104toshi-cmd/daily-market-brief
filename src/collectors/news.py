@@ -27,6 +27,12 @@ class Headline:
     published: str = ""
     reliability: float = DEFAULT_RELIABILITY
     fetched_at: str = ""
+    # v2.8（④）: 英語見出しの日本語訳（翻訳できた場合のみ設定。既定は空＝原文のみ）
+    title_ja: str = ""
+
+    def display_title(self) -> str:
+        """表示用の見出し。日本語訳があればそれを、無ければ原文を返す。"""
+        return self.title_ja or self.title
 
 
 def _now_iso() -> str:

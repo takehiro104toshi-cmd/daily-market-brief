@@ -67,6 +67,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add output/*.md output/*.html
+          # v2.8: Investment Journal / Theme Confidence Learning の学習データを永続化
+          # （毎日追記され、30/90/180日後の答え合わせに使う）。存在する場合のみ追加。
+          git add data/investment_journal/journal.json data/theme_learning/theme_learning.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Add daily market brief"
           git push
 

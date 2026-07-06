@@ -150,6 +150,7 @@ from .models import (
     WatchlistIntelligenceEntry,
 )
 from .strategist_engine import CausalRule, parse_causal_rules, resolve_tickers, ticker_names
+from .theme_learning import confidence_adjustment
 
 TOP_INDUSTRY_MOMENTUM = 5
 MAX_TICKERS_DISPLAYED = 5
@@ -1324,6 +1325,7 @@ def build_future_intelligence(
     market: Optional[Dict] = None,
     sector_ranking_entries: Optional[List[SectorRankingEntry]] = None,
     rashinban: Optional[RashinbanKnowledge] = None,
+    theme_win_rates: Optional[Dict[str, float]] = None,
 ) -> FutureIntelligenceBundle:
     market = market or {}
     sector_ranking_entries = sector_ranking_entries or []
@@ -1490,6 +1492,17 @@ def build_future_intelligence(
         theme_top_news_matched_map,
         config.get("theme_relations", {}),
     )
+
+    # v2.8: Theme Confidence Learning による実績補正（過去勝率が与えられた時のみ）。
+    # 既存のConfidence計算式・順位ロジックは変更せず、上下限つき（-20〜+10）の
+    # 小さな調整を後段で加えるだけ。補正結果はInvestment Thesis等にも波及する。
+    if theme_win_rates:
+        for td in theme_diagnosis:
+            adj = confidence_adjustment(theme_win_rates.get(td.label))
+            if adj != 0:
+                td.confidence_score = max(0, min(100, td.confidence_score + adj))
+                wr_pct = round(theme_win_rates[td.label] * 100)
+                td.confidence_basis.append(f"過去勝率{wr_pct}%による実績補正（{adj:+d}）")
 
     # Watchlist Intelligence: watchlist銘柄とテーマ別診断の照合（v1.7）。
     # 営業利用ではなく自分自身の長期投資判断を最優先目的とする。

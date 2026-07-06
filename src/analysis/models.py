@@ -709,6 +709,72 @@ class FutureIntelligenceBundle:
 
 
 @dataclass
+class LearningHistoryEntry:
+    """「Learning History」の1日分（v2.8・①）。
+
+    Investment Journal（data/investment_journal/journal.json）に記録した
+    過去のAI判断と、30/90/180日後の実際の市場データを比較した答え合わせの
+    結果を表示するための入れ物。評価はルールベース（記録時の参照価格と
+    現在価格の比較）で、AIが新たな予測を生成するものではない。
+    """
+
+    date: str
+    headline: str = ""
+    theme: str = ""
+    scenario_summary: str = ""
+    days_elapsed: int = 0
+    evaluated: bool = False
+    evaluation_horizon: int = 0        # 30 / 90 / 180
+    evaluation_stars: str = ""
+    evaluation_status: str = "評価待ち"  # 評価待ち / 的中 / 部分的中 / 外れ
+    evaluation_note: str = ""
+
+
+@dataclass
+class ThemeLearningStat:
+    """「Theme Confidence Learning」の1テーマ分（v2.8・②）。
+
+    data/theme_learning/theme_learning.json に毎日追記した予想と、後日の
+    実績（テーマ関連の代表指標の騰落）を突き合わせた勝率・平均リターン等の
+    集計結果を表示するための入れ物。Confidence補正にも使う。
+    """
+
+    label: str
+    first_seen: str = ""
+    samples: int = 0
+    wins: int = 0
+    win_rate: Optional[float] = None       # 0.0〜1.0（サンプルが無ければNone）
+    avg_return_pct: Optional[float] = None
+    avg_duration_days: Optional[float] = None
+    success_condition: str = ""
+    failure_condition: str = ""
+
+
+@dataclass
+class ScenarioV2Entry:
+    """「Scenario Engine v2」の1シナリオ分（v2.8・③）。
+
+    既存のScenarioForecast（強気/中立/弱気の確率・理由）と既存シグナル
+    （業種の追い風/逆風・ウォッチリスト・因果チェーン）のみから機械的に
+    組み立てる。新たな確率予測・目標株価・断定的な過去事例は生成しない。
+    期待値（＝確率）の高い順に最大3つだけを提示する。
+    """
+
+    rank: int
+    title: str
+    probability: int          # %（ScenarioForecastの配分をそのまま使用）
+    stars: str
+    trigger_condition: str    # 発生条件
+    market_impact: str        # マーケット影響
+    beneficiary_sectors: List[str] = field(default_factory=list)
+    adverse_sectors: List[str] = field(default_factory=list)
+    watch_names: List[str] = field(default_factory=list)
+    causal_chain: str = ""    # 詳しく: 因果関係
+    time_horizon: str = ""    # 詳しく: 時間軸
+    historical_note: str = "" # 詳しく: 一般的な反応パターン（特定過去日の断定ではない）
+
+
+@dataclass
 class WeeklyEventEntry:
     """「Weekly Event Impact Calendar」の1イベント分（v2.7）。
 
@@ -809,3 +875,6 @@ class AnalysisBundle:
     strategist_views: List[StrategistView] = field(default_factory=list)
     future_intelligence: FutureIntelligenceBundle = field(default_factory=FutureIntelligenceBundle)
     weekly_events: List[WeeklyEventEntry] = field(default_factory=list)
+    scenarios_v2: List[ScenarioV2Entry] = field(default_factory=list)
+    learning_history: List[LearningHistoryEntry] = field(default_factory=list)
+    theme_learning_stats: List[ThemeLearningStat] = field(default_factory=list)

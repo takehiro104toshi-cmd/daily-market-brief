@@ -4,6 +4,62 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.8 (2026-07-06) — Smart Intelligence Evolution
+
+「毎日読むレポート」から「毎日学習し続ける投資AI」へ。既存の分析ロジック
+（Momentum・Confidence・Watchlist判定）の設計は維持し、学習・信頼度・優先度の
+仕組みを追加。HTMLのみ変更（Markdown版は維持）。外部ライブラリ追加なし。
+
+追加（学習）
+・Investment Journal（①）: 新規 src/analysis/investment_journal.py。毎日のAI判断
+  （重要ニュース・テーマ・シナリオ・Thesis・Regime・Money Flow・Top Picks・
+  Confidence・重要イベント＋参照価格）を data/investment_journal/journal.json へ
+  追記し、30/90/180日後に現在の市場と機械的に答え合わせ（★評価・的中/外れ）。
+  新セクション「Learning History」を追加。市場データが無い環境では評価はスキップ
+・Theme Confidence Learning（②）: 新規 src/analysis/theme_learning.py。テーマ予想を
+  data/theme_learning/theme_learning.json へ蓄積し、30日後の地合いで勝率・平均
+  リターン・平均継続日数を集計。勝率で Future Intelligence の Confidence を上下限
+  つき（-20〜+10）実績補正（build_future_intelligenceにtheme_win_rates引数を追加。
+  未指定なら従来通り）。新セクション「Theme Confidence Learning」を追加
+
+改善（要約・信頼度・優先度）
+・Scenario Engine v2（③）: 新規 src/analysis/scenario_v2.py。強気/中立/弱気を
+  期待値（確率）の高い順に最大3つへ整理し①②③で表示。発生条件・恩恵/悪影響
+  セクター・注目銘柄・因果関係・時間軸は「詳しく」で展開。新セクション
+  「今日の3大シナリオ（期待値順）」を追加
+・情報ソース信頼度（⑥）: 新規 src/analysis/source_trust.py。出典名から★1〜5と
+  ティア（公式発表/一流メディア・IR/主要メディア/一般メディア/参考情報）を判定し、
+  ニュース・Executive Summaryの各カードに Source Trust バッジ＋理由を表示
+・Why Today（⑦）: 新規 src/analysis/why_today.py。既存データのみから「なぜ今日
+  見るべきか」を1〜2行で生成し、対象カードの先頭に表示（新予測はしない・長文禁止）
+・低重要度記事の折りたたみ（⑧⑨）: ニュースは重要度×鮮度で初期表示を選別
+  （★★★★☆以上／24時間以内かつ★★★☆☆以上／1位は必ず表示）。★★★☆☆以下・
+  48時間超は details に折りたたむ（削除しない）
+・英語ニュース自動翻訳（④・安全スキャフォールド）: 新規 src/analysis/translation.py。
+  ANTHROPIC_API_KEYがある時のみ英語見出しを日本語訳し「日本語→原文を見る」で表示。
+  キー未設定・失敗時は原文のまま（Headlineにtitle_ja/display_title()を追加）
+・Weekly Event 自動取得（⑤・安全スキャフォールド）: 新規
+  src/collectors/economic_calendar.py。economic_calendar.url設定時のみ公開カレンダーを
+  取得しconfig.yamlのmacro_eventsとマージ。未設定・失敗時は従来通りconfigのみ使用
+
+変更ファイル
+・src/analysis/: investment_journal.py / theme_learning.py / scenario_v2.py /
+  source_trust.py / why_today.py / translation.py（すべて新規）、models.py・
+  future_intelligence.py（既存・後方互換で拡張）
+・src/collectors/: economic_calendar.py（新規）、news.py（Headlineにtitle_ja追加）
+・src/report/html_builder.py（新セクション・Source Trust・Why Today・折りたたみ）
+・main.py / config.yaml / .github/workflows/daily-market-brief.yml（JSON永続化）
+・tests/test_v2_8_smart.py（新規・20件）、tests/test_v2_7_upgrade.py（折りたたみ仕様更新）
+・data/investment_journal/README.md・data/theme_learning/README.md（新規）
+
+pytest
+229 passed（既存209維持＋v2.8で20件追加）
+
+注意（この環境での検証範囲）
+・④翻訳・⑤自動取得はネットワーク/APIキーが必要なため、開発環境では実データ検証
+  不可（no-op経路とHTML表示は検証済み。GitHub Actions側で有効化される）。
+  それ以外の①②③⑥⑦⑧⑨は実データ経路込みで検証済み
+
 ## v2.7 (2026-07-06) — Market Intelligence Knowledge Upgrade ＋ Weekly Event Impact Calendar
 
 「毎朝ニュースを読むシステム」から「世界の変化を理解し長期投資判断を支援する

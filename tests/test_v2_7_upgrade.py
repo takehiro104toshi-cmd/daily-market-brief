@@ -127,7 +127,9 @@ def test_detail_buttons_and_importance_badges_present():
     assert "重要度80" in report  # ★★★★☆セクション
 
 
-def test_news_ranking_shows_top5_and_folds_rest():
+def test_news_ranking_folds_low_importance():
+    # v2.8: 折りたたみは順位ではなく重要度×鮮度ベース。★★★☆☆・日時なしの記事は
+    # 1位のみ初期表示され、残りは「低重要度・古い記事を表示」へ折りたたまれる。
     from src.analysis.models import NewsRankingItem
     from src.report.html_builder import _news_ranking_html
 
@@ -145,7 +147,7 @@ def test_news_ranking_shows_top5_and_folds_rest():
         for i in range(1, 9)
     ]
     html = _news_ranking_html(items)
-    assert "6位以下を表示（3件）" in html
+    assert "低重要度・古い記事を表示（7件）" in html
     # 各件の理由は「詳しく」内へ移動している
     assert html.count("detail-btn") >= 8
 

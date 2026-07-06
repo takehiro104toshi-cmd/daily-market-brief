@@ -29,9 +29,12 @@ from ..analysis.models import (
     MorningMeetingComment,
     NewsRankingItem,
     OkasanSalesComments,
+    LearningHistoryEntry,
     QAItem,
     RashinbanKnowledge,
     SalesComments,
+    ScenarioV2Entry,
+    ThemeLearningStat,
     SectorRankingEntry,
     SectorStrengthEntry,
     StockRankingEntry,
@@ -48,6 +51,7 @@ from ..analysis.data_freshness import (
     freshness_label,
     freshness_stars,
 )
+from ..analysis.source_trust import trust_for_source
 from ..collectors.market_data import Quote
 from ..collectors.news import parse_published_datetime
 from ..utils import SourceRegistry
@@ -277,6 +281,16 @@ details.more[open] > summary.detail-btn::before { content: "▾ "; }
 .event-row { border-bottom: 1px dashed var(--border); padding: 6px 0; }
 .event-countdown { display: inline-block; font-size: 0.72rem; font-weight: 700; color: #b45309;
   background: #fef3c7; border-radius: 8px; padding: 1px 8px; margin-right: 6px; }
+.trust { display: inline-block; font-size: 0.7rem; color: #3730a3; background: #e0e7ff;
+  border-radius: 8px; padding: 1px 7px; margin-left: 4px; }
+.why-today { font-size: 0.8rem; color: #0f5132; background: #e7f6ec; border: 1px solid #b7dfc4;
+  border-radius: 8px; padding: 6px 10px; margin: 0 0 8px 0; }
+.why-today strong { color: #0a3622; }
+.learn-hit { color: #1a7f37; font-weight: 600; }
+.learn-miss { color: #c62828; font-weight: 600; }
+.learn-wait { color: #6b7280; font-weight: 600; }
+:root[data-theme="dark"] .trust { background: #2a2f52; color: #c7cdf5; }
+:root[data-theme="dark"] .why-today { background: #10281a; border-color: #2f5a3f; color: #a7e0bd; }
 :root[data-theme="dark"] .more-body { background: #23262e; color: #cbd2dc; }
 :root[data-theme="dark"] details.more > summary.detail-btn { background: #1d2839; }
 :root[data-theme="dark"] .fi-conclusion { background: #2b2716; border-color: #5a512a; }
@@ -476,6 +490,9 @@ SECTION_DESCRIPTIONS = {
     "dashboard-top": "今日の市場全体を30秒で把握するダッシュボードです。",
     "executive-summary": "今日最重要のニュース最大3件とその影響を要約します。",
     "weekly-events": "今後1週間で相場を動かす可能性のあるイベントをカウントダウンつきで表示します。",
+    "scenarios-v2": "期待値（確率）の高い最大3つのシナリオに絞って提示します。",
+    "learning-history": "過去のAI判断を30/90/180日後の市場と自動で答え合わせした履歴です。",
+    "theme-learning": "テーマ予想の勝率を学習し、Confidenceの実績補正に使います。",
     "strategist-views": "重要ニュースをストラテジスト視点で深掘りします。",
     "future-intelligence": "世界→テーマ→業界→銘柄→長期戦略を一気通貫で分析します。",
     "news-ranking": "本日の重要ニュースを重要度×鮮度で並べたランキングです。",
@@ -580,14 +597,33 @@ def _scenario_card(scenario, nav_html: str = "") -> str:
     return _card("今日の相場シナリオ", rows + reasons, anchor="scenario", nav_html=nav_html)
 
 
-NEWS_RANKING_SUMMARY_COUNT = 5  # v2.7（③）: 通常表示は重要5件のみ（残りは「詳しく」内）
+def _age_hours(published: str, now: Optional[datetime]) -> Optional[float]:
+    """記事の経過時間（時間）。日時不明・now未指定はNone。"""
+    if now is None:
+        return None
+    dt = parse_published_datetime(published)
+    if dt is None:
+        return None
+    return (now - dt).total_seconds() / 3600
+
+
+def _source_trust_inline(source_name: str) -> str:
+    """出典名から Source Trust バッジ（★とティア）を小さく表示する（v2.8・⑥）。"""
+    t = trust_for_source(source_name)
+    return f'<span class="trust">Source Trust {_esc(t.stars)}（{_esc(t.tier)}）</span>'
 
 
 def _news_ranking_item_html(item: NewsRankingItem, now: Optional[datetime] = None) -> str:
-    """1件分: 要約（順位・★・見出し・鮮度）＋「詳しく」（理由・影響・銘柄・トーク）。"""
+    """1件分: 要約（順位・★・見出し・鮮度・信頼度）＋「詳しく」（理由・影響・銘柄・トーク・原文）。"""
+    h = item.headline
     marker = " 🏆" if item.is_top_pick else ""
+    trust = trust_for_source(h.source)
+    # v2.8（④）: 日本語訳があれば日本語を見出しに、原文は「詳しく」内に格納
+    orig_html = f"<p style='margin:0 0 4px 0;'>原文: {_esc(h.title)}</p>" if h.title_ja else ""
     detail = (
-        f"<p style='margin:0 0 4px 0;'>理由: {_esc(item.reason or NOT_AVAILABLE)}</p>"
+        f"<p style='margin:0 0 4px 0;'>Source Trust: {_esc(trust.stars)}（{_esc(trust.tier)}）— {_esc(trust.reason)}</p>"
+        + orig_html
+        + f"<p style='margin:0 0 4px 0;'>理由: {_esc(item.reason or NOT_AVAILABLE)}</p>"
         f"<p style='margin:0 0 4px 0;'>影響市場: {_esc(item.affected_market or NOT_AVAILABLE)} ／ "
         f"影響業種: {_esc(item.affected_sector or NOT_AVAILABLE)}</p>"
         + (
@@ -600,22 +636,40 @@ def _news_ranking_item_html(item: NewsRankingItem, now: Optional[datetime] = Non
     )
     return (
         f'<div class="row"><span>{item.rank}位{marker} {_esc(item.stars)} '
-        f'<a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a></span></div>'
-        f'<p style="margin:2px 0 0 0;">{_news_freshness_badge(item.headline.published, now)}</p>'
+        f'<a href="{_esc(h.link)}">{_esc(h.display_title())}</a></span></div>'
+        f'<p style="margin:2px 0 0 0;">{_news_freshness_badge(h.published, now)} {_source_trust_inline(h.source)}</p>'
         + _detail_block(detail)
     )
+
+
+def _is_primary_news(item: NewsRankingItem, now: Optional[datetime]) -> bool:
+    """初期表示すべき重要記事か（v2.8・⑧⑨）。
+
+    ★★★★☆以上、または24時間以内かつ重要度が高い（★★★☆☆以上）記事を
+    初期表示。1位は必ず初期表示する。それ以外（★★★☆☆以下・48時間超）は折りたたむ。
+    """
+    if item.rank == 1:
+        return True
+    star_count = item.stars.count("★")
+    if star_count >= 4:
+        return True
+    age = _age_hours(item.headline.published, now)
+    if age is not None and age <= 24 and star_count >= 3:
+        return True
+    return False
 
 
 def _news_ranking_html(items: List[NewsRankingItem], now: Optional[datetime] = None) -> str:
     if not items:
         return f"<p>本日ランキング可能なニュースがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
-    # v2.7（③④⑤）: 情報量より情報密度。通常表示は重要5件＋各件は要約1行、
-    # 詳細（理由・影響・恩恵銘柄・営業トーク）は「詳しく」で展開する。
-    parts = [_news_ranking_item_html(item, now) for item in items[:NEWS_RANKING_SUMMARY_COUNT]]
-    rest = items[NEWS_RANKING_SUMMARY_COUNT:]
-    if rest:
-        rest_html = "".join(_news_ranking_item_html(item, now) for item in rest)
-        parts.append(_detail_block(rest_html, label=f"{NEWS_RANKING_SUMMARY_COUNT + 1}位以下を表示（{len(rest)}件）"))
+    # v2.8（⑧⑨）: 重要度×鮮度で初期表示を選別。重要な記事だけを開いて表示し、
+    # 低重要度・古い記事は details に折りたたむ（削除はしない）。
+    primary = [i for i in items if _is_primary_news(i, now)]
+    secondary = [i for i in items if not _is_primary_news(i, now)]
+    parts = [_news_ranking_item_html(item, now) for item in primary]
+    if secondary:
+        rest_html = "".join(_news_ranking_item_html(item, now) for item in secondary)
+        parts.append(_detail_block(rest_html, label=f"低重要度・古い記事を表示（{len(secondary)}件）"))
     return "".join(parts)
 
 
@@ -1053,8 +1107,12 @@ def _executive_summary_html(items: List[ExecutiveSummaryItem], now: Optional[dat
     # 影響、恩恵/悪影響銘柄、営業トークは「詳しく」で展開する。
     parts = []
     for item in items:
+        trust = trust_for_source(item.headline.source)
+        orig_html = f"<p style='margin:0 0 4px 0;'>原文: {_esc(item.headline.title)}</p>" if item.headline.title_ja else ""
         detail = (
-            f"<p style='margin:0 0 4px 0;'>日本株への影響: {_esc(item.jp_stock_impact)}</p>"
+            f"<p style='margin:0 0 4px 0;'>Source Trust: {_esc(trust.stars)}（{_esc(trust.tier)}）— {_esc(trust.reason)}</p>"
+            + orig_html
+            + f"<p style='margin:0 0 4px 0;'>日本株への影響: {_esc(item.jp_stock_impact)}</p>"
             f"<p style='margin:0 0 4px 0;'>ドル円への影響: {_esc(item.usdjpy_impact)}</p>"
             f"<p style='margin:0 0 4px 0;'>金利への影響: {_esc(item.rate_impact)}</p>"
             f"<p style='margin:0 0 4px 0;'>恩恵銘柄: {_esc(item.beneficiary_stocks or '該当なし')} ／ "
@@ -1064,7 +1122,7 @@ def _executive_summary_html(items: List[ExecutiveSummaryItem], now: Optional[dat
         )
         parts.append(
             f"<h3>{item.rank}. {_esc(item.conclusion)} {_esc(item.stars)}</h3>"
-            f'<p style="margin:0 0 4px 0;">{_news_freshness_badge(item.headline.published, now)}</p>'
+            f'<p style="margin:0 0 4px 0;">{_news_freshness_badge(item.headline.published, now)} {_source_trust_inline(item.headline.source)}</p>'
             f"<p style='font-size:0.85rem;'>理由: {_esc(item.reason)}</p>"
             + _detail_block(detail)
         )
@@ -1112,6 +1170,113 @@ def _weekly_events_html(entries: List[WeeklyEventEntry]) -> str:
             f"{_esc(e.date_str)}{_esc(time_txt)} ／ {_esc(e.region)} ／ {_esc(e.category)} ／ 影響: {_esc(targets_txt)}</p>"
             + _detail_block(detail)
             + "</div>"
+        )
+    return "".join(parts)
+
+
+def _scenarios_v2_html(scenarios: List[ScenarioV2Entry]) -> str:
+    """「Scenario Engine v2」（v2.8・③）。期待値の高い最大3シナリオを①②③で表示。
+
+    通常表示は結論（タイトル・確率・★・マーケット影響）だけ短く、発生条件・
+    恩恵/悪影響セクター・注目銘柄・因果関係・時間軸・一般的な反応パターンは
+    「詳しく」で展開する。
+    """
+    if not scenarios:
+        return f"<p>本日組み立てられるシナリオがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    circled = {1: "①", 2: "②", 3: "③"}
+    parts = [
+        "<p class='legend'>既存の相場シナリオ（強気/中立/弱気の確率）と業種の追い風・逆風、"
+        "ウォッチリスト・因果チェーンのみから、期待値（確率）の高い順に最大3つへ整理したものです。"
+        "新たな確率予測・断定的な過去事例は生成していません。</p>"
+    ]
+    for s in scenarios:
+        benefit = "、".join(s.beneficiary_sectors) if s.beneficiary_sectors else "該当なし"
+        adverse = "、".join(s.adverse_sectors) if s.adverse_sectors else "該当なし"
+        watch = "、".join(s.watch_names) if s.watch_names else "該当なし"
+        chain_html = f"<p style='margin:0 0 4px 0;'>因果関係: {_esc(s.causal_chain.replace(chr(10), ' → '))}</p>" if s.causal_chain else ""
+        detail = (
+            f"<p style='margin:0 0 4px 0;'>発生条件: {_esc(s.trigger_condition)}</p>"
+            f"<p style='margin:0 0 4px 0;'>恩恵セクター: {_esc(benefit)}</p>"
+            f"<p style='margin:0 0 4px 0;'>悪影響セクター: {_esc(adverse)}</p>"
+            f"<p style='margin:0 0 4px 0;'>注目銘柄: {_esc(watch)}</p>"
+            + chain_html
+            + f"<p style='margin:0 0 4px 0;'>時間軸: {_esc(s.time_horizon)}</p>"
+            f"<p style='margin:0;'>一般的な反応パターン: {_esc(s.historical_note)}</p>"
+        )
+        parts.append(
+            f"<h3>{circled.get(s.rank, str(s.rank))} {_esc(s.title)} {_esc(s.stars)}"
+            f"<span class='imp'>確率{s.probability}%</span></h3>"
+            f"<p style='font-size:0.85rem;margin:2px 0 4px 0;'>マーケット影響: {_esc(s.market_impact)}</p>"
+            + _detail_block(detail)
+        )
+    return "".join(parts)
+
+
+def _learning_history_html(history: List[LearningHistoryEntry]) -> str:
+    """「Learning History」（v2.8・①）。過去のAI判断の答え合わせ結果を表示。"""
+    if not history:
+        return (
+            "<p>まだ答え合わせできる過去の記録がありません。"
+            "本機能は毎日のAI判断を記録し、30/90/180日後に実際の市場と自動で比較します"
+            "（記録が貯まると、この場所に的中・外れの履歴が表示されます）。</p>"
+        )
+    parts = [
+        "<p class='legend'>毎日のAI判断（重要ニュース・テーマ・シナリオ）を記録し、"
+        "30/90/180日後の日経平均と機械的に比較した答え合わせです。評価はルールベースで、"
+        "AIが新たな予測を生成するものではありません。</p>"
+    ]
+    evaluated = [h for h in history if h.evaluated]
+    waiting = [h for h in history if not h.evaluated]
+
+    def _row(h: LearningHistoryEntry) -> str:
+        cls = {"的中": "learn-hit", "部分的中": "learn-wait", "外れ": "learn-miss"}.get(h.evaluation_status, "learn-wait")
+        status_html = (
+            f"<span class='{cls}'>{_esc(h.evaluation_stars)} {_esc(h.evaluation_status)}（{h.evaluation_horizon}日後）</span>"
+            if h.evaluated
+            else f"<span class='learn-wait'>評価待ち（経過{h.days_elapsed}日）</span>"
+        )
+        detail = (
+            f"<p style='margin:0 0 4px 0;'>重要ニュース: {_esc(h.headline or NOT_AVAILABLE)}</p>"
+            f"<p style='margin:0 0 4px 0;'>重要テーマ: {_esc(h.theme or NOT_AVAILABLE)}</p>"
+            f"<p style='margin:0 0 4px 0;'>シナリオ配分: {_esc(h.scenario_summary)}</p>"
+            + (f"<p style='margin:0;'>答え合わせ: {_esc(h.evaluation_note)}</p>" if h.evaluated else "")
+        )
+        return (
+            f"<div class='row'><span>{_esc(h.date)}</span>{status_html}</div>" + _detail_block(detail)
+        )
+
+    parts.extend(_row(h) for h in evaluated)
+    if waiting:
+        parts.append(_detail_block("".join(_row(h) for h in waiting), label=f"評価待ちの記録を表示（{len(waiting)}件）"))
+    return "".join(parts)
+
+
+def _theme_learning_html(stats: List[ThemeLearningStat]) -> str:
+    """「Theme Confidence Learning」（v2.8・②）の勝率集計を表示。"""
+    if not stats:
+        return (
+            "<p>まだ学習データが貯まっていません。毎日のテーマ別診断を記録し、"
+            "30日後の地合いと比較して勝率・平均リターンを集計します"
+            "（記録が貯まると、この場所にテーマ別の勝率が表示されます）。</p>"
+        )
+    parts = [
+        "<p class='legend'>毎日のテーマ予想を蓄積し、30日後の日経平均（地合いの代理指標）と"
+        "比較して集計した勝率です。この勝率はFuture IntelligenceのConfidenceを上下限つきで"
+        "実績補正するのに使われます。</p>"
+    ]
+    for s in stats:
+        wr = f"{round(s.win_rate * 100)}%" if s.win_rate is not None else NOT_AVAILABLE
+        ret = f"{s.avg_return_pct:+.1f}%" if s.avg_return_pct is not None else NOT_AVAILABLE
+        dur = f"{s.avg_duration_days:.0f}日" if s.avg_duration_days is not None else NOT_AVAILABLE
+        detail = (
+            f"<p style='margin:0 0 4px 0;'>初回登場: {_esc(s.first_seen or NOT_AVAILABLE)} ／ サンプル: {s.samples}件（的中{s.wins}件）</p>"
+            f"<p style='margin:0 0 4px 0;'>平均リターン（地合い代理）: {_esc(ret)} ／ 平均継続: {_esc(dur)}</p>"
+            + (f"<p style='margin:0 0 4px 0;'>成功しやすい条件: {_esc(s.success_condition)}</p>" if s.success_condition else "")
+            + (f"<p style='margin:0;'>失敗しやすい条件: {_esc(s.failure_condition)}</p>" if s.failure_condition else "")
+        )
+        parts.append(
+            f"<div class='row'><span>{_esc(s.label)}</span><span>勝率{_esc(wr)}（{s.samples}件）</span></div>"
+            + _detail_block(detail)
         )
     return "".join(parts)
 
@@ -1816,6 +1981,7 @@ def build_html_report(
     actions_url: Optional[str] = None,
     freshness: Optional[DataFreshnessStats] = None,
     rashinban: Optional[RashinbanKnowledge] = None,
+    why_today: Optional[Dict[str, str]] = None,
 ) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。
 
@@ -1823,7 +1989,10 @@ def build_html_report(
     Data Qualityセクションを表示する（未指定でも従来通り動作する）。
     rashinban（v2.6・省略可）: 羅針盤学習ソースの読み込み状況。指定時のみ
     Rashinban Learning Sourceカードを表示する（本文・抜粋は表示しない）。
+    why_today（v2.8・省略可）: セクションanchor→「なぜ今日見るべきか」1行の辞書。
+    指定時のみ該当カードの先頭にWhy Today行を差し込む（未指定でも従来通り動作）。
     """
+    why_today = why_today or {}
     date_str = report_date.strftime("%Y年%m月%d日")
     updated_str = report_date.strftime("%Y-%m-%d %H:%M")
     tz_label = report_date.tzname() or "現地時間"
@@ -1857,6 +2026,7 @@ def build_html_report(
             "Future Intelligence Engine ★★★★★",
             _todays_action_html(market, analysis) + _future_intelligence_html(analysis.future_intelligence),
         ),
+        ("scenarios-v2", "今日の3大シナリオ（期待値順） ★★★★★", _scenarios_v2_html(analysis.scenarios_v2)),
         ("scenario", "今日の相場シナリオ ★★★★☆", None),  # _scenario_card は専用ヘルパーのため下で個別処理
         ("instrument-scenarios", "日経平均・ドル円・米国市場 個別シナリオ ★★★★☆", _instrument_scenarios_html(analysis.instrument_scenarios)),
         ("market-impact", "マーケットインパクト ★★★★☆", _market_impact_html(analysis.market_impact)),
@@ -1888,6 +2058,8 @@ def build_html_report(
         ("expanded-qa", "想定質問と回答例 ★★★☆☆", _expanded_qa_html(analysis.expanded_qa)),
         ("events", "イベント ★★★☆☆", _events_html(analysis.events)),
         ("ai-summary", "AIまとめ ★★☆☆☆", f"<p>{_esc(analysis.ai_summary_text)}</p>"),
+        ("learning-history", "Learning History（AI判断の答え合わせ） ★★★☆☆", _learning_history_html(analysis.learning_history)),
+        ("theme-learning", "Theme Confidence Learning（テーマ別勝率） ★★★☆☆", _theme_learning_html(analysis.theme_learning_stats)),
         ("sources", "引用（参照URL一覧） ★★☆☆☆", _source_list_html(sources)),
     ]
     if freshness is not None:
@@ -1902,11 +2074,17 @@ def build_html_report(
         prev_anchor = sections[i - 1][0] if i > 0 else None
         next_anchor = sections[i + 1][0] if i < len(sections) - 1 else None
         nav_html = _section_nav_html(prev_anchor, next_anchor)
+        # v2.8（⑦）: 「なぜ今日見るべきか」を該当カードの先頭に差し込む
+        why_html = ""
+        if why_today.get(anchor):
+            why_html = f'<div class="why-today"><strong>Why Today：</strong>{_esc(why_today[anchor])}</div>'
         if anchor == "scenario":
             rendered_sections.append(_scenario_card(analysis.scenario, nav_html=nav_html))
         else:
             extra_class = "sales-section" if anchor in SALES_SECTION_ANCHORS else ""
-            rendered_sections.append(_card(title, body_html, extra_class=extra_class, anchor=anchor, nav_html=nav_html))
+            rendered_sections.append(
+                _card(title, why_html + (body_html or ""), extra_class=extra_class, anchor=anchor, nav_html=nav_html)
+            )
 
     body = "".join(top_cards) + toc_card + "".join(rendered_sections)
     # フローティング操作ボタン（v2.5）: ↑TOP／☰目次／★お気に入り

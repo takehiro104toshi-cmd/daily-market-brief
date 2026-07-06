@@ -537,3 +537,28 @@ rashinban:
   # v2.7: 知識ベース化。最大100件を読み込み、重複統合＋重要度（複数号での
   # 繰り返し登場＋キーワード密度）順に重要な知識だけを抽出する。
   max_files: 100          # 新しい順に読み込む最大ファイル数
+
+# ===== v2.8 Smart Intelligence Evolution =====
+
+# 英語ニュース自動翻訳（④）。ANTHROPIC_API_KEY（Secrets）がある時のみ動作し、
+# 英語見出しを日本語へ翻訳して「日本語 → 原文を見る」で表示する。
+# キー未設定・失敗時は原文のまま（既存動作に影響なし）。
+translation:
+  enabled: true
+
+# 経済カレンダー自動取得（⑤・安全スキャフォールド）。公開RSS/JSONのURLを
+# 設定した場合のみ自動取得し、config.yamlのmacro_eventsとマージして
+# 「今週の重要イベント」に反映する。未設定なら従来通りmacro_eventsのみ使用。
+# 信頼できる無償ソースが確定するまでは空欄（自動取得なし）を推奨。
+economic_calendar:
+  url: ""
+
+# Investment Journal（①）。毎日のAI判断を記録し、30/90/180日後に実際の
+# 市場と自動で答え合わせする（GitHub Actionsが journal.json をコミットして永続化）。
+investment_journal:
+  dir: "data/investment_journal"
+
+# Theme Confidence Learning（②）。毎日のテーマ予想を蓄積し勝率を学習して、
+# Future IntelligenceのConfidenceを上下限つきで実績補正する。
+theme_learning:
+  dir: "data/theme_learning"
