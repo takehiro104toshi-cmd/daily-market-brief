@@ -493,6 +493,9 @@ key_levels:
 #   - { date: "2026-08-08", label: "米CPI（消費者物価指数）発表" }
 #   - { date: "2026-08-09", label: "米PPI（生産者物価指数）発表" }
 #   - { date: "2026-08-14", label: "SQ（特別清算指数算出日）" }
+# v2.7: 任意で time（日本時間 "HH:MM"）を追加すると、「今週の重要イベント・
+# 経済指標」（Weekly Event Impact Calendar）で「あと◯日 ◯時間」まで表示される。
+# 例: - { date: "2026-08-08", label: "米CPI（消費者物価指数）発表", time: "21:30" }
 macro_events: []
 
 output:
@@ -531,4 +534,6 @@ notifications:
 # ※ PDF/DOCXは対象外。md/txtへ変換して置く運用（詳細は data/rashinban/README.md）。
 rashinban:
   dir: "data/rashinban"   # 羅針盤ファイルの置き場所
-  max_files: 3            # 新しい順に読み込む最大ファイル数
+  # v2.7: 知識ベース化。最大100件を読み込み、重複統合＋重要度（複数号での
+  # 繰り返し登場＋キーワード密度）順に重要な知識だけを抽出する。
+  max_files: 100          # 新しい順に読み込む最大ファイル数

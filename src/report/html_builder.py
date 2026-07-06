@@ -40,6 +40,7 @@ from ..analysis.models import (
     ThemeForecast,
     TopPickEntry,
     WatchlistQuickEntry,
+    WeeklyEventEntry,
 )
 from ..analysis.data_freshness import (
     DataFreshnessStats,
@@ -258,6 +259,29 @@ ul.plain li { margin-bottom: 4px; font-size: 0.9rem; }
 .chain { font-size: 0.9rem; }
 .chain .arrow { text-align: center; color: #888; margin: 2px 0; }
 a { color: #1f6feb; }
+/* v2.7: 3分で読めるUI（要約＋「詳しく」アコーディオン＋重要度バッジ） */
+.imp { display: inline-block; font-size: 0.68rem; font-weight: 600; color: #7c3aed;
+  background: #f3e8ff; border-radius: 8px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+details.more { margin: 4px 0 10px 0; }
+details.more > summary.detail-btn { cursor: pointer; display: inline-block; list-style: none;
+  font-size: 0.78rem; font-weight: 600; color: #1f6feb; background: #eef4ff;
+  border: 1px solid #c9dcff; border-radius: 12px; padding: 3px 12px; user-select: none; }
+details.more > summary.detail-btn::-webkit-details-marker { display: none; }
+details.more > summary.detail-btn::before { content: "▸ "; }
+details.more[open] > summary.detail-btn::before { content: "▾ "; }
+.more-body { font-size: 0.82rem; color: #444; margin-top: 6px; padding: 8px 10px;
+  background: #f8f9fb; border-left: 3px solid #c9dcff; border-radius: 4px; }
+.fi-conclusion { background: #fffbe8; border: 1px solid #f0e0a0; border-radius: 8px;
+  padding: 10px 12px; margin: 8px 0; font-size: 0.9rem; }
+.fi-conclusion .imp { margin-left: 0; }
+.event-row { border-bottom: 1px dashed var(--border); padding: 6px 0; }
+.event-countdown { display: inline-block; font-size: 0.72rem; font-weight: 700; color: #b45309;
+  background: #fef3c7; border-radius: 8px; padding: 1px 8px; margin-right: 6px; }
+:root[data-theme="dark"] .more-body { background: #23262e; color: #cbd2dc; }
+:root[data-theme="dark"] details.more > summary.detail-btn { background: #1d2839; }
+:root[data-theme="dark"] .fi-conclusion { background: #2b2716; border-color: #5a512a; }
+:root[data-theme="dark"] .imp { background: #3b2a55; color: #d8c6f5; }
+:root[data-theme="dark"] .event-countdown { background: #453317; color: #f3c877; }
 @media (max-width: 420px) {
   .header h1 { font-size: 1.1rem; }
   .card { padding: 12px; }
@@ -451,6 +475,7 @@ def _copy_button_html() -> str:
 SECTION_DESCRIPTIONS = {
     "dashboard-top": "今日の市場全体を30秒で把握するダッシュボードです。",
     "executive-summary": "今日最重要のニュース最大3件とその影響を要約します。",
+    "weekly-events": "今後1週間で相場を動かす可能性のあるイベントをカウントダウンつきで表示します。",
     "strategist-views": "重要ニュースをストラテジスト視点で深掘りします。",
     "future-intelligence": "世界→テーマ→業界→銘柄→長期戦略を一気通貫で分析します。",
     "news-ranking": "本日の重要ニュースを重要度×鮮度で並べたランキングです。",
@@ -471,7 +496,13 @@ def _card(
 ) -> str:
     id_attr = f' id="{_esc(anchor)}"' if anchor else ""
     label, stars_txt = _split_title_stars(title)
-    title_html = _esc(label) + (f" {_stars_span(stars_txt)}" if stars_txt else "")
+    # v2.7（⑥）: ★から100点満点の重要度を機械的に換算して併記（★×20点）。
+    # 何を先に読むべきかを一目で分かるようにする表示のみの機能。
+    imp_html = ""
+    if stars_txt:
+        importance = min(100, stars_txt.count("★") * 20)
+        imp_html = f'<span class="imp">重要度{importance}</span>'
+    title_html = _esc(label) + (f" {_stars_span(stars_txt)}{imp_html}" if stars_txt else "")
     # お気に入り（☆⇄★）はアンカーを持つ通常セクションのみ対象（メニュー・目次等のno-filterカードは除く）
     fav_btn = ""
     if anchor and "no-filter" not in extra_class:
@@ -487,6 +518,20 @@ def _card(
     return (
         f'<div class="card {extra_class}"{id_attr}>{head_html}{desc_html}'
         f'<div class="card-body">{body_html}{nav_html}</div></div>'
+    )
+
+
+def _detail_block(detail_html: str, label: str = "詳しく") -> str:
+    """「3分で読めるUI」（v2.7）の詳細展開部品。
+
+    通常表示は要約のみとし、押した人だけが背景・理由・因果関係などを読める
+    アコーディオン（HTML標準のdetails/summary。外部JS不要）を生成する。
+    """
+    if not detail_html:
+        return ""
+    return (
+        f"<details class='more'><summary class='detail-btn'>{_esc(label)}</summary>"
+        f"<div class='more-body'>{detail_html}</div></details>"
     )
 
 
@@ -535,20 +580,42 @@ def _scenario_card(scenario, nav_html: str = "") -> str:
     return _card("今日の相場シナリオ", rows + reasons, anchor="scenario", nav_html=nav_html)
 
 
+NEWS_RANKING_SUMMARY_COUNT = 5  # v2.7（③）: 通常表示は重要5件のみ（残りは「詳しく」内）
+
+
+def _news_ranking_item_html(item: NewsRankingItem, now: Optional[datetime] = None) -> str:
+    """1件分: 要約（順位・★・見出し・鮮度）＋「詳しく」（理由・影響・銘柄・トーク）。"""
+    marker = " 🏆" if item.is_top_pick else ""
+    detail = (
+        f"<p style='margin:0 0 4px 0;'>理由: {_esc(item.reason or NOT_AVAILABLE)}</p>"
+        f"<p style='margin:0 0 4px 0;'>影響市場: {_esc(item.affected_market or NOT_AVAILABLE)} ／ "
+        f"影響業種: {_esc(item.affected_sector or NOT_AVAILABLE)}</p>"
+        + (
+            f"<p style='margin:0 0 4px 0;'>恩恵銘柄: {_esc('、'.join(item.beneficiary_tickers))} ／ "
+            f"悪影響銘柄: {_esc('、'.join(item.negative_tickers) or '該当なし')}</p>"
+            if item.beneficiary_tickers or item.negative_tickers
+            else ""
+        )
+        + (f"<p style='margin:0;'>営業トーク: 「{_esc(item.sales_talk)}」</p>" if item.sales_talk else "")
+    )
+    return (
+        f'<div class="row"><span>{item.rank}位{marker} {_esc(item.stars)} '
+        f'<a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a></span></div>'
+        f'<p style="margin:2px 0 0 0;">{_news_freshness_badge(item.headline.published, now)}</p>'
+        + _detail_block(detail)
+    )
+
+
 def _news_ranking_html(items: List[NewsRankingItem], now: Optional[datetime] = None) -> str:
     if not items:
         return f"<p>本日ランキング可能なニュースがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
-    parts = []
-    for item in items:
-        marker = " 🏆" if item.is_top_pick else ""
-        parts.append(
-            f'<div class="row"><span>{item.rank}位{marker} {_esc(item.stars)} '
-            f'<a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a></span></div>'
-            f'<p style="margin:2px 0 0 0;">{_news_freshness_badge(item.headline.published, now)}</p>'
-            f'<p style="font-size:0.8rem;color:#666;margin:2px 0 8px 0;">'
-            f'理由: {_esc(item.reason or NOT_AVAILABLE)} ／ 影響市場: {_esc(item.affected_market or NOT_AVAILABLE)} '
-            f"／ 影響業種: {_esc(item.affected_sector or NOT_AVAILABLE)}</p>"
-        )
+    # v2.7（③④⑤）: 情報量より情報密度。通常表示は重要5件＋各件は要約1行、
+    # 詳細（理由・影響・恩恵銘柄・営業トーク）は「詳しく」で展開する。
+    parts = [_news_ranking_item_html(item, now) for item in items[:NEWS_RANKING_SUMMARY_COUNT]]
+    rest = items[NEWS_RANKING_SUMMARY_COUNT:]
+    if rest:
+        rest_html = "".join(_news_ranking_item_html(item, now) for item in rest)
+        parts.append(_detail_block(rest_html, label=f"{NEWS_RANKING_SUMMARY_COUNT + 1}位以下を表示（{len(rest)}件）"))
     return "".join(parts)
 
 
@@ -631,6 +698,8 @@ def _stock_ranking_html(stock_ranking: dict) -> str:
 
 
 def _watchlist_quicklist_html(quicklist: dict) -> str:
+    # v2.7（⑩）: 銘柄ごとに一行要約（銘柄名・前日比・★）のみ表示し、
+    # 評価理由は「詳しく」で展開する（判定ロジックは不変・表示のみ変更）。
     def _render(entries: List[WatchlistQuickEntry]) -> str:
         if not entries:
             return f"<p>データがありません（{_esc(NOT_AVAILABLE)}）。</p>"
@@ -638,9 +707,10 @@ def _watchlist_quicklist_html(quicklist: dict) -> str:
         for e in entries:
             cls = _trend_class(e.quote.change_pct)
             rows.append(
-                f'<div class="row"><span>{_esc(e.quote.name)}（{_esc(e.quote.symbol)}）</span>'
+                f'<div class="row"><span>{_esc(e.quote.name)}（{_esc(e.quote.symbol)}）'
+                f' <span class="badge {cls}">{_esc(fmt_change_compact(e.quote.change_pct))}</span></span>'
                 f'<span class="badge {cls}">{_esc(e.stars)}</span></div>'
-                f'<p style="font-size:0.8rem;color:#666;margin:2px 0 8px 0;">{_esc(e.reason)}</p>'
+                + _detail_block(f"<p style='margin:0;'>{_esc(e.reason)}</p>")
             )
         return "".join(rows)
 
@@ -979,18 +1049,69 @@ def _new_badge(score: int) -> str:
 def _executive_summary_html(items: List[ExecutiveSummaryItem], now: Optional[datetime] = None) -> str:
     if not items:
         return f"<p>本日算出できる最重要ニュースがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>"
+    # v2.7（④⑤）: 通常表示は結論＋理由（2〜4行）のみ。日本株・ドル円・金利への
+    # 影響、恩恵/悪影響銘柄、営業トークは「詳しく」で展開する。
     parts = []
     for item in items:
+        detail = (
+            f"<p style='margin:0 0 4px 0;'>日本株への影響: {_esc(item.jp_stock_impact)}</p>"
+            f"<p style='margin:0 0 4px 0;'>ドル円への影響: {_esc(item.usdjpy_impact)}</p>"
+            f"<p style='margin:0 0 4px 0;'>金利への影響: {_esc(item.rate_impact)}</p>"
+            f"<p style='margin:0 0 4px 0;'>恩恵銘柄: {_esc(item.beneficiary_stocks or '該当なし')} ／ "
+            f"悪影響銘柄: {_esc(item.negative_stocks or '該当なし')}</p>"
+            f"<p style='margin:0 0 4px 0;'>ストラテジスト視点: {_esc(item.strategist_view)}</p>"
+            f"<p style='margin:0;'><strong>営業トーク:</strong> 「{_esc(item.sales_talk)}」</p>"
+        )
         parts.append(
             f"<h3>{item.rank}. {_esc(item.conclusion)} {_esc(item.stars)}</h3>"
             f'<p style="margin:0 0 4px 0;">{_news_freshness_badge(item.headline.published, now)}</p>'
             f"<p style='font-size:0.85rem;'>理由: {_esc(item.reason)}</p>"
-            f"<p style='font-size:0.82rem;color:#555;'>日本株への影響: {_esc(item.jp_stock_impact)}</p>"
-            f"<p style='font-size:0.82rem;color:#555;'>ドル円への影響: {_esc(item.usdjpy_impact)}</p>"
-            f"<p style='font-size:0.82rem;color:#555;'>金利への影響: {_esc(item.rate_impact)}</p>"
-            f"<p style='font-size:0.82rem;color:#555;'>恩恵銘柄: {_esc(item.beneficiary_stocks or '該当なし')} ／ "
-            f"悪影響銘柄: {_esc(item.negative_stocks or '該当なし')}</p>"
-            f"<p style='font-size:0.85rem;'><strong>営業トーク:</strong> 「{_esc(item.sales_talk)}」</p>"
+            + _detail_block(detail)
+        )
+    return "".join(parts)
+
+
+def _weekly_events_html(entries: List[WeeklyEventEntry]) -> str:
+    """「Weekly Event Impact Calendar」（v2.7）。
+
+    直近1週間の重要イベントを「近い順→重要度順」で、カウントダウン・★・
+    影響対象つきのカード形式で表示する。通常表示は短く、なぜ重要か・
+    マーケットへの影響・見るべきポイント・関連テーマは「詳しく」で展開。
+    データが無い場合は無理に生成せず、その旨を表示する。
+    """
+    if not entries:
+        return "<p>直近1週間の重要イベントは登録されていません（config.yamlのmacro_eventsに追加すると表示されます）。</p>"
+    parts = [
+        "<p class='legend'>config.yamlのmacro_events（登録情報）と決算発表予定（公開情報）から、"
+        "今日〜7日後のイベントだけを表示します。重要度・影響対象は人手による対応表との照合で、"
+        "AIによる新たな予測ではありません。日本時間基準です。</p>"
+    ]
+    for e in entries:
+        targets_txt = "、".join(e.impact_targets) if e.impact_targets else "市場全体"
+        watch_html = (
+            "<ul class='plain' style='margin:4px 0;'>" + "".join(f"<li>{_esc(w)}</li>" for w in e.watch_points) + "</ul>"
+            if e.watch_points
+            else ""
+        )
+        themes_html = (
+            f"<p style='margin:0;'>関連テーマ: {_esc('、'.join(e.related_themes))}</p>" if e.related_themes else ""
+        )
+        detail = (
+            f"<p style='margin:0 0 4px 0;'>なぜ重要か: {_esc(e.why_important)}</p>"
+            f"<p style='margin:0 0 4px 0;'>想定される影響: {_esc(e.expected_impact)}</p>"
+            + (f"<p style='margin:0 0 4px 0;'>見るべきポイント:</p>{watch_html}" if watch_html else "")
+            + themes_html
+        )
+        time_txt = f" {e.time_str}" if e.time_str else ""
+        parts.append(
+            "<div class='event-row'>"
+            f"<div class='row'><span><span class='event-countdown'>{_esc(e.countdown_text)}</span>"
+            f"{_esc(e.label)}</span>"
+            f"<span>{_stars_span(e.stars)} <span class='imp'>重要度{e.importance}</span></span></div>"
+            f"<p style='font-size:0.78rem;color:#666;margin:2px 0 0 0;'>"
+            f"{_esc(e.date_str)}{_esc(time_txt)} ／ {_esc(e.region)} ／ {_esc(e.category)} ／ 影響: {_esc(targets_txt)}</p>"
+            + _detail_block(detail)
+            + "</div>"
         )
     return "".join(parts)
 
@@ -1232,6 +1353,44 @@ def _fi_top_change_highlight_html(bundle: FutureIntelligenceBundle) -> str:
     )
 
 
+FI_SUMMARY_COUNT = 8  # v2.7（③⑧）: FI各リストの通常表示件数（残りは「詳しく」内）
+
+
+def _fi_conclusion_html(bundle: FutureIntelligenceBundle) -> str:
+    """FIの冒頭に置く「結論→重要ポイント3つ」（v2.7・⑧）。
+
+    新しい分析は行わず、既存のTheme Momentum・テーマ別診断・世界のお金の流れ
+    （いずれも計算済み）から最上位のシグナルを機械的に転記するだけの要約表示。
+    """
+    points = []
+    top_momentum = max(bundle.theme_momentum, key=lambda t: t.momentum_score, default=None)
+    if top_momentum:
+        points.append(
+            f"本日最も勢いのあるテーマは「{_esc(top_momentum.label)}」"
+            f"（Momentum {top_momentum.momentum_score}/100・{_esc(top_momentum.momentum_label)}）です。"
+        )
+    top_diag = max(bundle.theme_diagnosis, key=lambda t: t.confidence_score, default=None)
+    if top_diag:
+        points.append(
+            f"分析根拠が最も充実しているテーマは「{_esc(top_diag.label)}」"
+            f"（Confidence {top_diag.confidence_score}%・{_esc(top_diag.phase)}）です。"
+        )
+    if bundle.early_signals:
+        points.append(f"初動シグナルは「{_esc(bundle.early_signals[0].label)}」など{len(bundle.early_signals)}件を検知しています。")
+    elif bundle.capital_flow_market_mood:
+        points.append(f"市場ムード（参考）: {_esc(bundle.capital_flow_market_mood)}")
+    if not points:
+        return ""
+    conclusion = points[0]
+    points_html = "".join(f"<li>{p}</li>" for p in points[:3])
+    return (
+        "<div class='fi-conclusion'><span class='imp'>結論</span> "
+        f"<strong>{conclusion}</strong>"
+        f"<ul class='plain' style='margin:6px 0 0 0;'>{points_html}</ul>"
+        "<p class='legend' style='margin:6px 0 0 0;'>詳細は下の各ブロックの「詳しく」で確認できます。</p></div>"
+    )
+
+
 def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     """「Future Intelligence Engine」をレンダリングする。
 
@@ -1267,6 +1426,7 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     parts = [
         "<p class='legend'>本セクションは具体的な残り年数・市場規模・補助金額等の断定的な数値は使用せず、"
         "本日の関連ニュース件数と既存の継続性フラグから導いた定性的な考察です。</p>",
+        _fi_conclusion_html(bundle),
         f"<div class='fi-toc'><strong>Future Intelligence 目次</strong><ul>{toc_html}</ul></div>",
     ]
 
@@ -1279,25 +1439,46 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     parts.append("<h4>今日もっとも重要な変化</h4>")
     parts.append(_fi_top_change_highlight_html(bundle))
     parts.append("<h4>世界のメガトレンド</h4>")
-    for m in bundle.megatrends:
-        parts.append(
+    # v2.7（③）: 本日の関連見出し件数の多い順に上位のみ通常表示（重要度で自動選別。
+    # 算出ロジックは不変・表示の選別のみ）。残りは「詳しく」で展開。
+    megatrends_ranked = sorted(bundle.megatrends, key=lambda m: -m.headline_count)
+
+    def _megatrend_html(m) -> str:
+        return (
             f"<div class='row'><span>{_theme_link(m.label)} {_esc(m.stars)}</span>"
             f"<span>{_esc(m.phase)} ／ 継続性: {_esc(m.continuity)}</span></div>"
             f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
             f"本日の関連見出し: {m.headline_count}件／{_esc(m.why_growing)}</p>"
         )
 
+    parts.extend(_megatrend_html(m) for m in megatrends_ranked[:FI_SUMMARY_COUNT])
+    rest_megatrends = megatrends_ranked[FI_SUMMARY_COUNT:]
+    if rest_megatrends:
+        parts.append(
+            _detail_block("".join(_megatrend_html(m) for m in rest_megatrends), label=f"残り{len(rest_megatrends)}テーマを表示")
+        )
+
     parts.append("<h4>Theme Momentum Score</h4>")
     if bundle.theme_momentum:
-        for tm in bundle.theme_momentum:
+        # v2.7（③）: スコアの高い順に上位のみ通常表示（スコア計算は不変）
+        momentum_ranked = sorted(bundle.theme_momentum, key=lambda t: -t.momentum_score)
+
+        def _momentum_html(tm) -> str:
             sector_html = ""
             if tm.related_sector:
                 names_txt = "、".join(tm.beneficiary_names) if tm.beneficiary_names else "該当なし"
                 sector_html = f"<br>関連セクター: {_esc(tm.related_sector)} ／ 関連銘柄: {_esc(names_txt)}"
-            parts.append(
+            return (
                 f"<div class='row'><span>{_theme_link(tm.label)}{_new_badge(tm.momentum_score)}</span>"
                 f"<span>{tm.momentum_score}/100（{_esc(tm.momentum_label)}）</span></div>"
                 f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>{_esc(tm.reason)}{sector_html}</p>"
+            )
+
+        parts.extend(_momentum_html(tm) for tm in momentum_ranked[:FI_SUMMARY_COUNT])
+        rest_momentum = momentum_ranked[FI_SUMMARY_COUNT:]
+        if rest_momentum:
+            parts.append(
+                _detail_block("".join(_momentum_html(tm) for tm in rest_momentum), label=f"残り{len(rest_momentum)}テーマを表示")
             )
     else:
         parts.append(f"<p>本日算出できるモメンタムスコアがありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
@@ -1348,16 +1529,25 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         "無ければ既存シグナルからの「AI分析」（断定はしません）、"
         "判断材料が無い場合のみ「分析材料不足」と表示します。</p>"
     )
-    for tn in bundle.theme_maturity_notes:
-        basis_html = f"<br>判断根拠: {_esc(tn.basis)}" if tn.basis else ""
-        parts.append(
+    # v2.7（④⑤）: 通常表示は「テーマ＋現在フェーズ」の1行のみ。詳細は「詳しく」で展開
+    def _maturity_html(tn) -> str:
+        basis_html = f"<p style='margin:0;'>判断根拠: {_esc(tn.basis)}</p>" if tn.basis else ""
+        detail = (
+            f"<p style='margin:0 0 4px 0;'>市場ステージ: {_esc(tn.market_size_note)}</p>"
+            f"<p style='margin:0 0 4px 0;'>普及状況: {_esc(tn.adoption_note)}</p>"
+            f"<p style='margin:0 0 4px 0;'>競争環境: {_esc(tn.competition_note)} ／ 参入障壁: {_esc(tn.barrier_note)}</p>"
+            f"<p style='margin:0 0 4px 0;'>主なリスク: {_esc(tn.risk_note)}</p>" + basis_html
+        )
+        return (
             f"<div class='row'><span>{_theme_link(tn.label)}［{_esc(tn.source_label)}］</span>"
-            f"<span>現在フェーズ: {_esc(tn.market_stage)}</span></div>"
-            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-            f"市場ステージ: {_esc(tn.market_size_note)}<br>"
-            f"普及状況: {_esc(tn.adoption_note)}<br>"
-            f"競争環境: {_esc(tn.competition_note)} ／ 参入障壁: {_esc(tn.barrier_note)}<br>"
-            f"主なリスク: {_esc(tn.risk_note)}{basis_html}</p>"
+            f"<span>現在フェーズ: {_esc(tn.market_stage)}</span></div>" + _detail_block(detail)
+        )
+
+    parts.extend(_maturity_html(tn) for tn in bundle.theme_maturity_notes[:FI_SUMMARY_COUNT])
+    rest_maturity = bundle.theme_maturity_notes[FI_SUMMARY_COUNT:]
+    if rest_maturity:
+        parts.append(
+            _detail_block("".join(_maturity_html(tn) for tn in rest_maturity), label=f"残り{len(rest_maturity)}テーマを表示")
         )
 
     parts.append("<h4>テーマ別診断（Momentum → Lifecycle → Catalyst → Risk → Confidence）</h4>")
@@ -1367,20 +1557,37 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         "「AI分析」であり、断定はしません。Confidenceは「未来が当たる確率」ではなく、"
         "分析根拠の充実度です。</p>"
     )
-    for td in bundle.theme_diagnosis:
+    # v2.7（③④⑤）: Confidenceの高い順に上位のみ通常表示し、各テーマは
+    # 「1行要約＋詳しく（Catalyst・Risk・根拠・関連テーマ）」で表示する
+    diagnosis_ranked = sorted(bundle.theme_diagnosis, key=lambda t: -t.confidence_score)
+
+    def _diagnosis_html(td) -> str:
         catalysts_html = "、".join(_esc(c) for c in td.catalysts)
         risks_html = "、".join(_esc(r) for r in td.risks)
-        basis_html = f"<br>根拠: {_esc('、'.join(td.confidence_basis))}" if td.confidence_basis else ""
-        related_html = f"<br>関連テーマ: {_esc('、'.join(td.related_themes))}" if td.related_themes else ""
-        parts.append(
+        basis_html = (
+            f"<p style='margin:0;'>根拠: {_esc('、'.join(td.confidence_basis))}</p>" if td.confidence_basis else ""
+        )
+        related_html = (
+            f"<p style='margin:0 0 4px 0;'>関連テーマ: {_esc('、'.join(td.related_themes))}</p>" if td.related_themes else ""
+        )
+        detail = (
+            related_html
+            + f"<p style='margin:0 0 4px 0;'>Catalyst［AI分析］: {catalysts_html}</p>"
+            + f"<p style='margin:0 0 4px 0;'>Risk［AI分析］: {risks_html}</p>"
+            + basis_html
+        )
+        return (
             f"<h5 id='theme-{_esc(_slug(td.label))}'>{_esc(td.label)}{_new_badge(td.confidence_score)}</h5>"
-            f"<div class='row'><span>Confidence</span>"
-            f"<span>{td.confidence_score}%</span></div>"
-            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-            f"Momentum: {td.momentum_score}/100（{_esc(td.momentum_label)}）／"
-            f"Lifecycle: {_esc(td.phase)}（継続性: {_esc(td.continuity)}）{related_html}<br>"
-            f"Catalyst［AI分析］: {catalysts_html}<br>"
-            f"Risk［AI分析］: {risks_html}{basis_html}</p>"
+            f"<div class='row'><span>Confidence {td.confidence_score}%</span>"
+            f"<span>Momentum {td.momentum_score}/100（{_esc(td.momentum_label)}）／"
+            f"{_esc(td.phase)}（継続性: {_esc(td.continuity)}）</span></div>" + _detail_block(detail)
+        )
+
+    parts.extend(_diagnosis_html(td) for td in diagnosis_ranked[:FI_SUMMARY_COUNT])
+    rest_diagnosis = diagnosis_ranked[FI_SUMMARY_COUNT:]
+    if rest_diagnosis:
+        parts.append(
+            _detail_block("".join(_diagnosis_html(td) for td in rest_diagnosis), label=f"残り{len(rest_diagnosis)}テーマを表示")
         )
     parts.append(_section_nav_html("fi-signals", "fi-industry"))
     parts.append("</details>")
@@ -1461,23 +1668,25 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         "・投資判断のための整理です。断定的な売買助言（「買い」「売り」）ではなく、注目継続／"
         "押し目待ち／過熱警戒／材料待ち／判断材料不足という非断定的なラベルのみを使用します。</p>"
     )
+    # v2.7（⑩）: 銘柄ごとに「一行要約（銘柄名＋判定ラベル）→詳しく」で表示
     for w in bundle.watchlist_intelligence:
-        detail_html = ""
+        detail_parts = []
         if w.related_themes:
             catalysts_html = "、".join(_esc(c) for c in w.catalysts)
             risks_html = "、".join(_esc(r) for r in w.risks)
-            detail_html = (
-                f"関連テーマ: {_esc('、'.join(w.related_themes))}<br>"
-                f"Momentum: {w.momentum_score}/100（{_esc(w.momentum_label)}）／"
-                f"Lifecycle: {_esc(w.phase)}（継続性: {_esc(w.continuity)}）／"
-                f"Confidence: {w.confidence_score}%<br>"
-                + (f"Catalyst［AI分析］: {catalysts_html}<br>" if catalysts_html else "")
-                + (f"Risk［AI分析］: {risks_html}<br>" if risks_html else "")
+            detail_parts.append(f"<p style='margin:0 0 4px 0;'>関連テーマ: {_esc('、'.join(w.related_themes))}</p>")
+            detail_parts.append(
+                f"<p style='margin:0 0 4px 0;'>Momentum: {w.momentum_score}/100（{_esc(w.momentum_label)}）／"
+                f"Lifecycle: {_esc(w.phase)}（継続性: {_esc(w.continuity)}）／Confidence: {w.confidence_score}%</p>"
             )
+            if catalysts_html:
+                detail_parts.append(f"<p style='margin:0 0 4px 0;'>Catalyst［AI分析］: {catalysts_html}</p>")
+            if risks_html:
+                detail_parts.append(f"<p style='margin:0 0 4px 0;'>Risk［AI分析］: {risks_html}</p>")
+        detail_parts.append(f"<p style='margin:0;'>判断理由: {_esc(w.judgment_reason)}</p>")
         parts.append(
             f"<div class='row'><span>{_stock_link(w.ticker, f'{w.name}（{w.ticker}）')}</span><span>{_esc(w.judgment_label)}</span></div>"
-            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-            f"{detail_html}判断理由: {_esc(w.judgment_reason)}</p>"
+            + _detail_block("".join(detail_parts))
         )
 
     parts.append("<h4>Stock Intelligence（銘柄別・投資ストーリー）</h4>")
@@ -1488,27 +1697,31 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         "「今後注目するイベント」「投資ストーリー」は、既存シグナルのみから機械的に組み立てた"
         "ものであり、AIによる作文ではありません。</p>"
     )
+    # v2.7（⑩）: 銘柄ごとに「一行要約（銘柄名・判定・Confidence）→詳しく
+    # （背景・因果関係・投資ストーリー・リスク・時間軸）」で表示
     for s in bundle.stock_intelligence:
         catalysts_html = "、".join(_esc(c) for c in s.catalysts)
         risks_html = "、".join(_esc(r) for r in s.risks)
         chain_html = (
-            f"関連するテーマ: {_esc(' → '.join([s.primary_theme] + s.cross_theme_chain))}<br>"
+            f"<p style='margin:0 0 4px 0;'>関連するテーマ: {_esc(' → '.join([s.primary_theme] + s.cross_theme_chain))}</p>"
             if s.cross_theme_chain
             else ""
         )
+        detail = (
+            f"<p style='margin:0 0 4px 0;'>関連テーマ: {_esc('、'.join(s.related_themes))}（{len(s.related_themes)}件）</p>"
+            f"<p style='margin:0 0 4px 0;'>Momentum: {s.momentum_score}/100（{_esc(s.momentum_label)}）／"
+            f"Lifecycle: {_esc(s.phase)}（継続性: {_esc(s.continuity)}）</p>"
+            f"<p style='margin:0 0 4px 0;'>Catalyst［AI分析］: {catalysts_html}</p>"
+            f"<p style='margin:0 0 4px 0;'>Risk［AI分析］: {risks_html}</p>"
+            f"<p style='margin:0 0 4px 0;'>なぜ長期で見るのか: {_esc(s.why_long_term)}</p>"
+            f"<p style='margin:0 0 4px 0;'>今後注目するイベント: {_esc('、'.join(s.watch_events))}</p>"
+            f"{chain_html}"
+            f"<p style='margin:0;'>投資ストーリー: {_esc(' → '.join(s.investment_story))}</p>"
+        )
         parts.append(
             f"<h5 id='stock-{_esc(_slug(s.ticker))}'>{_esc(s.name)}（{_esc(s.ticker)}）{_new_badge(s.confidence_score)}</h5>"
-            f"<div class='row'><span>関連テーマ: {_esc('、'.join(s.related_themes))}"
-            f"（{len(s.related_themes)}件）</span><span>{_esc(s.judgment_label)}</span></div>"
-            f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-            f"Momentum: {s.momentum_score}/100（{_esc(s.momentum_label)}）／"
-            f"Lifecycle: {_esc(s.phase)}（継続性: {_esc(s.continuity)}）／Confidence: {s.confidence_score}%<br>"
-            f"Catalyst［AI分析］: {catalysts_html}<br>"
-            f"Risk［AI分析］: {risks_html}<br>"
-            f"なぜ長期で見るのか: {_esc(s.why_long_term)}<br>"
-            f"今後注目するイベント: {_esc('、'.join(s.watch_events))}<br>"
-            f"{chain_html}"
-            f"投資ストーリー: {_esc(' → '.join(s.investment_story))}</p>"
+            f"<div class='row'><span>{_esc(s.judgment_label)}</span>"
+            f"<span>Confidence {s.confidence_score}%</span></div>" + _detail_block(detail)
         )
     parts.append(_section_nav_html("fi-industry", "fi-longterm"))
     parts.append("</details>")
@@ -1532,27 +1745,46 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
         "しません。Confidence（分析根拠の充実度）の高い順に表示します。</p>"
     )
     if bundle.investment_theses:
-        for t in bundle.investment_theses:
+        # v2.7（⑨）: 各テーマを「結論 → 理由3つ → 詳しく」の3層で表示する
+        # （組み立てロジック・Confidence順の並びは不変。表示構成のみ変更）
+        def _thesis_html(t) -> str:
             industries_txt = "、".join(t.beneficiary_industries) if t.beneficiary_industries else "分析材料不足"
             names_txt = "、".join(t.beneficiary_names) if t.beneficiary_names else "分析材料不足"
             secondary_txt = "、".join(t.secondary_beneficiary_names) if t.secondary_beneficiary_names else "該当なし"
             less_txt = "、".join(t.less_watched_names) if t.less_watched_names else "該当なし"
             horizons_txt = "・".join(t.horizons) if t.horizons else "分析材料不足"
-            parts.append(
+            conclusion = (
+                f"<p style='font-size:0.85rem;margin:2px 0 4px 0;'><span class='imp'>結論</span> "
+                f"「{_esc(t.label)}」は{_esc(t.phase or '分析材料不足')}・継続性{_esc(t.continuity or '不明')}のテーマとして、"
+                f"{_esc(horizons_txt)}の時間軸で見る仮説です。</p>"
+            )
+            reasons = (
+                "<ul class='plain' style='font-size:0.82rem;'>"
+                f"<li>現状: {_esc(t.current_situation)}</li>"
+                f"<li>変化［AI分析］: {_esc(t.expected_change)}</li>"
+                f"<li>恩恵: {_esc(industries_txt)}（{_esc(names_txt)}）</li>"
+                "</ul>"
+            )
+            detail = (
+                f"<p style='margin:0 0 4px 0;'>二次的恩恵企業（関連テーマ経由）: {_esc(secondary_txt)}</p>"
+                f"<p style='margin:0 0 4px 0;'>まだ注目されにくい企業（因果チェーン2段階先）: {_esc(less_txt)}</p>"
+                f"<p style='margin:0 0 4px 0;'>投資期間: {_esc(horizons_txt)}</p>"
+                f"<p style='margin:0 0 4px 0;'>監視指標: {_esc('、'.join(t.watch_indicators))}</p>"
+                f"<p style='margin:0 0 4px 0;'>崩れる条件［AI分析］: {_esc('、'.join(t.breakdown_conditions))}</p>"
+                f"<p style='margin:0;'>投資仮説まとめ: {_esc(' → '.join(t.thesis_summary))}</p>"
+            )
+            return (
                 f"<h5>{_theme_link(t.label)}{_new_badge(t.confidence_score)}</h5>"
                 f"<div class='row'><span>Confidence {t.confidence_score}%</span>"
                 f"<span>Momentum {t.momentum_score}/100（{_esc(t.momentum_label)}）</span></div>"
-                f"<p style='font-size:0.8rem;color:#666;margin:2px 0 8px 0;'>"
-                f"現在何が起きているか: {_esc(t.current_situation)}<br>"
-                f"今後起こりそうな変化［AI分析］: {_esc(t.expected_change)}<br>"
-                f"恩恵を受ける業界: {_esc(industries_txt)}<br>"
-                f"恩恵企業: {_esc(names_txt)}<br>"
-                f"二次的恩恵企業（関連テーマ経由）: {_esc(secondary_txt)}<br>"
-                f"まだ注目されにくい企業（因果チェーン2段階先）: {_esc(less_txt)}<br>"
-                f"投資期間: {_esc(horizons_txt)}<br>"
-                f"監視指標: {_esc('、'.join(t.watch_indicators))}<br>"
-                f"崩れる条件［AI分析］: {_esc('、'.join(t.breakdown_conditions))}<br>"
-                f"投資仮説まとめ: {_esc(' → '.join(t.thesis_summary))}</p>"
+                + conclusion + reasons + _detail_block(detail)
+            )
+
+        parts.extend(_thesis_html(t) for t in bundle.investment_theses[:FI_SUMMARY_COUNT])
+        rest_theses = bundle.investment_theses[FI_SUMMARY_COUNT:]
+        if rest_theses:
+            parts.append(
+                _detail_block("".join(_thesis_html(t) for t in rest_theses), label=f"残り{len(rest_theses)}テーマを表示")
             )
     else:
         parts.append(f"<p>本日組み立てられる投資仮説がありませんでした（{_esc(NOT_AVAILABLE)}）。</p>")
@@ -1618,6 +1850,7 @@ def build_html_report(
     # v2.1: 「投資家が毎朝見る順番」＝重要度順に再配置（分析ロジック・表示内容は変更なし）。
     sections = [
         ("executive-summary", "AI Executive Summary ★★★★★", _executive_summary_html(analysis.executive_summary, now=report_date)),
+        ("weekly-events", "今週の重要イベント・経済指標 ★★★★★", _weekly_events_html(analysis.weekly_events)),
         ("strategist-views", "岡三ストラテジスト視点 ★★★★★", _strategist_views_html(analysis.strategist_views)),
         (
             "future-intelligence",

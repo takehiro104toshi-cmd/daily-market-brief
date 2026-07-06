@@ -4,6 +4,56 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.7 (2026-07-06) — Market Intelligence Knowledge Upgrade ＋ Weekly Event Impact Calendar
+
+「毎朝ニュースを読むシステム」から「世界の変化を理解し長期投資判断を支援する
+AIストラテジスト」への強化。分析ロジックの設計（Momentum・Confidence・
+Watchlist判定・FIの計算）は変更せず、知識品質・鮮度・情報密度・可読性を改善。
+
+追加・改善
+・羅針盤Knowledge強化（①）: 「新しい順に3件読む」→「最大100件から知識を構築」
+  する知識ベース方式へ。全ファイル走査→重複統合（正規化キー）→重要度
+  （複数号での繰り返し登場数＋キーワード密度）順に重要な知識だけ抽出。
+  カテゴリを拡張（景気循環・金融政策・金利・為替・半導体・AI・企業分析）し、
+  philosophy_patterns（投資哲学・利益確定・リスク規律）を新設。
+  本文転載禁止の制限（80文字/件・5件/カテゴリ・抜粋120文字）は不変
+・ニュース鮮度最優先（②）: news_rankingに鮮度軸を追加。24時間以内は+2加点、
+  48時間超は-4の大幅減点。ただしFOMC・日銀・決算・国家戦略・雇用統計・CPI等
+  「影響期間の長いイベント」は例外として減点しない（鮮度×影響期間の両立）。
+  日時不明記事は加減点なし。既存8軸の算出方法は不変
+・情報密度（③）: ニュースランキングは重要5件のみ通常表示（6位以下は折りたたみ）。
+  FIのメガトレンド／Theme Momentum／成熟度メモ／テーマ別診断／Investment
+  Thesisは重要度順（見出し件数・スコア・Confidence）に上位8件のみ通常表示し、
+  残りは「残りN件を表示」で展開（選別は表示のみ。計算は全件のまま）
+・要約表示＋詳しくボタン（④⑤⑦）: 各カード・各項目を「2〜4行の要約→
+  『詳しく』（HTML標準details/summary・外部JS不要）」の3分UIへ。
+  Executive Summary／ニュースランキング／Watchlist／FI診断・成熟度／
+  Watchlist・Stock Intelligence／Investment Thesisに適用
+・重要度表示（⑥）: 全セクションカードの見出しに「重要度◯◯」（★×20の
+  100点満点換算）バッジを追加
+・FI再構成（⑧）: 冒頭に「結論→重要ポイント3つ→詳しくは各ブロック」の
+  結論ボックスを追加（既存シグナルの転記のみ・新分析なし）
+・Investment Thesis再構成（⑨）: 各テーマを「結論→理由3つ→詳しく」へ
+・Watchlist再構成（⑩）: 銘柄ごとに一行要約→詳しくへ
+・Weekly Event Impact Calendar（追加依頼）: 新セクション「今週の重要イベント・
+  経済指標」。config.yamlのmacro_events＋決算発表予定から今日〜7日後の
+  イベントだけを「近い順→重要度順」で表示。カウントダウン（本日21:30／
+  あと1日 5時間／あと3日、日本時間）・★と重要度・国/地域・影響対象・
+  想定される影響（条件付き整理のみ）・詳しく（なぜ重要か/見るべきポイント/
+  関連テーマ）付き。macro_eventsに任意のtime("21:30")を登録すると時間まで
+  表示。データが無い日は「直近1週間の重要イベントは登録されていません」。
+  新規外部APIなし（新規 src/analysis/weekly_events.py＋WeeklyEventEntry）
+・HTML版のみ対象（⑪）。Markdown/モバイル版は変更なし
+
+変更ファイル
+・src/analysis/rashinban_loader.py / models.py / news_ranking.py /
+  weekly_events.py（新規） / src/report/html_builder.py / main.py / config.yaml
+・tests/test_v2_7_upgrade.py（新規） / tests/test_weekly_events.py（新規） /
+  tests/test_html_builder.py（セクション追加に伴う範囲修正1件）
+
+pytest
+209 passed（既存維持＋v2.7で19件追加）
+
 ## v2.6 (2026-07-05) — Rashinban Learning Source System v1.0
 
 追加（岡三「羅針盤」を、コード更新なしで毎日の分析精度向上に使える学習ソースにする）

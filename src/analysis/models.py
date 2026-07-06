@@ -709,6 +709,33 @@ class FutureIntelligenceBundle:
 
 
 @dataclass
+class WeeklyEventEntry:
+    """「Weekly Event Impact Calendar」の1イベント分（v2.7）。
+
+    config.yamlのmacro_events（登録情報）と決算発表予定（公開情報）のみから
+    組み立てる。重要度・影響対象・想定される影響は、イベント名キーワードと
+    人手による対応表（_EVENT_RULES）の照合結果であり、AIによる新たな予測ではない。
+    外部APIは使用しない。営業利用よりも自分自身の資産形成・投資判断を
+    最優先目的とする（今週どのイベント前後で相場が動きやすいかの把握）。
+    """
+
+    label: str
+    date_str: str = ""
+    time_str: str = ""  # "21:30" 等（日本時間）。未登録なら空
+    region: str = ""
+    category: str = ""  # 金融政策／経済指標／決算／需給 等
+    stars: str = ""
+    importance: int = 0  # 100点満点（★×20）
+    days_until: int = 0
+    countdown_text: str = ""  # 「本日21:30」「あと1日 5時間」「あと3日」等
+    impact_targets: List[str] = field(default_factory=list)
+    expected_impact: str = ""
+    why_important: str = ""
+    watch_points: List[str] = field(default_factory=list)
+    related_themes: List[str] = field(default_factory=list)
+
+
+@dataclass
 class RashinbanKnowledge:
     """「Rashinban Learning Source」の学習結果（v2.6）。
 
@@ -726,6 +753,8 @@ class RashinbanKnowledge:
     stock_selection_patterns: List[str] = field(default_factory=list)
     risk_patterns: List[str] = field(default_factory=list)
     time_horizon_patterns: List[str] = field(default_factory=list)
+    # v2.7: 投資哲学・利益確定・リスク規律など「投資の型」（知識ベース化で追加）
+    philosophy_patterns: List[str] = field(default_factory=list)
     raw_excerpt_summary: str = ""
     # 羅針盤本文に登場した既存macro_themeラベル（新テーマの生成はしない）
     emphasized_theme_labels: List[str] = field(default_factory=list)
@@ -738,6 +767,7 @@ class RashinbanKnowledge:
             + len(self.stock_selection_patterns)
             + len(self.risk_patterns)
             + len(self.time_horizon_patterns)
+            + len(self.philosophy_patterns)
         )
 
     def has_content(self) -> bool:
@@ -778,3 +808,4 @@ class AnalysisBundle:
     morning_meeting_comment: MorningMeetingComment = field(default_factory=MorningMeetingComment)
     strategist_views: List[StrategistView] = field(default_factory=list)
     future_intelligence: FutureIntelligenceBundle = field(default_factory=FutureIntelligenceBundle)
+    weekly_events: List[WeeklyEventEntry] = field(default_factory=list)

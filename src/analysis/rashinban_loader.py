@@ -29,30 +29,47 @@ from .models import RashinbanKnowledge
 logger = logging.getLogger("market_brief")
 
 DEFAULT_DIR = "data/rashinban"
-DEFAULT_MAX_FILES = 3
+# v2.7: 「3件読む」→「最大100件から知識を構築する」知識ベース方式へ。
+# 全ファイルを走査して重複統合・頻度重み付けを行い、重要な知識だけを残す。
+DEFAULT_MAX_FILES = 100
 MAX_PATTERN_CHARS = 80
 MAX_PATTERNS_PER_CATEGORY = 5
 MAX_EXCERPT_CHARS = 120
 
 _DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 
-# 抽出カテゴリ（③）: 行にキーワードが含まれる場合、その行を短く切り詰めて
-# 該当パターンへ分類する（人手による対応表・ルールベースのみ）。
+# 抽出カテゴリ（③／v2.7で拡張）: 行にキーワードが含まれる場合、その行を短く
+# 切り詰めて該当パターンへ分類する（人手による対応表・ルールベースのみ）。
+# v2.7: 景気循環・金融政策・半導体・AI・企業分析・投資哲学・利益確定・
+# リスク管理などの観点を追加し、philosophy_patterns（投資哲学）を新設。
 _CATEGORY_KEYWORDS = {
     "market_view_patterns": [
         "日本株", "日経平均", "TOPIX", "米国株", "米株", "S&P", "NYダウ", "ナスダック",
         "金利", "為替", "ドル円", "日銀", "FRB", "FOMC",
+        "金融政策", "景気循環", "景気サイクル", "インフレ", "利上げ", "利下げ", "量的",
     ],
     "theme_patterns": [
         "テーマ", "物色", "セクター", "業種", "波及", "連鎖", "恩恵", "きっかけ", "材料視",
+        "半導体", "AI", "人工知能", "データセンター", "因果",
     ],
     "stock_selection_patterns": [
         "銘柄", "注目株", "選定", "バリュエーション", "PER", "PBR", "割安", "割高",
         "レーティング", "格上げ", "格下げ", "目標株価",
+        "企業分析", "業績", "増益", "営業利益", "ROE",
     ],
-    "risk_patterns": ["リスク", "懸念", "警戒", "下振れ", "悪材料", "不透明"],
+    "risk_patterns": [
+        "リスク", "懸念", "警戒", "下振れ", "悪材料", "不透明",
+        "リスク管理", "損切り", "ヘッジ", "分散",
+    ],
     "time_horizon_patterns": ["短期", "中期", "長期", "目先", "年内", "来期", "半年", "数年"],
+    "philosophy_patterns": [
+        "投資哲学", "利益確定", "押し目", "逆張り", "順張り", "積立", "規律",
+        "長期投資", "分散投資", "ニュースを見る", "見る順番",
+    ],
 }
+
+# 重複統合用: 比較キーから落とす記号・空白
+_NORMALIZE_RE = re.compile(r"[\s、。・．，,\.]+")
 
 
 def _clean_line(line: str) -> str:
@@ -94,14 +111,25 @@ def _read_rashinban_files(base_dir: Path, max_files: int) -> List[Tuple[str, str
     return results
 
 
+def _normalize_for_dedupe(line: str) -> str:
+    """重複統合用の比較キー。空白・句読点を除去し、先頭40文字で同一視する。
+
+    号をまたいで繰り返し登場する定型的な知見（例:「押し目買いが有効」）を
+    1件に統合しつつ、繰り返し回数を「重要度」として数えられるようにする。
+    """
+    return _NORMALIZE_RE.sub("", line)[:40]
+
+
 def build_rashinban_knowledge(
     files_texts: List[Tuple[str, str]],
     macro_theme_labels: Optional[List[str]] = None,
 ) -> RashinbanKnowledge:
-    """読み込んだテキストから分析フレーム（型）をルールベースで抽出する。
+    """読み込んだテキストから知識ベース（分析フレーム）をルールベースで構築する。
 
-    本文の長文転載を防ぐため、各パターンは80文字まで・カテゴリごと最大5件、
-    raw_excerpt_summaryは120文字までに制限する。
+    v2.7: 「先着順に5件拾う」方式から「最大100ファイル分を全走査 →
+    重複統合 → 重要度（登場ファイル数＋キーワード密度）順に上位だけ残す」
+    知識ベース方式へ強化。全文保存はせず、抽出後の短い断片だけを保持する。
+    本文の長文転載を防ぐ制限（80文字/件・カテゴリ5件・抜粋120文字）は不変。
     """
     knowledge = RashinbanKnowledge(source_files=[name for name, _ in files_texts])
 
@@ -115,9 +143,11 @@ def build_rashinban_knowledge(
     elif any(name.lower() == "latest.md" for name, _ in files_texts):
         knowledge.latest_date = "latest.md（常に最新扱い）"
 
-    buckets = {field: [] for field in _CATEGORY_KEYWORDS}
+    # 候補収集: カテゴリごとに {比較キー: [snippet, 重み, 登場ファイル集合, 出現順]}
+    candidates = {field: {} for field in _CATEGORY_KEYWORDS}
     first_line = ""
-    for _, text in files_texts:
+    order = 0
+    for file_name, text in files_texts:
         for raw_line in text.splitlines():
             line = _clean_line(raw_line)
             if len(line) < 6:
@@ -125,18 +155,31 @@ def build_rashinban_knowledge(
             if not first_line:
                 first_line = line
             for field, keywords in _CATEGORY_KEYWORDS.items():
-                if len(buckets[field]) >= MAX_PATTERNS_PER_CATEGORY:
+                hit_count = sum(1 for kw in keywords if kw in line)
+                if hit_count == 0:
                     continue
-                if any(kw in line for kw in keywords):
-                    snippet = line[:MAX_PATTERN_CHARS]
-                    if snippet not in buckets[field]:
-                        buckets[field].append(snippet)
+                key = _normalize_for_dedupe(line)
+                entry = candidates[field].get(key)
+                if entry is None:
+                    order += 1
+                    candidates[field][key] = {
+                        "snippet": line[:MAX_PATTERN_CHARS],
+                        "keyword_hits": hit_count,
+                        "files": {file_name},
+                        "order": order,
+                    }
+                else:
+                    entry["files"].add(file_name)
 
-    knowledge.market_view_patterns = buckets["market_view_patterns"]
-    knowledge.theme_patterns = buckets["theme_patterns"]
-    knowledge.stock_selection_patterns = buckets["stock_selection_patterns"]
-    knowledge.risk_patterns = buckets["risk_patterns"]
-    knowledge.time_horizon_patterns = buckets["time_horizon_patterns"]
+    # 重要度順に統合: 複数号で繰り返される知見（登場ファイル数）を最優先し、
+    # 次にキーワード密度、最後に出現順。上位のみ残す（＝重要な知識だけ抽出）。
+    for field, cand_map in candidates.items():
+        ranked = sorted(
+            cand_map.values(),
+            key=lambda e: (-len(e["files"]), -e["keyword_hits"], e["order"]),
+        )
+        setattr(knowledge, field, [e["snippet"] for e in ranked[:MAX_PATTERNS_PER_CATEGORY]])
+
     knowledge.raw_excerpt_summary = first_line[:MAX_EXCERPT_CHARS]
 
     # 重点テーマ: 羅針盤本文に「既存のmacro_themeラベル」が登場する場合のみ抽出

@@ -48,6 +48,7 @@ from src.analysis import (
     top_picks,
     watchlist_analysis,
     watchlist_quicklist,
+    weekly_events,
 )
 from src.analysis.models import AnalysisBundle, RashinbanKnowledge, SalesTalkBullets
 from src.analysis.sales_talk import build_sales_talk_bullets, render_sales_talk_markdown
@@ -380,6 +381,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             causal_rules=config.get("causal_rules", []),
             durable_themes=config.get("durable_themes", []),
             rashinban=rashinban_knowledge,
+            now=now,
         ),
         [],
     )
@@ -428,6 +430,12 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         "events",
         lambda: events.build_events_breakdown(earnings_events, disclosures, config.get("macro_events", []), now),
         events.EventsBreakdown(),
+    )
+    # v2.7: Weekly Event Impact Calendar（直近1週間の重要イベント。登録情報のみ・外部API不使用）
+    weekly_events_result = _safe_call(
+        "weekly_events",
+        lambda: weekly_events.build_weekly_event_calendar(now, config.get("macro_events", []), earnings_events),
+        [],
     )
     ai_summary_text = _safe_call(
         "ai_summary",
@@ -565,6 +573,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         morning_meeting_comment=morning_meeting_comment_result,
         strategist_views=strategist_views_result,
         future_intelligence=future_intelligence_result,
+        weekly_events=weekly_events_result,
     )
 
     # v2.3: データ鮮度統計（計測のみ。分析ロジック・ランキング結果には影響しない）

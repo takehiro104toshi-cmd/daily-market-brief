@@ -198,9 +198,11 @@ def test_v2_2_prev_next_nav_between_sections():
     assert "← 前" in report
     assert "次 →" in report
     # 最初のセクション（AI Executive Summary）は「前」を持たない
+    # （v2.7で直後に「今週の重要イベント」セクションが追加されたため、
+    # 判定範囲はExecutive Summaryカードの範囲＝次カードの開始位置まで）
     exec_start = report.index('id="executive-summary"')
-    strategist_start = report.index('id="strategist-views"')
-    first_section_html = report[exec_start:strategist_start]
+    next_card_start = report.index('id="weekly-events"')
+    first_section_html = report[exec_start:next_card_start]
     assert "← 前" not in first_section_html
     assert "次 →" in first_section_html
 

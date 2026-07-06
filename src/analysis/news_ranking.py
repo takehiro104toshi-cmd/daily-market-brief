@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from ..collectors.news import Headline, parse_published_datetime
@@ -30,6 +31,18 @@ SURPRISE_KEYWORDS = [
     "上方修正", "下方修正", "最高値", "最安値", "規制", "制裁", "決算",
     "提携", "買収", "増資", "上場", "撤退", "経営統合", "自社株買い",
 ]
+
+# v2.7: 鮮度最優先。24時間以内は加点、48時間超は大きく減点する。
+# ただし影響期間の長いイベント（FOMC・日銀・決算・国家戦略等）は例外として
+# 減点しない（鮮度だけでなく「市場への影響期間」も考慮するため）。
+FRESH_BONUS_HOURS = 24
+FRESH_BONUS = 2
+STALE_HOURS = 48
+STALE_PENALTY = 4
+DURABLE_EVENT_KEYWORDS = (
+    "FOMC", "日銀", "金融政策", "決算", "国家戦略", "雇用統計",
+    "CPI", "PPI", "利上げ", "利下げ", "政策金利",
+)
 
 # 影響市場の判定キーワード（先に一致したものを優先）
 MARKET_KEYWORDS = [
@@ -48,6 +61,7 @@ class _HeadlineAnalysis:
     affected_sector: str
     beneficiary_tickers: List[str]
     negative_tickers: List[str]
+    is_durable: bool = False  # v2.7: 鮮度減点の例外判定（影響期間の長いテーマ）に使う
 
 
 def _matched_theme(headline: Headline, themes: List[str]) -> Optional[str]:
@@ -135,6 +149,7 @@ def _analyze_headline(
         affected_sector=matched_sector or "特定業種なし",
         beneficiary_tickers=beneficiary_tickers,
         negative_tickers=negative_tickers,
+        is_durable=is_durable,
     )
 
 
@@ -164,6 +179,7 @@ def build_news_ranking(
     causal_rules: Optional[List[dict]] = None,
     durable_themes: Optional[List[str]] = None,
     rashinban: Optional[RashinbanKnowledge] = None,
+    now: Optional[datetime] = None,
 ) -> List[NewsRankingItem]:
     """ニュースを重要度順にランキングする。
 
@@ -177,6 +193,13 @@ def build_news_ranking(
     （既存macro_themeラベルとの照合結果）に一致する見出しへ+1の補助加点を
     行う。羅針盤ファイルが無い場合はNone/空となり、従来と完全に同じ動作。
     本文の転載は行わない（テーマラベルの一致判定のみ）。
+
+    now（v2.7・省略可能）: 鮮度最優先の基準時刻。指定時（またはNoneなら
+    現在時刻）に対して、24時間以内の記事へ+2の加点、48時間超の記事へ
+    -4の減点を行う。ただし影響期間の長いイベント（FOMC・日銀・決算・
+    国家戦略等＝DURABLE_EVENT_KEYWORDS一致、またはdurable判定済み）は
+    例外として減点しない。日時を解析できない記事は加減点なし
+    （従来通り同点内の最後尾に回るのみ）。
     """
     if not headlines:
         return []
@@ -198,6 +221,25 @@ def build_news_ranking(
             if matched_label:
                 analysis.score += 1
                 analysis.reason += f"岡三「羅針盤」（学習ソース）の重点テーマ「{matched_label}」にも該当します。"
+
+    # v2.7: 鮮度最優先。24時間以内は加点・48時間超は大きく減点（影響期間の
+    # 長いイベントは例外）。既存8軸の算出方法自体は変更しない。
+    reference = now or datetime.now(timezone.utc)
+    for headline, analysis in analyzed:
+        published_dt = parse_published_datetime(headline.published)
+        if published_dt is None:
+            continue  # 日時不明は加減点なし（タイブレークで最後尾に回る既存挙動のみ）
+        age_hours = (reference - published_dt).total_seconds() / 3600
+        if age_hours <= FRESH_BONUS_HOURS:
+            analysis.score += FRESH_BONUS
+            analysis.reason += "24時間以内の新しい記事です（鮮度加点）。"
+        elif age_hours > STALE_HOURS:
+            is_long_impact = analysis.is_durable or any(kw in headline.title for kw in DURABLE_EVENT_KEYWORDS)
+            if is_long_impact:
+                analysis.reason += "48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。"
+            else:
+                analysis.score -= STALE_PENALTY
+                analysis.reason += "48時間を超えた記事のため、鮮度を大きく減点しています。"
     # スコア降順 → 記事日時の新しい順 → 出現順（v2.3: 同点時は新しい記事を優先。
     # 日時を解析できない記事は同点内の最後尾に回す。スコア算出自体は不変）
     ranked = sorted(
