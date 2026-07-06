@@ -30,6 +30,7 @@ from ..analysis.models import (
     NewsRankingItem,
     OkasanSalesComments,
     QAItem,
+    RashinbanKnowledge,
     SalesComments,
     SectorRankingEntry,
     SectorStrengthEntry,
@@ -1112,6 +1113,41 @@ def _news_freshness_card(freshness: Optional[DataFreshnessStats]) -> str:
     return _card("News Freshness（データ鮮度）", rows_html + eval_html, extra_class="digest", anchor="news-freshness")
 
 
+def _rashinban_card(rashinban: Optional[RashinbanKnowledge]) -> str:
+    """「Rashinban Learning Source」カード（v2.6）。
+
+    data/rashinban/ に置いた岡三「羅針盤」の読み込み状況のみを小さく表示する。
+    社内資料の本文・抜粋は公開HTMLへ一切載せない（ファイル名・日付・
+    抽出フレーム数・使用状況だけを表示する）。
+    """
+    if rashinban is None:
+        return ""
+    if rashinban.has_content():
+        rows = [
+            ("読み込みファイル", "、".join(rashinban.source_files)),
+            ("最新日付", rashinban.latest_date or "日付不明"),
+            ("抽出した分析フレーム", f"{rashinban.frame_count()}件"),
+            (
+                "使用状況",
+                f"重点テーマ{len(rashinban.emphasized_theme_labels)}件を分析へ反映"
+                if rashinban.emphasized_theme_labels
+                else "分析フレームとして参照（重点テーマの一致なし）",
+            ),
+        ]
+        rows_html = "".join(f"<div class='row'><span>{_esc(k)}</span><span>{_esc(v)}</span></div>" for k, v in rows)
+        note = (
+            "<p class='legend'>羅針盤は本文転載ではなく、分析品質を上げるための"
+            "分析フレーム（判断の型）として利用しています。本文・抜粋は表示しません。</p>"
+        )
+        body = rows_html + note
+    else:
+        body = (
+            "<p class='legend'>data/rashinban/ に羅針盤ファイル（.md/.txt）が未配置のため、"
+            "本日は既存の分析ロジックのみで生成しています（羅針盤なしでも通常動作します）。</p>"
+        )
+    return _card("Rashinban Learning Source（学習ソース）", body, extra_class="digest", anchor="rashinban-learning")
+
+
 def _data_quality_html(freshness: Optional[DataFreshnessStats], market: dict, analysis: AnalysisBundle) -> str:
     """「Data Quality」セクション（v2.3）。今日のレポートが最新データに基づくかを
     一目で確認するための機械的な可用性・鮮度指標（分析ロジックには不関与）。
@@ -1547,11 +1583,14 @@ def build_html_report(
     analysis: AnalysisBundle,
     actions_url: Optional[str] = None,
     freshness: Optional[DataFreshnessStats] = None,
+    rashinban: Optional[RashinbanKnowledge] = None,
 ) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。
 
     freshness（v2.3・省略可）: データ鮮度統計。指定時のみNews Freshnessカードと
     Data Qualityセクションを表示する（未指定でも従来通り動作する）。
+    rashinban（v2.6・省略可）: 羅針盤学習ソースの読み込み状況。指定時のみ
+    Rashinban Learning Sourceカードを表示する（本文・抜粋は表示しない）。
     """
     date_str = report_date.strftime("%Y年%m月%d日")
     updated_str = report_date.strftime("%Y-%m-%d %H:%M")
@@ -1564,6 +1603,7 @@ def build_html_report(
         _search_card_html(),
         _options_panel_html(),
         _news_freshness_card(freshness),
+        _rashinban_card(rashinban),
         _digest_card(market, analysis),
         _card(
             "本レポートについて",

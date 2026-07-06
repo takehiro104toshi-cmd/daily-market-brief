@@ -4,6 +4,40 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.6 (2026-07-05) — Rashinban Learning Source System v1.0
+
+追加（岡三「羅針盤」を、コード更新なしで毎日の分析精度向上に使える学習ソースにする）
+
+・Rashinban Loader（①）: 新規 `src/analysis/rashinban_loader.py`。
+  `data/rashinban/` の .md/.txt を新しい順に最大3件（config可変）読み込み、
+  latest.md→ファイル名日付（YYYY-MM-DD）降順で最新を判定。READMEは対象外。
+  フォルダが無い・空でもエラーにならず空のまま動作
+・RashinbanKnowledge（②）: models.py に追加（source_files／latest_date／
+  相場観・テーマ・銘柄選定・リスク・時間軸の5パターン＋raw_excerpt_summary＋
+  emphasized_theme_labels）。frame_count()／has_content() 付き
+・型の抽出（③）: すべてルールベース（AI API不使用）のキーワード分類。
+  本文転載防止のため 1件80文字・カテゴリ5件・抜粋120文字に制限。
+  重点テーマは既存 macro_themes ラベルとの照合のみ（新テーマ生成なし）
+・分析への接続（④）: 羅針盤がある場合のみ、重点テーマ一致分に
+  News Ranking=+1の補助加点＋理由追記／Strategist View・Executive Summary=
+  参照した旨の一文／Future Intelligence=Theme Momentum理由追記・
+  Investment Thesis監視指標追加。無い場合は従来と完全に同一動作
+  （既存スコアリング・判定ロジックの設計は不変）
+・HTML表示（⑤）: 「Rashinban Learning Source」小カードを追加。
+  読み込みファイル名・最新日付・抽出フレーム数・使用状況のみ表示し、
+  本文・抜粋は一切表示しない（未配置時はスキップした旨を表示）
+・自動読み込み（⑥）: GitHub Actionsはmain.py実行時に data/rashinban/ を
+  自動で読むため、workflowの変更なし（latest.md の差し替えだけで反映）
+・運用手順（⑦）: `data/rashinban/README.md` 新規＋READMEに
+  「GitHub Webだけで追加する手順」（PC・Claude Code不要）を追記
+・config.yaml: `rashinban:`（dir／max_files）を追加
+・tests/test_rashinban_loader.py 新規（空フォルダ／md・txt読込／最新判定／
+  Knowledge生成／HTML表示／長文転載なし／羅針盤なしで従来動作、の8観点）
+
+対象外（v1.0の割り切り）
+・PDF/DOCXの解析はしない（md/txtへ変換して置く運用）
+・羅針盤本文のレポート転載・長文引用はしない（分析フレームとしてのみ利用）
+
 ## v2.5 (2026-07-05) — Market Brief UI/UX & Freshness Upgrade
 
 追加・改善（HTML版のみ。分析ロジック・Momentum・Confidence・Watchlist判定は不変。

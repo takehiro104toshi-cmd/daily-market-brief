@@ -7,13 +7,13 @@
 """
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from ..collectors.market_data import Quote
 from ..collectors.news import Headline
 from ..collectors.themes import SectorMatch
 from ..report.format_utils import NOT_AVAILABLE, find_quote, truncate_to_chars
-from .models import ExecutiveSummaryItem, NewsRankingItem
+from .models import ExecutiveSummaryItem, NewsRankingItem, RashinbanKnowledge
 
 MAX_ITEMS = 3
 SALES_TALK_MAX_CHARS = 100
@@ -88,12 +88,19 @@ def build_executive_summary(
     market: dict,
     sector_matches: List[SectorMatch],
     ticker_lookup: Dict[str, Quote],
+    rashinban: Optional[RashinbanKnowledge] = None,
 ) -> List[ExecutiveSummaryItem]:
+    """rashinban（v2.6・省略可能）: 岡三「羅針盤」学習ソースの重点テーマに
+    一致する見出しへ、参照した旨の一文をストラテジスト視点に補足する
+    （本文転載はしない）。羅針盤が無い場合はNone/空で、従来と同じ動作。"""
     results: List[ExecutiveSummaryItem] = []
     for item in news_ranking_items[:MAX_ITEMS]:
         headline = item.headline
         conclusion = f"「{headline.title}」（{headline.source}）"
         reason = item.reason or "本日のニュースの中で相対的に注目度が高いと判断しました。"
+        strategist_view_text = _strategist_view(item, item.affected_sector)
+        if rashinban and any(label in headline.title for label in rashinban.emphasized_theme_labels):
+            strategist_view_text += "岡三「羅針盤」（学習ソース）でも重点テーマとして言及されています。"
         results.append(
             ExecutiveSummaryItem(
                 rank=item.rank,
@@ -107,7 +114,7 @@ def build_executive_summary(
                 sales_talk=item.sales_talk or _sales_talk(headline, item.affected_sector),
                 beneficiary_stocks=_resolve_names(item.beneficiary_tickers, ticker_lookup),
                 negative_stocks=_resolve_names(item.negative_tickers, ticker_lookup),
-                strategist_view=_strategist_view(item, item.affected_sector),
+                strategist_view=strategist_view_text,
             )
         )
     return results

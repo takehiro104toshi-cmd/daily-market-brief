@@ -576,6 +576,38 @@ Actionsタブから「Daily Market Brief」ワークフローを開き、「Run 
 - `output.pages_url`: 通知本文に載せるGitHub PagesのURLを明示したい場合に設定します。
   空欄のままなら、GitHub Actions実行時は環境変数 `GITHUB_REPOSITORY`（Actionsが
   自動設定）から `https://<owner>.github.io/<repo>/` を自動的に組み立てます。
+- `rashinban.dir` / `rashinban.max_files`: Rashinban Learning Source（v2.6）の
+  読み込み設定（下記参照）。
+
+## Rashinban Learning Source（羅針盤を学習ソースにする・v2.6）
+
+岡三「羅針盤」のテキストを `data/rashinban/` に置くだけで、毎朝のGitHub Actions
+実行時に自動で読み込まれ、分析の精度向上に**分析フレーム（判断の型）として**
+利用されます。**PCもClaude Codeも不要**で、スマホのブラウザだけで更新できます。
+
+### 追加のしかた（GitHub Webでの操作だけで完結）
+
+1. GitHubでこのリポジトリを開く
+2. `data/rashinban/latest.md` を開いて鉛筆マーク（Edit）を押す
+   （無い場合は `data/rashinban/` で「Add file → Create new file」→ ファイル名 `latest.md`）
+3. 羅針盤の本文を貼り付けて「Commit changes」
+4. 翌朝のレポートから自動反映（すぐ確認したい場合はActionsから手動実行）
+
+日付つきファイル（例: `2026-07-05_rashinban.md`）を追加していく運用も可能で、
+新しい順に最大 `rashinban.max_files` 件（既定3件）が読み込まれます。
+`latest.md` は常に最新扱いです。対応形式は `.md` / `.txt` のみ（PDF/DOCXは
+本文をコピーしてmd/txtに貼り付けてください）。
+
+### 何に使われるか・使われないか
+
+- 抽出はすべてルールベース（AI API不使用）。相場の見方・テーマ選定・銘柄の
+  選び方・リスクの見方・時間軸の置き方という「型」だけを短い断片として抽出します。
+- 羅針盤が言及している既存 `macro_themes` のテーマ（重点テーマ）に一致する
+  ニュース・テーマには、News Ranking（+1の補助加点）／Strategist View／
+  Future Intelligence／Investment Thesis／Executive Summary に参照した旨が付きます。
+- **本文がレポートへ転載されることはありません。** HTMLには読み込みファイル名・
+  日付・抽出フレーム数・使用状況だけを表示します。
+- ファイルが1つも無い場合は自動でスキップされ、従来と完全に同じ動作です。
 
 ## 通知機能（メール・LINE）
 

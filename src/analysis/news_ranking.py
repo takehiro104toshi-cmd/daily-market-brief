@@ -21,7 +21,7 @@ from typing import Dict, List, Optional
 
 from ..collectors.news import Headline, parse_published_datetime
 from ..report.format_utils import stars, truncate_to_chars
-from .models import NewsRankingItem
+from .models import NewsRankingItem, RashinbanKnowledge
 from .strategist_engine import CausalRule, match_causal_rule, parse_causal_rules, resolve_tickers
 
 SALES_TALK_MAX_CHARS = 100
@@ -163,6 +163,7 @@ def build_news_ranking(
     limit: int = 10,
     causal_rules: Optional[List[dict]] = None,
     durable_themes: Optional[List[str]] = None,
+    rashinban: Optional[RashinbanKnowledge] = None,
 ) -> List[NewsRankingItem]:
     """ニュースを重要度順にランキングする。
 
@@ -171,6 +172,11 @@ def build_news_ranking(
     判定をスコアリングに反映し、恩恵銘柄・悪影響銘柄も付与する。
     いずれも省略可能（省略時は従来通りのスコアリングのみ）で、
     既存の呼び出し箇所にも影響しない。
+
+    rashinban（v2.6・省略可能）: 岡三「羅針盤」学習ソースの重点テーマ
+    （既存macro_themeラベルとの照合結果）に一致する見出しへ+1の補助加点を
+    行う。羅針盤ファイルが無い場合はNone/空となり、従来と完全に同じ動作。
+    本文の転載は行わない（テーマラベルの一致判定のみ）。
     """
     if not headlines:
         return []
@@ -181,6 +187,17 @@ def build_news_ranking(
         (headline, _analyze_headline(headline, themes, sectors, watchlist_names, parsed_causal_rules, durable_themes))
         for headline in headlines
     ]
+
+    # v2.6: 羅針盤の重点テーマに一致する見出しへ小さな補助加点（+1）を行う。
+    # スコア算出の既存8軸は変更せず、追加の1軸としてのみ働く。
+    if rashinban and rashinban.emphasized_theme_labels:
+        for headline, analysis in analyzed:
+            matched_label = next(
+                (label for label in rashinban.emphasized_theme_labels if label in headline.title), None
+            )
+            if matched_label:
+                analysis.score += 1
+                analysis.reason += f"岡三「羅針盤」（学習ソース）の重点テーマ「{matched_label}」にも該当します。"
     # スコア降順 → 記事日時の新しい順 → 出現順（v2.3: 同点時は新しい記事を優先。
     # 日時を解析できない記事は同点内の最後尾に回す。スコア算出自体は不変）
     ranked = sorted(

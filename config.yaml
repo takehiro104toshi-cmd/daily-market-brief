@@ -521,3 +521,14 @@ notifications:
     enabled: true
   line:
     enabled: true
+
+# Rashinban Learning Source（v2.6）
+# 岡三「羅針盤」を学習ソースとして読み込む設定。
+# data/rashinban/ に .md / .txt を置くだけで、毎朝のGitHub Actions実行時に
+# 自動で読み込まれ、分析フレーム（判断の型）として各分析へ補助的に反映される。
+# ファイルが1つも無い場合は自動的にスキップされ、既存動作は一切変わらない。
+# ※ 本文はレポートへ転載しない（ファイル名・日付・抽出フレーム数のみ表示）。
+# ※ PDF/DOCXは対象外。md/txtへ変換して置く運用（詳細は data/rashinban/README.md）。
+rashinban:
+  dir: "data/rashinban"   # 羅針盤ファイルの置き場所
+  max_files: 3            # 新しい順に読み込む最大ファイル数

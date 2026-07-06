@@ -36,6 +36,7 @@ from src.analysis import (
     morning_meeting_comment,
     news_ranking,
     okasan_sales_comments,
+    rashinban_loader,
     sales_comments,
     sales_prep,
     scenario,
@@ -48,7 +49,7 @@ from src.analysis import (
     watchlist_analysis,
     watchlist_quicklist,
 )
-from src.analysis.models import AnalysisBundle, SalesTalkBullets
+from src.analysis.models import AnalysisBundle, RashinbanKnowledge, SalesTalkBullets
 from src.analysis.sales_talk import build_sales_talk_bullets, render_sales_talk_markdown
 from src.collectors import (
     bloomberg,
@@ -356,6 +357,15 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     lookup = build_ticker_lookup(watchlist_quotes)
     watchlist_names = [q.name for q in jp_quotes + us_quotes]
 
+    # v2.6: Rashinban Learning Source（data/rashinban/ に置いた岡三「羅針盤」の
+    # md/txtから分析フレームを抽出。ファイルが無ければ空のまま＝既存動作に影響なし）
+    macro_theme_labels = [entry.get("label", "") for entry in config.get("macro_themes", [])]
+    rashinban_knowledge = _safe_call(
+        "rashinban_learning",
+        lambda: rashinban_loader.load_rashinban_learning(config, macro_theme_labels),
+        RashinbanKnowledge(),
+    )
+
     scenario_forecast = _safe_call(
         "scenario", lambda: scenario.build_scenario(market, sector_matches),
         scenario.ScenarioForecast(34, 33, 33, "データ不足のため暫定値です（取得不可）。"),
@@ -369,6 +379,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             watchlist_names,
             causal_rules=config.get("causal_rules", []),
             durable_themes=config.get("durable_themes", []),
+            rashinban=rashinban_knowledge,
         ),
         [],
     )
@@ -474,7 +485,9 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     )
     executive_summary_result = _safe_call(
         "executive_summary",
-        lambda: executive_summary.build_executive_summary(news_ranking_items, market, sector_matches, lookup),
+        lambda: executive_summary.build_executive_summary(
+            news_ranking_items, market, sector_matches, lookup, rashinban=rashinban_knowledge
+        ),
         [],
     )
     call_priorities_result = _safe_call(
@@ -501,7 +514,9 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     )
     strategist_views_result = _safe_call(
         "strategist_views",
-        lambda: strategist_engine.build_strategist_views(news_ranking_items, config, lookup),
+        lambda: strategist_engine.build_strategist_views(
+            news_ranking_items, config, lookup, rashinban=rashinban_knowledge
+        ),
         [],
     )
     future_intelligence_result = _safe_call(
@@ -515,6 +530,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             executive_summary_result,
             market,
             sector_ranking_entries,
+            rashinban=rashinban_knowledge,
         ),
         future_intelligence.FutureIntelligenceBundle(),
     )
@@ -585,6 +601,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             analysis=analysis_bundle,
             actions_url=_resolve_actions_url(config),
             freshness=freshness_stats,
+            rashinban=rashinban_knowledge,
         ),
         "<html><body><p>HTML版レポートの生成に失敗しました（取得不可）。</p></body></html>",
     )

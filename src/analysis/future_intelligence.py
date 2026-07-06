@@ -140,6 +140,7 @@ from .models import (
     MegatrendEntry,
     NationalStrategyNote,
     NewsRankingItem,
+    RashinbanKnowledge,
     SectorRankingEntry,
     StockIntelligenceEntry,
     SupplyChainNote,
@@ -1322,6 +1323,7 @@ def build_future_intelligence(
     executive_summary_items: Optional[List[ExecutiveSummaryItem]] = None,
     market: Optional[Dict] = None,
     sector_ranking_entries: Optional[List[SectorRankingEntry]] = None,
+    rashinban: Optional[RashinbanKnowledge] = None,
 ) -> FutureIntelligenceBundle:
     market = market or {}
     sector_ranking_entries = sector_ranking_entries or []
@@ -1501,6 +1503,18 @@ def build_future_intelligence(
     investment_theses = _build_investment_theses(
         theme_diagnosis, theme_momentum, theme_rule_map, theme_beneficiary_names_map, horizon_map
     )
+
+    # v2.6: 岡三「羅針盤」（学習ソース）の重点テーマに一致する場合のみ、
+    # Theme Momentumの理由とInvestment Thesisの監視指標へ参照した旨を補足する
+    # （本文転載はしない。スコア・順位の計算方法は変更しない）。
+    if rashinban and rashinban.emphasized_theme_labels:
+        emphasized = set(rashinban.emphasized_theme_labels)
+        for tm in theme_momentum:
+            if tm.label in emphasized:
+                tm.reason += "岡三「羅針盤」（学習ソース）でも重点テーマとして言及されています。"
+        for thesis in investment_theses:
+            if thesis.label in emphasized:
+                thesis.watch_indicators.append("岡三「羅針盤」（学習ソース）の重点テーマとしての言及の継続")
 
     return FutureIntelligenceBundle(
         megatrends=megatrends,

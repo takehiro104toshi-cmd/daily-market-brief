@@ -25,7 +25,7 @@ from typing import Dict, List, Optional
 
 from ..collectors.news import Headline
 from ..report.format_utils import stars
-from .models import NewsRankingItem, StarScoreBreakdown, StrategistView
+from .models import NewsRankingItem, RashinbanKnowledge, StarScoreBreakdown, StrategistView
 
 MAX_VIEWS = 5
 
@@ -217,8 +217,14 @@ def build_strategist_views(
     config: dict,
     ticker_lookup: Dict,
     limit: int = MAX_VIEWS,
+    rashinban: Optional[RashinbanKnowledge] = None,
 ) -> List[StrategistView]:
-    """news_ranking（重要度順）の上位ニュースに、8ステップのパイプラインを適用する。"""
+    """news_ranking（重要度順）の上位ニュースに、8ステップのパイプラインを適用する。
+
+    rashinban（v2.6・省略可能）: 岡三「羅針盤」学習ソースの重点テーマに
+    一致するテーマの見方へ、参照した旨の一文を補足する（本文転載はしない）。
+    羅針盤ファイルが無い場合はNone/空となり、従来と完全に同じ動作。
+    """
     themes = config.get("themes", [])
     sectors = config.get("sectors", {})
     durable_themes = config.get("durable_themes", [])
@@ -257,10 +263,15 @@ def build_strategist_views(
             watchlist_names=watchlist_names,
         )
 
+        strategist_take = _strategist_take(theme, sector, causal_rule)
+        # v2.6: 羅針盤（学習ソース）の重点テーマに一致する場合のみ、参照した旨を一文補足
+        if rashinban and theme in rashinban.emphasized_theme_labels:
+            strategist_take += "岡三「羅針盤」（学習ソース）でも重点テーマとして言及されています。"
+
         views.append(
             StrategistView(
                 headline=headline,
-                strategist_take=_strategist_take(theme, sector, causal_rule),
+                strategist_take=strategist_take,
                 theme=theme,
                 related_sector=sector,
                 beneficiary_names=beneficiary_names,

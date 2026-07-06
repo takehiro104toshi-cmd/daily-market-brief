@@ -709,6 +709,43 @@ class FutureIntelligenceBundle:
 
 
 @dataclass
+class RashinbanKnowledge:
+    """「Rashinban Learning Source」の学習結果（v2.6）。
+
+    data/rashinban/ に置かれた岡三「羅針盤」（.md/.txt）から、ルールベースで
+    抽出した分析フレーム（型）のみを保持する。本文の転載・長文引用は行わず、
+    各パターンは短い断片（80文字まで・カテゴリごと最大5件）に制限される。
+    raw_excerpt_summaryは内部確認用の冒頭1行（120文字まで）で、HTMLには出さない。
+    ファイルが無い場合は空のまま使われ、既存分析には一切影響しない。
+    """
+
+    source_files: List[str] = field(default_factory=list)
+    latest_date: str = ""
+    market_view_patterns: List[str] = field(default_factory=list)
+    theme_patterns: List[str] = field(default_factory=list)
+    stock_selection_patterns: List[str] = field(default_factory=list)
+    risk_patterns: List[str] = field(default_factory=list)
+    time_horizon_patterns: List[str] = field(default_factory=list)
+    raw_excerpt_summary: str = ""
+    # 羅針盤本文に登場した既存macro_themeラベル（新テーマの生成はしない）
+    emphasized_theme_labels: List[str] = field(default_factory=list)
+
+    def frame_count(self) -> int:
+        """抽出した分析フレームの総数（HTML表示・ログ用）。"""
+        return (
+            len(self.market_view_patterns)
+            + len(self.theme_patterns)
+            + len(self.stock_selection_patterns)
+            + len(self.risk_patterns)
+            + len(self.time_horizon_patterns)
+        )
+
+    def has_content(self) -> bool:
+        """羅針盤ファイルが1件以上読み込めているか。"""
+        return bool(self.source_files)
+
+
+@dataclass
 class AnalysisBundle:
     """全AI分析モジュールの計算結果をまとめ、builder.pyへ渡すための入れ物。"""
 
