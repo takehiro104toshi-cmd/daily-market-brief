@@ -11,6 +11,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 100,
+        "confidence": 90,
+        "direction": "up",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -23,6 +33,16 @@
         "confidence": 83,
         "direction": "up",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 76,
+        "confidence": 93,
+        "direction": "up",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -41,6 +61,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 15,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -53,6 +83,16 @@
         "confidence": 5,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -71,6 +111,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -83,6 +133,16 @@
         "confidence": 65,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 45,
+        "confidence": 65,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -101,6 +161,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -113,6 +183,16 @@
         "confidence": 5,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -131,6 +211,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -143,6 +233,16 @@
         "confidence": 5,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -161,6 +261,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -173,6 +283,16 @@
         "confidence": 0,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -191,6 +311,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -203,6 +333,16 @@
         "confidence": 10,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 10,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -221,6 +361,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -233,6 +383,16 @@
         "confidence": 40,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 40,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -251,6 +411,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 6,
+        "confidence": 13,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -263,6 +433,16 @@
         "confidence": 5,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -281,6 +461,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 6,
+        "confidence": 13,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -293,6 +483,16 @@
         "confidence": 5,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -311,6 +511,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -323,6 +533,16 @@
         "confidence": 20,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 36,
+        "confidence": 33,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -341,6 +561,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -353,6 +583,16 @@
         "confidence": 25,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -371,6 +611,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 61,
+        "confidence": 58,
+        "direction": "up",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -383,6 +633,16 @@
         "confidence": 53,
         "direction": "up",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 61,
+        "confidence": 58,
+        "direction": "up",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -401,6 +661,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -413,6 +683,16 @@
         "confidence": 25,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -431,6 +711,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -443,6 +733,16 @@
         "confidence": 25,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -461,6 +761,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -473,6 +783,16 @@
         "confidence": 25,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -491,6 +811,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -503,6 +833,16 @@
         "confidence": 15,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 15,
+        "confidence": 15,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
@@ -521,6 +861,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -536,6 +886,16 @@
         "evaluated": false,
         "win": null,
         "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
       }
     ]
   },
@@ -548,6 +908,16 @@
         "confidence": 15,
         "direction": "flat",
         "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      },
+      {
+        "date": "2026-07-07",
+        "momentum": 15,
+        "confidence": 15,
+        "direction": "flat",
+        "nikkei_ref": 69744.0703125,
         "evaluated": false,
         "win": null,
         "return_pct": null
