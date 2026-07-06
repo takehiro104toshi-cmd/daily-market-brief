@@ -1,0 +1,557 @@
+{
+  "AI": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 100,
+        "confidence": 90,
+        "direction": "up",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "半導体": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 67,
+        "confidence": 83,
+        "direction": "up",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "電力": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 15,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "GX": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "DX": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "防衛": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 45,
+        "confidence": 65,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "宇宙": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "量子": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "核融合": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "ロボット": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "医療": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "バイオ": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 0,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "サイバーセキュリティ": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "水インフラ": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 10,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "物流": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "資源": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 40,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "食料": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "人口減少": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "高齢化": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "自動運転": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 0,
+        "confidence": 5,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "自動車": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "EV": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "蓄電池": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "金融": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "金利": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 79,
+        "confidence": 65,
+        "direction": "up",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "為替": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 61,
+        "confidence": 53,
+        "direction": "up",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "消費": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "人材": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "広告": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "SaaS": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "スマートフォン": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "クラウド": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "決済": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 25,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "旅行": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 15,
+        "confidence": 15,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "住宅": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "建設": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 30,
+        "confidence": 20,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  },
+  "インバウンド": {
+    "first_seen": "2026-07-06",
+    "predictions": [
+      {
+        "date": "2026-07-06",
+        "momentum": 15,
+        "confidence": 15,
+        "direction": "flat",
+        "nikkei_ref": 69737.6875,
+        "evaluated": false,
+        "win": null,
+        "return_pct": null
+      }
+    ]
+  }
+}
