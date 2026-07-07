@@ -84,6 +84,16 @@ source_reliability:
   "NHKニュース 経済": 0.85
   "Yahoo!ニュース トピックス": 0.5
   "NHKニュース 総合": 0.85
+  # v2.9 Source Expansion Engine（③）: 各collectorのRELIABILITYと重複するが、
+  # config.yamlだけで一覧・上書きできるようにここにも明記する。
+  "Federal Reserve Press Releases": 0.97
+  "SEC Press Releases": 0.97
+  "BLS 最新統計": 0.97
+  "EIA Today in Energy": 0.95
+  "ECB Press Releases": 0.97
+  "CoinDesk": 0.6
+  "CoinTelegraph": 0.6
+  "Yahoo Finance US": 0.6
 
 # 日経・Bloomberg・Reutersのベストエフォート見出し取得。
 # 省略した場合は各collector（src/collectors/nikkei.py 等）のデフォルトURLを使う。
@@ -107,6 +117,55 @@ source_reliability:
 #   - { name: "日本銀行 新着情報", url: "https://www.boj.or.jp/rss/whatsnew.rdf" }
 # mof_sources:
 #   - { name: "財務省 新着情報", url: "https://www.mof.go.jp/rss/whatsnew.rdf" }
+
+# v2.9 Source Expansion Engine（③）: 公式・高信頼ソース・海外マーケットソースの
+# ベストエフォート取得。省略時は各collector（src/collectors/fed.py等）の
+# デフォルトURLを使う。ここで上書きすると、config.yamlだけでURLを差し替えられる。
+# fed_sources:
+#   - { name: "Federal Reserve Press Releases", url: "https://www.federalreserve.gov/feeds/press_all.xml" }
+# sec_sources:
+#   - { name: "SEC Press Releases", url: "https://www.sec.gov/news/pressreleases.rss" }
+# us_gov_stats_sources:
+#   - { name: "BLS 最新統計", url: "https://www.bls.gov/feed/bls_latest.rss" }
+#   - { name: "EIA Today in Energy", url: "https://www.eia.gov/rss/todayinenergy.xml" }
+# ecb_sources:
+#   - { name: "ECB Press Releases", url: "https://www.ecb.europa.eu/rss/press.xml" }
+# crypto_news_sources:
+#   - { name: "CoinDesk", url: "https://www.coindesk.com/arc/outboundfeeds/rss/" }
+#   - { name: "CoinTelegraph", url: "https://cointelegraph.com/rss" }
+# yahoo_finance_us_sources:
+#   - { name: "Yahoo Finance US", url: "https://finance.yahoo.com/news/rssindex" }
+
+# v2.9 Source Expansion Engine（③）: 情報源の実装状況の分類。
+# ユーザー提示の追加候補ソースについて、実装可否を明示する
+# （詳細な理由はREADME「Source Expansion（情報源の追加方針）」を参照）。
+#   implemented   : 上記collectorとして実装済み（公開RSSのみ使用）
+#   reference_only: 公開情報だが自動取得は見送り、参照リンクとして案内のみ
+#   skipped       : 公開RSSが未確認／利用規約リスク／本文取得やスクレイピングに
+#                   なるため、今回は見送り（将来、公式RSSが確認できれば追加検討）
+source_classification:
+  implemented:
+    - "Federal Reserve / FOMC（fed_sources）"
+    - "SEC（sec_sources）"
+    - "BLS（us_gov_stats_sources）"
+    - "EIA（us_gov_stats_sources）"
+    - "ECB（ecb_sources）"
+    - "CoinDesk（crypto_news_sources）"
+    - "CoinTelegraph（crypto_news_sources）"
+    - "Yahoo Finance US（yahoo_finance_us_sources）"
+  reference_only:
+    - "US Treasury（安定した公開RSSが未確認のため自動取得はせず参照リンクのみ）"
+    - "Bank of England（RSS構成の確証が低いため自動取得はせず参照リンクのみ）"
+    - "IMF / World Bank / OECD（統計ポータルであり定型RSSでの検知に不向き）"
+    - "Nasdaq / NYSE 公式（RSS形式が不安定なため今回は見送り、参照リンクのみ）"
+    - "OpenAI Blog / Google AI Blog / Microsoft AI Blog / Meta AI Blog / AWS Blog / Oracle Newsroom（安定した公開RSSが未確認）"
+    - "NVIDIA / AMD / Intel / TSMC / ASML / Micron / Samsung / SK hynix Newsroom（公式ニュースルームに定型RSSがなく、スクレイピングが必要になるため）"
+  skipped:
+    - "Seeking Alpha RSS（利用規約・Bot対策のリスクが不明確なため見送り）"
+    - "Benzinga RSS（利用規約・Bot対策のリスクが不明確なため見送り）"
+    - "SEMI / TrendForce（公開RSSが未確認。TrendForceは有料レポートが中心）"
+    - "Baltic Exchange / Baltic Dry Index（公開の無償取得手段が未確認）"
+    - "Coinbase Blog（安定した公開RSSが未確認）"
 
 # EDINET書類一覧APIのエンドポイント上書き設定（省略時はsrc/collectors/edinet.pyの既定値を使用）。
 # edinet:

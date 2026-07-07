@@ -41,6 +41,9 @@ class SourceHealthEntry:
     ok: bool
     count: int
     newest_published: Optional[datetime] = None
+    # v2.9（⑤ 情報取得時刻の見える化）: このソースから見出しを取得した時刻
+    # （Headline.fetched_atの最大値）。取得失敗時はNone。
+    fetched_at: Optional[datetime] = None
 
 
 @dataclass
@@ -122,14 +125,19 @@ def build_source_health(
     """
     grouped: dict = {}
     for h in raw_headlines:
-        entry = grouped.setdefault(h.source, {"count": 0, "newest": None})
+        entry = grouped.setdefault(h.source, {"count": 0, "newest": None, "fetched_at": None})
         entry["count"] += 1
         dt = parse_published_datetime(h.published)
         if dt is not None and (entry["newest"] is None or dt > entry["newest"]):
             entry["newest"] = dt
+        fetched_dt = parse_published_datetime(h.fetched_at) if h.fetched_at else None
+        if fetched_dt is not None and (entry["fetched_at"] is None or fetched_dt > entry["fetched_at"]):
+            entry["fetched_at"] = fetched_dt
 
     health = [
-        SourceHealthEntry(name=name, ok=True, count=info["count"], newest_published=info["newest"])
+        SourceHealthEntry(
+            name=name, ok=True, count=info["count"], newest_published=info["newest"], fetched_at=info["fetched_at"]
+        )
         for name, info in grouped.items()
     ]
     for name in attempted_source_names or []:
@@ -224,14 +232,17 @@ def render_source_health_markdown(stats: DataFreshnessStats) -> str:
     lines = [
         "### RSS Source Health",
         "",
-        "| 情報源 | 状態 | 件数 | 最新記事日時 |",
-        "|---|---|---|---|",
+        "| 情報源 | 状態 | 件数 | 取得時刻 | 最新記事日時 |",
+        "|---|---|---|---|---|",
     ]
     for entry in sorted(stats.source_health, key=lambda e: (-e.count, e.name)):
         status = "✅ 成功" if entry.ok else "❌ 取得失敗（0件）"
-        lines.append(f"| {entry.name} | {status} | {entry.count}件 | {_fmt_dt(entry.newest_published, tz)} |")
+        lines.append(
+            f"| {entry.name} | {status} | {entry.count}件 | {_fmt_dt(entry.fetched_at, tz)} | "
+            f"{_fmt_dt(entry.newest_published, tz)} |"
+        )
     if not stats.source_health:
-        lines.append(f"| （情報なし） | - | 0件 | {NOT_AVAILABLE} |")
+        lines.append(f"| （情報なし） | - | 0件 | {NOT_AVAILABLE} | {NOT_AVAILABLE} |")
     lines.append("")
     return "\n".join(lines)
 

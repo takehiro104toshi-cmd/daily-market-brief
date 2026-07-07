@@ -23,6 +23,7 @@ from typing import Dict, List, Optional
 from ..collectors.news import Headline, parse_published_datetime
 from ..report.format_utils import stars, truncate_to_chars
 from .models import NewsRankingItem, RashinbanKnowledge
+from .source_trust import combined_trust_for_sources
 from .strategist_engine import CausalRule, match_causal_rule, parse_causal_rules, resolve_tickers
 
 SALES_TALK_MAX_CHARS = 100
@@ -136,6 +137,16 @@ def _analyze_headline(
         reason_parts.append(f"「{causal_rule.theme}」の因果チェーンに該当する")
     if is_durable:
         reason_parts.append("継続性の高い構造的なテーマである")
+
+    # v2.9（④ Duplicate/Cross Source Intelligence）: 複数の高信頼情報源が同一
+    # ニュースを報じている場合、重要度を機械的に上げる（新しい評価基準の
+    # 創作ではなく、既存のSource Trustスコアの集計のみ）。
+    if headline.source_count >= 2:
+        combined = combined_trust_for_sources(headline.source, headline.duplicate_sources)
+        if combined.max_score >= 4:
+            bonus = 1 if headline.source_count == 2 else 2
+            score += bonus
+            reason_parts.append(f"{combined.source_count}社の高信頼情報源が同一ニュースを報じている")
 
     if reason_parts:
         reason = "、".join(reason_parts) + "ため、重要度が高いと判断しました。"

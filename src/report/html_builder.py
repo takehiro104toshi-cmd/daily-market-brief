@@ -51,7 +51,7 @@ from ..analysis.data_freshness import (
     freshness_label,
     freshness_stars,
 )
-from ..analysis.source_trust import trust_for_source
+from ..analysis.source_trust import combined_trust_for_sources, trust_for_source
 from ..collectors.market_data import Quote
 from ..collectors.news import parse_published_datetime
 from ..utils import SourceRegistry
@@ -255,6 +255,14 @@ table th { color: #666; font-weight: 600; font-size: 0.78rem; }
 }
 .refresh-btn:active { background: #1d4ed8; }
 .refresh-note { font-size: 0.75rem; color: #6b7280; text-align: center; margin: -8px 0 14px 0; }
+/* v2.9（②Real-Time Update Engine）: 「最新レポートを生成する」導線ボタン */
+.regenerate-btn {
+  display: block; text-align: center; margin: 0 0 14px 0; padding: 12px 16px;
+  background: #fff; color: #2563eb; border: 2px solid #2563eb; border-radius: 10px;
+  font-weight: 600; font-size: 0.9rem; text-decoration: none;
+}
+.regenerate-btn:active { background: #eef4ff; }
+:root[data-theme="dark"] .regenerate-btn { background: #12161f; }
 .digest { background: #eef4ff; border: 1px solid #c9dcff; }
 ul.plain { padding-left: 18px; margin: 6px 0; }
 ul.plain li { margin-bottom: 4px; font-size: 0.9rem; }
@@ -620,8 +628,18 @@ def _news_ranking_item_html(item: NewsRankingItem, now: Optional[datetime] = Non
     trust = trust_for_source(h.source)
     # v2.8（④）: 日本語訳があれば日本語を見出しに、原文は「詳しく」内に格納
     orig_html = f"<p style='margin:0 0 4px 0;'>原文: {_esc(h.title)}</p>" if h.title_ja else ""
+    # v2.9（④ Duplicate/Cross Source Intelligence）: 複数ソースが同一ニュースを
+    # 配信していた場合、報道社数とCombined Trustを表示する。
+    dup_html = ""
+    if h.source_count >= 2:
+        combined = combined_trust_for_sources(h.source, h.duplicate_sources)
+        dup_html = (
+            f"<p style='margin:0 0 4px 0;'>{combined.source_count}社が同一ニュースを報道: "
+            f"{_esc('、'.join(combined.all_sources))} ／ Combined Trust {_esc(combined.stars)}</p>"
+        )
     detail = (
         f"<p style='margin:0 0 4px 0;'>Source Trust: {_esc(trust.stars)}（{_esc(trust.tier)}）— {_esc(trust.reason)}</p>"
+        + dup_html
         + orig_html
         + f"<p style='margin:0 0 4px 0;'>理由: {_esc(item.reason or NOT_AVAILABLE)}</p>"
         f"<p style='margin:0 0 4px 0;'>影響市場: {_esc(item.affected_market or NOT_AVAILABLE)} ／ "
@@ -919,8 +937,11 @@ def _dashboard_html(market: dict, analysis: AnalysisBundle, now: Optional[dateti
 
     news_items = analysis.executive_summary[:3] or analysis.news_ranking[:3]
     if news_items:
+        # v2.9（①）: 日本語訳があれば表示し、原文はネイティブのtitle属性（ホバー/
+        # 長押しで表示）に残す（外部JS不要・「原文も必ず残す」要件を満たす）。
         news_html = "".join(
-            f'<div class="dash-news"><a href="{_esc(item.headline.link)}">{_esc(item.headline.title)}</a>'
+            f'<div class="dash-news"><a href="{_esc(item.headline.link)}" title="{_esc(item.headline.title)}">'
+            f"{_esc(item.headline.display_title())}</a>"
             f"{_news_freshness_badge(item.headline.published, now)}</div>"
             for item in news_items
         )
@@ -1396,7 +1417,29 @@ def _news_freshness_card(freshness: Optional[DataFreshnessStats]) -> str:
         f"<div class='row'><span>データ鮮度評価</span>"
         f"<span>{_stars_span(freshness_stars(freshness.avg_age_hours))} {_esc(freshness_label(freshness.avg_age_hours))}</span></div>"
     )
-    return _card("News Freshness（データ鮮度）", rows_html + eval_html, extra_class="digest", anchor="news-freshness")
+    # v2.9（⑤ 情報取得時刻の見える化）: 「このレポートは何時時点の情報か」を
+    # 一目で分かるように、HTML生成時刻・市場データ取得時刻（同一バッチ取得のため
+    # 生成時刻と同時刻）・各ニュースソースの取得時刻を「詳しく」に表示する。
+    generated_txt = freshness.generated_at.strftime("%Y-%m-%d %H:%M")
+    timestamps_html = (
+        f"<p style='margin:0 0 4px 0;'>HTML生成時刻: {_esc(generated_txt)}</p>"
+        f"<p style='margin:0 0 8px 0;'>市場データ・為替・金利・コモディティ取得時刻: {_esc(generated_txt)}"
+        "（すべて同一バッチで取得）</p>"
+    )
+    source_rows = "".join(
+        f"<div class='row'><span>{_esc(e.name)}</span>"
+        f"<span>{'✅' if e.ok else '❌'} {e.count}件 ／ 取得: {_esc(_fmt_stats_dt(e.fetched_at, tz))}</span></div>"
+        for e in sorted(freshness.source_health, key=lambda e: (-e.count, e.name))
+    )
+    if not source_rows:
+        source_rows = f"<p>{_esc(NOT_AVAILABLE)}</p>"
+    timestamps_html += "<p style='margin:8px 0 4px 0;font-weight:600;'>各ニュースソースの取得時刻</p>" + source_rows
+    return _card(
+        "News Freshness（データ鮮度）",
+        rows_html + eval_html + _detail_block(timestamps_html, label="情報取得時刻を詳しく見る"),
+        extra_class="digest",
+        anchor="news-freshness",
+    )
 
 
 def _rashinban_card(rashinban: Optional[RashinbanKnowledge]) -> str:
@@ -1959,18 +2002,31 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     return "".join(parts)
 
 
-def _refresh_button_html() -> str:
-    """「最新表示に更新」ボタン。ページを再読み込みするだけの単純なボタン。
+def _refresh_button_html(actions_url: str = "") -> str:
+    """「最新表示に更新」導線（v2.9・② Real-Time Update Engine）。
 
-    毎朝のGitHub Actions自動生成・自動デプロイを基本運用とし、GitHub Actionsの
-    実行画面へは遷移しない（外部JS不要・HTML内で完結するjavascript:スキーム）。
-    常時表示する。
+    GitHub Pagesは静的ホスティングのため、ページ内JSだけでmain.pyを実行する
+    ことはできない。そのため2段階のボタンにする。
+    ① 「ページを再読み込み」— 常時表示。location.reload()するだけ（外部JS不要）。
+    ② 「最新レポートを生成する（GitHub Actionsを開く）」— actions_urlが設定されて
+      いる場合のみ表示。GitHub ActionsのRun workflow画面を新しいタブで開くだけで、
+      GitHub Token・Secretsはこのページ・リンク先ページのいずれにも含まれない
+      （安全な導線のみ。押した瞬間に自動実行はしない）。
     """
-    return (
+    parts = [
         '<a class="refresh-btn" href="javascript:location.reload()">'
-        "🔄 最新表示に更新</a>"
-        '<p class="refresh-note">最新の自動生成済みレポートを再読み込みします</p>'
-    )
+        "🔄 ページを再読み込み</a>"
+        '<p class="refresh-note">現在表示中のレポート（最後に自動生成された版）を再読み込みします</p>'
+    ]
+    if actions_url:
+        parts.append(
+            f'<a class="regenerate-btn" href="{_esc(actions_url)}" target="_blank" rel="noopener">'
+            "⚙️ 最新レポートを生成する（GitHub Actionsを開く）</a>"
+            '<p class="refresh-note">開いたGitHub Actions画面で「Run workflow」を押すと、'
+            "その時点の最新ニュース・市場データでレポートが再生成されます。"
+            "完了後、このページで「ページを再読み込み」を押すと反映されます。</p>"
+        )
+    return "".join(parts)
 
 
 def build_html_report(
@@ -1998,7 +2054,7 @@ def build_html_report(
     tz_label = report_date.tzname() or "現地時間"
 
     top_cards = [
-        _refresh_button_html(),
+        _refresh_button_html(actions_url or ""),
         _menu_grid_html(),
         _dashboard_html(market, analysis, now=report_date),
         _search_card_html(),

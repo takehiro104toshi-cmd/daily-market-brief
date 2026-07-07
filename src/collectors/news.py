@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import re
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import Dict, List, Optional
@@ -29,10 +29,19 @@ class Headline:
     fetched_at: str = ""
     # v2.8（④）: 英語見出しの日本語訳（翻訳できた場合のみ設定。既定は空＝原文のみ）
     title_ja: str = ""
+    # v2.9（④ Duplicate/Cross Source Intelligence）: 同一ニュースを配信していた
+    # 他の情報源名（重複除去時にdedupe_headlinesが記録。既定は空＝重複なし）。
+    duplicate_sources: List[str] = field(default_factory=list)
+    source_count: int = 1
 
     def display_title(self) -> str:
         """表示用の見出し。日本語訳があればそれを、無ければ原文を返す。"""
         return self.title_ja or self.title
+
+    @property
+    def is_translated(self) -> bool:
+        """翻訳済みかどうかを判定するフィールド（v2.9①）。title_jaの有無から導出する。"""
+        return bool(self.title_ja)
 
 
 def _now_iso() -> str:
@@ -134,16 +143,34 @@ def dedupe_headlines(headlines: List[Headline]) -> List[Headline]:
 
     複数の情報源が同じ見出し（正規化後に一致）を配信している場合、
     信頼度スコアが最も高いものを残す（同点の場合は先に出現したものを残す）。
+
+    v2.9（④ Duplicate/Cross Source Intelligence）: 統合時に「他にどの情報源が
+    同じニュースを配信していたか」（duplicate_sources）と配信元の総数
+    （source_count）を残す。重複が無い場合は従来どおりsource_count=1・
+    duplicate_sources=[]のまま（既存動作に影響なし）。分析側（news_ranking等）
+    はこの情報を使って複数の高信頼情報源が報じたニュースの重要度を上げられる。
     """
-    best: Dict[str, Headline] = {}
+    groups: Dict[str, List[Headline]] = {}
     order: List[str] = []
     for h in headlines:
         key = _normalize_title(h.title)
         if not key:
             continue
-        if key not in best:
-            best[key] = h
+        if key not in groups:
+            groups[key] = []
             order.append(key)
-        elif h.reliability > best[key].reliability:
-            best[key] = h
-    return [best[key] for key in order]
+        groups[key].append(h)
+
+    results = []
+    for key in order:
+        candidates = groups[key]
+        # 信頼度の高い順（同点は先に出現した順）に並べ、先頭を採用元とする
+        best = max(candidates, key=lambda h: h.reliability)
+        other_sources = []
+        for h in candidates:
+            if h.source != best.source and h.source not in other_sources:
+                other_sources.append(h.source)
+        best.duplicate_sources = other_sources
+        best.source_count = 1 + len(other_sources)
+        results.append(best)
+    return results

@@ -61,9 +61,12 @@ from src.collectors import (
     bloomberg,
     boj,
     cnbc,
+    crypto_news,
     earnings,
+    ecb,
     economic_calendar,
     edinet,
+    fed,
     investing,
     jpx,
     kabutan,
@@ -78,9 +81,12 @@ from src.collectors import (
     rakuten,
     reuters,
     sbi,
+    sec_gov,
     tdnet,
     themes,
+    us_gov_stats,
     wsj,
+    yahoo_finance_us,
 )
 from src.report.builder import build_report
 from src.report.format_utils import ticker_lookup as build_ticker_lookup
@@ -282,6 +288,14 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         ("investing", lambda: investing.fetch_investing_headlines(sources, limit, config.get("investing_sources"))),
         ("boj", lambda: boj.fetch_boj_headlines(sources, limit, config.get("boj_sources"))),
         ("mof", lambda: mof.fetch_mof_headlines(sources, limit, config.get("mof_sources"))),
+        # v2.9 Source Expansion Engine（③）: 公式・高信頼ソースと海外マーケット
+        # ソースを追加。いずれも公開RSSのみ・失敗時は空リストでレポート生成は継続する。
+        ("fed", lambda: fed.fetch_fed_headlines(sources, limit, config.get("fed_sources"))),
+        ("sec", lambda: sec_gov.fetch_sec_headlines(sources, limit, config.get("sec_sources"))),
+        ("us_gov_stats", lambda: us_gov_stats.fetch_us_gov_stats_headlines(sources, limit, config.get("us_gov_stats_sources"))),
+        ("ecb", lambda: ecb.fetch_ecb_headlines(sources, limit, config.get("ecb_sources"))),
+        ("crypto_news", lambda: crypto_news.fetch_crypto_news_headlines(sources, limit, config.get("crypto_news_sources"))),
+        ("yahoo_finance_us", lambda: yahoo_finance_us.fetch_yahoo_finance_us_headlines(sources, limit, config.get("yahoo_finance_us_sources"))),
     ):
         fetched = _safe_call(collector_name, fetch_fn, [])
         if not fetched:

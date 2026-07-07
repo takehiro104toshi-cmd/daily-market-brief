@@ -30,11 +30,10 @@ def test_html_report_is_well_formed_and_color_coded():
     # 投資助言ではない旨の明記
     assert "投資助言ではありません" in report
 
-    # 「最新表示に更新」ボタンは常時表示（ページ再読み込みのみ、Run workflowへは遷移しない）
+    # v2.9（②Real-Time Update Engine）: 「ページを再読み込み」ボタンは常時表示
     assert 'class="refresh-btn"' in report
     assert "location.reload()" in report
-    assert "最新表示に更新" in report
-    assert "Run workflow" not in report
+    assert "ページを再読み込み" in report
 
     # 新規セクションもHTML側に反映されていること
     assert "今日の重要ニュースランキング" in report
@@ -108,25 +107,37 @@ def test_html_report_handles_missing_data_without_breaking_structure():
     assert "取得不可" in report
 
 
-def test_html_report_shows_reload_refresh_button_regardless_of_actions_url():
-    # actions_urlを渡しても渡さなくても、常に「ページ再読み込みのみ」のボタンになる
-    # （GitHub ActionsのRun workflow画面へは遷移しない）。
-    for actions_url in (None, "https://github.com/example/daily-market-brief/actions/workflows/daily-market-brief.yml"):
-        report = build_html_report(
-            report_date=datetime(2026, 7, 1),
-            market=full_market(),
-            sources=SourceRegistry(),
-            analysis=full_bundle(),
-            actions_url=actions_url,
-        )
+def test_html_report_shows_reload_button_always_and_regenerate_button_only_with_actions_url():
+    # v2.9（②）: 「ページを再読み込み」は常時表示。actions_urlがある時だけ
+    # 「最新レポートを生成する」ボタンがGitHub Actions画面（新しいタブ）へリンクされる。
+    report_without = build_html_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+        actions_url=None,
+    )
+    assert 'class="refresh-btn"' in report_without
+    assert 'href="javascript:location.reload()"' in report_without
+    assert 'class="regenerate-btn"' not in report_without
+    assert report_without.count("<div") == report_without.count("</div>")
 
-        assert 'class="refresh-btn"' in report
-        assert 'href="javascript:location.reload()"' in report
-        assert "最新表示に更新" in report
-        assert "Run workflow" not in report
-        if actions_url:
-            assert actions_url not in report
-        assert report.count("<div") == report.count("</div>")
+    actions_url = "https://github.com/example/daily-market-brief/actions/workflows/daily-market-brief.yml"
+    report_with = build_html_report(
+        report_date=datetime(2026, 7, 1),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+        actions_url=actions_url,
+    )
+    assert 'class="regenerate-btn"' in report_with
+    assert actions_url in report_with
+    assert 'target="_blank"' in report_with
+    assert 'rel="noopener"' in report_with
+    # GitHub TokenやSecretsはHTMLに一切出さない
+    assert "ghp_" not in report_with
+    assert "token" not in report_with.lower()
+    assert report_with.count("<div") == report_with.count("</div>")
 
 
 def test_html_report_escapes_headline_titles_to_avoid_broken_markup():

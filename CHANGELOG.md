@@ -4,6 +4,69 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v2.9 (2026-07-07) — Real-Time Freshness / Translation / Source Expansion Upgrade
+
+「毎日読むレポート」から「岡三証券退職後も自分だけでマーケットを分析・予測し
+続けるための自己改善型システム」へ。既存の分析ロジックは変更せず、翻訳・
+リアルタイム性・情報源・重複統合を強化。
+
+Phase 0（実装前調査）分類:
+- A（安全に実装）: ①翻訳エンジン強化 ②2段階更新ボタン＋取得時刻表示
+  ③公式RSS群の追加 ④重複ソース統合・重要度補正 ⑤情報取得時刻の見える化
+- B（GitHub Actionsでのみ実データ検証可）: 新規collector（Fed/SEC/BLS/EIA/
+  ECB/CoinDesk/CoinTelegraph/Yahoo Finance US）の実際のRSS取得、
+  ANTHROPIC_API_KEYがある場合の実翻訳（この開発環境はネットワーク遮断・
+  APIキー未設定のため。no-op経路・グレースフルフェイルは検証済み）
+- C（今回は見送り）: Seeking Alpha/Benzinga（利用規約・Bot対策リスク）、
+  半導体各社Newsroom・AI各社Blog（定型RSSが無くスクレイピングが必要）、
+  US Treasury/BoE/IMF/World Bank/OECD/Nasdaq公式（RSS構成の確証が低い）
+  — 詳細はconfig.yamlの`source_classification`とREADMEを参照
+
+追加・改善
+・①English News Translation Engine強化: Headlineに`duplicate_sources`等と
+  並び`is_translated`（title_jaの有無から導出するプロパティ）を追加。翻訳
+  プロンプトを金融用語重視・100文字目安・専門用語補足（EPS/CPI/FOMC/
+  guidance/yield/rate cut等）へ更新。Today's Dashboardの見出し表示を
+  `display_title()`（日本語訳）+ネイティブtitle属性（原文・ホバー表示）へ修正。
+  ANTHROPIC_API_KEY未設定・失敗時は原文のまま（既存動作に影響なし）
+・②Real-Time Update Engine: 「最新表示に更新」を2段階ボタンへ再設計。
+  「ページを再読み込み」（常時表示・location.reloadのみ）と「最新レポートを
+  生成する（GitHub Actionsを開く）」（actions_url設定時のみ・新しいタブで
+  Run workflow画面を開くだけ・自動実行はしない・GitHub Token/Secretsは
+  一切埋め込まない）。News Freshnessカードに「情報取得時刻を詳しく見る」を
+  追加し、HTML生成時刻・市場データ取得時刻・各ニュースソースの取得時刻
+  （SourceHealthEntryにfetched_at追加）を表示
+・③Source Expansion Engine: 新規collector 6本（fed.py/sec_gov.py/
+  us_gov_stats.py/ecb.py/crypto_news.py/yahoo_finance_us.py）を追加。
+  公開RSSのみ使用し、既存collectorと同じ「失敗時は空リストを返す」設計を
+  踏襲（main.pyの追加情報源ループに追加するだけで、失敗してもレポート生成は
+  止まらない）。config.yamlに情報源の実装状況（implemented/reference_only/
+  skipped）を分類・明記
+・④Duplicate/Cross Source Intelligence: dedupe_headlinesが同一ニュースを
+  配信していた他の情報源名（duplicate_sources）と配信元総数（source_count）
+  を記録するよう拡張（重複が無ければ従来通りsource_count=1）。
+  news_ranking.pyで2社以上・信頼度★4以上の重複報道に+1〜+2の補正を追加
+  （新しい評価基準の創作ではなく既存Source Trustスコアの集計）。
+  source_trust.pyにcombined_trust_for_sources()を追加し、HTMLへ
+  「○社が同一ニュースを報道／Combined Trust」を表示。Source Trustの
+  ティア判定にSEC/BLS/BEA/EIA/ECB/BoE/Barron's/CoinDesk/CoinTelegraph等を追加
+
+変更ファイル
+・src/collectors/: news.py（duplicate_sources/source_count/is_translated）、
+  fed.py・sec_gov.py・us_gov_stats.py・ecb.py・crypto_news.py・
+  yahoo_finance_us.py（すべて新規）
+・src/analysis/: source_trust.py（combined_trust_for_sources追加・ティア拡張）、
+  news_ranking.py（重複ソース補正）、data_freshness.py（fetched_at追加）、
+  translation.py（プロンプト更新）
+・src/report/html_builder.py（2段階更新ボタン・情報取得時刻・重複表示・
+  Dashboard翻訳表示）
+・main.py（新規collector配線）、config.yaml（新規ソース設定・分類・reliability）
+・tests/test_v2_9_realtime_translation_sources.py（新規・15件）、
+  tests/test_html_builder.py（更新ボタン仕様変更に伴う2件更新）
+
+pytest
+244 passed（既存229維持＋v2.9で15件追加）
+
 ## v2.8 (2026-07-06) — Smart Intelligence Evolution
 
 「毎日読むレポート」から「毎日学習し続ける投資AI」へ。既存の分析ロジック
