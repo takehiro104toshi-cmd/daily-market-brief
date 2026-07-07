@@ -264,6 +264,26 @@ table th { color: #666; font-weight: 600; font-size: 0.78rem; }
 }
 .regenerate-btn:active { background: #eef4ff; }
 :root[data-theme="dark"] .regenerate-btn { background: #12161f; }
+/* v3.3: 設定未完了メッセージ・生成状態の説明・スマホ手順・将来の即時生成枠 */
+.regenerate-pending {
+  margin: 0 0 14px 0; padding: 12px 16px; background: #f3f4f6; color: #4b5563;
+  border: 2px dashed #9ca3af; border-radius: 10px; font-size: 0.85rem;
+}
+.generation-status { margin: 0 0 14px 0; }
+.mobile-steps {
+  margin: 0 0 14px 0; background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 4px 12px;
+}
+.mobile-steps summary { cursor: pointer; font-weight: 600; padding: 8px 0; font-size: 0.9rem; }
+.mobile-steps ol { padding-left: 20px; margin: 4px 0 10px 0; font-size: 0.85rem; }
+.one-tap-btn {
+  display: block; width: 100%; text-align: center; margin: 0 0 4px 0; padding: 12px 16px;
+  background: #e5e7eb; color: #6b7280; border: none; border-radius: 10px;
+  font-weight: 600; font-size: 0.9rem; cursor: not-allowed;
+}
+:root[data-theme="dark"] .regenerate-pending { background: #1a1d24; border-color: #4b5563; color: #9ca3af; }
+:root[data-theme="dark"] .mobile-steps { background: #171a21; border-color: #2d3340; }
+:root[data-theme="dark"] .one-tap-btn { background: #2a2d33; color: #9ca3af; }
 .digest { background: #eef4ff; border: 1px solid #c9dcff; }
 ul.plain { padding-left: 18px; margin: 6px 0; }
 ul.plain li { margin-bottom: 4px; font-size: 0.9rem; }
@@ -2150,17 +2170,60 @@ def _future_intelligence_html(bundle: FutureIntelligenceBundle) -> str:
     return "".join(parts)
 
 
-def _refresh_button_html(actions_url: str = "") -> str:
-    """「最新表示に更新」導線（v2.9・② Real-Time Update Engine）。
+def _generation_status_html(generated_str: str) -> str:
+    """「生成状態の説明」（v3.3・改善③）。このページが何であり、再読み込みと
+    再生成の違いが何かを、ボタン付近で毎回明示する（表示専用・分析には無関係）。
+    """
+    return (
+        "<div class='generation-status'>"
+        f"<p class='refresh-note'>最終生成時刻: {_esc(generated_str)}（このページは最後に生成されたレポートです）</p>"
+        "<p class='refresh-note'>「ページを再読み込み」は表示中のHTMLを読み直すだけで、新しいデータは取得しません。"
+        "最新ニュース・市場データで再分析するには「最新レポートを生成する」から実行してください。</p>"
+        "</div>"
+    )
+
+
+def _mobile_regenerate_steps_html() -> str:
+    """「📱 スマホでの実行手順」（v3.3・改善①）。details/summaryで折りたたみ表示する。"""
+    steps = (
+        "<li>開いた画面でログインする</li>"
+        "<li>「Run workflow」をタップする</li>"
+        "<li>表示された緑の「Run workflow」ボタンをもう一度タップする</li>"
+        "<li>完了まで1〜3分待つ</li>"
+        "<li>このページに戻って「ページを再読み込み」をタップする</li>"
+    )
+    return f"<details class='mobile-steps'><summary>📱 スマホでの実行手順</summary><ol class='plain'>{steps}</ol></details>"
+
+
+def _one_tap_regenerate_html() -> str:
+    """「🚀 ワンタップで最新生成」（v3.3・改善④）。realtime.enabled=true かつ
+    endpoint_url設定時のみ表示する将来用の枠。バックエンド未実装のため常に押せない
+    状態で表示し、認証情報の類は一切埋め込まない。
+    """
+    return (
+        "<button type='button' class='one-tap-btn' disabled>🚀 ワンタップで最新生成</button>"
+        "<p class='refresh-note'>ワンタップ生成は準備中です（中継用のバックエンドが実装されるまで押せません。"
+        "認証に関わる情報はこのページに一切含まれません）。</p>"
+    )
+
+
+def _refresh_button_html(actions_url: str = "", realtime: Optional[dict] = None, generated_str: str = "") -> str:
+    """「最新表示に更新」導線（v2.9・② Real-Time Update Engine、v3.3で導線を再設計）。
 
     GitHub Pagesは静的ホスティングのため、ページ内JSだけでmain.pyを実行する
-    ことはできない。そのため2段階のボタンにする。
+    ことはできない。そのため以下の構成にする。
     ① 「ページを再読み込み」— 常時表示。location.reload()するだけ（外部JS不要）。
-    ② 「最新レポートを生成する（GitHub Actionsを開く）」— actions_urlが設定されて
-      いる場合のみ表示。GitHub ActionsのRun workflow画面を新しいタブで開くだけで、
-      GitHub Token・Secretsはこのページ・リンク先ページのいずれにも含まれない
-      （安全な導線のみ。押した瞬間に自動実行はしない）。
+    ② 「最新レポートを生成する」— actions_urlが設定されている場合のみリンクとして
+      表示（該当workflow実行画面を新しいタブで開くだけ）。未設定時はボタンを消す
+      のではなく「設定未完了」の説明を表示する。
+    ③ 生成状態の説明（最終生成時刻・再読み込みと再生成の違い）を常時表示。
+    ④ 「📱 スマホでの実行手順」を details/summary で常時提供。
+    ⑤ realtime.enabled=true かつ endpoint_url 設定時のみ、将来のワンタップ生成枠
+      （現状は押せないボタン）を追加表示する。
+    いずれの場合も GitHub Token・Secrets・認証情報の類はこのページに一切含めない
+    （安全な導線のみ。押した瞬間に自動実行はしない）。
     """
+    realtime = realtime or {}
     parts = [
         '<a class="refresh-btn" href="javascript:location.reload()">'
         "🔄 ページを再読み込み</a>"
@@ -2169,11 +2232,23 @@ def _refresh_button_html(actions_url: str = "") -> str:
     if actions_url:
         parts.append(
             f'<a class="regenerate-btn" href="{_esc(actions_url)}" target="_blank" rel="noopener">'
-            "⚙️ 最新レポートを生成する（GitHub Actionsを開く）</a>"
-            '<p class="refresh-note">開いたGitHub Actions画面で「Run workflow」を押すと、'
+            "⚙️ 最新レポートを生成する</a>"
+            '<p class="refresh-note">開いた画面で「Run workflow」を押すと、'
             "その時点の最新ニュース・市場データでレポートが再生成されます。"
             "完了後、このページで「ページを再読み込み」を押すと反映されます。</p>"
         )
+    else:
+        parts.append(
+            "<div class='regenerate-pending'>"
+            "⚙️ 最新レポートを生成する（設定未完了）"
+            "<p class='refresh-note' style='margin-top:6px;'>config.yaml の output.actions_url が"
+            "未設定のため、このページから直接移動できません。設定後に有効になります。</p>"
+            "</div>"
+        )
+    parts.append(_generation_status_html(generated_str))
+    parts.append(_mobile_regenerate_steps_html())
+    if realtime.get("enabled") and realtime.get("endpoint_url"):
+        parts.append(_one_tap_regenerate_html())
     return "".join(parts)
 
 
@@ -2281,6 +2356,7 @@ def build_html_report(
     freshness: Optional[DataFreshnessStats] = None,
     rashinban: Optional[RashinbanKnowledge] = None,
     why_today: Optional[Dict[str, str]] = None,
+    realtime: Optional[Dict[str, str]] = None,
 ) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。
 
@@ -2290,6 +2366,9 @@ def build_html_report(
     Rashinban Learning Sourceカードを表示する（本文・抜粋は表示しない）。
     why_today（v2.8・省略可）: セクションanchor→「なぜ今日見るべきか」1行の辞書。
     指定時のみ該当カードの先頭にWhy Today行を差し込む（未指定でも従来通り動作）。
+    realtime（v3.3・省略可）: config.yamlのrealtime設定。enabled=trueかつ
+    endpoint_url設定時のみ、将来のワンタップ生成枠（現状は押せないボタン）を表示する
+    （未指定・enabled=falseでも従来通り動作。GitHub Token等は一切埋め込まない）。
     """
     why_today = why_today or {}
     date_str = report_date.strftime("%Y年%m月%d日")
@@ -2302,7 +2381,7 @@ def build_html_report(
     translation_st = _translation_status(analysis)
 
     top_cards = [
-        _refresh_button_html(actions_url or ""),
+        _refresh_button_html(actions_url or "", realtime=realtime, generated_str=updated_str),
         _menu_grid_html(),
         _todays_decision_html(market, analysis, freshness, anomalies, translation_st),
         _dashboard_html(market, analysis, now=report_date),

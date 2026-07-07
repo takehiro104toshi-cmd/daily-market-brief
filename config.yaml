@@ -569,13 +569,13 @@ output:
   # "https://<owner>.github.io/<repo>/" を組み立てる。ローカル実行時などで
   # 明示したい場合はここに記載するか、環境変数 PAGES_URL を設定する。
   pages_url: ""
-  # HTMLレポート上部の「最新情報に更新」ボタンから飛ぶ、GitHub Actions
-  # workflowページのURL。空欄の場合、GitHub Actions実行時は環境変数
-  # GITHUB_REPOSITORY から自動的に
+  # HTMLレポート上部の「最新レポートを生成する」ボタンから飛ぶ、該当workflow
+  # 実行画面の直リンク。v3.3（改善②）: ここに設定した値を最優先で使う
+  # （空欄の場合のみ、GitHub Actions実行時に環境変数 GITHUB_REPOSITORY から
   # "https://github.com/<owner>/<repo>/actions/workflows/daily-market-brief.yml"
-  # を組み立てる。ローカル実行時などで明示したい場合はここに記載するか、
-  # 環境変数 ACTIONS_URL を設定する。いずれも未設定の場合はボタン自体を表示しない。
-  actions_url: ""
+  # を自動推定する）。ローカル実行時などで上書きしたい場合は環境変数
+  # ACTIONS_URL を設定する。いずれも無い場合はボタンの代わりに「設定未完了」を表示する。
+  actions_url: "https://github.com/takehiro104toshi-cmd/daily-market-brief/actions/workflows/daily-market-brief.yml"
 
 # 通知機能のON/OFF切り替え。
 # enabled: false にすると、対応する環境変数が設定されていても通知を送らない。

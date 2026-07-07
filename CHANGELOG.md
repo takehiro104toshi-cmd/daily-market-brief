@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v3.3 (2026-07-07) — Latest Report Generation Button Upgrade（スマホからの再生成導線を改善）
+
+「最新レポートを生成する」ボタンまわりのUXのみを改善した版。分析ロジック・
+HTMLの他セクションは変更していない。GitHub Token・Secretsの類は引き続き
+HTMLへ一切出さない（既存のセキュリティ方針を厳守）。
+
+追加・改善
+・改善1 ボタンUI再設計（src/report/html_builder.py `_refresh_button_html` 他）:
+  ①🔄ページを再読み込み（常時表示・従来通り）②⚙️最新レポートを生成する
+  （actions_url設定時のみリンク表示。未設定時は非表示ではなく「設定未完了」を
+  表示し、何が足りないか分かるようにした）③📱スマホでの実行手順（details/summaryで
+  常時提供。ログイン→Run workflow→緑ボタン→1〜3分待機→再読み込み、の5手順）。
+・改善2 Actions画面へのリンク精度向上（main.py `_resolve_actions_url`）: 優先順位を
+  「環境変数ACTIONS_URL（明示上書き）＞config.yaml output.actions_url（設定時最優先）
+  ＞GITHUB_REPOSITORYからの自動推定＞空文字」に変更。config.yamlのactions_urlに
+  実際のワークフロー直リンクを設定済み。
+・改善3 生成状態の説明（`_generation_status_html` 新規）: 最終生成時刻・
+  「このページは最後に生成されたレポート」であること・「再読み込みだけでは新規
+  データ取得されない」ことをボタン付近に常時表示。
+・改善4 将来のワンタップ生成枠（`_one_tap_regenerate_html` 新規、`build_html_report`
+  に `realtime` 引数を追加）: `realtime.enabled=true` かつ `endpoint_url` 設定時のみ
+  「🚀 ワンタップで最新生成」ボタンの枠を表示（バックエンド未実装のため常に押せない
+  状態）。無効時・未指定時は従来通り何も表示しない。main.pyから
+  `config.get("realtime", {})` を渡すよう配線。
+・改善5 セキュリティ: GitHub Token・Secrets・認証情報の類を新規追加分にも一切含めない
+  （既存のno-leakテストに加え、v3.3の新規テストでも "token" 文字列の非存在を確認）。
+・改善6 README更新: ページ再読み込みとレポート再生成の違い・スマホでRun workflowを
+  押す手順・Run workflowが見えない場合の対処（ログイン確認/デスクトップ表示切替/
+  GitHubアプリ利用）・完全ワンタップ化に必要なもの（Cloudflare Worker/Vercel
+  Function/GitHub App）・GitHub TokenをHTMLに出してはいけない理由を追記。
+
+やらないこと（v3.3で厳守）
+・GitHub Token・Personal Access Token・Secretsの類をHTML/JSへ埋め込むこと。
+・認証なしでworkflow_dispatchを実行できる実装（誰でも押せるワンタップ自動実行）。
+・分析ロジック・他セクションのHTML/CSSの変更（ボタンまわりのみに限定）。
+
 ## v3.2 (2026-07-07) — Analysis Accuracy Upgrade（分析精度・ニュース重要度・未来予測・市場判断の強化）
 
 UI改善ではなく「分析精度」の底上げに特化した版。HTML/CSS/UIは一切変更せず、

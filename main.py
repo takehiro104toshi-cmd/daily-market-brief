@@ -165,19 +165,25 @@ def _resolve_pages_url(config: dict) -> str:
 
 
 def _resolve_actions_url(config: dict) -> str:
-    """HTMLレポートの「最新情報に更新」ボタンから飛ぶ、GitHub Actions workflowページのURL。
+    """HTMLレポートの「最新レポートを生成する」ボタンから飛ぶ、該当workflow実行画面の直リンク。
 
-    優先順位: 環境変数 ACTIONS_URL > GITHUB_REPOSITORY（GitHub Actionsが自動設定）から
-    ".github/workflows/daily-market-brief.yml" 実行ページのURLを組み立て >
-    config.yaml の output.actions_url > 空文字（未設定時はボタン自体を表示しない）。
+    v3.3（改善②）: 優先順位を config.yaml の output.actions_url 優先へ変更。
+    環境変数 ACTIONS_URL（ローカル実行時等の明示的な上書き）> config.yaml の
+    output.actions_url（明示設定があれば最優先で採用）> GITHUB_REPOSITORY
+    （GitHub Actionsが自動設定する環境変数）から
+    "https://github.com/<owner>/<repo>/actions/workflows/daily-market-brief.yml" を
+    自動推定 > 空文字（いずれも無ければボタンの代わりに「設定未完了」を表示）。
     """
     explicit = os.environ.get("ACTIONS_URL")
     if explicit:
         return explicit
+    configured = config.get("output", {}).get("actions_url", "") or ""
+    if configured:
+        return configured
     repo = os.environ.get("GITHUB_REPOSITORY")
     if repo and "/" in repo:
         return f"https://github.com/{repo}/actions/workflows/daily-market-brief.yml"
-    return config.get("output", {}).get("actions_url", "") or ""
+    return ""
 
 
 def _build_notification_summary(market: dict, analysis: AnalysisBundle) -> str:
@@ -747,6 +753,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             freshness=freshness_stats,
             rashinban=rashinban_knowledge,
             why_today=why_today_map,
+            realtime=config.get("realtime", {}),
         ),
         "<html><body><p>HTML版レポートの生成に失敗しました（取得不可）。</p></body></html>",
     )
