@@ -52,6 +52,7 @@ from ..analysis.data_freshness import (
     freshness_stars,
 )
 from ..analysis.source_trust import combined_trust_for_sources, trust_for_source
+from ..analysis.anomaly import AnomalyEntry, anomaly_status_label, detect_anomalies
 from ..collectors.market_data import Quote
 from ..collectors.news import parse_published_datetime
 from ..utils import SourceRegistry
@@ -297,6 +298,14 @@ details.more[open] > summary.detail-btn::before { content: "▾ "; }
 .why-today { font-size: 0.8rem; color: #0f5132; background: #e7f6ec; border: 1px solid #b7dfc4;
   border-radius: 8px; padding: 6px 10px; margin: 0 0 8px 0; }
 .why-today strong { color: #0a3622; }
+.todays-decision { border-left: 4px solid #7c3aed; }
+.td-sub { font-size: 0.78rem; color: #666; margin: 2px 0 8px 0; }
+.td-head { font-weight: 600; margin: 10px 0 2px 0; }
+.dq-warn { font-size: 0.82rem; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d;
+  border-radius: 8px; padding: 8px 10px; margin: 0 0 8px 0; }
+:root[data-theme="dark"] .todays-decision { border-left-color: #a78bfa; }
+:root[data-theme="dark"] .td-sub { color: #9aa4b2; }
+:root[data-theme="dark"] .dq-warn { background: #3a2c0f; border-color: #6b5218; color: #fbbf24; }
 .learn-hit { color: #1a7f37; font-weight: 600; }
 .learn-miss { color: #c62828; font-weight: 600; }
 .learn-wait { color: #6b7280; font-weight: 600; }
@@ -538,7 +547,9 @@ def _card(
             f'<button type="button" class="fav-btn" data-card="{_esc(anchor)}" '
             'onclick="toggleFav(this)" aria-label="お気に入りに追加/解除">☆</button>'
         )
-    collapse_btn = '<button type="button" class="collapse-btn" onclick="toggleCard(this)" aria-label="開く/閉じる">▾</button>'
+    # v3.1（改善6）: 初期状態で折りたたむカード（card-collapsed）はボタン表示も▸にする
+    collapse_glyph = "▸" if "card-collapsed" in extra_class else "▾"
+    collapse_btn = f'<button type="button" class="collapse-btn" onclick="toggleCard(this)" aria-label="開く/閉じる">{collapse_glyph}</button>'
     actions_html = f'<div class="card-actions">{fav_btn}{collapse_btn}{_copy_button_html()}</div>'
     head_html = f'<div class="card-head"><h2>{title_html}</h2>{actions_html}</div>'
     desc = description or SECTION_DESCRIPTIONS.get(anchor or "", "")
@@ -1031,6 +1042,7 @@ def _toc_item_html(anchor: str, title: str) -> str:
 
 # トップメニューグリッド（v2.5）: 主要セクションへのジャンプボタン
 MENU_GRID_ITEMS = [
+    ("#todays-decision", "🎯 Today's Decision"),
     ("#dashboard-top", "📊 Dashboard"),
     ("#executive-summary", "📰 Executive Summary"),
     ("#future-intelligence", "🌍 Future Intelligence"),
@@ -1390,6 +1402,18 @@ def _morning_meeting_comment_html(comment: MorningMeetingComment) -> str:
     )
 
 
+# 公式ソースと判定するドメイン断片（公的機関・取引所・中央銀行・当局・一次情報）。
+_OFFICIAL_DOMAIN_HINTS = (
+    ".go.jp", ".gov", "boj.or.jp", "mof.go.jp", "jpx.co.jp", "fsa.go.jp", "stat.go.jp",
+    "federalreserve.gov", "sec.gov", "treasury.gov", "ecb.europa.eu", "edinet", "release.tdnet",
+)
+
+
+def _domain_of(url: str) -> str:
+    m = re.search(r"https?://([^/]+)", url or "")
+    return m.group(1).lower() if m else ""
+
+
 def _source_list_html(sources: SourceRegistry) -> str:
     refs = sources.all()
     if not refs:
@@ -1397,11 +1421,31 @@ def _source_list_html(sources: SourceRegistry) -> str:
     by_category: dict = {}
     for ref in refs:
         by_category.setdefault(ref.category, []).append(ref)
+
+    # v3.1（改善7）: 初期表示は要約（情報源数・カテゴリ数・公式/海外内訳・主要TOP10）。
+    # 全URL一覧は「詳しく」に折りたたむ（従来通り全件を保持）。
+    domains = [_domain_of(r.url) for r in refs]
+    official = sum(1 for d in domains if any(h in d for h in _OFFICIAL_DOMAIN_HINTS))
+    overseas = sum(1 for d in domains if d and not d.endswith(".jp"))
+    top10 = "、".join(_esc(r.label) for r in refs[:10])
+    summary_rows = [
+        ("情報源数", f"{len(refs)}件"),
+        ("カテゴリ数", f"{len(by_category)}カテゴリ"),
+        ("公式ソース数", f"{official}件"),
+        ("海外ソース数", f"{overseas}件"),
+    ]
+    summary_html = "".join(
+        f"<div class='row'><span>{_esc(k)}</span><span>{_esc(v)}</span></div>" for k, v in summary_rows
+    )
+    summary_html += f"<p class='td-sub'>主要ソースTOP10: {top10}</p>"
+
     parts = []
     for category, items in by_category.items():
         links = "".join(f'<li><a href="{_esc(item.url)}">{_esc(item.label)}</a></li>' for item in items)
         parts.append(f"<h3>{_esc(category)}</h3><ul class='plain'>{links}</ul>")
-    return "".join(parts)
+    full_list = "".join(parts)
+    legend = "<p class='legend'>初期表示は情報源の概要のみです。参照URLの全一覧は「詳しく」で確認できます。</p>"
+    return legend + summary_html + _detail_block(full_list, label=f"参照URLの全一覧を表示（{len(refs)}件）")
 
 
 def _fmt_stats_dt(dt, tz) -> str:
@@ -1495,10 +1539,66 @@ def _rashinban_card(rashinban: Optional[RashinbanKnowledge]) -> str:
     return _card("Rashinban Learning Source（学習ソース）", body, extra_class="digest", anchor="rashinban-learning")
 
 
-def _data_quality_html(freshness: Optional[DataFreshnessStats], market: dict, analysis: AnalysisBundle) -> str:
-    """「Data Quality」セクション（v2.3）。今日のレポートが最新データに基づくかを
+def _translation_status(analysis: AnalysisBundle) -> dict:
+    """本日のニュース見出しから、翻訳の状況を機械的に集計する（v3.1・改善2/8）。
+
+    分析ロジックには一切影響しない、表示用のステータス。英語見出しのうち
+    日本語訳が付いた件数・付かなかった件数を数えるだけ（API未設定の判定は
+    llm_enhancer.is_available()を併用）。
+    """
+    from ..analysis import translation as _t
+    from ..analysis import llm_enhancer as _llm
+
+    seen: dict = {}
+    for src in (analysis.news_ranking, analysis.executive_summary):
+        for it in src:
+            h = getattr(it, "headline", None)
+            if h is not None:
+                seen[getattr(h, "title", "")] = h
+    english = [(t, h) for t, h in seen.items() if _t.is_english(t)]
+    untranslated = [h for t, h in english if not getattr(h, "title_ja", "")]
+    return {
+        "english_total": len(english),
+        "untranslated": len(untranslated),
+        "translated": len(english) - len(untranslated),
+        "api_available": _llm.is_available(),
+    }
+
+
+def _translation_status_text(st: dict) -> str:
+    """翻訳ステータスを1行の日本語にする（未翻訳が残る場合は明確に警告）。"""
+    if st["english_total"] == 0:
+        return "翻訳対象の英語記事なし（翻訳不要）"
+    if st["untranslated"] == 0:
+        return f"翻訳済み {st['translated']}件（英文原文も保持）"
+    if not st["api_available"]:
+        return f"翻訳API未設定のため英文のまま表示（未翻訳 {st['untranslated']}件）"
+    return f"翻訳APIは設定済みですが未翻訳の記事があります（未翻訳 {st['untranslated']}件）"
+
+
+def _calendar_status_text(analysis: AnalysisBundle) -> str:
+    """経済カレンダーの取得状況（自動取得／登録情報の内訳）。"""
+    events = analysis.weekly_events
+    if not events:
+        return "今週分の登録・自動取得イベントなし"
+    auto = sum(1 for e in events if getattr(e, "source", "登録情報") != "登録情報")
+    registered = len(events) - auto
+    return f"今週{len(events)}件（自動取得{auto}件／登録情報{registered}件）"
+
+
+def _data_quality_html(
+    freshness: Optional[DataFreshnessStats],
+    market: dict,
+    analysis: AnalysisBundle,
+    anomalies: Optional[List[AnomalyEntry]] = None,
+    translation_st: Optional[dict] = None,
+) -> str:
+    """「Data Quality」セクション（v2.3、v3.1で翻訳API状態・経済カレンダー状態・
+    異常値チェック・取得失敗ソースを追加）。今日のレポートが最新データに基づくかを
     一目で確認するための機械的な可用性・鮮度指標（分析ロジックには不関与）。
     """
+    anomalies = anomalies if anomalies is not None else detect_anomalies(market)
+    translation_st = translation_st if translation_st is not None else _translation_status(analysis)
     all_quotes = (
         market.get("indices", []) + market.get("forex", []) + market.get("rates", []) + market.get("commodities", [])
     )
@@ -1514,25 +1614,48 @@ def _data_quality_html(freshness: Optional[DataFreshnessStats], market: dict, an
         ("市場データ", _stars_span(availability_stars(market_ok, len(all_quotes)))),
         ("Future Intelligence", _stars_span(availability_stars(fi_ok, 3))),
         ("Watchlist", _stars_span(availability_stars(watch_ok, len(watch_entries)))),
+        # v3.1（改善8）: 翻訳API状態・経済カレンダー取得状態・異常値チェックを追加
+        ("翻訳API状態", _esc(_translation_status_text(translation_st))),
+        ("経済カレンダー", _esc(_calendar_status_text(analysis))),
+        ("異常値チェック", _esc(anomaly_status_label(anomalies))),
     ]
     if freshness is not None:
         tz = freshness.generated_at.tzinfo
         avg_txt = f"{freshness.avg_age_hours:.0f}時間" if freshness.avg_age_hours is not None else NOT_AVAILABLE
+        failed = [e for e in freshness.source_health if not e.ok]
+        failed_txt = "、".join(e.name for e in failed) if failed else "なし"
         rows.extend(
             [
                 ("更新日時", _esc(freshness.generated_at.strftime("%H:%M %Z").strip())),
                 ("最新ニュース", _esc(_fmt_stats_dt(freshness.newest_published, tz))),
+                ("市場データ取得時刻", _esc(freshness.generated_at.strftime("%m/%d %H:%M"))),
                 ("平均鮮度", _esc(avg_txt)),
                 ("情報源", _esc(f"{len(freshness.source_health)}")),
+                ("RSS取得件数", _esc(f"{freshness.rss_fetched_total}件")),
                 ("ランキング対象", _esc(f"{freshness.deduped_total}件")),
+                ("取得失敗ソース", _esc(failed_txt)),
             ]
         )
     rows_html = "".join(f"<div class='row'><span>{_esc(k)}</span><span>{v}</span></div>" for k, v in rows)
+    # v3.1（改善2）: 未翻訳の英語記事が残る場合は目立つ警告を出す
+    warn_html = ""
+    if translation_st["english_total"] and translation_st["untranslated"]:
+        warn_html = (
+            f"<p class='dq-warn'>⚠️ {_esc(_translation_status_text(translation_st))}。"
+            "ANTHROPIC_API_KEY を設定すると日本語訳が付きます（過去に翻訳済みの見出しはキャッシュから日本語表示）。</p>"
+        )
+    # v3.1（改善3/8）: 異常値の詳細（あれば列挙、なければ「異常値なし」）
+    if anomalies:
+        anomaly_html = "<p class='dq-warn'>⚠️ 異常値の可能性（取得値の確認を推奨）:</p><ul class='plain'>" + "".join(
+            f"<li>{_esc(a.message)}</li>" for a in anomalies
+        ) + "</ul>"
+    else:
+        anomaly_html = "<p class='legend'>異常値チェック: 主要指標・為替・金利に想定範囲外の値はありませんでした（異常値なし）。</p>"
     legend = (
         "<p class='legend'>本日のレポートが最新データに基づいているかを確認するための"
         "機械的な指標です（取得できた項目の割合と記事の経過時間から算出。分析内容の評価ではありません）。</p>"
     )
-    return legend + rows_html
+    return legend + warn_html + rows_html + anomaly_html
 
 
 FI_BLOCK_TOC_HTML = [
@@ -1551,6 +1674,13 @@ SALES_SECTION_ANCHORS = {
     "okasan-sales-comments",
     "morning-meeting-comment",
     "expanded-qa",
+}
+
+# v3.1（改善6）: 営業系だが sales-section 扱いにしない（既存テスト維持）ものを、
+# 初期状態だけ折りたたむ対象。投資判断に必須ではないため畳んで下部に置く。
+COLLAPSED_BY_DEFAULT_ANCHORS = {
+    "call-priorities",
+    "chat-topics",
 }
 
 
@@ -2047,6 +2177,101 @@ def _refresh_button_html(actions_url: str = "") -> str:
     return "".join(parts)
 
 
+def _market_judgment(analysis: AnalysisBundle) -> tuple:
+    """今日の市場判断（リスクオン／オフ／中立）を、既存のシナリオ確率のみから
+    機械的に判定する（新たな予測は行わない・v3.1・改善1）。戻り値は(ラベル, 一行理由)。
+    """
+    sc = analysis.scenario
+    bull, bear = sc.bull_pct, sc.bear_pct
+    mood = analysis.future_intelligence.capital_flow_market_mood
+    mood_txt = f"（市場ムード参考: {mood}）" if mood else ""
+    if bull - bear >= 15:
+        return "リスクオン傾向", f"強気シナリオ{bull}% > 弱気{bear}%{mood_txt}"
+    if bear - bull >= 15:
+        return "リスクオフ傾向", f"弱気シナリオ{bear}% > 強気{bull}%{mood_txt}"
+    return "中立（ニュートラル）", f"強気{bull}%・弱気{bear}%で拮抗{mood_txt}"
+
+
+def _todays_decision_html(
+    market: dict,
+    analysis: AnalysisBundle,
+    freshness: Optional[DataFreshnessStats],
+    anomalies: List[AnomalyEntry],
+    translation_st: dict,
+) -> str:
+    """「Today's Decision」カード（v3.1・改善1）。朝の3分でその日の投資判断を
+    掴むためのサマリー。新しい分析は行わず、既に算出済みの各エンジンの
+    最上位シグナルを機械的に転記するだけ（各項目1〜2行）。
+    """
+    fi = analysis.future_intelligence
+
+    # ① 今日の市場判断
+    judgment_label, judgment_reason = _market_judgment(analysis)
+
+    # ② 重要テーマTOP3（Theme Momentum Scoreの高い順）
+    themes = sorted(fi.theme_momentum, key=lambda t: -t.momentum_score)[:3]
+    if themes:
+        theme_txt = "、".join(f"{_esc(t.label)}（{t.momentum_score}）" for t in themes)
+    else:
+        theme_txt = NOT_AVAILABLE
+
+    # ③ 今日見るべき銘柄TOP5（ウォッチリスト→無ければ注目5銘柄）
+    watch = (analysis.watchlist_quicklist.get("jp", []) + analysis.watchlist_quicklist.get("us", []))[:5]
+    if watch:
+        stock_txt = "、".join(f"{_esc(e.quote.name)}" for e in watch)
+    else:
+        picks = (analysis.top_picks.get("jp", []) + analysis.top_picks.get("us", []))[:5]
+        stock_txt = "、".join(f"{_esc(p.quote.name)}" for p in picks) if picks else NOT_AVAILABLE
+
+    # ④ 警戒ポイントTOP3（異常値を最優先→テーマ診断のRisk）
+    risks: List[str] = [a.message for a in anomalies]
+    for td in sorted(fi.theme_diagnosis, key=lambda t: -t.confidence_score):
+        for r in td.risks:
+            risks.append(f"{td.label}: {r}")
+    risks = risks[:3]
+    risk_txt = "".join(f"<li>{_esc(r)}</li>" for r in risks) if risks else f"<li>本日特筆すべき警戒材料は検知していません（{_esc(NOT_AVAILABLE)}）。</li>"
+
+    # ⑤ 今週の重要イベント（直近3件）
+    events = analysis.weekly_events[:3]
+    if events:
+        event_txt = "".join(
+            f"<li>{_esc(e.label)}（{_esc(e.countdown_text or e.date_str)}）</li>" for e in events
+        )
+    else:
+        event_txt = f"<li>今週の登録・自動取得イベントはありません（{_esc(NOT_AVAILABLE)}）。</li>"
+
+    # ⑥ AI Confidence（テーマ診断の最大Confidence＝分析根拠の充実度）
+    confidences = [td.confidence_score for td in fi.theme_diagnosis]
+    conf_txt = f"{max(confidences)}%（分析根拠の充実度。将来の的中確率ではありません）" if confidences else NOT_AVAILABLE
+
+    # ⑦ データ鮮度
+    if freshness is not None:
+        fresh_txt = f"{_stars_span(freshness_stars(freshness.avg_age_hours))} {_esc(freshness_label(freshness.avg_age_hours))}"
+    else:
+        fresh_txt = _esc(NOT_AVAILABLE)
+
+    # 翻訳ステータス（改善2の警告もここに小さく出す）
+    trans_txt = _esc(_translation_status_text(translation_st))
+
+    rows = (
+        f"<div class='row'><span>今日の市場判断</span><span><strong>{_esc(judgment_label)}</strong></span></div>"
+        f"<p class='td-sub'>{_esc(judgment_reason)}</p>"
+        f"<div class='row'><span>重要テーマTOP3</span><span>{theme_txt}</span></div>"
+        f"<div class='row'><span>今日見るべき銘柄TOP5</span><span>{stock_txt}</span></div>"
+        f"<div class='row'><span>AI Confidence</span><span>{_esc(conf_txt)}</span></div>"
+        f"<div class='row'><span>データ鮮度</span><span>{fresh_txt}</span></div>"
+        f"<div class='row'><span>翻訳ステータス</span><span>{trans_txt}</span></div>"
+        f"<p class='td-head'>警戒ポイントTOP3</p><ul class='plain'>{risk_txt}</ul>"
+        f"<p class='td-head'>今週の重要イベント</p><ul class='plain'>{event_txt}</ul>"
+    )
+    legend = (
+        "<p class='legend'>朝の3分で今日の投資判断を掴むための要約です。各項目は既存の分析エンジンが"
+        "算出済みの最上位シグナルを機械的に転記したもので、断定的な売買助言ではありません。"
+        "詳細は下の各セクションで確認できます。</p>"
+    )
+    return _card("🎯 Today's Decision（今日の投資判断・3分サマリー）", legend + rows, extra_class="digest todays-decision", anchor="todays-decision")
+
+
 def build_html_report(
     report_date: datetime,
     market: dict,
@@ -2071,9 +2296,15 @@ def build_html_report(
     updated_str = report_date.strftime("%Y-%m-%d %H:%M")
     tz_label = report_date.tzname() or "現地時間"
 
+    # v3.1（改善1/2/3）: 異常値検知・翻訳ステータスを一度だけ算出し、
+    # Today's Decision カードと Data Quality の両方で再利用する。
+    anomalies = detect_anomalies(market)
+    translation_st = _translation_status(analysis)
+
     top_cards = [
         _refresh_button_html(actions_url or ""),
         _menu_grid_html(),
+        _todays_decision_html(market, analysis, freshness, anomalies, translation_st),
         _dashboard_html(market, analysis, now=report_date),
         _search_card_html(),
         _options_panel_html(),
@@ -2138,7 +2369,9 @@ def build_html_report(
     ]
     if freshness is not None:
         # v2.3: 引用一覧の下にData Qualityを追加（freshness指定時のみ表示）
-        sections.append(("data-quality", "Data Quality ★★☆☆☆", _data_quality_html(freshness, market, analysis)))
+        sections.append(
+            ("data-quality", "Data Quality ★★☆☆☆", _data_quality_html(freshness, market, analysis, anomalies, translation_st))
+        )
 
     toc_items = "".join(_toc_item_html(anchor, title) for anchor, title, _ in sections)
     toc_card = _card("目次", f"<ul class='toc-list'>{toc_items}</ul>", extra_class="toc no-filter", anchor="toc")
@@ -2155,7 +2388,14 @@ def build_html_report(
         if anchor == "scenario":
             rendered_sections.append(_scenario_card(analysis.scenario, nav_html=nav_html))
         else:
-            extra_class = "sales-section" if anchor in SALES_SECTION_ANCHORS else ""
+            # v3.1（改善6）: 営業系セクションは初期状態で折りたたむ（card-collapsed）。
+            # 投資判断に必要なセクションを上に、営業メモは畳んで下に置く。
+            if anchor in SALES_SECTION_ANCHORS:
+                extra_class = "sales-section card-collapsed"
+            elif anchor in COLLAPSED_BY_DEFAULT_ANCHORS:
+                extra_class = "card-collapsed"
+            else:
+                extra_class = ""
             rendered_sections.append(
                 _card(title, why_html + (body_html or ""), extra_class=extra_class, anchor=anchor, nav_html=nav_html)
             )
