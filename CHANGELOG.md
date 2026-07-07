@@ -4,6 +4,65 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v3.2 (2026-07-07) — Analysis Accuracy Upgrade（分析精度・ニュース重要度・未来予測・市場判断の強化）
+
+UI改善ではなく「分析精度」の底上げに特化した版。HTML/CSS/UIは一切変更せず、
+分析エンジンのみを追加・強化した。すべて公開市場データと既存の算出済みシグナル
+だけから機械的に算出し、生成AIの推測は使わない。既存エンジン（scenario/
+causal_chain/news_ranking/source_trust 等）は変更せず、結果を後付けで拡張、
+または新規エンジンとして並列に追加する形で後方互換を維持している。
+
+Phase 0分類:
+- A（既存で十分使える）: Source Trust（★1〜5の階層は既にあり）／Duplicate/Cross
+  Source Intelligence（source_count・combined_trust は算出済み）／Theme Momentum
+  Score／既存の因果チェーン（短い3〜5本）。
+- B（少し改善すれば使える）: 情報源の階層→Tier1〜4ラベルへ写像（改善4）／
+  ニュース重要度★→100点満点化（改善3）／Weekly Eventにコンセンサス等の入れ物追加（改善6）。
+- C（今回新規追加）: Market Regime Engine（改善1）／Cross Market多段波及（改善2）／
+  Future Probability条件分岐（改善7）／Theme Rotation（改善8）／Market Breadth（改善9）／
+  Analysis Confidence（改善10）。
+- D（今回はやらない）: HTML/CSS/UI改善（明示的に禁止）／実際の資金フロー額・
+  値上がり値下がり全銘柄数の取得（未提供データの捏造はしない・構造のみ）／
+  生成AIによる将来予測の断定。
+
+追加・強化（分析エンジンのみ・すべて AnalysisBundle に格納。表示は次版以降）
+・改善1 Market Regime Engine（src/analysis/market_regime.py 新規）: VIX・米10年債・
+  NASDAQ・S&P500・SOX・ドル指数(DXY)・ドル円・WTI・Gold・Bitcoin の前日比/水準から、
+  Risk On / Risk Off / Neutral を判定し Risk Score(0〜100) を算出。各指標の寄与
+  （符号・重み）を定数化した透明なスコアリング。データ欠損指標はスキップし評価数も返す。
+  config.yaml に ドル指数(DXY) を追加。
+・改善2 Cross Market Analysis（src/analysis/cross_market.py 新規）: 既存の因果チェーンは
+  変更せず、米金利↑→ドル高→円安→日本輸出株→半導体→設備投資→電力→電線 のような
+  多段の波及を、条件成立時のみ機械的に組み立てる。config.yaml の cross_market_rules（任意）で
+  追加ルールも定義可能。
+・改善3 News Impact Score（src/analysis/news_impact.py 新規）: 既存の★ランキングは不変。
+  市場影響・テーマ継続性・一次情報(Tier1)・複数ソース一致・日本株/米国株/指数/為替/金利影響・
+  セクター波及・話題性・鮮度の加点表から Impact Score(0〜100) と内訳を後付け付与
+  （NewsRankingItem に impact_score / impact_breakdown を追加）。
+・改善4 Source Tier（source_trust.py に追加）: 既存の信頼度スコア(1〜5)を Tier1（公式・
+  一次情報）〜Tier4（一般・参考）へ写像。Tier1はImpact Scoreで重く評価。
+・改善5 Duplicate Intelligence（news_impact.py）: 3社以上が同一ニュースを報じていれば
+  Major Story と判定（NewsRankingItem.is_major_story）。count_major_stories で件数集計。
+・改善6 Macro Intelligence（構造のみ）: WeeklyEventEntry に consensus/previous/forecast/
+  actual/surprise の入れ物を追加（今回は構造だけ。値があれば転記、無ければ空＝従来表示）。
+・改善7 Future Probability（src/analysis/future_probability.py 新規）: 未来予測ではなく
+  「もしAかつBなら→C」のif条件型。景気後退懸念/リスクオン継続/円安輸出優位/インフレ再燃/
+  安全資産選好の各分岐を本日の市場データで評価し triggered を立てる。生成AIの推測なし。
+・改善8 Theme Rotation（src/analysis/theme_rotation.py 新規）: Theme Momentum Score と
+  theme_relations（人手の隣接関係）から、AI→半導体→電力… のテーマ間資金移動の
+  「向かいやすさ」を推定（断定はしない）。
+・改善9 Market Breadth（src/analysis/market_breadth.py 新規）: 取得済み指数・コモディティ・
+  ウォッチリストの前日比プラス/マイナス数から Breadth Score(0〜100) を算出。東証全銘柄の
+  騰落ではない代用値であることを is_proxy=True と basis で明示（将来の全銘柄データに拡張可能な構造）。
+・改善10 Analysis Confidence（src/analysis/analysis_confidence.py 新規）: 旧「AI Confidence」に
+  代わり、取得ソース数・公式(Tier1)情報数・重複報道数・鮮度・データ欠損・分析可能項目数から
+  レポート全体の分析根拠の充実度(0〜100)を機械的に算出（将来の的中確率ではない）。
+
+やらないこと（v3.2で厳守）
+・HTML/CSS/UIの変更（html_builder.py 等は一切触っていない）。
+・既存分析ロジック（scenario/causal_chain/news_ranking/source_trust本体）の書き換え。
+・未提供データ（実資金フロー額・全銘柄の値上がり値下がり数・将来予測の確率）の捏造。
+
 ## v3.1 (2026-07-07) — UX / Decision Quality Upgrade（結論ファースト・翻訳警告・異常値検知）
 
 「情報は多いが投資の“結論”が埋もれる」を解消し、朝3分でその日の判断に辿り着ける

@@ -209,6 +209,13 @@ class NewsRankingItem:
     sales_talk: str = ""
     beneficiary_tickers: List[str] = field(default_factory=list)
     negative_tickers: List[str] = field(default_factory=list)
+    # v3.2（改善3/4/5）: News Impact Score（0〜100）・情報源Tier・Major Story判定。
+    # いずれもデフォルト値付きで、既存のランキング（stars・並び順）とは独立した
+    # 追加の機械的スコア。既存の呼び出し箇所・表示には影響しない。
+    impact_score: int = 0
+    impact_breakdown: Dict[str, int] = field(default_factory=dict)
+    source_tier: str = ""          # "Tier1" / "Tier2" / "Tier3" / "Tier4"
+    is_major_story: bool = False    # 3社以上が同一ニュースを報道
 
 
 @dataclass
@@ -804,6 +811,14 @@ class WeeklyEventEntry:
     source: str = "登録情報"
     source_stars: str = ""
     fetched_at: str = ""
+    # v3.2（改善6・Macro Intelligence 構造）: 市場コンセンサス・前回値・予想値・結果・
+    # サプライズを保持できる構造（今回は入れ物のみ。登録・自動取得で値があれば
+    # そのまま転記し、無ければ空文字＝従来表示。断定的な予測は生成しない）。
+    consensus: str = ""
+    previous: str = ""
+    forecast: str = ""
+    actual: str = ""
+    surprise: str = ""
 
 
 @dataclass
@@ -847,6 +862,120 @@ class RashinbanKnowledge:
 
 
 @dataclass
+class MarketRegime:
+    """「Market Regime Engine」の判定結果（v3.2・改善1）。
+
+    VIX・米10年債・NASDAQ・S&P500・SOX・ドル指数・ドル円・WTI・Gold・Bitcoin
+    などの公開市場データのみから、現在の地合いを機械的に総合評価する。
+    regime は Risk On / Risk Off / Neutral、stance は Bullish / Bearish / Neutral。
+    risk_score（0〜100）は0=極端なRisk Off、100=極端なRisk Onの連続値で、
+    各指標のリスクオン/オフ寄与を合算して算出する（生成AIの推測ではない）。
+    signals は指標ごとの寄与（名前→+寄与/-寄与とコメント）。
+    """
+
+    regime: str = "判定不能"        # Risk On / Risk Off / Neutral / 判定不能
+    stance: str = "Neutral"          # Bullish / Bearish / Neutral
+    risk_score: int = 50             # 0〜100（50=中立）
+    summary: str = ""
+    signals: List["RegimeSignal"] = field(default_factory=list)
+    evaluated_count: int = 0         # 実際に評価に使えた指標数（データ欠損の把握用）
+
+
+@dataclass
+class RegimeSignal:
+    """Market Regime Engine の指標1件分の寄与（表示・確認用）。"""
+
+    name: str
+    value: Optional[float] = None
+    contribution: float = 0.0        # リスクオン(+)/オフ(-)への寄与
+    note: str = ""
+
+
+@dataclass
+class CrossMarketChain:
+    """「Cross Market Analysis」の1本分（v3.2・改善2）。
+
+    米金利↑→ドル高→円安→日本輸出株→半導体→設備投資→電力→電線 のように、
+    公開市場データと人手による波及テンプレート（config.yaml の cross_market_rules、
+    無ければ内蔵の既定ルール）から、条件成立時のみ多段の波及を機械的に組み立てる。
+    生成AIの推測ではなく、trigger（発火条件）が実データで満たされた場合のみ nodes を返す。
+    """
+
+    label: str
+    trigger: str
+    nodes: List[str] = field(default_factory=list)
+    basis: str = ""
+
+
+@dataclass
+class ConditionalScenario:
+    """「Future Probability（条件分岐型）」の1件分（v3.2・改善7）。
+
+    未来の断定予測ではなく、「もしAかつBなら → C」というif条件ベースの分岐。
+    conditions（発火条件）が本日の公開市場データで満たされているかを機械的に
+    評価し、triggered=Trueなら現在その分岐にあることを示す。生成AIの推測は行わない。
+    """
+
+    label: str
+    conditions: List[str] = field(default_factory=list)
+    outcome: str = ""
+    triggered: bool = False
+    rationale: str = ""
+
+
+@dataclass
+class ThemeRotationEntry:
+    """「Theme Rotation」の1件分（v3.2・改善8）。
+
+    AI→半導体→電力→電線→素材→建設 のような、テーマからテーマへの資金移動の
+    「向かいやすさ」を、既存の Theme Momentum Score と config.yaml の theme_relations
+    （人手によるテーマ隣接関係）のみから機械的に推定する。実際の資金フロー額は
+    取得しておらず断定はしない（「資金が移りやすい」等の非断定表現に統一）。
+    """
+
+    from_theme: str
+    to_theme: str
+    from_momentum: int = 0
+    to_momentum: int = 0
+    signal: str = ""                 # 資金移動が起きやすい / 拮抗 / 逆流の可能性
+    note: str = ""
+
+
+@dataclass
+class MarketBreadth:
+    """「Market Breadth」（v3.2・改善9）。
+
+    市場全体の強さ（値上がり/値下がりの広がり）を保持する構造。将来、値上がり
+    ・値下がり銘柄数の実データを取得できるようになった際にそのまま使えるよう、
+    advancers/decliners を持てる形にする。現状は取得済みの主要指数・ウォッチリスト
+    銘柄の前日比プラス/マイナス数から breadth_score（0〜100）を機械的に算出する
+    （50=中立、100=全面高）。指数の代用であり、東証全銘柄の騰落ではない点を明記する。
+    """
+
+    advancers: int = 0
+    decliners: int = 0
+    unchanged: int = 0
+    breadth_score: int = 50          # 0〜100（50=中立）
+    basis: str = ""                  # 算出根拠（何を母集団にしたか）
+    is_proxy: bool = True            # 全市場の実騰落ではなく取得済み銘柄からの代用か
+
+
+@dataclass
+class AnalysisConfidence:
+    """「Analysis Confidence」（v3.2・改善10）。
+
+    旧「AI Confidence」に代わる、レポート全体の分析根拠の充実度（0〜100）。
+    「未来が当たる確率」ではなく、取得ソース数・公式情報数・重複報道数・鮮度・
+    データ欠損・分析可能項目数という既存の実データのみから機械的に算出する。
+    """
+
+    score: int = 0
+    grade: str = ""                  # 高 / 中 / 低 / 判定不能
+    components: Dict[str, int] = field(default_factory=dict)
+    basis: str = ""
+
+
+@dataclass
 class AnalysisBundle:
     """全AI分析モジュールの計算結果をまとめ、builder.pyへ渡すための入れ物。"""
 
@@ -883,3 +1012,11 @@ class AnalysisBundle:
     scenarios_v2: List[ScenarioV2Entry] = field(default_factory=list)
     learning_history: List[LearningHistoryEntry] = field(default_factory=list)
     theme_learning_stats: List[ThemeLearningStat] = field(default_factory=list)
+    # v3.2 Analysis Accuracy Upgrade（分析エンジン強化。いずれもデフォルト値付きで
+    # 既存の呼び出し箇所・表示には影響しない）。
+    market_regime: Optional[MarketRegime] = None                 # 改善1
+    cross_market_chains: List[CrossMarketChain] = field(default_factory=list)   # 改善2
+    conditional_scenarios: List[ConditionalScenario] = field(default_factory=list)  # 改善7
+    theme_rotation: List[ThemeRotationEntry] = field(default_factory=list)      # 改善8
+    market_breadth: Optional[MarketBreadth] = None               # 改善9
+    analysis_confidence: Optional[AnalysisConfidence] = None      # 改善10

@@ -42,6 +42,14 @@ from src.analysis import (
     theme_learning,
     translation,
     why_today,
+    # v3.2 Analysis Accuracy Upgrade（分析エンジン強化）
+    analysis_confidence,
+    cross_market,
+    future_probability,
+    market_breadth,
+    market_regime,
+    news_impact,
+    theme_rotation,
     sales_comments,
     sales_prep,
     scenario,
@@ -417,6 +425,9 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         ),
         [],
     )
+    # v3.2（改善3/4/5）: News Impact Score（0〜100）・Source Tier・Major Story を
+    # 既存ランキング結果へ後付けで付与する（並び順・★は変更しない）。
+    _safe_call("news_impact", lambda: news_impact.apply_news_impact_scores(news_ranking_items, now), news_ranking_items)
     causal_chain_text = _safe_call(
         "causal_chain",
         lambda: causal_chain.build_causal_chain(market, sector_matches, lookup),
@@ -596,6 +607,26 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         [],
     )
 
+    # v3.2 Analysis Accuracy Upgrade（分析エンジン強化。いずれも公開市場データ・
+    # 既存の算出済みシグナルのみから機械的に算出。生成AIの推測は使わない）。
+    market_regime_result = _safe_call("market_regime", lambda: market_regime.build_market_regime(market), None)
+    cross_market_result = _safe_call(
+        "cross_market", lambda: cross_market.build_cross_market_chains(market, config), []
+    )
+    conditional_scenarios_result = _safe_call(
+        "future_probability", lambda: future_probability.build_conditional_scenarios(market), []
+    )
+    theme_rotation_result = _safe_call(
+        "theme_rotation",
+        lambda: theme_rotation.build_theme_rotation(
+            future_intelligence_result.theme_momentum, config.get("theme_relations", {})
+        ),
+        [],
+    )
+    market_breadth_result = _safe_call(
+        "market_breadth", lambda: market_breadth.build_market_breadth(market, list(lookup.values())), None
+    )
+
     analysis_bundle = AnalysisBundle(
         scenario=scenario_forecast,
         news_ranking=news_ranking_items,
@@ -628,6 +659,11 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         future_intelligence=future_intelligence_result,
         weekly_events=weekly_events_result,
         scenarios_v2=scenarios_v2_result,
+        market_regime=market_regime_result,
+        cross_market_chains=cross_market_result,
+        conditional_scenarios=conditional_scenarios_result,
+        theme_rotation=theme_rotation_result,
+        market_breadth=market_breadth_result,
     )
 
     # v2.8（①②）: Investment Journal / Theme Confidence Learning。
@@ -667,6 +703,16 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             deduped_headlines=headlines,
             ranking_items=news_ranking_items,
             attempted_source_names=failed_source_names,
+        ),
+        None,
+    )
+
+    # v3.2（改善10）: Analysis Confidence（旧AI Confidence）。取得ソース数・公式情報数・
+    # 重複報道数・鮮度・データ欠損・分析可能項目数という実データのみから機械的に算出。
+    analysis_bundle.analysis_confidence = _safe_call(
+        "analysis_confidence",
+        lambda: analysis_confidence.build_analysis_confidence(
+            sources, freshness_stats, market, news_ranking_items, analysis_bundle
         ),
         None,
     )

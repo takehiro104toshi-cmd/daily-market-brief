@@ -87,6 +87,25 @@ def combined_trust_for_sources(primary_source: str, duplicate_sources: List[str]
     )
 
 
+# v3.2（改善4・Source Tier）: 既存の信頼度スコア（1〜5）を Tier1〜4 の階層ラベルへ
+# 写像する。Tier1=公式・一次情報（FRB/FOMC/SEC/ECB/BLS/BOJ/企業IR）、
+# Tier2=一流メディア（Reuters/Bloomberg/WSJ/CNBC/日経）、Tier3=主要メディア
+# （Yahoo/Investing/株探/CoinDesk等）、Tier4=一般・参考。News Impact Score の
+# 加点に使う（Tier1は一次情報として重み付けを高める）。新たな評価基準の創作ではなく
+# 既存 Source Trust スコアの言い換え。
+_TIER_BY_SCORE = {5: "Tier1", 4: "Tier2", 3: "Tier3", 2: "Tier4", 1: "Tier4"}
+
+
+def tier_label_for_score(score: int) -> str:
+    """信頼度スコア（1〜5）→ Tier ラベル（Tier1〜4）。"""
+    return _TIER_BY_SCORE.get(score, "Tier4")
+
+
+def source_tier(source_name: str) -> str:
+    """出典名から Tier ラベル（Tier1〜4）を返す。"""
+    return tier_label_for_score(trust_for_source(source_name).score)
+
+
 def trust_for_source(source_name: str) -> SourceTrust:
     """出典名から信頼度を判定する。空・不明は★☆☆☆☆（参考情報）。"""
     if not source_name or not source_name.strip():

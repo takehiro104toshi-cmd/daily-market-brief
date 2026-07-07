@@ -47,6 +47,9 @@ indices:
   # Stooqでの正確な代替シンボルが未確認のため、yfinanceのみを利用する
   # （取得失敗時は他の指標同様「取得不可」と表示され、レポート生成は継続する）。
   - { symbol: "^SOX", name: "SOX指数（フィラデルフィア半導体指数）" }
+  # ドル指数（DXY）。Market Regime Engine（v3.2）向け。yfinanceのみ利用
+  # （取得失敗時は他指標同様「取得不可」となり、地合い判定は残りの指標で継続する）。
+  - { symbol: "DX-Y.NYB", name: "ドル指数（DXY）" }
 
 # 為替
 forex:
