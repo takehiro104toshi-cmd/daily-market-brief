@@ -799,6 +799,11 @@ class WeeklyEventEntry:
     why_important: str = ""
     watch_points: List[str] = field(default_factory=list)
     related_themes: List[str] = field(default_factory=list)
+    # v3.0（③）: 取得元の見える化。config手入力なら「登録情報」、自動取得なら
+    # 情報源名。source_stars は Source Trust（★1〜5）。fetched_at は取得時刻（自動取得のみ）。
+    source: str = "登録情報"
+    source_stars: str = ""
+    fetched_at: str = ""
 
 
 @dataclass

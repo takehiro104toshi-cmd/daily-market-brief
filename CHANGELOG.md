@@ -4,6 +4,54 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v3.0 (2026-07-07) — Foundation Completion（翻訳キャッシュ／リアルタイム導線／経済カレンダー）
+
+v2.8/v2.9の骨組みを「本番で使える」状態に仕上げた版。既存の分析ロジックは変更せず、
+翻訳の永続化・更新導線・経済指標の自動収集を完成させた。
+
+Phase 0分類:
+- A（実装済み）: 翻訳エンジン本体・2段階更新ボタン・source health/fetched_at・
+  Weekly Eventの重要度/影響対象/カウントダウン
+- B（骨組みのみ→今回完成）: 翻訳キャッシュ（毎回API・永続化なし）／
+  economic_calendar（単一URL JSONのみ・source未記録）／Weekly EventのSource表示なし
+- C（今回実装）: 翻訳キャッシュ永続化・翻訳UI強化・realtime設定枠・
+  economic_calendarのsources(rss/json/csv)対応・Weekly EventのSource/取得時刻表示・
+  workflow永続化・README
+- D（やらない）: Token/SecretsをHTMLへ・完全自動workflow_dispatch（Token必要）・
+  有料/ログイン/規約不明スクレイピング
+
+追加・改善
+・①English Translation Engine完成: 翻訳キャッシュを永続化
+  （data/translation_cache/translation_cache.json）。原文タイトルをキーに日本語訳を
+  保存し、翌日以降はAPIを呼ばず再利用。ANTHROPIC_API_KEY未設定でも過去に翻訳済みの
+  見出しは日本語表示。翻訳失敗（空文字）はキャッシュに残さずリトライ可能。キャッシュ
+  破損時も空として継続。HTMLは日本語訳を優先表示＋「翻訳済み」バッジ＋原文を「詳しく」に保持
+  （News Ranking/Executive Summary/Dashboardで翻訳タイトル優先）
+・②Real-Time Update Engine完成: config.yamlに realtime 設定枠
+  （enabled/provider/endpoint_url/mode）を追加。将来のCloudflare Worker等による完全
+  リアルタイム化に備えつつ、enabled=falseの間は既存動作のまま・Token/SecretsはHTMLへ
+  一切出さない。取得時刻表示（HTML生成/市場データ/各ソース）はv2.9のNews Freshness詳細を継続
+・③Economic Indicator Auto Collection完成: economic_calendar.pyを本実装。
+  economic_calendar.sources（[{name,url,type(rss/json/csv)}]）を順に取得・正規化し、
+  macro_events（手入力優先）とマージ・重複除去。取得失敗時はmacro_eventsのみで継続。
+  RFC2822日付にも対応。WeeklyEventEntryにsource/source_stars/fetched_atを追加し、
+  Weekly EventにSource・Source Trust・取得時刻を表示（影響対象は既存の自動補完を継続）
+・⑤GitHub Actions永続化: translation_cache.jsonをコミット対象に追加
+  （journal.json/theme_learning.jsonに追加）。data/translation_cache/README.md を新規追加
+
+変更ファイル
+・src/analysis/translation.py（永続キャッシュ）・executive_summary.py（display_title優先）・
+  weekly_events.py（source/fetched_at）・models.py（WeeklyEventEntry拡張）
+・src/collectors/economic_calendar.py（rss/json/csv対応・source記録）
+・src/report/html_builder.py（翻訳済みバッジ・Weekly EventのSource/取得時刻表示）
+・main.py（翻訳キャッシュ配線）・config.yaml（translation.cache_dir/realtime/
+  economic_calendar.sources）・.github/workflows/daily-market-brief.yml（キャッシュ永続化）
+・README.md / CHANGELOG.md / data/translation_cache/README.md（新規）
+・tests/test_v3_0_foundation.py（新規・17件）
+
+pytest
+261 passed（既存244維持＋v3.0で17件追加）
+
 ## v2.9 (2026-07-07) — Real-Time Freshness / Translation / Source Expansion Upgrade
 
 「毎日読むレポート」から「岡三証券退職後も自分だけでマーケットを分析・予測し

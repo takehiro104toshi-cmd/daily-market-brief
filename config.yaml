@@ -602,15 +602,36 @@ rashinban:
 # 英語ニュース自動翻訳（④）。ANTHROPIC_API_KEY（Secrets）がある時のみ動作し、
 # 英語見出しを日本語へ翻訳して「日本語 → 原文を見る」で表示する。
 # キー未設定・失敗時は原文のまま（既存動作に影響なし）。
+# v3.0（①）: cache_dir に翻訳キャッシュ（translation_cache.json）を保存し、
+# 過去に翻訳した見出しはAPIキー無しでも日本語表示・再利用する（コスト削減）。
 translation:
   enabled: true
+  cache_dir: "data/translation_cache"
 
-# 経済カレンダー自動取得（⑤・安全スキャフォールド）。公開RSS/JSONのURLを
-# 設定した場合のみ自動取得し、config.yamlのmacro_eventsとマージして
-# 「今週の重要イベント」に反映する。未設定なら従来通りmacro_eventsのみ使用。
-# 信頼できる無償ソースが確定するまでは空欄（自動取得なし）を推奨。
+# v3.0（②）Real-Time Update Engine。HTMLの「最新表示に更新」は、GitHub Pagesが
+# 静的サイトのためページ内から自動再生成はできない（Token/SecretsをHTMLへ出す実装は禁止）。
+# 現状は「ページ再読み込み」＋「GitHub Actions画面を開く（Run workflow）」の安全導線。
+# 将来、Cloudflare Worker等の認証つきバックエンドで完全リアルタイム化する際の設定枠。
+# enabled=false の間は既存動作のまま（HTMLには何も変化を与えない・Tokenは出さない）。
+realtime:
+  enabled: false          # true でも今回はHTML自動再生成はしない（将来の中継実装用フラグ）
+  provider: ""            # 例: "cloudflare_worker" / "vercel_function" / "github_app"
+  endpoint_url: ""        # 中継エンドポイントURL（GitHub Tokenはここではなくバックエンド側Secretに保管）
+  mode: "manual_actions"  # 現状は手動Run workflow運用
+
+# 経済カレンダー自動取得（v3.0・③）。公開RSS/JSON/CSVを sources に列挙すると
+# 自動取得し、config.yamlのmacro_events（手入力）とマージして「今週の重要イベント」
+# に反映する。取得失敗・未設定時はmacro_eventsのみで継続（レポートは止まらない）。
+# 各sourceは { name, url, type(rss/json/csv・省略可) }。公開ソースのみ・APIキー不要。
+# 後方互換として単一の url: も受け付ける。信頼できる無償ソースが確定するまでは
+# sources空欄（自動取得なし）＝macro_events手入力運用を推奨。
 economic_calendar:
   url: ""
+  sources: []
+  # 例（公開ソースが確認できたら設定する。すべて公開RSS/JSON/CSVのみ）:
+  # sources:
+  #   - { name: "自作イベントJSON", url: "https://raw.githubusercontent.com/<you>/<repo>/main/events.json", type: "json" }
+  #   - { name: "Fed カレンダーRSS", url: "https://www.federalreserve.gov/feeds/press_all.xml", type: "rss" }
 
 # Investment Journal（①）。毎日のAI判断を記録し、30/90/180日後に実際の
 # 市場と自動で答え合わせする（GitHub Actionsが journal.json をコミットして永続化）。

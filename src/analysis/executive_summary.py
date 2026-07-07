@@ -96,7 +96,9 @@ def build_executive_summary(
     results: List[ExecutiveSummaryItem] = []
     for item in news_ranking_items[:MAX_ITEMS]:
         headline = item.headline
-        conclusion = f"「{headline.title}」（{headline.source}）"
+        # v3.0（①）: 英語見出しは日本語訳を優先表示（display_title）。原文はHTML側の
+        # 「詳しく」に残す。日本語訳が無ければ従来通り原文をそのまま使う。
+        conclusion = f"「{headline.display_title()}」（{headline.source}）"
         reason = item.reason or "本日のニュースの中で相対的に注目度が高いと判断しました。"
         strategist_view_text = _strategist_view(item, item.affected_sector)
         if rashinban and any(label in headline.title for label in rashinban.emphasized_theme_labels):

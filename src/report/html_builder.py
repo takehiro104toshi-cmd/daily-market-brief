@@ -291,6 +291,9 @@ details.more[open] > summary.detail-btn::before { content: "▾ "; }
   background: #fef3c7; border-radius: 8px; padding: 1px 8px; margin-right: 6px; }
 .trust { display: inline-block; font-size: 0.7rem; color: #3730a3; background: #e0e7ff;
   border-radius: 8px; padding: 1px 7px; margin-left: 4px; }
+.translated { display: inline-block; font-size: 0.68rem; font-weight: 600; color: #0369a1;
+  background: #e0f2fe; border-radius: 8px; padding: 1px 6px; margin-left: 4px; }
+:root[data-theme="dark"] .translated { background: #0b2b3d; color: #7dd3fc; }
 .why-today { font-size: 0.8rem; color: #0f5132; background: #e7f6ec; border: 1px solid #b7dfc4;
   border-radius: 8px; padding: 6px 10px; margin: 0 0 8px 0; }
 .why-today strong { color: #0a3622; }
@@ -621,6 +624,11 @@ def _source_trust_inline(source_name: str) -> str:
     return f'<span class="trust">Source Trust {_esc(t.stars)}（{_esc(t.tier)}）</span>'
 
 
+def _translated_badge(headline) -> str:
+    """翻訳済みの見出しに「翻訳済み」バッジを付ける（v3.0・①）。原文は英語のまま。"""
+    return '<span class="translated">翻訳済み</span>' if getattr(headline, "title_ja", "") else ""
+
+
 def _news_ranking_item_html(item: NewsRankingItem, now: Optional[datetime] = None) -> str:
     """1件分: 要約（順位・★・見出し・鮮度・信頼度）＋「詳しく」（理由・影響・銘柄・トーク・原文）。"""
     h = item.headline
@@ -654,7 +662,7 @@ def _news_ranking_item_html(item: NewsRankingItem, now: Optional[datetime] = Non
     )
     return (
         f'<div class="row"><span>{item.rank}位{marker} {_esc(item.stars)} '
-        f'<a href="{_esc(h.link)}">{_esc(h.display_title())}</a></span></div>'
+        f'<a href="{_esc(h.link)}">{_esc(h.display_title())}</a>{_translated_badge(h)}</span></div>'
         f'<p style="margin:2px 0 0 0;">{_news_freshness_badge(h.published, now)} {_source_trust_inline(h.source)}</p>'
         + _detail_block(detail)
     )
@@ -941,7 +949,7 @@ def _dashboard_html(market: dict, analysis: AnalysisBundle, now: Optional[dateti
         # 長押しで表示）に残す（外部JS不要・「原文も必ず残す」要件を満たす）。
         news_html = "".join(
             f'<div class="dash-news"><a href="{_esc(item.headline.link)}" title="{_esc(item.headline.title)}">'
-            f"{_esc(item.headline.display_title())}</a>"
+            f"{_esc(item.headline.display_title())}</a>{_translated_badge(item.headline)}"
             f"{_news_freshness_badge(item.headline.published, now)}</div>"
             for item in news_items
         )
@@ -1142,7 +1150,7 @@ def _executive_summary_html(items: List[ExecutiveSummaryItem], now: Optional[dat
             f"<p style='margin:0;'><strong>営業トーク:</strong> 「{_esc(item.sales_talk)}」</p>"
         )
         parts.append(
-            f"<h3>{item.rank}. {_esc(item.conclusion)} {_esc(item.stars)}</h3>"
+            f"<h3>{item.rank}. {_esc(item.conclusion)} {_esc(item.stars)}{_translated_badge(item.headline)}</h3>"
             f'<p style="margin:0 0 4px 0;">{_news_freshness_badge(item.headline.published, now)} {_source_trust_inline(item.headline.source)}</p>'
             f"<p style='font-size:0.85rem;'>理由: {_esc(item.reason)}</p>"
             + _detail_block(detail)
@@ -1161,9 +1169,9 @@ def _weekly_events_html(entries: List[WeeklyEventEntry]) -> str:
     if not entries:
         return "<p>直近1週間の重要イベントは登録されていません（config.yamlのmacro_eventsに追加すると表示されます）。</p>"
     parts = [
-        "<p class='legend'>config.yamlのmacro_events（登録情報）と決算発表予定（公開情報）から、"
-        "今日〜7日後のイベントだけを表示します。重要度・影響対象は人手による対応表との照合で、"
-        "AIによる新たな予測ではありません。日本時間基準です。</p>"
+        "<p class='legend'>config.yamlのmacro_events（登録情報）・経済カレンダー自動取得・"
+        "決算発表予定（公開情報）から、今日〜7日後のイベントだけを表示します。重要度・"
+        "影響対象は人手による対応表との照合で、AIによる新たな予測ではありません。日本時間基準です。</p>"
     ]
     for e in entries:
         targets_txt = "、".join(e.impact_targets) if e.impact_targets else "市場全体"
@@ -1175,8 +1183,18 @@ def _weekly_events_html(entries: List[WeeklyEventEntry]) -> str:
         themes_html = (
             f"<p style='margin:0;'>関連テーマ: {_esc('、'.join(e.related_themes))}</p>" if e.related_themes else ""
         )
+        # v3.0（③）: 取得元・Source Trust・取得時刻を表示（自動取得は取得時刻あり）
+        fetched_txt = ""
+        if e.fetched_at:
+            dt = parse_published_datetime(e.fetched_at)
+            fetched_txt = f" ／ 取得時刻: {dt.strftime('%m/%d %H:%M') if dt else _esc(e.fetched_at)}"
+        source_html = (
+            f"<p style='margin:0 0 4px 0;'>Source: {_esc(e.source)}"
+            f"{(' ／ Source Trust: ' + _esc(e.source_stars)) if e.source_stars else ''}{fetched_txt}</p>"
+        )
         detail = (
-            f"<p style='margin:0 0 4px 0;'>なぜ重要か: {_esc(e.why_important)}</p>"
+            source_html
+            + f"<p style='margin:0 0 4px 0;'>なぜ重要か: {_esc(e.why_important)}</p>"
             f"<p style='margin:0 0 4px 0;'>想定される影響: {_esc(e.expected_impact)}</p>"
             + (f"<p style='margin:0 0 4px 0;'>見るべきポイント:</p>{watch_html}" if watch_html else "")
             + themes_html

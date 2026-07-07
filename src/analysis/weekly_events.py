@@ -20,6 +20,7 @@ from typing import List, Optional
 from ..collectors.earnings import EarningsEvent
 from ..report.format_utils import stars
 from .models import WeeklyEventEntry
+from .source_trust import trust_for_source
 
 WEEK_DAYS = 7
 DEFAULT_STARS = 3
@@ -185,7 +186,15 @@ def _countdown_text(days_until: int, time_str: str, now: datetime, event_date: d
     return f"あと{days_until}日"
 
 
-def _build_entry(label: str, date_str: str, time_str: str, now: datetime, category_override: str = "") -> Optional[WeeklyEventEntry]:
+def _build_entry(
+    label: str,
+    date_str: str,
+    time_str: str,
+    now: datetime,
+    category_override: str = "",
+    source: str = "登録情報",
+    fetched_at: str = "",
+) -> Optional[WeeklyEventEntry]:
     event_date = _parse_date(date_str)
     if event_date is None:
         return None
@@ -194,6 +203,9 @@ def _build_entry(label: str, date_str: str, time_str: str, now: datetime, catego
         return None  # 過去イベント・1週間より先は表示しない
     rule = _match_rule(label)
     star_count = rule["stars"]
+    # v3.0（③）: Source Trust。自動取得は情報源名から★判定、登録情報（手入力）は
+    # ユーザー自身の管理情報として★★★★★扱い。
+    source_stars = stars(5, max_stars=5) if source == "登録情報" else trust_for_source(source).stars
     return WeeklyEventEntry(
         label=label,
         date_str=date_str,
@@ -209,6 +221,9 @@ def _build_entry(label: str, date_str: str, time_str: str, now: datetime, catego
         why_important=rule["why"],
         watch_points=list(rule["watch_points"]),
         related_themes=list(rule["themes"]),
+        source=source,
+        source_stars=source_stars,
+        fetched_at=fetched_at,
     )
 
 
@@ -227,7 +242,15 @@ def build_weekly_event_calendar(
         label = event.get("label", "")
         if not label:
             continue
-        entry = _build_entry(label, event.get("date", ""), str(event.get("time", "") or ""), now)
+        # v3.0（③）: 自動取得イベントは source/fetched_at を持つ。手入力は「登録情報」。
+        entry = _build_entry(
+            label,
+            event.get("date", ""),
+            str(event.get("time", "") or ""),
+            now,
+            source=event.get("source", "") or "登録情報",
+            fetched_at=str(event.get("fetched_at", "") or ""),
+        )
         if entry:
             entries.append(entry)
 

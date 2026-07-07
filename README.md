@@ -716,6 +716,59 @@ GitHub PagesはNode.js/Python等のサーバーサイド実行環境を持たな
   `main.py` の追加情報源ループへ1行足すだけで組み込めます（既存collectorと
   同じ形の関数・失敗時は空リストを返す設計を踏襲してください）。
 
+## v3.0 Foundation Completion（翻訳キャッシュ／リアルタイム導線／経済カレンダー）
+
+v2.8/v2.9で入れた骨組みを「本番で使える」状態に仕上げたものです。
+
+### 英文翻訳の有効化と翻訳キャッシュ
+
+- 有効化手順は前節「英語ニュース自動翻訳を有効化する方法」と同じ
+  （`ANTHROPIC_API_KEY` Secret ＋ `anthropic` パッケージ）。
+- v3.0で **翻訳キャッシュ**（`data/translation_cache/translation_cache.json`）を追加。
+  一度翻訳した見出しは保存され、翌日以降は**APIを呼ばずに再利用**します（コスト削減）。
+  そのため `ANTHROPIC_API_KEY` が未設定でも、**過去に翻訳済みの見出しは日本語で
+  表示**されます。キャッシュはGitHub Actionsが自動コミットして蓄積します。
+- HTMLでは日本語訳を優先表示し、「翻訳済み」バッジを付け、原文は各カードの
+  「詳しく」内（英語のまま）に保持します。
+
+### 「最新表示に更新」と「最新レポート生成」の違い
+
+- **ページを再読み込み**: 今表示中のレポート（最後に自動生成された版）を再表示するだけ。
+  新しいデータは取得しません。
+- **最新レポートを生成する**: `output.actions_url` 設定時のみ表示。GitHub Actions画面を
+  新しいタブで開き、そこで「Run workflow」を押すと最新データで再生成されます。
+  完了後（数分後）に「ページを再読み込み」で反映されます。
+- GitHub Pagesは静的サイトのためページ内から自動再生成はできません。GitHub Token・
+  Secretsは**HTMLに一切埋め込みません**。将来の完全リアルタイム化（Cloudflare Worker /
+  Vercel Function / GitHub App による認証つき中継）に備え、`config.yaml` の `realtime:`
+  設定枠を用意しています（`enabled: false` の間は既存動作のまま）。
+- News Freshnessカードの「情報取得時刻を詳しく見る」で、HTML生成時刻・市場データ
+  取得時刻・各ニュースソースの取得時刻を確認できます。
+
+### 経済カレンダー自動取得
+
+- `config.yaml` の `economic_calendar.sources` に公開RSS/JSON/CSVを列挙すると、
+  今週の重要イベントを自動取得し、`macro_events`（手入力）とマージして
+  「今週の重要イベント」に反映します。**手入力（macro_events）が優先**され、
+  自動取得分は未登録のものだけ追加されます。
+- 取得先が未設定・取得失敗・パース失敗でも、`macro_events` のみでレポートは継続します
+  （止まりません）。公開ソースのみ・APIキー不要。各イベントにSource・Source Trust・
+  取得時刻が表示されます。イベント名から影響対象（米CPI→米金利/ドル円/NASDAQ等）を
+  自動補完します。
+- 信頼できる無償の経済カレンダーAPIが確定するまでは、`sources` を空にして
+  `macro_events` の手入力運用でも十分に機能します。
+
+### Source Expansion / 永続化データ
+
+- 使ってよい情報源: **RSS／公開API／公式JSON・XML／公式IR／公式統計** のみ。
+  有料本文・ログイン必須・規約不明なスクレイピングは行いません
+  （実装済み/参照のみ/見送りの分類は `config.yaml` の `source_classification`）。
+- GitHub Actionsが自動コミットして蓄積する永続データ:
+  `data/translation_cache/translation_cache.json`（翻訳）／
+  `data/investment_journal/journal.json`（AI判断の答え合わせ）／
+  `data/theme_learning/theme_learning.json`（テーマ勝率）。いずれも初回実行で
+  自動生成され、手で作る必要はありません（各フォルダのREADME参照）。
+
 ## 通知機能（メール・LINE）
 
 レポート生成後、任意で「今日の結論＋重要ニュース3件＋GitHub Pages URL」を

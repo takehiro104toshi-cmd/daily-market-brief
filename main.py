@@ -304,11 +304,17 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     raw_headlines = headlines + extra_headlines  # 重複除去前の全見出し（鮮度統計用）
     headlines = news.dedupe_headlines(raw_headlines)
 
-    # v2.8（④）: 英語見出しの自動翻訳（ANTHROPIC_API_KEYがある時のみ動作。
-    # 未設定・失敗時は原文のまま＝既存動作に影響なし）
+    # v2.8/v3.0（①）: 英語見出しの自動翻訳。永続キャッシュ（translation_cache.json）を
+    # 使い、過去に翻訳済みの見出しはAPIキー無しでも日本語表示。新規翻訳は
+    # ANTHROPIC_API_KEYがある時のみ。未設定・失敗時は原文のまま（既存動作に影響なし）。
     translation_cfg = config.get("translation", {})
     if translation_cfg.get("enabled", True):
-        _safe_call("translation", lambda: translation.translate_headlines(headlines), 0)
+        translation_cache_dir = translation_cfg.get("cache_dir", translation.DEFAULT_CACHE_DIR)
+        _safe_call(
+            "translation",
+            lambda: translation.translate_headlines(headlines, cache_dir=translation_cache_dir),
+            0,
+        )
 
     _safe_call("kabutan_reference", lambda: kabutan.register_reference(sources), None)
     _safe_call("moomoo_reference", lambda: moomoo.register_reference(sources), None)
