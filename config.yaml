@@ -617,10 +617,10 @@ translation:
 # 将来、Cloudflare Worker等の認証つきバックエンドで完全リアルタイム化する際の設定枠。
 # enabled=false の間は既存動作のまま（HTMLには何も変化を与えない・Tokenは出さない）。
 realtime:
-  enabled: false          # true でも今回はHTML自動再生成はしない（将来の中継実装用フラグ）
-  provider: ""            # 例: "cloudflare_worker" / "vercel_function" / "github_app"
-  endpoint_url: ""        # 中継エンドポイントURL（GitHub Tokenはここではなくバックエンド側Secretに保管）
-  mode: "manual_actions"  # 現状は手動Run workflow運用
+  enabled: true
+  provider: "cloudflare_worker"
+  endpoint_url: "https://daily-market-brief-trigger.takehiro104toshi.workers.dev/trigger"
+  mode: "one_tap"
 
 # 経済カレンダー自動取得（v3.0・③）。公開RSS/JSON/CSVを sources に列挙すると
 # 自動取得し、config.yamlのmacro_events（手入力）とマージして「今週の重要イベント」
