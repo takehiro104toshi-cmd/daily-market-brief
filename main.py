@@ -53,6 +53,8 @@ from src.analysis import (
     # v3.5 Market Narrative（本日の相場総括）
     anomaly,
     market_narrative,
+    # v3.5.2 Strategic Narrative Engine（朝会3分説明レベル）
+    strategic_narrative,
     sales_comments,
     sales_prep,
     scenario,
@@ -740,6 +742,26 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             analysis_bundle.analysis_confidence,
             weekly_events_result,
             anomaly.detect_anomalies(market),
+        ),
+        None,
+    )
+
+    # v3.5.2（改善①〜⑩）: Strategic Narrative Engine。朝会3分説明レベルの相場解説を
+    # 既存エンジンの結果だけから組み立てる（生成AI・断定予測・新規取得・捏造なし）。
+    analysis_bundle.strategic_narrative = _safe_call(
+        "strategic_narrative",
+        lambda: strategic_narrative.build_strategic_narrative(
+            market,
+            market_regime_result,
+            cross_market_result,
+            news_ranking_items,
+            future_intelligence_result,
+            market_breadth_result,
+            analysis_bundle.analysis_confidence,
+            scenario_forecast,
+            scenarios_v2_result,
+            watchlist_quicklist_result,
+            weekly_events_result,
         ),
         None,
     )

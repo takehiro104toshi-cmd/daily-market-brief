@@ -976,6 +976,51 @@ class AnalysisConfidence:
 
 
 @dataclass
+class StrategicFactor:
+    """「相場を押し下げた材料／下支えした材料」の1件（v3.5.2）。優先度を★で示す。"""
+
+    label: str
+    stars: str = ""          # ★の数（寄与度の大きさ）
+    score: float = 0.0       # 内部スコア（並べ替え用）
+    note: str = ""           # 1行の理由
+
+
+@dataclass
+class StrategicScenario:
+    """今後のシナリオ（A/B/C）1件（v3.5.2）。断定せず、条件→帰結の連鎖で示す。"""
+
+    label: str               # 例: "シナリオA（確率高）"
+    probability_label: str = ""  # 高 / 中 / 低（Scenario Engineの配分から）
+    chain: List[str] = field(default_factory=list)  # 条件→帰結の連鎖
+
+
+@dataclass
+class StrategicNarrative:
+    """「Strategic Narrative Engine」の出力（v3.5.2）。
+
+    証券会社ストラテジストが朝会で3分説明するレベルの相場解説を、既存エンジンの
+    算出済み結果（Market Regime / Cross Market / News Ranking / News Impact /
+    Future Intelligence / Theme Momentum / Market Breadth / Analysis Confidence /
+    Scenario / Watchlist / Macro Events / Market Data）だけから機械的に組み立てる。
+    生成AIの作文・断定的な将来予測・新規データ取得・存在しないデータの捏造・推測は
+    一切行わない。個別の売買推奨（買うべき/売るべき）も出さない。
+    """
+
+    one_liner: str = ""                                   # ② 本日の一言（20〜40字）
+    market_psychology: str = ""                           # ③ 今日の市場心理
+    causal_chain: List[str] = field(default_factory=list)  # ① 市場が織り込んだ因果の連鎖
+    driver_ranking: List[StrategicFactor] = field(default_factory=list)  # ④ 本日の主因ランキング①②③
+    downside_factors: List[StrategicFactor] = field(default_factory=list)  # ⑤ 相場を押し下げた材料
+    support_factors: List[StrategicFactor] = field(default_factory=list)   # ⑤ 下支えした材料
+    scenarios: List[StrategicScenario] = field(default_factory=list)       # ⑥ 今後のシナリオA/B/C
+    nikkei_causation: List[str] = field(default_factory=list)  # ⑦ なぜ日経平均はこうなったか（原因まで遡る）
+    cross_market_prose: str = ""                          # ⑧ Cross Marketの自然文
+    sales_30sec: str = ""                                 # ⑨ 営業マン向け30秒説明
+    strategist_summary: str = ""                          # ⑩ ストラテジスト総括（200〜300字）
+    reused_engines: List[str] = field(default_factory=list)  # 再利用した既存エンジン
+
+
+@dataclass
 class MarketNarrativeSummary:
     """「本日の相場総括（Market Narrative）」（v3.5・改善1）。
 
@@ -1055,3 +1100,5 @@ class AnalysisBundle:
     analysis_confidence: Optional[AnalysisConfidence] = None      # 改善10
     # v3.5 Market Narrative（本日の相場総括。デフォルトNoneで既存呼び出しに影響なし）
     market_narrative: Optional[MarketNarrativeSummary] = None
+    # v3.5.2 Strategic Narrative Engine（朝会3分説明レベルの相場解説。既存エンジンの再利用のみ）
+    strategic_narrative: Optional[StrategicNarrative] = None

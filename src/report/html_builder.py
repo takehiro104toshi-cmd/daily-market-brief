@@ -333,6 +333,12 @@ details.more[open] > summary.detail-btn::before { content: "▾ "; }
 .nk-node { font-size: 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
   padding: 5px 8px; display: inline-block; }
 .nk-arrow { text-align: center; color: #14b8a6; font-weight: 700; margin: 1px 0; }
+.strategist-summary { font-size: 0.9rem; line-height: 1.6; margin: 0 0 8px 0;
+  background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px; padding: 8px 10px; }
+.sales-30sec { font-size: 0.88rem; line-height: 1.55; margin: 0 0 8px 0;
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 10px; }
+:root[data-theme="dark"] .strategist-summary { background: #0d2b23; border-color: #1c5c48; color: #d1fae5; }
+:root[data-theme="dark"] .sales-30sec { background: #2a2410; border-color: #5a4d18; color: #fde68a; }
 :root[data-theme="dark"] .narrative-card { border-left-color: #2dd4bf; }
 :root[data-theme="dark"] .narrative-headline { color: #5eead4; }
 :root[data-theme="dark"] .narrative-conclusion { background: #0d2b23; border-color: #1c5c48; color: #d1fae5; }
@@ -2315,69 +2321,151 @@ def _refresh_button_html(actions_url: str = "", realtime: Optional[dict] = None,
     return "".join(parts)
 
 
-def _market_narrative_html(narrative) -> str:
-    """「本日の相場総括（Market Narrative）」カード（v3.5・改善1）。HTML最上部に置く、
-    「今日の相場がなぜ動いたか・背景・今後の見方」の深掘り総括。narrativeが未指定なら
-    空文字（既存呼び出しに影響しない）。断定・売買助言はせず、条件分岐で見立てを示す。
+def _strategic_narrative_html(sn) -> str:
+    """「Strategic Narrative Engine」の出力（朝会3分説明レベル）を描画する（v3.5.2）。
+
+    snが未指定なら空文字。既存エンジンの結果だけから機械的に組み立てた解説で、
+    断定的な予測・個別の売買推奨は含まない。
     """
-    if narrative is None:
+    if sn is None:
         return ""
 
-    def _list(items, cls="plain"):
+    def _list(items):
         if not items:
             return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
-        return f"<ul class='{cls}'>" + "".join(f"<li>{_esc(x)}</li>" for x in items) + "</ul>"
+        return "<ul class='plain'>" + "".join(f"<li>{_esc(x)}</li>" for x in items) + "</ul>"
 
-    def _chain(items):
+    def _arrow(items):
         if not items:
             return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
-        # 矢印（↓）でつないだ因果チェーン。1ノード1行で読みやすく。
         rows = "".join(
             f"<div class='nk-node'>{_esc(x)}</div>" + ("<div class='nk-arrow'>↓</div>" if i < len(items) - 1 else "")
             for i, x in enumerate(items)
         )
         return f"<div class='nk-chain'>{rows}</div>"
 
-    # ① 今日の結論（結論ファースト・1〜2文）
-    conclusion = f"<p class='narrative-headline'>① 今日の結論</p><p class='narrative-conclusion'>{_esc(narrative.conclusion or narrative.headline)}</p>"
-    # ② なぜ日経平均は動いたか（米国株→金利→為替→日本株→セクター→銘柄）
-    nikkei = "<p class='td-head'>② なぜ日経平均は動いたか</p>" + _chain(narrative.nikkei_chain)
-    # ③ 悪材料 ④ 支えになる材料（分けて表示）
-    negatives = "<p class='td-head'>③ 悪材料</p>" + _list(narrative.negative_factors)
-    supportive = "<p class='td-head'>④ 支えになる材料</p>" + _list(narrative.supportive_factors)
-    # ⑤ 今後見るべきポイント（条件分岐）
-    watch = "<p class='td-head'>⑤ 今後見るべきポイント</p>" + _list(narrative.watch_points)
-    # ⑥ 見立て（短期/中期/長期）
-    views = (
-        "<p class='td-head'>⑥ 見立て（条件分岐・断定ではありません）</p>"
-        + f"<p class='td-sub'>短期: {_esc(narrative.near_term_view)}</p>"
-        + f"<p class='td-sub'>中期: {_esc(narrative.medium_term_view)}</p>"
-        + f"<p class='td-sub'>長期: {_esc(narrative.long_term_view)}</p>"
+    def _factors(items):
+        if not items:
+            return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+        rows = "".join(
+            f"<div class='row'><span>{_stars_span(f.stars)} {_esc(f.label)}</span></div>"
+            f"<p class='td-sub'>{_esc(f.note)}</p>" if f.note else
+            f"<div class='row'><span>{_stars_span(f.stars)} {_esc(f.label)}</span></div>"
+            for f in items
+        )
+        return rows
+
+    # ② 本日の一言（最重要・箱で強調）
+    one_liner = f"<p class='narrative-headline'>【本日の一言】</p><p class='narrative-conclusion'>{_esc(sn.one_liner)}</p>"
+    # ③ 今日の市場心理
+    psych = f"<p class='td-head'>【今日の市場心理】</p><p class='td-sub'>{_esc(sn.market_psychology)}</p>"
+    # ④ 本日の主因ランキング
+    ranking_rows = "".join(
+        f"<div class='row'><span>{i+1}. {_stars_span(f.stars)} {_esc(f.label)}</span></div>"
+        f"<p class='td-sub'>{_esc(f.note)}</p>"
+        for i, f in enumerate(sn.driver_ranking)
+    ) or f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+    ranking = "<p class='td-head'>【本日の主因ランキング】</p>" + ranking_rows
+    # ⑤ 押し下げ材料／下支え材料
+    factors = (
+        "<p class='td-head'>【相場を押し下げた材料】</p>" + _factors(sn.downside_factors)
+        + "<p class='td-head'>【下支えした材料】</p>" + _factors(sn.support_factors)
+    )
+    # ⑥ 今後のシナリオ
+    scen_rows = "".join(
+        f"<p class='td-head' style='margin-bottom:0;'>{_esc(s.label)}（確率{_esc(s.probability_label)}）</p>"
+        + f"<p class='td-sub'>{_esc(' → '.join(s.chain))}</p>"
+        for s in sn.scenarios
+    ) or f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+    scenarios = "<p class='td-head'>【今後のシナリオ】</p>" + scen_rows
+    # ⑩ ストラテジスト総括（箱で強調）
+    summary = f"<p class='td-head'>【ストラテジスト総括】</p><p class='strategist-summary'>{_esc(sn.strategist_summary)}</p>"
+    # ⑨ 営業向け30秒説明
+    sales = f"<p class='td-head'>【営業向け30秒説明】</p><p class='sales-30sec'>{_esc(sn.sales_30sec)}</p>"
+
+    # 詳しく: 織り込んだ流れ・なぜ日経・Cross Market自然文・再利用エンジン
+    detail = (
+        "<p class='td-head'>【市場が織り込んだ流れ】</p>" + _arrow(sn.causal_chain)
+        + "<p class='td-head'>【なぜ日経平均はこうなったか】</p>" + _arrow(sn.nikkei_causation)
+        + "<p class='td-head'>【Cross Market（背景の解説）】</p>"
+        + f"<p class='td-sub'>{_esc(sn.cross_market_prose)}</p>"
+        + (f"<p class='legend'>再利用した分析エンジン: {_esc('、'.join(sn.reused_engines))}</p>" if sn.reused_engines else "")
+    )
+    return (
+        one_liner + psych + ranking + factors + scenarios + summary + sales
+        + _detail_block(detail, label="市場が織り込んだ流れ・なぜ日経・背景を詳しく")
     )
 
-    # 詳しく: 主要変化・背景・波及・リスク・示唆・根拠（重複を避け折りたたみ）
-    chain_html = ""
-    if narrative.cross_market_chain:
-        chain_html = "<p class='td-head'>波及チェーン（Cross Market）</p><p class='td-sub'>" + _esc(" → ".join(narrative.cross_market_chain)) + "</p>"
-    move_html = (
-        "<p class='td-head'>主要指標の変化</p><p class='td-sub'>" + _esc(" ／ ".join(narrative.market_move)) + "</p>"
-        if narrative.market_move else ""
-    )
-    detail = (
-        move_html
-        + "<p class='td-head'>背景</p>" + _list(narrative.background_factors)
-        + chain_html
-        + "<p class='td-head'>注意すべきリスク</p>" + _list(narrative.risk_factors)
-        + "<p class='td-head'>投資判断への示唆（個別の売買推奨ではありません）</p>" + _list(narrative.implications)
-        + (f"<p class='td-sub'>{_esc(narrative.confidence)}</p>" if narrative.confidence else "")
-        + (f"<p class='legend'>根拠にした分析: {_esc('、'.join(narrative.source_items))}</p>" if narrative.source_items else "")
-    )
+
+def _market_narrative_html(narrative, strategic=None) -> str:
+    """「本日の相場総括（Market Narrative）」カード（v3.5・改善1）。HTML最上部に置く、
+    「今日の相場がなぜ動いたか・背景・今後の見方」の深掘り総括。narrativeが未指定なら
+    空文字（既存呼び出しに影響しない）。断定・売買助言はせず、条件分岐で見立てを示す。
+    """
+    if narrative is None and strategic is None:
+        return ""
+
     legend = (
         "<p class='legend'>ニュースと市場データ・既存の各分析エンジンの結果だけを機械的に組み合わせた"
         "「なぜ今日の相場が動いたか」の総括です。生成AIの作文・断定的な将来予測・個別の売買推奨は"
         "行いません。見立ては条件分岐で示します。</p>"
     )
-    body = legend + conclusion + nikkei + negatives + supportive + watch + views + _detail_block(detail, label="主要変化・背景・リスク・示唆を詳しく")
+
+    # v3.5.2: Strategic Narrative Engine の出力（朝会3分説明レベル）を主軸に表示する。
+    strat_html = _strategic_narrative_html(strategic)
+
+    six_html = ""
+    if narrative is not None:
+        def _list(items, cls="plain"):
+            if not items:
+                return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+            return f"<ul class='{cls}'>" + "".join(f"<li>{_esc(x)}</li>" for x in items) + "</ul>"
+
+        def _chain(items):
+            if not items:
+                return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+            rows = "".join(
+                f"<div class='nk-node'>{_esc(x)}</div>" + ("<div class='nk-arrow'>↓</div>" if i < len(items) - 1 else "")
+                for i, x in enumerate(items)
+            )
+            return f"<div class='nk-chain'>{rows}</div>"
+
+        conclusion = f"<p class='narrative-headline'>① 今日の結論</p><p class='narrative-conclusion'>{_esc(narrative.conclusion or narrative.headline)}</p>"
+        nikkei = "<p class='td-head'>② なぜ日経平均は動いたか</p>" + _chain(narrative.nikkei_chain)
+        negatives = "<p class='td-head'>③ 悪材料</p>" + _list(narrative.negative_factors)
+        supportive = "<p class='td-head'>④ 支えになる材料</p>" + _list(narrative.supportive_factors)
+        watch = "<p class='td-head'>⑤ 今後見るべきポイント</p>" + _list(narrative.watch_points)
+        views = (
+            "<p class='td-head'>⑥ 見立て（条件分岐・断定ではありません）</p>"
+            + f"<p class='td-sub'>短期: {_esc(narrative.near_term_view)}</p>"
+            + f"<p class='td-sub'>中期: {_esc(narrative.medium_term_view)}</p>"
+            + f"<p class='td-sub'>長期: {_esc(narrative.long_term_view)}</p>"
+        )
+        six_visible = conclusion + nikkei + negatives + supportive + watch + views
+
+        chain_html = ""
+        if narrative.cross_market_chain:
+            chain_html = "<p class='td-head'>波及チェーン（Cross Market）</p><p class='td-sub'>" + _esc(" → ".join(narrative.cross_market_chain)) + "</p>"
+        move_html = (
+            "<p class='td-head'>主要指標の変化</p><p class='td-sub'>" + _esc(" ／ ".join(narrative.market_move)) + "</p>"
+            if narrative.market_move else ""
+        )
+        detail_inner = (
+            move_html
+            + "<p class='td-head'>背景</p>" + _list(narrative.background_factors)
+            + chain_html
+            + "<p class='td-head'>注意すべきリスク</p>" + _list(narrative.risk_factors)
+            + "<p class='td-head'>投資判断への示唆（個別の売買推奨ではありません）</p>" + _list(narrative.implications)
+            + (f"<p class='td-sub'>{_esc(narrative.confidence)}</p>" if narrative.confidence else "")
+            + (f"<p class='legend'>根拠にした分析: {_esc('、'.join(narrative.source_items))}</p>" if narrative.source_items else "")
+        )
+        if strategic is not None:
+            # Strategic Narrative を主軸にし、6部構成のデータ整理は折りたたみに回す。
+            six_html = _detail_block(six_visible + detail_inner, label="データ整理（結論・材料・見立て）を表示")
+        else:
+            six_html = six_visible + _detail_block(detail_inner, label="主要変化・背景・リスク・示唆を詳しく")
+
+    body = legend + strat_html + six_html
     return _card("📝 本日の相場総括（Market Narrative）", body, extra_class="digest narrative-card", anchor="market-narrative")
 
 
@@ -2514,7 +2602,7 @@ def build_html_report(
     top_cards = [
         _refresh_button_html(actions_url or "", realtime=realtime, generated_str=updated_str),
         _menu_grid_html(),
-        _market_narrative_html(analysis.market_narrative),
+        _market_narrative_html(analysis.market_narrative, getattr(analysis, "strategic_narrative", None)),
         _todays_decision_html(market, analysis, freshness, anomalies, translation_st),
         _dashboard_html(market, analysis, now=report_date),
         _search_card_html(),
