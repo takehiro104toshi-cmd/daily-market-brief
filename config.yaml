@@ -611,28 +611,16 @@ translation:
   enabled: true
   cache_dir: "data/translation_cache"
 
-# Real-Time Update Engine（v3.0導入 → v3.4でワンタップ生成に対応）。
-# HTMLの「最新表示に更新」は、GitHub Pagesが静的サイトのためページ内から直接
-# main.pyを実行できない（Token/SecretsをHTMLへ出す実装は禁止）。
-# v3.4: Cloudflare Worker等の「認証つき中継バックエンド」を用意すれば、
-# HTMLの「🚀 ワンタップで最新レポート生成」から endpoint_url へPOSTするだけで
-# GitHub Actions を起動できる（Tokenは中継バックエンド側のSecretにのみ保管し、
-# HTML・JSには一切出さない）。Worker の作り方は cloudflare/README.md を参照。
-#
-# enabled=false（既定）の間は従来通り「ページ再読み込み」＋「GitHub Actions画面を
-# 開く（Run workflow）」の安全導線のみ（ワンタップボタンは表示しない）。
-# Cloudflare Worker をデプロイして endpoint_url を設定したら、enabled: true にすると
-# HTMLにワンタップ生成ボタンが表示される。
+# v3.0（②）Real-Time Update Engine。HTMLの「最新表示に更新」は、GitHub Pagesが
+# 静的サイトのためページ内から自動再生成はできない（Token/SecretsをHTMLへ出す実装は禁止）。
+# 現状は「ページ再読み込み」＋「GitHub Actions画面を開く（Run workflow）」の安全導線。
+# 将来、Cloudflare Worker等の認証つきバックエンドで完全リアルタイム化する際の設定枠。
+# enabled=false の間は既存動作のまま（HTMLには何も変化を与えない・Tokenは出さない）。
 realtime:
-  enabled: false                 # true かつ endpoint_url 設定でワンタップ生成ボタンを表示
-  provider: ""                   # 例: "cloudflare_worker" / "vercel_function" / "github_app"
-  endpoint_url: ""               # 中継エンドポイントURL（例: https://<worker>.<account>.workers.dev/trigger）
-  mode: "manual_actions"         # "one_tap"（Worker設定済み）/ "manual_actions"（既定・手動Run workflow）
-  # 設定例（Cloudflare Worker デプロイ後）:
-  #   enabled: true
-  #   provider: "cloudflare_worker"
-  #   endpoint_url: "https://daily-market-brief-trigger.example.workers.dev/trigger"
-  #   mode: "one_tap"
+  enabled: true
+  provider: "cloudflare_worker"
+  endpoint_url: "https://daily-market-brief-trigger.takehiro104toshi.workers.dev/trigger"
+  mode: "one_tap"
 
 # 経済カレンダー自動取得（v3.0・③）。公開RSS/JSON/CSVを sources に列挙すると
 # 自動取得し、config.yamlのmacro_events（手入力）とマージして「今週の重要イベント」
