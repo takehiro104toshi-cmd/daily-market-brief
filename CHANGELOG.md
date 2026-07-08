@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v3.4 (2026-07-07) — One-Tap Report Generation（Cloudflare Worker中継でワンタップ生成）
+
+GitHub Actions画面を経由せず、スマホから1タップで workflow_dispatch を起動できる
+ようにした版。GitHub Token・Secrets・PATはHTML/JS/GitHub Pagesに絶対に出さず、
+Cloudflare Worker等の認証つき中継バックエンドを介して安全に実行する設計。
+
+追加・改善
+・Cloudflare Worker（cloudflare/trigger-report-worker.js 新規）: POST /trigger で
+  GitHub Actions の workflow_dispatch API を叩く中継役。GITHUB_TOKEN はWorkerの
+  Secret（env）からのみ参照し、コードに直書きしない・レスポンス/ログにも出さない。
+  必要な変数: GITHUB_TOKEN(Secret)/GITHUB_OWNER/GITHUB_REPO/GITHUB_WORKFLOW_FILE/
+  ALLOWED_ORIGIN/WORKFLOW_REF。CORSは ALLOWED_ORIGIN（既定 GitHub PagesのURL）のみ許可。
+  成功時 {ok:true,message:"workflow dispatched"}、失敗時 {ok:false,error:...}（要約のみ）。
+・cloudflare/README.md・cloudflare/wrangler.toml.example 新規: Worker のデプロイ手順・
+  Secret設定・必要なGitHub Token権限（Fine-grained: Actions R/W・Contents R/W、対象repo限定）。
+・HTML（src/report/html_builder.py）: `_one_tap_regenerate_html` を機能化。realtime.enabled=true
+  かつ endpoint_url 設定時のみ「🚀 ワンタップで最新レポート生成」ボタンを表示。押下でJS（SCRIPT）が
+  endpoint_url へPOSTし、成功なら「生成を開始しました。1〜3分後にページを再読み込み」、失敗なら
+  エラー表示、連打防止で60秒間ボタン無効化。エンドポイントURLは data-endpoint に持たせ、
+  Token・Secretはボタン・JS・HTMLに一切埋め込まない。
+・config.yaml: realtime 設定枠を one_tap 対応に更新（enabled/provider/endpoint_url/mode＋
+  Cloudflare Worker設定例をコメントで追記）。既定は enabled:false（従来通りボタン非表示）。
+・既存の安全導線（🔄ページ再読み込み／⚙️GitHub Actionsを開く／📱スマホ手順）は
+  Worker未設定時のフォールバックとして残置。
+・README: Cloudflare Workerでのワンタップ生成の仕組み・TokenをHTMLに入れてはいけない理由・
+  Worker Secretの設定方法・必要なGitHub Token権限・config.yaml設定例・トラブルシューティングを追記。
+
+やらないこと（v3.4で厳守）
+・GitHub Token/Secrets/PATをHTML・JS・GitHub Pagesへ出すこと。
+・認証なしAPIでのworkflow_dispatch／誰でも勝手に実行できる実装。
+・許可Origin以外からのWorker実行（CORSで拒否）。
+
 ## v3.3 (2026-07-07) — Latest Report Generation Button Upgrade（スマホからの再生成導線を改善）
 
 「最新レポートを生成する」ボタンまわりのUXのみを改善した版。分析ロジック・

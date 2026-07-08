@@ -276,14 +276,20 @@ table th { color: #666; font-weight: 600; font-size: 0.78rem; }
 }
 .mobile-steps summary { cursor: pointer; font-weight: 600; padding: 8px 0; font-size: 0.9rem; }
 .mobile-steps ol { padding-left: 20px; margin: 4px 0 10px 0; font-size: 0.85rem; }
+/* v3.4: Cloudflare Worker中継によるワンタップ生成ボタン（有効時） */
 .one-tap-btn {
-  display: block; width: 100%; text-align: center; margin: 0 0 4px 0; padding: 12px 16px;
-  background: #e5e7eb; color: #6b7280; border: none; border-radius: 10px;
-  font-weight: 600; font-size: 0.9rem; cursor: not-allowed;
+  display: block; width: 100%; text-align: center; margin: 0 0 4px 0; padding: 14px 16px;
+  background: #059669; color: #fff; border: none; border-radius: 10px;
+  font-weight: 700; font-size: 0.95rem; cursor: pointer;
 }
+.one-tap-btn:active { background: #047857; }
+.one-tap-btn:disabled { background: #9ca3af; color: #e5e7eb; cursor: not-allowed; }
+.one-tap-msg { font-size: 0.8rem; color: #374151; text-align: center; margin: 2px 0 14px 0; }
+.one-tap-msg.ok { color: #059669; font-weight: 600; }
+.one-tap-msg.err { color: #c62828; font-weight: 600; }
 :root[data-theme="dark"] .regenerate-pending { background: #1a1d24; border-color: #4b5563; color: #9ca3af; }
 :root[data-theme="dark"] .mobile-steps { background: #171a21; border-color: #2d3340; }
-:root[data-theme="dark"] .one-tap-btn { background: #2a2d33; color: #9ca3af; }
+:root[data-theme="dark"] .one-tap-msg { color: #cbd5e1; }
 .digest { background: #eef4ff; border: 1px solid #c9dcff; }
 ul.plain { padding-left: 18px; margin: 6px 0; }
 ul.plain li { margin-bottom: 4px; font-size: 0.9rem; }
@@ -497,6 +503,43 @@ function copySection(btn) {
         if (!blocks[i].open) { anyClosed = true; break; }
       }
       for (var j = 0; j < blocks.length; j++) { blocks[j].open = anyClosed; }
+    });
+  }
+
+  // v3.4: ワンタップ生成（Cloudflare Worker等の中継バックエンドへPOST）。
+  // エンドポイントURLはボタンのdata-endpointから読む。GitHubの認証情報は
+  // このJS・HTMLに一切含まれない（中継バックエンド側の暗号化変数にのみ保管される）。
+  var oneTap = document.getElementById('one-tap-btn');
+  if (oneTap) {
+    oneTap.addEventListener('click', function () {
+      var endpoint = oneTap.getAttribute('data-endpoint');
+      var msg = document.getElementById('one-tap-msg');
+      if (!endpoint) { return; }
+      function setMsg(text, cls) {
+        if (!msg) { return; }
+        msg.textContent = text;
+        msg.className = 'one-tap-msg' + (cls ? (' ' + cls) : '');
+      }
+      oneTap.disabled = true;
+      setMsg('生成をリクエストしています…', '');
+      fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      }).then(function (r) {
+        return r.json().catch(function () { return { ok: r.ok }; });
+      }).then(function (data) {
+        if (data && data.ok) {
+          setMsg('生成を開始しました。1〜3分後にページを再読み込みしてください。', 'ok');
+        } else {
+          var err = (data && data.error) ? ('：' + data.error) : '';
+          setMsg('生成リクエストに失敗しました' + err + '。時間をおいて再度お試しください。', 'err');
+        }
+      }).catch(function () {
+        setMsg('生成リクエストに失敗しました（通信エラー）。時間をおいて再度お試しください。', 'err');
+      });
+      // 連打防止で60秒間ボタンを無効化（成否にかかわらず）。
+      setTimeout(function () { oneTap.disabled = false; }, 60000);
     });
   }
 })();
@@ -2195,15 +2238,22 @@ def _mobile_regenerate_steps_html() -> str:
     return f"<details class='mobile-steps'><summary>📱 スマホでの実行手順</summary><ol class='plain'>{steps}</ol></details>"
 
 
-def _one_tap_regenerate_html() -> str:
-    """「🚀 ワンタップで最新生成」（v3.3・改善④）。realtime.enabled=true かつ
-    endpoint_url設定時のみ表示する将来用の枠。バックエンド未実装のため常に押せない
-    状態で表示し、認証情報の類は一切埋め込まない。
+def _one_tap_regenerate_html(endpoint_url: str) -> str:
+    """「🚀 ワンタップで最新レポート生成」（v3.4）。realtime.enabled=true かつ
+    endpoint_url設定時のみ表示する、Cloudflare Worker等の安全な中継バックエンドを
+    叩くボタン。
+
+    ボタンには中継エンドポイントURL（data-endpoint）だけを埋め込む。GitHub Token・
+    Secrets・PATの類は一切埋め込まない（認証情報は中継バックエンド側のSecretにのみ
+    保管し、HTMLはWorkerのエンドポイントURLを知っているだけ）。押下時の挙動（POST・
+    成功/失敗メッセージ・60秒の連打防止）は外部依存のないインラインJS（SCRIPT）側で処理する。
     """
     return (
-        "<button type='button' class='one-tap-btn' disabled>🚀 ワンタップで最新生成</button>"
-        "<p class='refresh-note'>ワンタップ生成は準備中です（中継用のバックエンドが実装されるまで押せません。"
-        "認証に関わる情報はこのページに一切含まれません）。</p>"
+        f"<button type='button' id='one-tap-btn' class='one-tap-btn' "
+        f"data-endpoint='{_esc(endpoint_url)}'>🚀 ワンタップで最新レポート生成</button>"
+        "<p class='one-tap-msg' id='one-tap-msg'>"
+        "このボタンは中継バックエンド（Cloudflare Worker等）経由でレポート生成を開始します。"
+        "GitHubの認証情報（アクセストークン）はこのページに一切含まれていません。</p>"
     )
 
 
@@ -2248,7 +2298,7 @@ def _refresh_button_html(actions_url: str = "", realtime: Optional[dict] = None,
     parts.append(_generation_status_html(generated_str))
     parts.append(_mobile_regenerate_steps_html())
     if realtime.get("enabled") and realtime.get("endpoint_url"):
-        parts.append(_one_tap_regenerate_html())
+        parts.append(_one_tap_regenerate_html(realtime.get("endpoint_url", "")))
     return "".join(parts)
 
 
@@ -2366,9 +2416,11 @@ def build_html_report(
     Rashinban Learning Sourceカードを表示する（本文・抜粋は表示しない）。
     why_today（v2.8・省略可）: セクションanchor→「なぜ今日見るべきか」1行の辞書。
     指定時のみ該当カードの先頭にWhy Today行を差し込む（未指定でも従来通り動作）。
-    realtime（v3.3・省略可）: config.yamlのrealtime設定。enabled=trueかつ
-    endpoint_url設定時のみ、将来のワンタップ生成枠（現状は押せないボタン）を表示する
-    （未指定・enabled=falseでも従来通り動作。GitHub Token等は一切埋め込まない）。
+    realtime（v3.3導入・v3.4で機能化・省略可）: config.yamlのrealtime設定。
+    enabled=trueかつendpoint_url設定時のみ「🚀 ワンタップで最新レポート生成」ボタンを
+    表示し、押下でendpoint_url（Cloudflare Worker等の中継バックエンド）へPOSTして
+    GitHub Actionsを起動する（未指定・enabled=falseでも従来通り動作。GitHub Token・
+    Secretsの類はこのHTML・JSに一切埋め込まず、中継バックエンド側のSecretにのみ保管する）。
     """
     why_today = why_today or {}
     date_str = report_date.strftime("%Y年%m月%d日")

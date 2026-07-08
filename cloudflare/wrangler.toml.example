@@ -1,0 +1,19 @@
+# wrangler.toml のひな型（v3.4）。
+# このファイルを wrangler.toml にコピーして値を調整し、`wrangler deploy` します。
+# GITHUB_TOKEN はここには書かず、必ず `wrangler secret put GITHUB_TOKEN` で登録してください
+# （Secretはコード・設定ファイルに直書きしない）。
+
+name = "daily-market-brief-trigger"
+main = "trigger-report-worker.js"
+compatibility_date = "2024-11-01"
+
+# 認証情報でない設定値は [vars] に置けます（Tokenはここに置かない）。
+[vars]
+GITHUB_OWNER = "takehiro104toshi-cmd"
+GITHUB_REPO = "daily-market-brief"
+GITHUB_WORKFLOW_FILE = "daily-market-brief.yml"
+ALLOWED_ORIGIN = "https://takehiro104toshi-cmd.github.io"
+WORKFLOW_REF = "main"
+
+# GITHUB_TOKEN は Secret として登録する（例）:
+#   wrangler secret put GITHUB_TOKEN

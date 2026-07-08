@@ -845,6 +845,76 @@ GitHub Pagesで公開されるHTMLは**誰でも閲覧できます**。もしGit
 HTMLへ出力しません（将来の中継バックエンドを使う場合も、秘密情報はバックエンド側の
 環境変数・Secretにのみ保管する設計とします）。
 
+## v3.4 One-Tap Report Generation（Cloudflare Workerでワンタップ生成）
+
+GitHub Actions画面を経由せず、スマホから**1タップで**レポート再生成
+（workflow_dispatch）を実行できるようにする仕組みです。安全のため、必ず
+Cloudflare Worker等の**認証つき中継バックエンド**を挟みます。
+
+### 仕組み（GitHub TokenをHTMLに入れてはいけない理由）
+
+```
+[スマホのHTML(GitHub Pages)]  --POST /trigger-->  [Cloudflare Worker]  --workflow_dispatch-->  [GitHub Actions]
+        （Tokenを知らない・URLだけ）               （Tokenをsecretで保持）
+```
+
+GitHub Pagesで公開されるHTML・JSは**誰でも閲覧できます**。もしGitHubの書き込み権限を
+持つToken（PAT等）をHTMLやJavaScriptに埋め込むと、閲覧した誰もがそれを盗んで任意の
+ワークフロー実行やリポジトリ改ざんができてしまいます。そのため本システムは、HTML側には
+**中継WorkerのURLしか置かず**、Tokenは**Cloudflare Worker側のSecret**にのみ保管します。
+HTMLはWorkerを叩くだけで、Tokenの存在すら知りません。
+
+### Cloudflare Worker のセットアップ（要点）
+
+詳細な手順は **`cloudflare/README.md`** を参照してください。要点だけ：
+
+1. **GitHub Token を用意**（Fine-grained token推奨）
+   - 対象repo: **daily-market-brief のみ**
+   - 権限: **Actions: Read and write** ／ **Contents: Read and write**
+2. **Worker をデプロイ**（`cloudflare/trigger-report-worker.js` を貼り付け）
+3. **Worker の Secret / 変数を設定**
+   - `GITHUB_TOKEN`（**Secret**）／`GITHUB_OWNER`／`GITHUB_REPO`／
+     `GITHUB_WORKFLOW_FILE`／`ALLOWED_ORIGIN`（GitHub PagesのURL）
+4. **config.yaml の `realtime` を設定**して再生成すると、HTMLにボタンが出ます。
+
+### config.yamlの設定例
+
+```yaml
+realtime:
+  enabled: true
+  provider: "cloudflare_worker"
+  endpoint_url: "https://daily-market-brief-trigger.<account>.workers.dev/trigger"
+  mode: "one_tap"
+```
+
+`enabled: false`（既定）の間はワンタップボタンは表示されず、従来の安全導線
+（🔄再読み込み／⚙️GitHub Actionsを開く／📱スマホ手順）だけが表示されます。
+Cloudflare Worker未設定でも従来通り使えるフォールバックとして常に残しています。
+
+### ワンタップボタンの挙動
+
+- 押すと `endpoint_url` にPOSTします（GitHub Actionsが起動）。
+- 成功: 「生成を開始しました。1〜3分後にページを再読み込みしてください」と表示。
+- 失敗: エラーメッセージを表示。
+- 連打防止のため、押下後**60秒間**ボタンを無効化します。
+- ボタン・JS・HTMLにGitHub Token/Secretは一切含まれません。
+
+### 必要なGitHub Token権限（再掲）
+
+- **Fine-grained token 推奨**
+- Actions: **Read and write**（workflow_dispatchの実行に必要）
+- Contents: **Read and write**（レポート生成ワークフローがコミットするため）
+- 対象repo: **daily-market-brief のみ**（最小権限）
+
+### トラブルシューティング
+
+- **ボタンが出ない**: `config.yaml` の `realtime.enabled: true` と `endpoint_url` を確認し、
+  レポートを再生成（HTMLへの反映は次回生成後）。
+- **押すと「authentication failed」**: WorkerのTokenの権限・repoスコープ・有効期限を確認。
+- **「workflow or repository not found」**: WorkerのGITHUB_OWNER/REPO/WORKFLOW_FILEを確認。
+- **CORSエラー**: WorkerのALLOWED_ORIGINがGitHub PagesのURLと完全一致しているか確認。
+- 詳細は `cloudflare/README.md` のトラブルシューティングも参照。
+
 ## 通知機能（メール・LINE）
 
 レポート生成後、任意で「今日の結論＋重要ニュース3件＋GitHub Pages URL」を

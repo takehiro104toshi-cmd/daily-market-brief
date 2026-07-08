@@ -68,9 +68,9 @@ def test_generation_status_explains_reload_vs_regenerate():
 
 def test_one_tap_button_absent_when_realtime_disabled():
     report = _report(actions_url=ACTIONS_URL, realtime={"enabled": False, "endpoint_url": ""})
-    assert "ワンタップで最新生成" not in report
+    assert "ワンタップで最新レポート生成" not in report
     report_none = _report(actions_url=ACTIONS_URL, realtime=None)
-    assert "ワンタップで最新生成" not in report_none
+    assert "ワンタップで最新レポート生成" not in report_none
 
 
 def test_one_tap_button_present_when_realtime_enabled_with_endpoint():
@@ -78,13 +78,14 @@ def test_one_tap_button_present_when_realtime_enabled_with_endpoint():
         actions_url=ACTIONS_URL,
         realtime={"enabled": True, "endpoint_url": "https://relay.example.com/hook", "provider": "cloudflare_worker"},
     )
-    assert "ワンタップで最新生成" in report
-    assert 'class=\'one-tap-btn\' disabled' in report or "disabled" in report
+    # v3.4でラベルは「ワンタップで最新レポート生成」に発展（先頭は共通の「ワンタップ」）
+    assert "ワンタップで最新レポート生成" in report
+    assert "id='one-tap-btn'" in report
 
 
 def test_one_tap_button_absent_when_enabled_but_no_endpoint():
     report = _report(actions_url=ACTIONS_URL, realtime={"enabled": True, "endpoint_url": ""})
-    assert "ワンタップで最新生成" not in report
+    assert "ワンタップで最新レポート生成" not in report
 
 
 # ---------- 改善⑤ セキュリティ ----------
