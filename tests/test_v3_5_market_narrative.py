@@ -98,8 +98,9 @@ def test_narrative_card_rendered_at_top():
     report = build_html_report(report_date=NOW, market=market, sources=SourceRegistry(), analysis=b)
     assert 'id="market-narrative"' in report
     assert "本日の相場総括" in report
-    assert "なぜ動いたか" in report
-    assert "これから何を見るべきか" in report
+    assert "今日の結論" in report
+    assert "なぜ日経平均は動いたか" in report
+    assert "今後見るべきポイント" in report
     # Today's Decision / Dashboard より上に配置
     assert report.index('id="market-narrative"') < report.index('id="todays-decision"')
     assert report.index('id="market-narrative"') < report.index('id="dashboard-top"')
@@ -139,3 +140,60 @@ def test_menu_leads_with_market_narrative():
     assert '<a class="menu-btn" href="#market-narrative"' in report
     # メニュー内で 相場総括 が Today's Decision より前
     assert report.index('href="#market-narrative"') < report.index('href="#todays-decision"')
+
+
+# ---------- v3.5.1: 初心者向け6部構成の改善 ----------
+
+def test_narrative_has_conclusion_first():
+    nar = _narrated_bundle(_rate_up_market()).market_narrative
+    assert nar.conclusion
+    assert "本日は" in nar.conclusion
+    # 主因（金利/半導体）が結論に含まれる
+    assert "半導体" in nar.conclusion or "金利" in nar.conclusion
+
+
+def test_nikkei_chain_orders_us_rates_fx_sector_nikkei():
+    nar = _narrated_bundle(_rate_up_market()).market_narrative
+    chain = nar.nikkei_chain
+    assert chain
+    joined = " / ".join(chain)
+    # 米国株→金利→為替→（SOX/半導体）→日経 の順で各要素が現れる
+    assert "米国株" in joined
+    assert "金利" in joined
+    assert "ドル円" in joined
+    assert "SOX" in joined or "半導体" in joined
+    assert "日経平均" in chain[-1]  # 帰結は日経
+
+
+def test_negative_and_supportive_factors_separated():
+    nar = _narrated_bundle(_rate_up_market()).market_narrative
+    # 悪材料に金利上昇・SOX安、支援材料に円安・テーマ継続
+    neg = " ".join(nar.negative_factors)
+    sup = " ".join(nar.supportive_factors)
+    assert "金利" in neg and "SOX" in neg
+    assert "円安" in sup
+
+
+def test_watch_points_are_specific_conditionals():
+    nar = _narrated_bundle(_rate_up_market()).market_narrative
+    joined = " ".join(nar.watch_points)
+    assert "SOX" in joined
+    assert "金利" in joined
+    assert "か" in joined  # 「〜するか」の条件形
+
+
+def test_views_have_short_medium_long():
+    nar = _narrated_bundle(_rate_up_market()).market_narrative
+    assert nar.near_term_view and nar.medium_term_view and nar.long_term_view
+    assert "構造テーマ" in nar.long_term_view
+
+
+def test_narrative_card_renders_six_parts_and_chain():
+    report = build_html_report(report_date=NOW, market=_rate_up_market(), sources=SourceRegistry(), analysis=_narrated_bundle(_rate_up_market()))
+    for heading in ["① 今日の結論", "② なぜ日経平均は動いたか", "③ 悪材料", "④ 支えになる材料", "⑤ 今後見るべきポイント", "⑥ 見立て"]:
+        assert heading in report
+    assert "nk-chain" in report            # 因果チェーンの矢印表示
+    assert "narrative-conclusion" in report
+    assert report.count("<div") == report.count("</div>")
+    # 売買助言は出さない
+    assert "買うべき" not in report and "売るべき" not in report

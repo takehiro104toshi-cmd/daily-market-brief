@@ -326,9 +326,17 @@ details.more[open] > summary.detail-btn::before { content: "▾ "; }
 .why-today strong { color: #0a3622; }
 .todays-decision { border-left: 4px solid #7c3aed; }
 .narrative-card { border-left: 4px solid #0d9488; }
-.narrative-headline { font-size: 1.02rem; font-weight: 700; margin: 4px 0 10px 0; color: #0f766e; }
+.narrative-headline { font-size: 0.82rem; font-weight: 700; margin: 8px 0 2px 0; color: #0f766e; }
+.narrative-conclusion { font-size: 0.98rem; font-weight: 600; line-height: 1.55; margin: 0 0 6px 0;
+  background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 8px 10px; }
+.nk-chain { margin: 2px 0 8px 0; }
+.nk-node { font-size: 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 5px 8px; display: inline-block; }
+.nk-arrow { text-align: center; color: #14b8a6; font-weight: 700; margin: 1px 0; }
 :root[data-theme="dark"] .narrative-card { border-left-color: #2dd4bf; }
 :root[data-theme="dark"] .narrative-headline { color: #5eead4; }
+:root[data-theme="dark"] .narrative-conclusion { background: #0d2b23; border-color: #1c5c48; color: #d1fae5; }
+:root[data-theme="dark"] .nk-node { background: #171a21; border-color: #2d3340; }
 .td-sub { font-size: 0.78rem; color: #666; margin: 2px 0 8px 0; }
 .td-head { font-weight: 600; margin: 10px 0 2px 0; }
 .dq-warn { font-size: 0.82rem; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d;
@@ -2320,35 +2328,56 @@ def _market_narrative_html(narrative) -> str:
             return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
         return f"<ul class='{cls}'>" + "".join(f"<li>{_esc(x)}</li>" for x in items) + "</ul>"
 
-    head = f"<p class='narrative-headline'>{_esc(narrative.headline)}</p>"
-    move = "<p class='td-head'>何が起きたか</p>" + (
-        "<p class='td-sub'>" + _esc(" ／ ".join(narrative.market_move)) + "</p>"
-        if narrative.market_move else f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
-    )
-    causes = "<p class='td-head'>なぜ動いたか</p>" + _list(narrative.main_causes)
-    watch = "<p class='td-head'>これから何を見るべきか</p>" + _list(narrative.watch_points)
-    implications = "<p class='td-head'>投資判断への示唆（売買助言ではありません）</p>" + _list(narrative.implications)
+    def _chain(items):
+        if not items:
+            return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+        # 矢印（↓）でつないだ因果チェーン。1ノード1行で読みやすく。
+        rows = "".join(
+            f"<div class='nk-node'>{_esc(x)}</div>" + ("<div class='nk-arrow'>↓</div>" if i < len(items) - 1 else "")
+            for i, x in enumerate(items)
+        )
+        return f"<div class='nk-chain'>{rows}</div>"
 
-    # 詳しく: 背景・波及チェーン・今後の見立て（条件分岐）・リスク・根拠
-    chain_html = ""
-    if narrative.cross_market_chain:
-        chain_html = "<p class='td-head'>波及チェーン</p><p class='td-sub'>" + _esc(" → ".join(narrative.cross_market_chain)) + "</p>"
-    detail = (
-        "<p class='td-head'>背景</p>" + _list(narrative.background_factors)
-        + chain_html
-        + "<p class='td-head'>今後の見立て（条件分岐・断定ではありません）</p>"
+    # ① 今日の結論（結論ファースト・1〜2文）
+    conclusion = f"<p class='narrative-headline'>① 今日の結論</p><p class='narrative-conclusion'>{_esc(narrative.conclusion or narrative.headline)}</p>"
+    # ② なぜ日経平均は動いたか（米国株→金利→為替→日本株→セクター→銘柄）
+    nikkei = "<p class='td-head'>② なぜ日経平均は動いたか</p>" + _chain(narrative.nikkei_chain)
+    # ③ 悪材料 ④ 支えになる材料（分けて表示）
+    negatives = "<p class='td-head'>③ 悪材料</p>" + _list(narrative.negative_factors)
+    supportive = "<p class='td-head'>④ 支えになる材料</p>" + _list(narrative.supportive_factors)
+    # ⑤ 今後見るべきポイント（条件分岐）
+    watch = "<p class='td-head'>⑤ 今後見るべきポイント</p>" + _list(narrative.watch_points)
+    # ⑥ 見立て（短期/中期/長期）
+    views = (
+        "<p class='td-head'>⑥ 見立て（条件分岐・断定ではありません）</p>"
         + f"<p class='td-sub'>短期: {_esc(narrative.near_term_view)}</p>"
         + f"<p class='td-sub'>中期: {_esc(narrative.medium_term_view)}</p>"
+        + f"<p class='td-sub'>長期: {_esc(narrative.long_term_view)}</p>"
+    )
+
+    # 詳しく: 主要変化・背景・波及・リスク・示唆・根拠（重複を避け折りたたみ）
+    chain_html = ""
+    if narrative.cross_market_chain:
+        chain_html = "<p class='td-head'>波及チェーン（Cross Market）</p><p class='td-sub'>" + _esc(" → ".join(narrative.cross_market_chain)) + "</p>"
+    move_html = (
+        "<p class='td-head'>主要指標の変化</p><p class='td-sub'>" + _esc(" ／ ".join(narrative.market_move)) + "</p>"
+        if narrative.market_move else ""
+    )
+    detail = (
+        move_html
+        + "<p class='td-head'>背景</p>" + _list(narrative.background_factors)
+        + chain_html
         + "<p class='td-head'>注意すべきリスク</p>" + _list(narrative.risk_factors)
+        + "<p class='td-head'>投資判断への示唆（個別の売買推奨ではありません）</p>" + _list(narrative.implications)
         + (f"<p class='td-sub'>{_esc(narrative.confidence)}</p>" if narrative.confidence else "")
         + (f"<p class='legend'>根拠にした分析: {_esc('、'.join(narrative.source_items))}</p>" if narrative.source_items else "")
     )
     legend = (
         "<p class='legend'>ニュースと市場データ・既存の各分析エンジンの結果だけを機械的に組み合わせた"
-        "「なぜ動いたか」の総括です。生成AIの作文・断定的な将来予測・個別の売買推奨は"
-        "行いません。今後の見立ては条件分岐で示します。</p>"
+        "「なぜ今日の相場が動いたか」の総括です。生成AIの作文・断定的な将来予測・個別の売買推奨は"
+        "行いません。見立ては条件分岐で示します。</p>"
     )
-    body = legend + head + move + causes + watch + implications + _detail_block(detail, label="背景・今後の見立て・リスクを詳しく")
+    body = legend + conclusion + nikkei + negatives + supportive + watch + views + _detail_block(detail, label="主要変化・背景・リスク・示唆を詳しく")
     return _card("📝 本日の相場総括（Market Narrative）", body, extra_class="digest narrative-card", anchor="market-narrative")
 
 

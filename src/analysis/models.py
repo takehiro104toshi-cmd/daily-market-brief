@@ -988,11 +988,18 @@ class MarketNarrativeSummary:
     """
 
     headline: str = ""                                     # 今日の相場を一言で
+    # v3.5.1: 初心者でも一読で分かる6部構成（①結論 ②なぜ日経が動いたか ③悪材料
+    # ④支援材料 ⑤見るべき点 ⑥見立て）。いずれもデフォルト付きで後方互換。
+    conclusion: str = ""                                   # ① 今日の結論（1〜2文）
+    nikkei_chain: List[str] = field(default_factory=list)  # ② なぜ日経平均は動いたか（米国株→金利→為替→日本株→セクター→銘柄）
+    negative_factors: List[str] = field(default_factory=list)   # ③ 悪材料
+    supportive_factors: List[str] = field(default_factory=list)  # ④ 支えになる材料
+    long_term_view: str = ""                               # ⑥ 長期の見立て
     market_move: List[str] = field(default_factory=list)   # 何が起きたか（主要変化）
-    main_causes: List[str] = field(default_factory=list)   # なぜ動いたか
+    main_causes: List[str] = field(default_factory=list)   # なぜ動いたか（詳細・詳しく内）
     background_factors: List[str] = field(default_factory=list)  # 背景（金利/為替/AI半導体/決算/原油/VIX/政策）
     cross_market_chain: List[str] = field(default_factory=list)  # 波及チェーン（Cross Market）
-    watch_points: List[str] = field(default_factory=list)  # これから何を見るべきか
+    watch_points: List[str] = field(default_factory=list)  # ⑤ これから何を見るべきか（条件分岐）
     near_term_view: str = ""                               # 短期の見立て（条件分岐）
     medium_term_view: str = ""                             # 中期の見立て（条件分岐）
     risk_factors: List[str] = field(default_factory=list)  # 注意すべきリスク

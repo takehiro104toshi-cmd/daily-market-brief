@@ -142,32 +142,169 @@ def _background_factors(market: dict, future_intelligence) -> List[str]:
     return factors
 
 
-def _watch_points(market: dict, weekly_events: List[WeeklyEventEntry], future_intelligence) -> List[str]:
-    points: List[str] = []
-    for e in (weekly_events or [])[:3]:
-        cd = getattr(e, "countdown_text", "") or getattr(e, "date_str", "")
-        points.append(f"イベント: {e.label}（{cd}）")
-    # 常に見るべき定点
-    points.append("米10年金利の方向（上昇継続ならグロース株の重荷）")
-    points.append("SOX（半導体指数）の強弱（テーマ株の物色の先行指標）")
-    points.append("ドル円の水準（輸出採算・海外投資家の日本株評価に影響）")
-    # 決算接近（Future Intelligenceが持っていれば注目イベントを流用）
-    return points
+def _lead_driver(market: dict) -> str:
+    """今日の相場を主導した材料を一言で（半導体主導／金利主導／為替主導など）。"""
+    sox = _quote(market, "indices", "SOX")
+    tnx = _quote(market, "rates", "10年")
+    usdjpy = _quote(market, "forex", "米ドル/円")
+    if sox and sox.change_pct is not None and abs(sox.change_pct) >= 1.5:
+        return "半導体主導"
+    if tnx and tnx.change is not None and tnx.change != 0:
+        return "金利主導"
+    if usdjpy and usdjpy.change_pct is not None and abs(usdjpy.change_pct) >= 0.5:
+        return "為替主導"
+    return ""
 
 
-def _views(market: dict, regime: Optional[MarketRegime]) -> tuple:
-    """短期・中期の見立てを条件分岐（if条件）で返す（断定はしない）。"""
+def _conclusion(market: dict, regime: Optional[MarketRegime]) -> str:
+    """① 今日の結論（1〜2文）。何が主因でどちらに動いたかを端的に。"""
+    tone = "方向感を欠く"
+    if regime is not None:
+        tone = {"Risk On": "リスクオン寄り", "Risk Off": "リスクオフ寄り", "Neutral": "中立"}.get(regime.regime, tone)
+    lead = _lead_driver(market)
+    lead_txt = f"「{lead}の{tone}」" if lead else f"「{tone}」"
+
+    nikkei = _quote(market, "indices", "日経")
+    nk_dir = ""
+    if nikkei and nikkei.change_pct is not None:
+        nk_dir = "上昇" if nikkei.change_pct >= 0 else "下落"
+    # 主因（悪材料 or 支援材料のトップ）
+    drivers = _notable_drivers(market)
+    driver_txt = "と".join(drivers[:2]) if drivers else "複数の材料が拮抗"
+
+    s1 = f"本日は{lead_txt}の相場。"
+    if nk_dir:
+        s1 += f"{driver_txt}を背景に、日経平均は{nk_dir}しました。"
+    else:
+        s1 += f"{driver_txt}が意識される展開でした。"
+    # ニュアンス（VIX水準）
     vix = _quote(market, "indices", "VIX")
-    vix_price = vix.price if (vix and vix.price is not None) else None
+    if vix and vix.price is not None:
+        if vix.price < 20:
+            s1 += "VIXは20未満で、全面的なパニックではありません。"
+        elif vix.price >= 25:
+            s1 += "VIXも高水準で、警戒感が強まっています。"
+    return s1
+
+
+def _nikkei_chain(market: dict) -> List[str]:
+    """② なぜ日経平均は動いたか（米国株→金利→為替→日本株→セクター→銘柄の順）。"""
+    chain: List[str] = []
+    # 米国株
+    nasdaq = _quote(market, "indices", "ナスダック")
+    dji = _quote(market, "indices", "ダウ")
+    us = nasdaq if (nasdaq and nasdaq.change_pct is not None) else dji
+    if us and us.change_pct is not None:
+        chain.append(f"米国株は{'堅調' if us.change_pct >= 0 else '軟調'}（{us.name} {fmt_change_compact(us.change_pct)}）")
+    # 金利
+    tnx = _quote(market, "rates", "10年")
+    if tnx and tnx.change is not None:
+        if tnx.change > 0:
+            chain.append("米10年金利が上昇→グロース株の割引率上昇で逆風")
+        elif tnx.change < 0:
+            chain.append("米10年金利が低下→グロース株の割引率低下で追い風")
+    # 為替
+    usdjpy = _quote(market, "forex", "米ドル/円")
+    if usdjpy and usdjpy.change_pct is not None:
+        chain.append(f"ドル円は{'円安' if usdjpy.change_pct >= 0 else '円高'}方向（輸出採算に{'追い風' if usdjpy.change_pct >= 0 else '逆風'}）")
+    # セクター（SOX）
+    sox = _quote(market, "indices", "SOX")
+    if sox and sox.change_pct is not None and abs(sox.change_pct) >= 1.0:
+        if sox.change_pct < 0:
+            chain.append(f"SOX{fmt_change_compact(sox.change_pct)}→日本の半導体関連に売り波及")
+        else:
+            chain.append(f"SOX{fmt_change_compact(sox.change_pct)}→日本の半導体関連に買い波及")
+    # 日本株（帰結）
+    nikkei = _quote(market, "indices", "日経")
+    if nikkei and nikkei.change_pct is not None:
+        chain.append(f"日経平均を{'押し下げ' if nikkei.change_pct < 0 else '押し上げ'}（{fmt_change_compact(nikkei.change_pct)}）")
+    return chain
+
+
+def _negative_factors(market: dict) -> List[str]:
+    """③ 悪材料（本日の重荷）。取得できたデータのみ。"""
+    out: List[str] = []
+    tnx = _quote(market, "rates", "10年")
+    if tnx and tnx.change is not None and tnx.change > 0:
+        lvl = f"（{tnx.price:g}%前後）" if tnx.price is not None else ""
+        out.append(f"米10年金利の上昇{lvl}")
+    sox = _quote(market, "indices", "SOX")
+    if sox and sox.change_pct is not None and sox.change_pct <= -1.0:
+        out.append(f"SOX（半導体指数）安 {fmt_change_compact(sox.change_pct)}")
+    nasdaq = _quote(market, "indices", "ナスダック")
+    if nasdaq and nasdaq.change_pct is not None and nasdaq.change_pct < 0:
+        out.append(f"NASDAQ安 {fmt_change_compact(nasdaq.change_pct)}")
+    dji = _quote(market, "indices", "ダウ")
+    if dji and dji.change_pct is not None and dji.change_pct < 0:
+        out.append(f"NYダウ安 {fmt_change_compact(dji.change_pct)}")
+    wti = _quote(market, "commodities", "WTI")
+    if wti and wti.change_pct is not None and wti.change_pct >= 1.5:
+        out.append("原油高によるインフレ警戒")
+    vix = _quote(market, "indices", "VIX")
+    if vix and vix.price is not None and vix.price >= 25:
+        out.append(f"VIX高水準（{vix.price:g}）")
+    return out
+
+
+def _supportive_factors(market: dict, future_intelligence, weekly_events: List[WeeklyEventEntry]) -> List[str]:
+    """④ 支えになる材料。取得できたデータのみ。"""
+    out: List[str] = []
+    usdjpy = _quote(market, "forex", "米ドル/円")
+    if usdjpy and usdjpy.change_pct is not None and usdjpy.change_pct >= 0:
+        out.append("ドル円は円安方向（輸出関連の採算を支援）")
+    vix = _quote(market, "indices", "VIX")
+    if vix and vix.price is not None and vix.price < 20:
+        out.append("VIXは20未満（全面リスクオフではない）")
+    tnx = _quote(market, "rates", "10年")
+    if tnx and tnx.change is not None and tnx.change < 0:
+        out.append("米10年金利の低下（グロース株の追い風）")
+    tm = getattr(future_intelligence, "theme_momentum", []) if future_intelligence else []
+    if tm:
+        top = max(tm, key=lambda t: t.momentum_score)
+        out.append(f"「{top.label}」テーマは中長期では継続（Momentum {top.momentum_score}/100）")
+    if any("決算" in getattr(e, "label", "") or getattr(e, "category", "") == "決算" for e in (weekly_events or [])):
+        out.append("決算イベントで個別材料は出やすい")
+    if not out:
+        out.append("目立った支援材料は確認できませんでした（分析材料の範囲内）")
+    return out
+
+
+def _watch_points(market: dict, weekly_events: List[WeeklyEventEntry], future_intelligence) -> List[str]:
+    """⑤ 今後見るべきポイント（具体的な条件分岐で）。"""
+    points: List[str] = []
+    sox = _quote(market, "indices", "SOX")
+    if sox is not None:
+        points.append("SOX（半導体指数）が反発するか")
+    tnx = _quote(market, "rates", "10年")
+    if tnx and tnx.price is not None:
+        points.append(f"米10年金利が{tnx.price:g}%台で定着するか")
+    else:
+        points.append("米10年金利の方向（上昇継続ならグロース株の重荷）")
+    vix = _quote(market, "indices", "VIX")
+    if vix and vix.price is not None:
+        points.append(f"VIXが20を{'超える' if vix.price < 20 else '下回って推移する'}か")
+    else:
+        points.append("VIXが20を超えるか")
+    usdjpy = _quote(market, "forex", "米ドル/円")
+    if usdjpy is not None:
+        points.append("ドル円の円安が輸出株を支えるか")
+    for e in (weekly_events or [])[:2]:
+        cd = getattr(e, "countdown_text", "") or getattr(e, "date_str", "")
+        points.append(f"{e.label}（{cd}）で見方が変わるか")
+    return points[:6]
+
+
+def _views(market: dict, regime: Optional[MarketRegime], future_intelligence) -> tuple:
+    """短期・中期・長期の見立てを条件分岐で返す（断定はしない・各3行以内）。"""
+    sox = _quote(market, "indices", "SOX")
+    sox_weak = bool(sox and sox.change_pct is not None and sox.change_pct < 0)
     near = (
-        "米金利がさらに上昇しSOXが弱含む場合、グロース株・半導体株には警戒。"
-        + ("VIXが20未満で踏みとどまれば、全面リスクオフではなく個別調整に留まる可能性。" if (vix_price is not None and vix_price < 20) else "VIXが高止まりする場合はリスク回避が優勢になりやすい。")
+        "SOXが弱い間は半導体・グロース株は慎重に確認。" if sox_weak
+        else "半導体（SOX）の強さが続くかを確認しつつ、過熱には留意。"
     )
-    medium = (
-        "AI・半導体など構造テーマのニュースが継続する場合、中長期テーマは残りやすい一方、"
-        "短期は選別色（利食い・循環物色）が強まりやすい。金利・決算の確認が重要。"
-    )
-    return near, medium
+    medium = "AI投資テーマは残るが、金利上昇局面では銘柄選別が強まりやすい。"
+    long_view = "AI・半導体・電力インフラなどの構造テーマは維持。ただし短期のバリュエーション調整には注意。"
+    return near, medium, long_view
 
 
 def _risk_factors(anomalies, future_intelligence, regime: Optional[MarketRegime]) -> List[str]:
@@ -219,7 +356,7 @@ def build_market_narrative(
         if ch.nodes:
             cross_nodes = list(ch.nodes)
 
-    near, medium = _views(market, regime)
+    near, medium, long_view = _views(market, regime, future_intelligence)
     conf_txt = ""
     if analysis_confidence is not None:
         conf_txt = f"Analysis Confidence {analysis_confidence.score}/100（{analysis_confidence.grade}・分析根拠の充実度。将来の的中確率ではありません）"
@@ -238,6 +375,11 @@ def build_market_narrative(
 
     return MarketNarrativeSummary(
         headline=_build_headline(market, regime),
+        conclusion=_conclusion(market, regime),
+        nikkei_chain=_nikkei_chain(market),
+        negative_factors=_negative_factors(market),
+        supportive_factors=_supportive_factors(market, future_intelligence, weekly_events or []),
+        long_term_view=long_view,
         market_move=_market_move(market),
         main_causes=_main_causes(market, news_ranking, cross_market, regime),
         background_factors=_background_factors(market, future_intelligence),
