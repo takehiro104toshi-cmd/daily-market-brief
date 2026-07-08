@@ -325,6 +325,10 @@ details.more[open] > summary.detail-btn::before { content: "▾ "; }
   border-radius: 8px; padding: 6px 10px; margin: 0 0 8px 0; }
 .why-today strong { color: #0a3622; }
 .todays-decision { border-left: 4px solid #7c3aed; }
+.narrative-card { border-left: 4px solid #0d9488; }
+.narrative-headline { font-size: 1.02rem; font-weight: 700; margin: 4px 0 10px 0; color: #0f766e; }
+:root[data-theme="dark"] .narrative-card { border-left-color: #2dd4bf; }
+:root[data-theme="dark"] .narrative-headline { color: #5eead4; }
 .td-sub { font-size: 0.78rem; color: #666; margin: 2px 0 8px 0; }
 .td-head { font-weight: 600; margin: 10px 0 2px 0; }
 .dq-warn { font-size: 0.82rem; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d;
@@ -1105,6 +1109,7 @@ def _toc_item_html(anchor: str, title: str) -> str:
 
 # トップメニューグリッド（v2.5）: 主要セクションへのジャンプボタン
 MENU_GRID_ITEMS = [
+    ("#market-narrative", "📝 本日の相場総括"),
     ("#todays-decision", "🎯 Today's Decision"),
     ("#dashboard-top", "📊 Dashboard"),
     ("#executive-summary", "📰 Executive Summary"),
@@ -2302,6 +2307,51 @@ def _refresh_button_html(actions_url: str = "", realtime: Optional[dict] = None,
     return "".join(parts)
 
 
+def _market_narrative_html(narrative) -> str:
+    """「本日の相場総括（Market Narrative）」カード（v3.5・改善1）。HTML最上部に置く、
+    「今日の相場がなぜ動いたか・背景・今後の見方」の深掘り総括。narrativeが未指定なら
+    空文字（既存呼び出しに影響しない）。断定・売買助言はせず、条件分岐で見立てを示す。
+    """
+    if narrative is None:
+        return ""
+
+    def _list(items, cls="plain"):
+        if not items:
+            return f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+        return f"<ul class='{cls}'>" + "".join(f"<li>{_esc(x)}</li>" for x in items) + "</ul>"
+
+    head = f"<p class='narrative-headline'>{_esc(narrative.headline)}</p>"
+    move = "<p class='td-head'>何が起きたか</p>" + (
+        "<p class='td-sub'>" + _esc(" ／ ".join(narrative.market_move)) + "</p>"
+        if narrative.market_move else f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
+    )
+    causes = "<p class='td-head'>なぜ動いたか</p>" + _list(narrative.main_causes)
+    watch = "<p class='td-head'>これから何を見るべきか</p>" + _list(narrative.watch_points)
+    implications = "<p class='td-head'>投資判断への示唆（売買助言ではありません）</p>" + _list(narrative.implications)
+
+    # 詳しく: 背景・波及チェーン・今後の見立て（条件分岐）・リスク・根拠
+    chain_html = ""
+    if narrative.cross_market_chain:
+        chain_html = "<p class='td-head'>波及チェーン</p><p class='td-sub'>" + _esc(" → ".join(narrative.cross_market_chain)) + "</p>"
+    detail = (
+        "<p class='td-head'>背景</p>" + _list(narrative.background_factors)
+        + chain_html
+        + "<p class='td-head'>今後の見立て（条件分岐・断定ではありません）</p>"
+        + f"<p class='td-sub'>短期: {_esc(narrative.near_term_view)}</p>"
+        + f"<p class='td-sub'>中期: {_esc(narrative.medium_term_view)}</p>"
+        + "<p class='td-head'>注意すべきリスク</p>" + _list(narrative.risk_factors)
+        + (f"<p class='td-sub'>{_esc(narrative.confidence)}</p>" if narrative.confidence else "")
+        + (f"<p class='legend'>根拠にした分析: {_esc('、'.join(narrative.source_items))}</p>" if narrative.source_items else "")
+    )
+    legend = (
+        "<p class='legend'>ニュースと市場データ・既存の各分析エンジンの結果だけを機械的に組み合わせた"
+        "「なぜ動いたか」の総括です。生成AIの作文・断定的な将来予測・個別の売買推奨は"
+        "行いません。今後の見立ては条件分岐で示します。</p>"
+    )
+    body = legend + head + move + causes + watch + implications + _detail_block(detail, label="背景・今後の見立て・リスクを詳しく")
+    return _card("📝 本日の相場総括（Market Narrative）", body, extra_class="digest narrative-card", anchor="market-narrative")
+
+
 def _market_judgment(analysis: AnalysisBundle) -> tuple:
     """今日の市場判断（リスクオン／オフ／中立）を、既存のシナリオ確率のみから
     機械的に判定する（新たな予測は行わない・v3.1・改善1）。戻り値は(ラベル, 一行理由)。
@@ -2435,6 +2485,7 @@ def build_html_report(
     top_cards = [
         _refresh_button_html(actions_url or "", realtime=realtime, generated_str=updated_str),
         _menu_grid_html(),
+        _market_narrative_html(analysis.market_narrative),
         _todays_decision_html(market, analysis, freshness, anomalies, translation_st),
         _dashboard_html(market, analysis, now=report_date),
         _search_card_html(),
@@ -2464,7 +2515,14 @@ def build_html_report(
         ),
         ("scenarios-v2", "今日の3大シナリオ（期待値順） ★★★★★", _scenarios_v2_html(analysis.scenarios_v2)),
         ("scenario", "今日の相場シナリオ ★★★★☆", None),  # _scenario_card は専用ヘルパーのため下で個別処理
-        ("instrument-scenarios", "日経平均・ドル円・米国市場 個別シナリオ ★★★★☆", _instrument_scenarios_html(analysis.instrument_scenarios)),
+        # v3.5（改善5）: シナリオ系は「今日の3大シナリオ」を主軸とし、個別シナリオは重複を避けて
+        # 初期は「詳しく」に折りたたむ（内容・算出は不変・見せ方のみ）。
+        (
+            "instrument-scenarios",
+            "日経平均・ドル円・米国市場 個別シナリオ ★★★★☆",
+            "<p class='legend'>「今日の3大シナリオ」と重複しやすいため、個別シナリオは折りたたみ表示です。</p>"
+            + _detail_block(_instrument_scenarios_html(analysis.instrument_scenarios), label="個別シナリオを表示"),
+        ),
         ("market-impact", "マーケットインパクト ★★★★☆", _market_impact_html(analysis.market_impact)),
         ("sector-strength", "セクターランキング ★★★★☆", _sector_strength_html(analysis.sector_strength)),
         ("causal-chain", "マーケット分析（因果チェーン） ★★★★☆", _causal_chain_html(analysis.causal_chain_text, analysis.causal_chains)),
@@ -2478,6 +2536,16 @@ def build_html_report(
         ("top-picks", "今日の注目5銘柄 ★★★★☆", _top_picks_html(analysis.top_picks)),
         ("watchlist", "今日のウォッチリスト ★★★★☆", _watchlist_quicklist_html(analysis.watchlist_quicklist)),
         ("long-term-picks", "長期投資アイデア TOP5 ★★★★☆", _long_term_picks_html(analysis.long_term_picks)),
+        # v3.5（改善4/9）: ここから下は営業支援用のメモ。投資判断に必須ではないため
+        # 「営業メモ」として1グループに集約し、各カードは初期折りたたみ（表示オプションで一括非表示も可）。
+        (
+            "sales-memo",
+            "営業メモ（営業支援・初期折りたたみ） ★★☆☆☆",
+            "<p class='legend'>以下は営業支援用のメモ（今日電話すべき顧客／営業準備／営業トーク／"
+            "営業向けコメント／岡三証券営業向けコメント／朝会コメント／会話ネタ／想定質問）です。"
+            "投資判断そのものには必須ではないため、各カードは初期状態で折りたたんでいます"
+            "（表示オプションの「営業セクションを非表示」で一括で隠せます）。</p>",
+        ),
         ("call-priorities", "今日電話すべき顧客 ★★★☆☆", _call_priorities_html(analysis.call_priorities)),
         ("sales-prep", "営業準備 ★★★☆☆", _sales_prep_html(analysis.sales_prep)),
         ("sales-talk", "営業トーク ★★★☆☆", _sales_talk_html(analysis.sales_talk_bullets)),

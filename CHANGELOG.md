@@ -4,6 +4,47 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v3.5 (2026-07-07) — Market Narrative & Section Pruning Upgrade（相場総括の新設・構成整理）
+
+情報を大量に並べるツールから「今日の相場がなぜ動いたか・背景・今後の見方」を端的に
+深掘りできる分析ツールへ寄せた版。最上部に相場総括を新設し、営業系・重複セクションを
+整理して「朝3分で本質」を優先した。分析ロジックは変更せず、既存エンジンの算出済み
+結果を組み合わせるだけ（生成AI作文・断定的将来予測・売買助言は行わない）。
+
+Phase 0分類:
+- A（既存で十分使える）: Market Regime／Cross Market／Future Intelligence／
+  Executive Summary／Analysis Confidence／Weekly Events／異常値検知（総括の素材が既に揃っている）。
+- B（少し改善すれば使える）: シナリオ系の重複整理（個別シナリオを折りたたみ）／
+  営業系のグループ化（既にcard-collapsed済み→「営業メモ」見出しで集約）。
+- C（今回新規追加）: Market Narrative Summary（本日の相場総括）＝新規モジュール＋最上部カード。
+- D（今回はやらない・据え置き）: セクションの物理的な全並べ替え（既存のprev/next・目次・
+  Data Qualityは引用の下、というナビゲーションテストを壊さないため見送り。「本質を上に」は
+  最上部の相場総括＋Today's Decisionで担保）／営業系の完全削除（まず営業メモに集約・段階的に）。
+
+追加・改善
+・改善1/2 Market Narrative（src/analysis/market_narrative.py 新規＋models.MarketNarrativeSummary）:
+  市場データ・重要ニュース・Market Regime・Cross Market・Future Intelligence・Weekly Events・
+  異常値・Analysis Confidence だけから、①今日を一言で（headline）②何が起きたか③なぜ動いたか
+  ④背景⑤波及チェーン⑥これから見るべき点⑦今後の見立て（短期/中期・条件分岐）⑧リスク
+  ⑨投資判断への示唆（短期/中期/長期/注意・売買助言なし）⑩Analysis Confidence⑪根拠、を機械的に整理。
+  HTML最上部（Today's Decision・Dashboardより上）に「📝 本日の相場総括」カードを新設し、
+  背景・見立て・リスクは「詳しく」に折りたたみ。main.pyで配線・AnalysisBundleに格納。
+・改善3 役割整理: Today's Decisionは「3分の判断カード」、Market Narrativeは「なぜの深掘り」。
+  総括の背景説明はNarrative側に集約し、Today's Decisionは短い判断カードのまま維持。
+・改善5 シナリオ整理: 「今日の3大シナリオ（期待値順）」を主軸とし、「日経平均・ドル円・米国市場
+  個別シナリオ」は重複回避のため初期は「詳しく」に折りたたみ（内容・算出は不変）。
+・改善4/9 営業メモ統合: 営業支援系（今日電話すべき顧客／営業準備／営業トーク／営業向けコメント
+  ／岡三証券営業向けコメント／朝会コメント／会話ネタ／想定質問）の直前に「営業メモ」見出しを
+  追加して1グループに集約。各カードは初期折りたたみ（v3.1）＋「営業セクションを非表示」トグルは維持。
+  メニュー最上段に「本日の相場総括」を追加し重要度順の入口に。
+
+（既に実装済みで継続）: Future Intelligenceの初期短縮（fi-conclusion＋FI_SUMMARY_COUNT折りたたみ・v2.7）／
+Watchlistの今日見るべき5銘柄（Today's Decision・v3.1）／引用の要約＋全URL折りたたみ（v3.1）。
+
+やらないこと（v3.5で厳守）
+・売買助言（「買うべき」「売るべき」等の個別推奨）／事実と分析の混同／取得していないデータの捏造／
+  既存の分析ロジック・エンジンの書き換え／派手なUI化。
+
 ## v3.4 (2026-07-07) — One-Tap Report Generation（Cloudflare Worker中継でワンタップ生成）
 
 GitHub Actions画面を経由せず、スマホから1タップで workflow_dispatch を起動できる

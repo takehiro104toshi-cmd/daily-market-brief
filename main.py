@@ -50,6 +50,9 @@ from src.analysis import (
     market_regime,
     news_impact,
     theme_rotation,
+    # v3.5 Market Narrative（本日の相場総括）
+    anomaly,
+    market_narrative,
     sales_comments,
     sales_prep,
     scenario,
@@ -719,6 +722,24 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         "analysis_confidence",
         lambda: analysis_confidence.build_analysis_confidence(
             sources, freshness_stats, market, news_ranking_items, analysis_bundle
+        ),
+        None,
+    )
+
+    # v3.5（改善1/2）: 本日の相場総括（Market Narrative）。既に算出済みの各エンジンの
+    # 結果と市場データ・ニュースだけから機械的に組み立てる（生成AI・断定・売買助言なし）。
+    analysis_bundle.market_narrative = _safe_call(
+        "market_narrative",
+        lambda: market_narrative.build_market_narrative(
+            market,
+            news_ranking_items,
+            executive_summary_result,
+            future_intelligence_result,
+            market_regime_result,
+            cross_market_result,
+            analysis_bundle.analysis_confidence,
+            weekly_events_result,
+            anomaly.detect_anomalies(market),
         ),
         None,
     )

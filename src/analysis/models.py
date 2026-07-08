@@ -976,6 +976,32 @@ class AnalysisConfidence:
 
 
 @dataclass
+class MarketNarrativeSummary:
+    """「本日の相場総括（Market Narrative）」（v3.5・改善1）。
+
+    ニュースと市場データ・既存の各エンジン（Market Regime / Cross Market /
+    Future Intelligence / Executive Summary / Weekly Events / 異常値 /
+    Analysis Confidence）の算出済み結果だけを機械的に組み合わせ、「今日の相場が
+    なぜ動いたのか」「背景は何か」「今後どう見ればよいか」を端的にまとめる。
+    生成AIによる作文・断定的な将来予測・売買助言（買うべき/売るべき）は行わない。
+    今後の見立ては条件分岐（if条件）で表現する。
+    """
+
+    headline: str = ""                                     # 今日の相場を一言で
+    market_move: List[str] = field(default_factory=list)   # 何が起きたか（主要変化）
+    main_causes: List[str] = field(default_factory=list)   # なぜ動いたか
+    background_factors: List[str] = field(default_factory=list)  # 背景（金利/為替/AI半導体/決算/原油/VIX/政策）
+    cross_market_chain: List[str] = field(default_factory=list)  # 波及チェーン（Cross Market）
+    watch_points: List[str] = field(default_factory=list)  # これから何を見るべきか
+    near_term_view: str = ""                               # 短期の見立て（条件分岐）
+    medium_term_view: str = ""                             # 中期の見立て（条件分岐）
+    risk_factors: List[str] = field(default_factory=list)  # 注意すべきリスク
+    implications: List[str] = field(default_factory=list)  # 投資判断への示唆（短期/中期/長期/注意）
+    confidence: str = ""                                   # Analysis Confidence（分析根拠の充実度）
+    source_items: List[str] = field(default_factory=list)  # 根拠にした既存エンジン・データ
+
+
+@dataclass
 class AnalysisBundle:
     """全AI分析モジュールの計算結果をまとめ、builder.pyへ渡すための入れ物。"""
 
@@ -1020,3 +1046,5 @@ class AnalysisBundle:
     theme_rotation: List[ThemeRotationEntry] = field(default_factory=list)      # 改善8
     market_breadth: Optional[MarketBreadth] = None               # 改善9
     analysis_confidence: Optional[AnalysisConfidence] = None      # 改善10
+    # v3.5 Market Narrative（本日の相場総括。デフォルトNoneで既存呼び出しに影響なし）
+    market_narrative: Optional[MarketNarrativeSummary] = None
