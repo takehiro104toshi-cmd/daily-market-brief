@@ -977,12 +977,20 @@ class AnalysisConfidence:
 
 @dataclass
 class StrategicFactor:
-    """「相場を押し下げた材料／下支えした材料」の1件（v3.5.2）。優先度を★で示す。"""
+    """「相場を押し下げた材料／下支えした材料」の1件（v3.5.2、v3.5.3で方向を明確化）。
+
+    direction は「日経平均にとって」positive（押し上げ）/ negative（押し下げ）/
+    neutral（中立）。同一factorは方向が一意なので、押し下げ材料と下支え材料の両方に
+    出ることはない（v3.5.3・改善4）。category は rates/fx/us_equity/semiconductor/
+    volatility/commodity/event/theme のいずれか。
+    """
 
     label: str
     stars: str = ""          # ★の数（寄与度の大きさ）
     score: float = 0.0       # 内部スコア（並べ替え用）
     note: str = ""           # 1行の理由
+    direction: str = ""      # positive / negative / neutral（日経平均にとって）
+    category: str = ""       # rates / fx / us_equity / semiconductor / volatility / commodity / event / theme
 
 
 @dataclass

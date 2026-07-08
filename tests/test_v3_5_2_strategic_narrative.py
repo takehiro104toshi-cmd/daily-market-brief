@@ -98,11 +98,12 @@ def test_scenarios_abc_with_probability_labels():
     assert all(s.chain for s in sn.scenarios)
 
 
-def test_nikkei_causation_goes_from_result_to_macro():
+def test_nikkei_causation_explains_background_and_counter():
+    # v3.5.3: 「日経は◯◯しました。背景には…がありました。一方で…」の段落形式
     sn = _build(_semis_down_market())
     chain = sn.nikkei_causation
     assert "日経平均" in chain[0]        # 結果から始まる
-    assert any("マクロ" in c or "FRB" in c for c in chain)  # マクロまで遡る
+    assert any("背景には" in c or "支えとなる一方" in c for c in chain)  # 背景・力関係を説明
 
 
 def test_cross_market_prose_is_natural_language():
@@ -124,8 +125,10 @@ def test_strategist_summary_weaves_all_and_no_advice():
     s = sn.strategist_summary
     assert 120 <= len(s) <= 400
     assert "買うべき" not in s and "売るべき" not in s
-    # 背景・市場心理・一番効いた材料・今後、を含む
-    assert "背景" in s and "最も効いた" in s and "今後" in s
+    # v3.5.3: 方向・市場心理・今後の見るポイントを一連の流れで含む
+    assert "日経平均" in s
+    assert "市場心理" in s
+    assert "今後" in s
 
 
 def test_reused_engines_listed():
