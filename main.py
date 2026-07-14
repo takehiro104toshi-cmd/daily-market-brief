@@ -11,8 +11,10 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import logging
 import os
+import tempfile
 from datetime import datetime, time
 from pathlib import Path
 from typing import Optional
@@ -38,6 +40,7 @@ from src.analysis import (
     news_ranking,
     okasan_sales_comments,
     rashinban_loader,
+    report_schedule,
     scenario_v2,
     theme_learning,
     translation,
@@ -149,6 +152,35 @@ def parse_args(argv: Optional[list] = None) -> argparse.Namespace:
         default="config.yaml",
         help="設定ファイルのパス（デフォルト: config.yaml）",
     )
+    # v4.x Six Daily Report Schedule。いずれも省略時は従来どおり臨時レポートとして生成する
+    # （スケジュール管理・二重生成防止・履歴保存には関与しない＝完全な後方互換）。
+    parser.add_argument(
+        "--report-slot",
+        type=str,
+        default=None,
+        help=(
+            "生成するレポートスロット（pre_market/market_open/morning_close/afternoon_open/"
+            "market_close/evening）。'auto' で現在JST時刻の直前スロットを自動選択。"
+            "省略時はスケジュール管理を行わず臨時レポートを生成します。"
+        ),
+    )
+    parser.add_argument(
+        "--trigger-type",
+        type=str,
+        default=None,
+        choices=[None, "schedule", "manual", "one_tap", "recovery", "unknown"],
+        help="実行のトリガー種別（記録用）。省略可。",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="同一日・同一スロットが生成済みでも再生成する。",
+    )
+    parser.add_argument(
+        "--recovery",
+        action="store_true",
+        help="欠損回復モード。missing/failed/stale のときだけ生成する（successならno-op）。",
+    )
     return parser.parse_args(argv)
 
 
@@ -258,11 +290,103 @@ def _resolve_report_datetime(tz: pytz.BaseTzInfo, date_str: Optional[str]) -> da
     return tz.localize(datetime.combine(parsed_date, time(7, 0)))
 
 
-def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = None) -> Path:
+def _write_text_atomic(path: Path, text: str) -> None:
+    """一時ファイルへ書き込んでから os.replace で atomic に差し替える。
+
+    途中失敗で既存の（正常な）index.html を壊れた内容で上書きしないため。
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".tmp-", suffix=path.suffix)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
+
+def _validate_html(html_text: Optional[str]) -> bool:
+    """公開前の最低限のHTML妥当性チェック（v4.x §15）。
+
+    空でない・必須タイトル・最終更新・主要カード・閉じタグを満たすときのみ True。
+    """
+    if not html_text or len(html_text) < 200:
+        return False
+    required = [
+        "Market Intelligence System",  # 必須タイトル
+        "最終更新",                      # 最終更新時刻
+        "</body>", "</html>",           # 閉じタグ
+    ]
+    if not all(token in html_text for token in required):
+        return False
+    # Market Narrative もしくは主要カード（目次）のいずれかが含まれること
+    return ("相場" in html_text) or ("目次" in html_text) or ("card" in html_text)
+
+
+def _save_history_html(base_dir: Path, config: dict, date_key: str, slot_id: str, html_text: str) -> Optional[Path]:
+    """各スロットのHTMLを履歴として保存する（archive_reports=true かつ slot 指定時のみ）。"""
+    sched = report_schedule.get_schedule_config(config)
+    if not sched.get("archive_reports", True):
+        return None
+    history_dir = base_dir / Path(sched.get("history_dir", report_schedule.DEFAULT_HISTORY_DIR)) / date_key
+    dest = history_dir / f"{slot_id}.html"
+    _write_text_atomic(dest, html_text)
+    return dest
+
+
+def generate_report(
+    config_path: str = "config.yaml",
+    date_str: Optional[str] = None,
+    report_slot: Optional[str] = None,
+    trigger_type: Optional[str] = None,
+    force: bool = False,
+    recovery: bool = False,
+) -> Optional[Path]:
     setup_logging()
     config = load_config(config_path)
     tz = pytz.timezone(config.get("output", {}).get("timezone", "Asia/Tokyo"))
     now = _resolve_report_datetime(tz, date_str)
+
+    # ---- v4.x Six Daily Report Schedule: スロット解決と二重生成防止（省略時は完全に従来動作） ----
+    schedule_engaged = report_slot is not None
+    effective_slot: Optional[str] = None
+    runs = None
+    runs_file = None
+    trig = trigger_type or "unknown"
+    if schedule_engaged:
+        sched_cfg = report_schedule.get_schedule_config(config)
+        date_key_sched = now.strftime("%Y-%m-%d")
+        if report_slot == "auto":
+            effective_slot = report_schedule.resolve_auto_slot(config, now)
+        elif report_schedule.slot_by_id(config, report_slot):
+            effective_slot = report_slot
+        else:
+            effective_slot = None  # 未知のスロット名 → 臨時扱い（記録しない）
+        runs_file = report_schedule.runs_path(config, date_key_sched, base_dir=BASE_DIR)
+        runs = report_schedule.load_runs(runs_file, date_key_sched, sched_cfg["timezone"])
+        should, reason = report_schedule.decide_action(
+            config, runs, effective_slot, force=force, is_recovery=recovery, now=now
+        )
+        logger.info(
+            "レポートスケジュール判定: slot=%s trigger=%s force=%s recovery=%s → %s（%s）",
+            effective_slot, trig, force, recovery, "生成" if should else "スキップ", reason,
+        )
+        if not should:
+            latest = BASE_DIR / config.get("output", {}).get("dir", "output") / LATEST_FILENAME
+            return latest if latest.exists() else None
+        if effective_slot:
+            slot_def = report_schedule.slot_by_id(config, effective_slot) or {}
+            report_schedule.record_start(
+                runs, effective_slot,
+                scheduled_time=slot_def.get("time", ""),
+                trigger_type=trig, is_recovery_run=recovery, now=now,
+                workflow_run_id=os.environ.get("GITHUB_RUN_ID", ""),
+            )
+            report_schedule.save_runs_atomic(runs_file, runs)
     if date_str:
         logger.info("--date 指定により、レポート対象日を %s として生成します。", now.strftime("%Y-%m-%d"))
 
@@ -785,6 +909,23 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
         lambda: build_mobile_report(report_date=now, market=market, analysis=analysis_bundle),
         f"# Morning Market Brief Mobile\n\nモバイル版レポートの生成に失敗しました（取得不可）。\n",
     )
+    # v4.x: 本日の自動生成状況カード用コンテキスト（スロット指定時のみ）。
+    # 現在の生成回を暫定的に success として重ね、6スロットの状態を表示する。
+    schedule_ctx = None
+    if schedule_engaged and runs is not None:
+        display_runs = copy.deepcopy(runs)
+        if effective_slot:
+            slot_def = report_schedule.slot_by_id(config, effective_slot) or {}
+            report_schedule.upsert_slot_record(
+                display_runs, effective_slot,
+                {"status": "success", "generated_at": now.isoformat(),
+                 "is_recovery_run": recovery, "trigger_type": trig,
+                 "scheduled_time": slot_def.get("time", "")},
+            )
+        schedule_ctx = report_schedule.build_status_context(
+            config, display_runs, now=now, current_slot_id=effective_slot
+        )
+
     html_report = _safe_call(
         "html_report",
         lambda: build_html_report(
@@ -797,6 +938,7 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
             rashinban=rashinban_knowledge,
             why_today=why_today_map,
             realtime=config.get("realtime", {}),
+            schedule=schedule_ctx,
         ),
         "<html><body><p>HTML版レポートの生成に失敗しました（取得不可）。</p></body></html>",
     )
@@ -820,9 +962,43 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
     html_out_path.write_text(html_report, encoding="utf-8")
     logger.info("HTML版レポートを保存しました: %s", html_out_path)
 
+    # v4.x: 公開前にHTML妥当性を検証。壊れたHTMLで既存の最新ページ（index）を
+    # atomicに上書きしない（不正時は前回の最新版を維持し、スロットは failed 記録）。
+    html_valid = _validate_html(html_report)
     latest_html_path = output_dir / LATEST_HTML_FILENAME
-    latest_html_path.write_text(html_report, encoding="utf-8")
-    logger.info("最新HTML版レポートを保存しました: %s", latest_html_path)
+    if html_valid:
+        _write_text_atomic(latest_html_path, html_report)
+        logger.info("最新HTML版レポートを保存しました: %s", latest_html_path)
+    else:
+        logger.warning(
+            "HTML妥当性チェックに失敗したため、最新HTML(index)は上書きしませんでした（前回版を維持）。"
+        )
+
+    # v4.x: 各スロットの履歴HTML保存 → 実行記録JSONを success/failed で確定
+    if schedule_engaged and effective_slot and runs is not None and runs_file is not None:
+        date_key_sched = now.strftime("%Y-%m-%d")
+        if html_valid:
+            _safe_call(
+                "history_html",
+                lambda: _save_history_html(BASE_DIR, config, date_key_sched, effective_slot, html_report),
+                None,
+            )
+        status = "success" if html_valid else "failed"
+        meta = {
+            "slot_label": (report_schedule.slot_by_id(config, effective_slot) or {}).get("label", ""),
+            "trigger_type": trig,
+            "is_recovery_run": recovery,
+            "generated_at_jst": now.isoformat(),
+            "generated_at_utc": now.astimezone(pytz.UTC).isoformat(),
+            "report_date_jst": date_key_sched,
+            "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "git_commit_sha": os.environ.get("GITHUB_SHA", ""),
+            "generation_status": status,
+            "html_valid": html_valid,
+        }
+        report_schedule.record_result(runs, effective_slot, status, now=now, meta=meta)
+        report_schedule.save_runs_atomic(runs_file, runs)
+        logger.info("実行記録を更新しました: slot=%s status=%s → %s", effective_slot, status, runs_file)
 
     # v2.3: Data Freshness Summary＋RSS Source Healthをログ（GitHub Actions実行時はJob Summaryにも）出力
     _safe_call("data_freshness_summary", lambda: data_freshness.write_job_summary(freshness_stats), None)
@@ -835,4 +1011,11 @@ def generate_report(config_path: str = "config.yaml", date_str: Optional[str] = 
 
 if __name__ == "__main__":
     args = parse_args()
-    generate_report(config_path=args.config, date_str=args.date)
+    generate_report(
+        config_path=args.config,
+        date_str=args.date,
+        report_slot=args.report_slot,
+        trigger_type=args.trigger_type,
+        force=args.force,
+        recovery=args.recovery,
+    )

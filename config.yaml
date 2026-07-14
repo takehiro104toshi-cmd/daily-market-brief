@@ -577,6 +577,44 @@ output:
   # ACTIONS_URL を設定する。いずれも無い場合はボタンの代わりに「設定未完了」を表示する。
   actions_url: "https://github.com/takehiro104toshi-cmd/daily-market-brief/actions/workflows/daily-market-brief.yml"
 
+# ===== v4.x Six Daily Report Schedule（1日6回・信頼性運用） =====
+# JST基準で1日6回レポートを自動生成する。GitHub ActionsのcronはUTCだが、
+# レポート日付・保存日付・slot判定はすべてPython側でAsia/Tokyoへ変換して行う
+# （cronの時刻からJST日付を推測しない）。--report-slot を指定しない従来実行は
+# このスケジュール管理に一切関与しない（完全な後方互換）。
+report_schedule:
+  enabled: true
+  timezone: "Asia/Tokyo"
+  run_on_weekends: true
+  run_on_japanese_holidays: true      # 将来拡張用（今回は祝日判定ロジックは導入しない）
+  archive_reports: true               # false で履歴HTMLを保存せず最新HTMLのみ更新
+  recovery_enabled: true
+  max_retry_count: 2                  # workflow/Python側の最大再試行回数
+  retry_wait_seconds: 120             # 再試行の待機秒数
+  stale_after_minutes: 30             # running のままこの分数を超えたら stale（回復可能）
+  recovery_offset_minutes: 15         # 各通常時刻の何分後に回復チェックするか
+  runs_dir: "data/report_runs"        # 実行記録JSON（YYYY-MM-DD.json）の保存先
+  history_dir: "output/history"       # 各スロットの履歴HTML（YYYY-MM-DD/<slot>.html）の保存先
+  slots:
+    - id: "pre_market"
+      time: "07:30"
+      label: "寄り前レポート"
+    - id: "market_open"
+      time: "09:10"
+      label: "寄り付き確認"
+    - id: "morning_close"
+      time: "11:30"
+      label: "前場終了レポート"
+    - id: "afternoon_open"
+      time: "12:40"
+      label: "後場開始確認"
+    - id: "market_close"
+      time: "15:40"
+      label: "大引けレポート"
+    - id: "evening"
+      time: "17:20"
+      label: "夕方総括"
+
 # 通知機能のON/OFF切り替え。
 # enabled: false にすると、対応する環境変数が設定されていても通知を送らない。
 # メール・LINEとも、環境変数が未設定の場合は自動的にスキップされ、
@@ -611,16 +649,28 @@ translation:
   enabled: true
   cache_dir: "data/translation_cache"
 
-# v3.0（②）Real-Time Update Engine。HTMLの「最新表示に更新」は、GitHub Pagesが
-# 静的サイトのためページ内から自動再生成はできない（Token/SecretsをHTMLへ出す実装は禁止）。
-# 現状は「ページ再読み込み」＋「GitHub Actions画面を開く（Run workflow）」の安全導線。
-# 将来、Cloudflare Worker等の認証つきバックエンドで完全リアルタイム化する際の設定枠。
-# enabled=false の間は既存動作のまま（HTMLには何も変化を与えない・Tokenは出さない）。
+# Real-Time Update Engine（v3.0導入 → v3.4でワンタップ生成に対応）。
+# HTMLの「最新表示に更新」は、GitHub Pagesが静的サイトのためページ内から直接
+# main.pyを実行できない（Token/SecretsをHTMLへ出す実装は禁止）。
+# v3.4: Cloudflare Worker等の「認証つき中継バックエンド」を用意すれば、
+# HTMLの「🚀 ワンタップで最新レポート生成」から endpoint_url へPOSTするだけで
+# GitHub Actions を起動できる（Tokenは中継バックエンド側のSecretにのみ保管し、
+# HTML・JSには一切出さない）。Worker の作り方は cloudflare/README.md を参照。
+#
+# enabled=false（既定）の間は従来通り「ページ再読み込み」＋「GitHub Actions画面を
+# 開く（Run workflow）」の安全導線のみ（ワンタップボタンは表示しない）。
+# Cloudflare Worker をデプロイして endpoint_url を設定したら、enabled: true にすると
+# HTMLにワンタップ生成ボタンが表示される。
 realtime:
-  enabled: true
-  provider: "cloudflare_worker"
-  endpoint_url: "https://daily-market-brief-trigger.takehiro104toshi.workers.dev/trigger"
-  mode: "one_tap"
+  enabled: false                 # true かつ endpoint_url 設定でワンタップ生成ボタンを表示
+  provider: ""                   # 例: "cloudflare_worker" / "vercel_function" / "github_app"
+  endpoint_url: ""               # 中継エンドポイントURL（例: https://<worker>.<account>.workers.dev/trigger）
+  mode: "manual_actions"         # "one_tap"（Worker設定済み）/ "manual_actions"（既定・手動Run workflow）
+  # 設定例（Cloudflare Worker デプロイ後）:
+  #   enabled: true
+  #   provider: "cloudflare_worker"
+  #   endpoint_url: "https://daily-market-brief-trigger.example.workers.dev/trigger"
+  #   mode: "one_tap"
 
 # 経済カレンダー自動取得（v3.0・③）。公開RSS/JSON/CSVを sources に列挙すると
 # 自動取得し、config.yamlのmacro_events（手入力）とマージして「今週の重要イベント」

@@ -57,6 +57,7 @@ from ..collectors.market_data import Quote
 from ..collectors.news import parse_published_datetime
 from ..utils import SourceRegistry
 from .format_utils import NOT_AVAILABLE, find_quote, fmt_change_compact, fmt_price, todays_action_items
+from .schedule_status import render_schedule_status_card
 
 STYLE = """
 :root {
@@ -345,6 +346,20 @@ details.more[open] > summary.detail-btn::before { content: "▾ "; }
 :root[data-theme="dark"] .nk-node { background: #171a21; border-color: #2d3340; }
 .td-sub { font-size: 0.78rem; color: #666; margin: 2px 0 8px 0; }
 .td-head { font-weight: 600; margin: 10px 0 2px 0; }
+/* v4.x 本日の自動生成状況カード */
+.sched-list { margin: 6px 0; }
+.sched-row { display: flex; align-items: baseline; gap: 6px; padding: 3px 0; font-size: 0.86rem; border-bottom: 1px solid #f0f0f0; }
+.sched-mark { width: 1.4em; }
+.sched-time { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 3.2em; }
+.sched-label { color: #333; }
+.sched-state { color: #666; margin-left: auto; font-size: 0.8rem; }
+.sched-current { background: #eef6ff; border: 1px solid #cfe3fb; border-radius: 8px; padding: 8px 10px; font-size: 0.86rem; }
+.sched-warn { list-style: none; padding: 0; margin: 6px 0; }
+.sched-warn li { font-size: 0.82rem; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 6px 10px; margin: 4px 0; }
+.sched-failed .sched-state, .sched-stale .sched-state { color: #b91c1c; }
+:root[data-theme="dark"] .sched-row { border-bottom-color: #2a2f37; }
+:root[data-theme="dark"] .sched-label { color: #d8dee6; }
+:root[data-theme="dark"] .sched-current { background: #12263b; border-color: #1e3a5f; }
 .dq-warn { font-size: 0.82rem; color: #92400e; background: #fef3c7; border: 1px solid #fcd34d;
   border-radius: 8px; padding: 8px 10px; margin: 0 0 8px 0; }
 :root[data-theme="dark"] .todays-decision { border-left-color: #a78bfa; }
@@ -2587,6 +2602,7 @@ def build_html_report(
     rashinban: Optional[RashinbanKnowledge] = None,
     why_today: Optional[Dict[str, str]] = None,
     realtime: Optional[Dict[str, str]] = None,
+    schedule: Optional[dict] = None,
 ) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。
 
@@ -2614,6 +2630,8 @@ def build_html_report(
 
     top_cards = [
         _refresh_button_html(actions_url or "", realtime=realtime, generated_str=updated_str),
+        # v4.x: 本日の自動生成状況（6スロット）。schedule 未指定なら空文字＝従来通り。
+        render_schedule_status_card(schedule),
         _menu_grid_html(),
         _market_narrative_html(analysis.market_narrative, getattr(analysis, "strategic_narrative", None)),
         _todays_decision_html(market, analysis, freshness, anomalies, translation_st),

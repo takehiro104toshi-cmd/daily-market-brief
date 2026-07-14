@@ -1,33 +1,77 @@
 name: Daily Market Brief
 
-# 毎朝7:00(JST) = 前日22:00(UTC)にレポート生成スクリプトを実行し、
-# 生成されたMarkdown/HTMLレポートをコミットし、latest_market_brief.html を
-# GitHub Pagesへ公開する（スマホからURLで閲覧できるようにするため）。
-# メール・LINE通知は、対応するSecretsが設定されている場合のみ自動的に有効になる
-# （未設定の場合は何もせずスキップする。詳細はREADME.mdを参照）。
-# 手動実行(workflow_dispatch)にも対応。
-# 使わない場合はこのファイルを削除するか、on: の内容を空にしてください。
+# v4.x Six Daily Report Schedule & Reliability Upgrade
+# JST（Asia/Tokyo）で1日6回、レポートを自動生成する。GitHub Actions の schedule cron は
+# UTC 基準のため、レポート日付・保存日付・slot 判定はすべて Python 側（main.py /
+# scripts/resolve_report_schedule.py）で JST へ変換して行う（cron の時刻から JST 日付を
+# 推測しない）。
 #
-# GitHub Pagesを使うには、リポジトリの Settings > Pages > Build and deployment >
-# Source を「GitHub Actions」に設定してください（一度だけの手動設定が必要です）。
-# 詳細は README.md の「GitHub Pagesで見る」を参照してください。
+# 通常実行（6回）と、その15分後の欠損回復チェック（6回）を同じ workflow で mode 分岐する。
+# 回復チェックは対象 slot が success のとき何も生成せず正常終了する（--recovery）。
+#
+#   通常  07:30 JST = 22:30 UTC / 09:10 = 00:10 / 11:30 = 02:30 / 12:40 = 03:40 / 15:40 = 06:40 / 17:20 = 08:20
+#   回復  07:45 JST = 22:45 UTC / 09:25 = 00:25 / 11:45 = 02:45 / 12:55 = 03:55 / 15:55 = 06:55 / 17:35 = 08:35
+#
+# 既存の手動実行（workflow_dispatch）と Cloudflare Worker のワンタップ実行（inputs なしの
+# dispatch）は維持する。inputs はすべて default 値を持つため、inputs 無しの dispatch でも壊れない。
+#
+# GitHub Pages を使うには、リポジトリの Settings > Pages > Build and deployment >
+# Source を「GitHub Actions」に設定してください（一度だけの手動設定）。
 
 on:
   schedule:
-    - cron: "0 22 * * *"
-  workflow_dispatch: {}
+    # --- 通常実行（6回・UTC） ---
+    - cron: "30 22 * * *"   # 07:30 JST 寄り前
+    - cron: "10 0 * * *"    # 09:10 JST 寄り付き
+    - cron: "30 2 * * *"    # 11:30 JST 前場終了
+    - cron: "40 3 * * *"    # 12:40 JST 後場開始
+    - cron: "40 6 * * *"    # 15:40 JST 大引け
+    - cron: "20 8 * * *"    # 17:20 JST 夕方総括
+    # --- 欠損回復チェック（各15分後・UTC。successならno-op） ---
+    - cron: "45 22 * * *"   # 07:45 JST 回復
+    - cron: "25 0 * * *"    # 09:25 JST 回復
+    - cron: "45 2 * * *"    # 11:45 JST 回復
+    - cron: "55 3 * * *"    # 12:55 JST 回復
+    - cron: "55 6 * * *"    # 15:55 JST 回復
+    - cron: "35 8 * * *"    # 17:35 JST 回復
+  workflow_dispatch:
+    inputs:
+      report_slot:
+        description: "生成するレポートスロット"
+        required: false
+        type: choice
+        options:
+          - auto
+          - pre_market
+          - market_open
+          - morning_close
+          - afternoon_open
+          - market_close
+          - evening
+        default: auto
+      force:
+        description: "生成済みでも再生成"
+        required: false
+        type: boolean
+        default: false
+      recovery:
+        description: "欠損回復モード（missing/failed/staleのみ生成）"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
   pages: write
   id-token: write
 
-# 同時に複数のPagesデプロイが走らないようにする（GitHub推奨設定）。
-# cancel-in-progress: true にすることで、新しい実行が始まったときに
-# 前回のデプロイが deployment_queued のまま滞留して後続をブロックするのを防ぐ。
+# 1日最大12回（通常6＋回復6）の実行が同時多発しても commit/push 競合を避けるため直列化する。
+# schedule イベントでは inputs が存在しないため、event.schedule（cron文字列）を group に使う。
+# workflow_dispatch では report_slot を使う。どちらでも安全に評価できる式にしている。
+# cancel-in-progress は false（生成途中を打ち切らない）。
 concurrency:
-  group: "pages"
-  cancel-in-progress: true
+  group: daily-market-brief-${{ github.ref }}-${{ github.event.inputs.report_slot || github.event.schedule || 'manual' }}
+  cancel-in-progress: false
 
 jobs:
   generate-report:
@@ -42,42 +86,93 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # cron 文字列 / dispatch 入力から (slot_id, mode, trigger_type, force, recovery) を解決する。
+      - name: Resolve report slot
+        id: sched
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CRON: ${{ github.event.schedule }}
+          INPUT_REPORT_SLOT: ${{ github.event.inputs.report_slot }}
+          INPUT_FORCE: ${{ github.event.inputs.force }}
+          INPUT_RECOVERY: ${{ github.event.inputs.recovery }}
+          CONFIG_PATH: config.yaml
+        run: python scripts/resolve_report_schedule.py
+
       - name: Generate market brief
         env:
-          # メール通知（Settings > Secrets and variables > Actions で設定。未設定ならスキップ）
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
-          # LINE通知（LINE Messaging APIのプッシュメッセージ。未設定ならスキップ）
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_TO: ${{ secrets.LINE_TO }}
-          # 任意: Claude APIによるAI分析の文章磨き上げ（未設定ならルールベースのみで動作）
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # 任意: EDINET APIキー（未設定でも動作するが、取得できる場合がある）
           EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
-          # GitHub Pagesの公開URL（通知本文に含める）。owner/repo から自動算出されるため通常は設定不要。
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python main.py
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          SLOT_ID: ${{ steps.sched.outputs.slot_id }}
+          TRIGGER_TYPE: ${{ steps.sched.outputs.trigger_type }}
+          FORCE_FLAG: ${{ steps.sched.outputs.force }}
+          RECOVERY_FLAG: ${{ steps.sched.outputs.recovery }}
+        # Python 側で最大2回まで自動再試行する（config: max_retry_count）。
+        # ネットワーク取得エラーは個別に「取得不可」で握りつぶすため、ここで失敗するのは
+        # HTML生成そのものが致命的に壊れた場合など。最終失敗時のみ workflow を失敗扱いにする。
+        run: |
+          set -o pipefail
+          ARGS="--report-slot ${SLOT_ID} --trigger-type ${TRIGGER_TYPE}"
+          if [ "${FORCE_FLAG}" = "true" ]; then ARGS="${ARGS} --force"; fi
+          if [ "${RECOVERY_FLAG}" = "true" ]; then ARGS="${ARGS} --recovery"; fi
+          MAX_RETRY=2
+          WAIT=120
+          attempt=0
+          until python main.py ${ARGS}; do
+            attempt=$((attempt+1))
+            if [ "${attempt}" -gt "${MAX_RETRY}" ]; then
+              echo "::error::main.py が ${MAX_RETRY} 回の再試行後も失敗しました。"
+              exit 1
+            fi
+            echo "::warning::main.py 実行に失敗しました。${WAIT}s 後に再試行します（${attempt}/${MAX_RETRY}）。"
+            sleep "${WAIT}"
+          done
 
       - name: Commit and push report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/*.md output/*.html
-          # v2.8/v3.0: 学習データ・翻訳キャッシュを永続化（毎日追記・再利用）。存在する場合のみ追加。
-          # - journal.json / theme_learning.json: 30/90/180日後の答え合わせに使う
-          # - translation_cache.json: 翻訳結果を再利用してAPIコストを抑える
+          # 自動生成ファイルのみをコミット対象にする。
+          git add output/*.md output/*.html 2>/dev/null || true
+          # v4.x: 各スロットの履歴HTMLと実行記録JSONを永続化（存在する場合のみ）。
+          git add output/history 2>/dev/null || true
+          git add data/report_runs 2>/dev/null || true
+          # 学習データ・翻訳キャッシュ（従来どおり）。
           git add data/investment_journal/journal.json data/theme_learning/theme_learning.json data/translation_cache/translation_cache.json 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Add daily market brief"
-          git push
+          if git diff --cached --quiet; then
+            echo "変更がないためコミットをスキップします。"
+          else
+            git commit -m "Add daily market brief (${SLOT_ID:-adhoc})"
+            # 同時実行との競合に備え、push 直前に最新 main を rebase 取得してから push（force push はしない）。
+            for i in 1 2 3 4 5; do
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push && break
+              echo "push 競合またはネットワークエラー。${i} 回目の再試行をします..."
+              sleep $((i*3))
+            done
+          fi
+        env:
+          SLOT_ID: ${{ steps.sched.outputs.slot_id }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
 
       - name: Prepare GitHub Pages site
         run: |
           mkdir -p pages-site
           cp output/latest_market_brief.html pages-site/index.html
+          # 履歴もPagesへ同梱（HTMLの「本日の過去レポート」リンクが history/ を参照するため）。
+          if [ -d output/history ]; then
+            mkdir -p pages-site/history
+            cp -r output/history/* pages-site/history/ 2>/dev/null || true
+          fi
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -86,29 +181,23 @@ jobs:
 
       - name: Write job summary
         if: always()
+        env:
+          SLOT_ID: ${{ steps.sched.outputs.slot_id }}
+          MODE: ${{ steps.sched.outputs.mode }}
+          TRIGGER_TYPE: ${{ steps.sched.outputs.trigger_type }}
         run: |
           {
             echo "### Daily Market Brief 実行結果"
             echo ""
-            if [ -f output/latest_market_brief.md ]; then
-              echo "- ✅ latest_market_brief.md 生成"
-            else
-              echo "- ❌ latest_market_brief.md が見つかりません"
-            fi
+            echo "- スロット: ${SLOT_ID:-adhoc}（mode=${MODE:-generate} / trigger=${TRIGGER_TYPE:-unknown}）"
             if [ -f output/latest_market_brief.html ]; then
               echo "- ✅ latest_market_brief.html 生成"
             else
               echo "- ❌ latest_market_brief.html が見つかりません"
             fi
-            if [ -f output/mobile_market_brief.md ]; then
-              echo "- ✅ mobile_market_brief.md 生成"
-            else
-              echo "- ❌ mobile_market_brief.md が見つかりません"
-            fi
             echo ""
-            echo "詳細な取得失敗（WARNING）は上のログを確認してください。"
-            echo "個別の情報源の取得失敗はレポート内で「取得不可」と表示され、"
-            echo "処理全体は失敗しない設計です。"
+            echo "個別の情報源の取得失敗はレポート内で「取得不可」と表示され、処理全体は失敗しない設計です。"
+            echo "回復チェック実行（--recovery）は対象スロットが success の場合、何も生成せず正常終了します。"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-pages:

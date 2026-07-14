@@ -4,6 +4,51 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.x (2026-07-14) — Six Daily Report Schedule & Reliability Upgrade（1日6回・信頼性運用）
+
+レポートをJST基準で1日6回（07:30/09:10/11:30/12:40/15:40/17:20）自動生成する信頼性運用の
+基盤を追加。通常6回＋各15分後の欠損回復チェック6回をGitHub Actionsに設定し、実行記録・
+二重生成防止・自動再試行・欠損回復・履歴保存・生成状況HTML表示を実装。既存の手動実行・
+Cloudflare Workerワンタップ・GitHub Pages公開・既存レポート生成は一切壊さない。
+
+Phase 0（既存構造の調査）
+- schedule cron はUTC・単発（"0 22 * * *"）。main.py は output.timezone(Asia/Tokyo)で now を
+  算出。build_html_report はトップカード群を組み立て、latest_market_brief.html を output/ へ出力し、
+  workflow が pages-site/index.html へコピーして GitHub Pages 公開。Cloudflare Worker は inputs 無しで
+  workflow_dispatch する（→ 追加 inputs は全て default 必須）。
+
+追加（新規ファイル）
+・src/analysis/report_schedule.py【新規】— JST/UTC変換、通常/回復cron生成、cron→(slot_id,mode)対応、
+  直前slot解決、実行記録(data/report_runs/YYYY-MM-DD.json)のatomic読み書き、二重生成防止・stale判定、
+  HTML用スロット状態算出。純粋ロジック（副作用は記録の読み書きのみ）。
+・src/report/schedule_status.py【新規】— 「本日のレポート生成状況」カード（6スロット・現在表示中・
+  欠損警告）をHTML化する純粋関数。データ無しなら空文字。
+・scripts/resolve_report_schedule.py【新規】— GitHub Actionsでcron文字列/dispatch入力から
+  (slot_id,mode,trigger_type,force,recovery)を解決しGITHUB_OUTPUTへ書く。巨大シェルif文を回避。
+・tests/test_v4_report_schedule.py / tests/test_v4_schedule_main.py【新規】— §19のテスト31件。
+
+改善（既存ファイル・最小差分・後方互換）
+・main.py — CLI引数 --report-slot/--trigger-type/--force/--recovery を追加（省略時は従来の臨時生成で
+  スケジュール管理に一切関与しない＝完全な後方互換）。スロット指定時のみ: 二重生成防止判定→
+  runningで記録開始→生成→HTML妥当性チェック→最新indexをatomic更新（不正時は前回版を維持）→
+  履歴HTML保存→success/failedを生成メタデータ付きで記録。生成状況カードのコンテキストをHTMLへ渡す。
+・src/report/html_builder.py — build_html_report に schedule 引数（省略可）を追加し、トップに
+  生成状況カードを描画（未指定なら空文字＝従来通り）。カード用CSSを追加。
+・config.yaml — report_schedule ブロック（enabled/timezone/run_on_weekends/run_on_japanese_holidays/
+  archive_reports/recovery_enabled/max_retry_count/retry_wait_seconds/stale_after_minutes/
+  recovery_offset_minutes/runs_dir/history_dir/slots×6）を追加。
+・.github/workflows/daily-market-brief.yml — 通常6cron＋回復6cronを設定。workflow_dispatch に
+  report_slot(choice,default auto)/force/recovery(default false) を追加（inputs無しdispatchでも動作）。
+  concurrencyでslot単位に直列化(cancel-in-progress:false)。slot解決ステップ→最大2回の自動再試行→
+  自動生成ファイルのみcommit(force pushなし・pull --rebaseで競合回避)→履歴もpages-siteへ同梱。
+
+制約遵守
+・新規ニュース取得・新しい外部API・生成AI文章生成・World/Geopolitical Engine・大規模UI再設計・
+  分析ロジックのリファクタは一切なし。Secret/Tokenはログ・HTML・JSへ出さない。
+・JST基準を厳守（cron時刻からJST日付を推測しない）。
+
+テスト: 403 passed（既存372＋新規31）。
+
 ## v3.6 (2026-07-09) — Strategic Narrative Engine「朝会3分・トップストラテジスト級」化
 
 v3.5.3で方向整合は取れたが、Market Narrativeを「証券会社トップストラテジストが朝会で3分説明する
