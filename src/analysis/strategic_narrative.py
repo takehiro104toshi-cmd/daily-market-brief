@@ -145,11 +145,68 @@ def _phrase_cat(category: str, semantic: str) -> str:
     return category
 
 
-def _collect_factors(market: dict) -> Tuple[List[StrategicFactor], List[StrategicFactor]]:
+# 改善③: 主因の総合影響度を上げる、カテゴリ別ニュースキーワード（News Ranking/Impact用）。
+_NEWS_KW = {
+    "semiconductor": ["半導体", "SOX", "AI", "エヌビディア", "Nvidia", "NVIDIA", "東京エレクトロン", "GPU"],
+    "rates": ["金利", "FRB", "FOMC", "CPI", "PPI", "利上げ", "利下げ", "雇用統計", "国債", "インフレ"],
+    "us_equity": ["米国株", "NYダウ", "ダウ", "NASDAQ", "ナスダック", "S&P", "米株"],
+    "commodity_oil": ["原油", "OPEC", "WTI", "石油", "ガソリン"],
+    "fx": ["円安", "円高", "為替", "ドル円", "ドル/円", "為替介入"],
+    "volatility": ["地政学", "リスク回避", "急落", "急騰", "有事", "VIX"],
+}
+
+
+def _news_boost(category: str, news_ranking: list) -> Tuple[float, int, int]:
+    """カテゴリに関連するニュース件数・最大Impact Scoreから、主因の総合影響度への加点を返す。
+    戻り値: (boost, 関連件数, 最大impact_score)。News Ranking / News Impact の再利用。"""
+    kws = _NEWS_KW.get(category, [])
+    if not kws or not news_ranking:
+        return 0.0, 0, 0
+    matched = [it for it in news_ranking if any(kw in getattr(it.headline, "title", "") for kw in kws)]
+    count = len(matched)
+    max_impact = max((getattr(it, "impact_score", 0) or 0) for it in matched) if matched else 0
+    boost = min(2.0, count * 0.6) + (max_impact / 100.0)
+    return boost, count, max_impact
+
+
+def _cross_boost(category: str, cross_market: list) -> float:
+    """Cross Market の発火チェーンに当該カテゴリが登場していれば加点（再利用）。"""
+    if not cross_market:
+        return 0.0
+    kw_map = {"semiconductor": "半導体", "rates": "金利", "fx": "円", "commodity_oil": "原油",
+              "us_equity": "米", "volatility": "リスク"}
+    kw = kw_map.get(category)
+    if not kw:
+        return 0.0
+    for ch in cross_market:
+        blob = getattr(ch, "trigger", "") + " ".join(getattr(ch, "nodes", []) or [])
+        if kw in blob:
+            return 0.7
+    return 0.0
+
+
+def _collect_factors(market: dict, news_ranking: Optional[list] = None,
+                     cross_market: Optional[list] = None) -> Tuple[List[StrategicFactor], List[StrategicFactor]]:
     """各指標を direction 付き factor にし、negative（押し下げ）/ positive（下支え）へ
-    一意に分類して返す（改善②④）。neutral は両方から除外。"""
+    一意に分類して返す（改善②④）。neutral は両方から除外。
+
+    v3.6（改善③）: 主因の並び順は「値動きの大きさ（指数寄与）× 重み」に加えて、
+    News Ranking / News Impact の関連件数・最大Impact、Cross Market への登場を合算した
+    総合影響度で決める。★も総合影響度から付与する。"""
+    news_ranking = news_ranking or []
+    cross_market = cross_market or []
     downside: List[StrategicFactor] = []
     support: List[StrategicFactor] = []
+
+    def _make(display, chg, salience, direction, pkey):
+        boost, count, _impact = _news_boost(pkey, news_ranking)
+        composite = salience + boost + _cross_boost(pkey, cross_market)
+        note = _NOTE.get((pkey, direction), "")
+        if count:
+            note = (note + f"（関連ニュース{count}件）").strip()
+        return StrategicFactor(label=f"{display} {fmt_change_compact(chg)}", stars=_stars(composite),
+                               score=composite, note=note, direction=direction, category=pkey)
+
     for keyword, category, display, cat_name, semantic, weight in _DRIVER_SPECS:
         q = _q(market, category, keyword)
         if q is None or q.change_pct is None:
@@ -162,19 +219,14 @@ def _collect_factors(market: dict) -> Tuple[List[StrategicFactor], List[Strategi
         if direction == "neutral":
             continue
         pkey = _phrase_cat(cat_name, semantic)
-        note = _NOTE.get((pkey, direction), "")
-        factor = StrategicFactor(
-            label=f"{display} {fmt_change_compact(chg)}",
-            stars=_stars(salience), score=salience, note=note,
-            direction=direction, category=pkey,
-        )
+        factor = _make(display, chg, salience, direction, pkey)
         (support if direction == "positive" else downside).append(factor)
 
     # VIX（水準ベース）
     vix = _q(market, "indices", "VIX")
     if vix and vix.price is not None:
         if vix.price >= 20:
-            sal = min(4.0, (vix.price - 20) / 5 + 1.2)
+            sal = min(4.0, (vix.price - 20) / 5 + 1.2) + _cross_boost("volatility", cross_market)
             downside.append(StrategicFactor(label=f"VIX {vix.price:g}（警戒圏）", stars=_stars(sal), score=sal,
                                             note=_NOTE[("volatility", "negative")], direction="negative", category="volatility"))
         else:
@@ -228,36 +280,38 @@ def _one_liner(nikkei_dir: str, downside, support) -> str:
 
 # ---------- 改善⑦: 今日の市場心理 ----------
 
-def _market_psychology(market: dict, news_ranking: list, regime: Optional[MarketRegime],
-                       weekly_events: list, nikkei_dir: str) -> str:
-    tnx = _q(market, "rates", "10年")
-    sox = _q(market, "indices", "SOX")
-    nasdaq = _q(market, "indices", "ナスダック")
-    wti = _q(market, "commodities", "WTI")
-    vix = _q(market, "indices", "VIX")
-    ai_news = any(("AI" in getattr(it.headline, "title", "") or "半導体" in getattr(it.headline, "title", "")) for it in (news_ranking or []))
-    rates_up = bool(tnx and tnx.change is not None and tnx.change > 0)
-    semis_down = bool(sox and sox.change_pct is not None and sox.change_pct < 0)
-    nasdaq_down = bool(nasdaq and nasdaq.change_pct is not None and nasdaq.change_pct < 0)
-    oil_up = bool(wti and wti.change_pct is not None and wti.change_pct >= 1.5)
-    vix_high = bool(vix and vix.price is not None and vix.price >= 20)
-    earnings_soon = any(("決算" in getattr(e, "label", "") or getattr(e, "category", "") == "決算") for e in (weekly_events or []))
+# 改善②③: 市場心理は「本日の主因（ランキング1位）」の category/direction から決める。
+# こうすることで市場心理と主因ランキングが必ず一致する（固定文章ではなく毎日変わる）。
+_PSYCH_BY_TOP = {
+    ("rates", "negative"): "市場は金利上昇を受けて、高PER・グロース銘柄の利益確定を優先しました。",
+    ("rates", "positive"): "市場は金利低下を好感し、グロース株へ資金を戻しました。",
+    ("commodity_oil", "negative"): "市場は原油高によるインフレ再燃・金利高止まりを警戒しました。",
+    ("commodity_oil", "positive"): "市場は原油安によるインフレ懸念の後退を好感しました。",
+    ("semiconductor", "negative"): "市場は半導体株への売りを優先し、値がさ・高PER株の持ち高を軽くしました。",
+    ("semiconductor", "positive"): "市場は半導体株高を好感し、値がさ・グロース株へ資金を向けました。",
+    ("us_equity", "negative"): "市場は米国株安を嫌気し、東京市場でも持ち高を軽くしました。",
+    ("us_equity", "positive"): "市場は米国株高を好感し、景気敏感株へ資金を戻しました。",
+    ("fx", "negative"): "市場は円高を受けて、輸出関連株の利益確定を優先しました。",
+    ("fx", "positive"): "市場は円安を好感し、輸出関連株を見直しました。",
+    ("volatility", "negative"): "市場はリスク回避姿勢を強め、資金を安全資産へ移す動きが優勢でした。",
+    ("volatility", "positive"): "市場は落ち着いた投資家心理のもと、押し目を拾う姿勢がみられました。",
+}
 
-    if rates_up and (semis_down or nasdaq_down) and ai_news:
-        return "市場はAIそのものを悲観したというより、金利上昇を受けて高PER銘柄の利益確定を優先しました。"
-    if rates_up and oil_up:
-        return "市場はインフレ再燃・金利高止まりを警戒しました。"
-    if vix_high:
-        return "市場はリスク回避姿勢を強めました。"
-    if earnings_soon:
+
+def _market_psychology(top_factor: Optional[StrategicFactor], nikkei_dir: str,
+                       weekly_events: list) -> str:
+    """今日の市場心理を、本日の主因（ランキング1位）から生成する（改善②）。
+
+    決算集中は主因が弱いときのみ様子見として上書きする（主因と矛盾させない）。"""
+    earnings_soon = any(("決算" in getattr(e, "label", "") or getattr(e, "category", "") == "決算") for e in (weekly_events or []))
+    if top_factor is None:
+        if earnings_soon:
+            return "市場は決算発表を控え、結果を見極めたい様子見姿勢を強めました。"
+        return "市場は強弱材料が拮抗し、方向感を欠く様子見が優勢でした。"
+    if nikkei_dir == "flat" and earnings_soon:
         return "市場は決算発表を控え、結果を見極めたい様子見姿勢を強めました。"
-    if ai_news and semis_down:
-        return "AIテーマは継続していますが、短期的には半導体・高PER株への選別色が強まりました。"
-    if regime is not None and regime.regime == "Risk On":
-        return "市場はリスク選好を維持し、押し目を拾う姿勢がみられました。"
-    if regime is not None and regime.regime == "Risk Off":
-        return "市場はリスク回避に傾き、値がさ・高PER銘柄の持ち高調整を優先しました。"
-    return "市場は強弱材料が拮抗し、方向感を欠く様子見が優勢でした。"
+    return _PSYCH_BY_TOP.get((top_factor.category, top_factor.direction),
+                             "市場は強弱材料をにらみ、方向感を探る展開でした。")
 
 
 # ---------- 改善⑧: なぜ日経平均は動いたか ----------
@@ -313,49 +367,223 @@ def _cross_market_prose(market: dict, nikkei_dir: str, downside, support) -> str
 
 # ---------- 改善⑪: 営業向け30秒説明 ----------
 
+def _has_cat(factors, category: str) -> bool:
+    return any(f.category == category for f in factors)
+
+
+def _contrast_clause(nikkei_dir: str, downside, support) -> str:
+    """「◯◯にもかかわらず」の逆行（想定と違った点）を検出して返す（改善④⑥）。無ければ空。"""
+    if nikkei_dir == "down" and _has_cat(support, "fx"):
+        return "円安という輸出株の追い風がありながら"
+    if nikkei_dir == "down" and _has_cat(support, "semiconductor"):
+        return "SOX指数の上昇という支えがありながら"
+    if nikkei_dir == "up" and _has_cat(downside, "rates"):
+        return "米金利上昇という逆風がありながら"
+    if nikkei_dir == "up" and _has_cat(downside, "commodity_oil"):
+        return "原油高という重荷がありながら"
+    return ""
+
+
 def _sales_30sec(market: dict, nikkei_dir: str, downside, support, watch: List[str]) -> str:
-    watch_txt = "、".join(watch[:2]) if watch else "米国株と為替"
+    """営業向け30秒（改善⑥）。「◯◯にもかかわらず下落」など、お客様に話せる自然な説明。"""
+    watch_txt = "と".join(watch[:2]) if watch else "米国株と為替"
+    contrast = _contrast_clause(nikkei_dir, downside, support)
     if nikkei_dir == "down":
         cause = "と".join(_lead(downside)) or "売り材料"
-        sup = "、".join(_lead(support, 2))
-        sup_clause = f"{sup}は支えでしたが、" if sup else ""
-        return f"今日は{cause}が重荷となり、日経平均は下落しました。{sup_clause}売り材料が勝った形です。今後は{watch_txt}がポイントです。"
+        if contrast:
+            return (f"今日は{contrast}、日経平均は下落しました。背景は{cause}です。"
+                    f"支え材料より{cause}の影響が大きかったという見方です。今後は{watch_txt}が焦点になります。")
+        return f"今日は{cause}が重荷となり、日経平均は下落しました。売り材料が勝った形です。今後は{watch_txt}が焦点になります。"
     if nikkei_dir == "up":
         cause = "と".join(_lead(support)) or "買い材料"
-        neg = "、".join(_lead(downside, 2))
-        neg_clause = f"{neg}は重荷でしたが、" if neg else ""
-        return f"今日は{cause}が支えとなり、日経平均は上昇しました。{neg_clause}買い材料が優勢でした。今後は{watch_txt}がポイントです。"
-    return f"今日は強弱材料が交錯し、日経平均は方向感に乏しい展開でした。今後は{watch_txt}がポイントです。"
+        if contrast:
+            return (f"今日は{contrast}、日経平均は上昇しました。支えは{cause}です。"
+                    f"重荷より{cause}の影響が大きかったという見方です。今後は{watch_txt}が焦点になります。")
+        return f"今日は{cause}が支えとなり、日経平均は上昇しました。買い材料が優勢でした。今後は{watch_txt}が焦点になります。"
+    return f"今日は強弱材料が交錯し、日経平均は方向感に乏しい展開でした。今後は{watch_txt}が焦点になります。"
 
 
 # ---------- 改善⑩: ストラテジスト総括 ----------
 
 def _strategist_summary(market: dict, nikkei_dir: str, downside, support,
-                        psychology: str, watch: List[str]) -> str:
+                        psychology: str, watch: List[str], deep_chain: List[str]) -> str:
+    """ストラテジスト総括（改善④⑧）。①何が起きたか②なぜ③市場は何を織り込んだか
+    ④想定と違った点⑤明日確認、を「一本のストーリー」でつなぐ（200〜300字目安）。"""
     watch_txt = "、".join(watch) if watch else "米国株・為替・金利"
-    us = _q(market, "indices", "ダウ")
-    nasdaq = _q(market, "indices", "ナスダック")
-    us_ref = nasdaq if (nasdaq and nasdaq.change_pct is not None) else us
+    # ② なぜ（deep_chain の中盤・原因側を短く）
+    why = ""
+    for node in deep_chain:
+        if "インフレ" in node or "利下げ期待" in node or "金利" in node:
+            why = node
+            break
+    if not why and deep_chain:
+        why = deep_chain[0]
+    contrast = _contrast_clause(nikkei_dir, downside, support)
 
     if nikkei_dir == "down":
-        head = f"本日は{'と'.join(_lead(downside)) or '複数の売り材料'}が重荷となり、日経平均は下落しました。"
-        us_clause = "米国株が軟調だったことも東京市場の地合いを冷やしました。" if (us_ref and us_ref.change_pct is not None and us_ref.change_pct < 0) else ""
-        sup = "、".join(_lead(support, 2))
-        counter = f"一方で、{sup}は下支え材料でしたが、下落材料を打ち消すには至りませんでした。" if sup else ""
+        lead = "と".join(_lead(downside)) or "複数の売り材料"
+        head = f"本日は{lead}が重荷となり、日経平均は下落しました。"
+        why_clause = f"{why}が起点となり、高PER株への利益確定売りが優勢となりました。" if why else ""
+        contrast_clause = f"{contrast}、下落材料の影響が上回った点は、やや想定より弱い動きでした。" if contrast else ""
     elif nikkei_dir == "up":
-        head = f"本日は{'と'.join(_lead(support)) or '複数の買い材料'}が支えとなり、日経平均は上昇しました。"
-        us_clause = "米国株高も東京市場の地合いを支えました。" if (us_ref and us_ref.change_pct is not None and us_ref.change_pct > 0) else ""
-        neg = "、".join(_lead(downside, 2))
-        counter = f"一方で、{neg}は重荷でしたが、上昇材料が優勢となりました。" if neg else ""
+        lead = "と".join(_lead(support)) or "複数の買い材料"
+        head = f"本日は{lead}が支えとなり、日経平均は上昇しました。"
+        why_clause = f"{why}が追い風となり、値がさ・グロース株が買い戻されました。" if why else ""
+        contrast_clause = f"{contrast}、上昇材料が優勢となった点は、底堅さを示しました。" if contrast else ""
     else:
         head = "本日は強弱材料が交錯し、日経平均は方向感に乏しい展開でした。"
-        us_clause = ""
-        counter = f"支え材料と重荷材料（{'、'.join(_lead(support, 1) + _lead(downside, 1))}）が拮抗しました。"
+        why_clause = ""
+        contrast_clause = "上下双方の材料が拮抗し、大きな想定外はありませんでした。"
+
     return (
-        f"{head}{us_clause}{counter}市場心理としては、{psychology}"
-        f"今後は{watch_txt}を確認したい局面です。"
+        f"{head}{why_clause}{psychology}{contrast_clause}"
+        f"今後は{watch_txt}の方向性が焦点になります。"
         "（本コメントは公開データと既存の分析エンジンの機械的な組み合わせであり、断定的な予測・個別の売買推奨ではありません。）"
     )
+
+
+# ---------- 改善①: ニュース→心理→金利→為替→セクター→日経 の深い因果 ----------
+
+def _news_trigger(news_ranking: list) -> str:
+    """ニュース見出しから、原因の起点になり得るキーワードを抽出（推測せず見出しにある語のみ）。"""
+    triggers = [
+        ("OPEC", "OPEC関連の報道"), ("減産", "減産報道"), ("CPI", "CPI（物価指標）の発表"),
+        ("雇用統計", "米雇用統計"), ("FOMC", "FOMC関連の報道"), ("FRB", "FRB関連の発言・報道"),
+        ("利上げ", "利上げ観測"), ("利下げ", "利下げ観測"), ("地政学", "地政学リスクの報道"),
+    ]
+    for it in (news_ranking or []):
+        title = getattr(it.headline, "title", "")
+        for kw, phrase in triggers:
+            if kw in title:
+                return phrase
+    return ""
+
+
+def _deep_causal_chain(market: dict, news_ranking: list, nikkei_dir: str) -> List[str]:
+    """原因の原因まで遡る因果チェーン（改善①）。取得データで裏付く節だけを繋ぐ（推測禁止）。"""
+    tnx = _q(market, "rates", "10年")
+    wti = _q(market, "commodities", "WTI")
+    usdjpy = _q(market, "forex", "米ドル/円")
+    sox = _q(market, "indices", "SOX")
+    nasdaq = _q(market, "indices", "ナスダック")
+    rate_up = bool(tnx and tnx.change is not None and tnx.change > 0)
+    rate_down = bool(tnx and tnx.change is not None and tnx.change < 0)
+    oil_up = bool(wti and wti.change_pct is not None and wti.change_pct >= 1.5)
+    yen_weak = bool(usdjpy and usdjpy.change_pct is not None and usdjpy.change_pct >= 0.2)
+    yen_strong = bool(usdjpy and usdjpy.change_pct is not None and usdjpy.change_pct <= -0.2)
+    sox_down = bool(sox and sox.change_pct is not None and sox.change_pct <= -1.0)
+    sox_up = bool(sox and sox.change_pct is not None and sox.change_pct >= 1.0)
+    nasdaq_down = bool(nasdaq and nasdaq.change_pct is not None and nasdaq.change_pct < 0)
+
+    nodes: List[str] = []
+    trig = _news_trigger(news_ranking)
+    if trig:
+        nodes.append(trig)
+    if oil_up:
+        nodes.append("原油高")
+        nodes.append("インフレ再燃への警戒")
+    if rate_up:
+        if not oil_up:
+            nodes.append("FRBの利下げ期待の後退")
+        nodes.append("米長期金利の上昇")
+        nodes.append("高PER（グロース）株の割引率上昇")
+    elif rate_down:
+        nodes.append("FRBの利下げ期待の高まり")
+        nodes.append("米長期金利の低下")
+        nodes.append("高PER（グロース）株の割引率低下")
+    if yen_weak:
+        nodes.append("日米金利差の意識からドル買い・円安")
+    elif yen_strong:
+        nodes.append("円高方向で輸出関連に逆風")
+    if nasdaq_down or sox_down:
+        nodes.append("米ハイテク・半導体株の下落")
+    if sox_down:
+        nodes.append("日本の半導体関連に売り波及")
+    elif sox_up and nikkei_dir != "down":
+        nodes.append("日本の半導体関連に買い波及")
+    tail = {"down": "日経平均の下落", "up": "日経平均の上昇", "flat": "日経平均は方向感に乏しい展開"}[nikkei_dir]
+    nodes.append(tail)
+    # 重複除去（順序維持）
+    seen = set()
+    out = []
+    for n in nodes:
+        if n not in seen:
+            seen.add(n)
+            out.append(n)
+    return out
+
+
+# ---------- 改善⑦: 今日覚えること3つ ----------
+
+def _key_points(nikkei_dir: str, ranking: List[StrategicFactor], watch: List[str]) -> List[str]:
+    top = ranking[0] if ranking else None
+    factor_txt = top.label if top else "強弱材料の交錯"
+    seen_map = {
+        "rates": "米10年金利の方向", "semiconductor": "半導体株（SOX指数）", "us_equity": "米国株の地合い",
+        "fx": "為替（円相場）", "commodity_oil": "原油価格とインフレ", "volatility": "投資家心理（VIX）",
+    }
+    watching = seen_map.get(top.category, "米国株と為替の方向") if top else "米国株と為替の方向"
+    tomorrow = "、".join(watch[:2]) if watch else "米国株と為替の方向"
+    dir_word = {"down": "下落", "up": "上昇", "flat": "方向感の乏しさ"}[nikkei_dir]
+    return [
+        f"最大要因: {factor_txt}（日経平均の{dir_word}に最も効いた）",
+        f"市場参加者が見ていたもの: {watching}",
+        f"明日見るべきポイント: {tomorrow}",
+    ]
+
+
+# ---------- 改善⑨: 自己評価（ルールベースのセルフチェック） ----------
+
+def _self_evaluation(psychology: str, ranking, deep_chain: List[str], sales_30sec: str,
+                     strategist_summary: str) -> Tuple[int, List[str], List[str]]:
+    checks: List[str] = []
+    improvements: List[str] = []
+    score = 0
+    # 1) 市場心理が主因と一致（20点）
+    top = ranking[0] if ranking else None
+    expect = _PSYCH_BY_TOP.get((top.category, top.direction), "") if top else ""
+    ok1 = bool(top) and psychology == expect
+    if ok1 or (top is None):
+        score += 20
+        checks.append("市場心理と主因の一致: OK")
+    else:
+        checks.append("市場心理と主因の一致: NG")
+        improvements.append("市場心理を主因ランキング1位のカテゴリから生成し直す。")
+    # 2) 因果チェーンが飛んでいないか（20点: 4節以上＋日経で締める）
+    ok2 = len(deep_chain) >= 4 and "日経平均" in deep_chain[-1]
+    if ok2:
+        score += 20
+        checks.append("因果チェーンの連続性: OK")
+    else:
+        checks.append("因果チェーンの連続性: NG")
+        improvements.append("ニュース→金利→為替→セクター→日経の中間ノードを補う。")
+    # 3) 背景説明があるか（20点: 総括に「なぜ」＋今後）
+    ok3 = ("起点" in strategist_summary or "警戒" in strategist_summary or "受けて" in strategist_summary
+           or "追い風" in strategist_summary) and "今後" in strategist_summary
+    if ok3:
+        score += 20
+        checks.append("背景説明の有無: OK")
+    else:
+        checks.append("背景説明の有無: NG")
+        improvements.append("総括に『なぜそうなったか』と『明日確認すべき点』を必ず含める。")
+    # 4) 営業マンが30秒で説明できるか（20点: 長さと焦点）
+    ok4 = 40 <= len(sales_30sec) <= 170 and "焦点" in sales_30sec
+    if ok4:
+        score += 20
+        checks.append("営業30秒の実用性: OK")
+    else:
+        checks.append("営業30秒の実用性: NG")
+        improvements.append("営業説明を40〜170字に収め、今後の焦点を1文で締める。")
+    # 5) ニュース要約でなくストーリーになっているか（20点: つなぎ言葉）
+    connectives = ["受けて", "一方で", "ため", "優勢", "上回", "考えられます", "起点", "追い風"]
+    ok5 = sum(1 for c in connectives if c in strategist_summary) >= 2
+    if ok5:
+        score += 20
+        checks.append("ストーリー性（羅列でない）: OK")
+    else:
+        checks.append("ストーリー性（羅列でない）: NG")
+        improvements.append("材料を接続詞でつなぎ、因果の一本の流れにする。")
+    return score, checks, improvements
 
 
 # ---------- 改善⑥（因果チェーン・金利ベース） ----------
@@ -436,19 +664,25 @@ def build_strategic_narrative(
     日経の方向と一致する材料だけから作り、押し下げ・下支えの重複を排除する。
     """
     market = market or {}
+    news_ranking = news_ranking or []
     nikkei_dir, _nk_chg = _nikkei_direction(market)
-    downside, support = _collect_factors(market)
+    # 改善③: News Ranking / News Impact / Cross Market を合算した総合影響度で分類・順位付け
+    downside, support = _collect_factors(market, news_ranking, cross_market)
 
     # 主因ランキング（改善③）: 日経の方向と一致する材料だけから作る
     if nikkei_dir == "down":
         ranking = downside[:3]
     elif nikkei_dir == "up":
         ranking = support[:3]
-    else:  # flat: 強弱材料が交錯 → 寄与の大きい順に両方から
+    else:  # flat: 強弱材料が交錯 → 総合影響度の大きい順に両方から
         ranking = sorted(downside + support, key=lambda x: -x.score)[:3]
 
-    psychology = _market_psychology(market, news_ranking or [], regime, weekly_events or [], nikkei_dir)
+    # 改善②: 市場心理は主因（ランキング1位）から生成（主因と必ず一致）
+    top_factor = ranking[0] if ranking else None
+    psychology = _market_psychology(top_factor, nikkei_dir, weekly_events or [])
     watch = _watch_terms(market, weekly_events or [])
+    deep_chain = _deep_causal_chain(market, news_ranking, nikkei_dir)
+    key_points = _key_points(nikkei_dir, ranking, watch)
 
     reused = ["Market Data"]
     if regime is not None:
@@ -470,6 +704,10 @@ def build_strategic_narrative(
     if weekly_events:
         reused.append("Macro Events")
 
+    sales = _sales_30sec(market, nikkei_dir, downside, support, watch)
+    summary = _strategist_summary(market, nikkei_dir, downside, support, psychology, watch, deep_chain)
+    self_score, self_check, self_improve = _self_evaluation(psychology, ranking, deep_chain, sales, summary)
+
     return StrategicNarrative(
         one_liner=_one_liner(nikkei_dir, downside, support),
         market_psychology=psychology,
@@ -480,7 +718,12 @@ def build_strategic_narrative(
         scenarios=_scenarios(scenario),
         nikkei_causation=_nikkei_causation(nikkei_dir, downside, support),
         cross_market_prose=_cross_market_prose(market, nikkei_dir, downside, support),
-        sales_30sec=_sales_30sec(market, nikkei_dir, downside, support, watch),
-        strategist_summary=_strategist_summary(market, nikkei_dir, downside, support, psychology, watch),
+        sales_30sec=sales,
+        strategist_summary=summary,
         reused_engines=reused,
+        deep_causal_chain=deep_chain,
+        key_points=key_points,
+        self_score=self_score,
+        self_check=self_check,
+        self_improvement=self_improve,
     )

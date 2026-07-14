@@ -1026,6 +1026,12 @@ class StrategicNarrative:
     sales_30sec: str = ""                                 # ⑨ 営業マン向け30秒説明
     strategist_summary: str = ""                          # ⑩ ストラテジスト総括（200〜300字）
     reused_engines: List[str] = field(default_factory=list)  # 再利用した既存エンジン
+    # v3.6 追加
+    deep_causal_chain: List[str] = field(default_factory=list)  # 改善① ニュース→心理→金利→為替→セクター→日経
+    key_points: List[str] = field(default_factory=list)         # 改善⑦ 今日覚えること3つ
+    self_score: int = 0                                         # 改善⑨ 自己評価（100点満点）
+    self_check: List[str] = field(default_factory=list)         # 改善⑨ 各観点のOK/NG
+    self_improvement: List[str] = field(default_factory=list)   # 改善⑨ 80点未満の改善案
 
 
 @dataclass

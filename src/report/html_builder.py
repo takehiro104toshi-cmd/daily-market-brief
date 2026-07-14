@@ -2378,22 +2378,35 @@ def _strategic_narrative_html(sn) -> str:
         for s in sn.scenarios
     ) or f"<p class='td-sub'>{_esc(NOT_AVAILABLE)}</p>"
     scenarios = "<p class='td-head'>【今後のシナリオ】</p>" + scen_rows
+    # 改善⑦ 今日覚えること3つ（営業マンが30秒で覚える）
+    key_points = ""
+    if getattr(sn, "key_points", None):
+        key_points = "<p class='td-head'>【今日覚えること（3つ）】</p>" + _list(sn.key_points)
     # ⑩ ストラテジスト総括（箱で強調）
     summary = f"<p class='td-head'>【ストラテジスト総括】</p><p class='strategist-summary'>{_esc(sn.strategist_summary)}</p>"
     # ⑨ 営業向け30秒説明
     sales = f"<p class='td-head'>【営業向け30秒説明】</p><p class='sales-30sec'>{_esc(sn.sales_30sec)}</p>"
 
-    # 詳しく: 織り込んだ流れ・なぜ日経・Cross Market自然文・再利用エンジン
+    # 詳しく: 織り込んだ流れ（原因の原因まで）・なぜ日経・Cross Market自然文・自己評価・再利用エンジン
+    deep = getattr(sn, "deep_causal_chain", None) or sn.causal_chain
+    self_html = ""
+    if getattr(sn, "self_check", None):
+        self_html = (
+            f"<p class='td-head'>【分析セルフチェック（自己評価 {getattr(sn, 'self_score', 0)}/100）】</p>"
+            + _list(sn.self_check)
+            + (("<p class='td-sub'>改善案: " + _esc("／".join(sn.self_improvement)) + "</p>") if getattr(sn, "self_improvement", None) else "")
+        )
     detail = (
-        "<p class='td-head'>【市場が織り込んだ流れ】</p>" + _arrow(sn.causal_chain)
+        "<p class='td-head'>【市場が織り込んだ流れ（原因の原因まで）】</p>" + _arrow(deep)
         + "<p class='td-head'>【なぜ日経平均はこうなったか】</p>" + _arrow(sn.nikkei_causation)
         + "<p class='td-head'>【Cross Market（背景の解説）】</p>"
         + f"<p class='td-sub'>{_esc(sn.cross_market_prose)}</p>"
+        + self_html
         + (f"<p class='legend'>再利用した分析エンジン: {_esc('、'.join(sn.reused_engines))}</p>" if sn.reused_engines else "")
     )
     return (
-        one_liner + psych + ranking + factors + scenarios + summary + sales
-        + _detail_block(detail, label="市場が織り込んだ流れ・なぜ日経・背景を詳しく")
+        one_liner + psych + key_points + ranking + factors + scenarios + summary + sales
+        + _detail_block(detail, label="市場が織り込んだ流れ・なぜ日経・背景・自己評価を詳しく")
     )
 
 

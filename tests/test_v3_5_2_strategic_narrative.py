@@ -117,7 +117,8 @@ def test_cross_market_prose_is_natural_language():
 def test_sales_30sec_present():
     sn = _build(_semis_down_market())
     assert "今日は" in sn.sales_30sec
-    assert "ポイント" in sn.sales_30sec
+    # v3.6: 営業向け30秒は「今後は〜が焦点になります」で締める会話調
+    assert "焦点" in sn.sales_30sec
 
 
 def test_strategist_summary_weaves_all_and_no_advice():
@@ -125,9 +126,8 @@ def test_strategist_summary_weaves_all_and_no_advice():
     s = sn.strategist_summary
     assert 120 <= len(s) <= 400
     assert "買うべき" not in s and "売るべき" not in s
-    # v3.5.3: 方向・市場心理・今後の見るポイントを一連の流れで含む
+    # v3.6: 方向・市場心理（文章化）・今後の見るポイントを一連の流れで含む
     assert "日経平均" in s
-    assert "市場心理" in s
     assert "今後" in s
 
 

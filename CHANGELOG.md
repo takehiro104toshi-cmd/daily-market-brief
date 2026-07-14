@@ -4,6 +4,46 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v3.6 (2026-07-09) — Strategic Narrative Engine「朝会3分・トップストラテジスト級」化
+
+v3.5.3で方向整合は取れたが、Market Narrativeを「証券会社トップストラテジストが朝会で3分説明する
+レベル」に引き上げる。新Engine（Strategic Narrative）のみを強化し、既存Engineは変更しない。
+新しいニュース取得・新しいAPI・生成AIによる推測・断定的な将来予測・個別売買助言は一切行わず、
+既存の算出済みエンジン結果だけを機械的に組み替える。既存データのみ・後方互換・最小差分・pytest全通過。
+
+Phase 0分類
+- A（既存で十分・再利用）: Market Data / Market Regime / Cross Market / News Ranking /
+  News Impact / Future Intelligence / Theme Momentum / Scenario / Market Breadth /
+  Analysis Confidence / Macro Events(Weekly Events) / Watchlist。
+- B（少し直せば使える＝今回）: strategic_narrative.py（市場心理・主因ランキング・総括・
+  30秒・因果チェーン・自己評価を強化）と html_builder.py の描画。
+- C（新規追加）: StrategicNarrative に deep_causal_chain / key_points / self_score /
+  self_check / self_improvement フィールドを追加。
+- D（やらない）: 生成AI作文／新規データ取得・新API／個別寄与額の捏造／既存Engine変更／大規模リファクタ。
+
+改善内容（①〜⑨）
+・① 原因の原因まで遡る因果チェーン `deep_causal_chain`（ニュース→原油→インフレ→金利→バリュエーション
+  →為替→セクター→日経）。取得データで裏付く節・ニュース見出しにある語だけを繋ぐ（推測禁止）。
+・② 今日の市場心理を主因ランキング1位のcategory/directionから毎日自動生成（固定文を廃止・主因と必ず一致）。
+・③ 主因ランキングを「総合影響度」で決定＝値動き×重み＋News Ranking/Impactの関連件数・最大Impact
+  ＋Cross Market登場（`_news_boost`/`_cross_boost`）。★も総合影響度から付与、noteに関連ニュース件数。
+・④⑧ ストラテジスト総括を「①何が起きたか②なぜ③何を織り込んだか④想定と違った点⑤明日確認」の
+  5部構成・一本のストーリーに（200〜300字目安・テンプレ羅列を排除）。
+・⑤ Cross Marketを文章化（何が勝ち何が負けたかを自然文で・矢印羅列でない）。
+・⑥ 営業向け30秒を会話調へ（「◯◯にもかかわらず下落」等の逆行を検出し「今後は〜が焦点になります」で締める）。
+・⑦ 今日覚えること3つ `key_points`（最大要因／市場参加者が見ていたもの／明日見るべき点）を可視化。
+・⑨ ルールベースの自己評価 `self_score`(100点満点)・`self_check`(5観点OK/NG)・`self_improvement`
+  (80点未満の改善案)。観点=市場心理と主因の一致／因果チェーンの連続性／背景説明／営業30秒の実用性／ストーリー性。
+・HTML描画: 【今日覚えること（3つ）】を可視ブロック追加、詳細に【市場が織り込んだ流れ（原因の原因まで）】と
+  【分析セルフチェック（自己評価 N/100）】を追加。strategic_narrative が None の場合は従来表示にフォールバック。
+
+テスト
+- 追加: tests/test_v3_6_strategist_grade.py（14件）— 深い因果チェーン／心理と主因の一致・可変性／
+  総合影響度加点／5部構成総括／Cross Market文章化／営業30秒の逆行検出／key_points3件／自己評価／
+  禁止表現・売買助言なし／空データ安全。
+- 既存: v3.5.2/v3.5.3の文言依存アサーション（「ポイント」→「焦点」等）をv3.6の文言へ更新。
+- 結果: 372 passed。
+
 ## v3.5.3 (2026-07-08) — Strategic Narrative Engine Accuracy Fix（主因・因果・材料分類の矛盾解消）
 
 v3.5.2で文章の形は良くなったが、主因判定・因果・材料分類に矛盾（日経下落なのにSOX上昇を

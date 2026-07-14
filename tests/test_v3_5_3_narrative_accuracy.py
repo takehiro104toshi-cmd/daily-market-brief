@@ -134,7 +134,7 @@ def test_sales_30sec_no_contradiction_on_down_day():
     sn = _sn(_market(-2.0, sox_pct=1.9, rate_chg=0.05, nasdaq_pct=-1.0))
     s = sn.sales_30sec
     assert "下落しました" in s
-    assert "ポイント" in s
+    assert "焦点" in s  # v3.6: 「今後は〜が焦点になります」で締める
     # SOX上昇を「重荷」と書かない
     assert "SOX指数（半導体） +" not in s.split("重荷")[0] if "重荷" in s else True
 
