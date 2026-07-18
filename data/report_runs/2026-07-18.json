@@ -20,6 +20,25 @@
       "git_commit_sha": "281bf35f92445d8d144ac699b6f1d0fb6ddca330",
       "generation_status": "success",
       "html_valid": true
+    },
+    "market_open": {
+      "status": "success",
+      "scheduled_time": "09:10",
+      "started_at": "2026-07-18T12:27:49.071202+09:00",
+      "data_fetch_started_at": "2026-07-18T12:27:49.071202+09:00",
+      "trigger_type": "schedule",
+      "is_recovery_run": false,
+      "workflow_run_id": "29628848645",
+      "generated_at": "2026-07-18T12:27:49.071202+09:00",
+      "report_build_completed_at": "2026-07-18T12:27:49.071202+09:00",
+      "retry_count": 0,
+      "slot_label": "寄り付き確認",
+      "generated_at_jst": "2026-07-18T12:27:49.071202+09:00",
+      "generated_at_utc": "2026-07-18T03:27:49.071202+00:00",
+      "report_date_jst": "2026-07-18",
+      "git_commit_sha": "7ff6199c2151b0f859ed81aae84f52bb74b3fec1",
+      "generation_status": "success",
+      "html_valid": true
     }
   }
 }
