@@ -8,11 +8,11 @@
 **日経平均の直近値は64,141.12円（前日比 -2,694.42 (-4.03%)）。**
 
 ## 2. 岡三ストラテジスト視点　★★★★★
-**Moonshot AI plans Hong Kong IPO within six months after Kimi breakthrough** ★★★☆☆
+**5 big analyst AI moves: Apple upgraded as HSBC flags ’operational turning point’** ★★★☆☆
 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 恩恵: 該当なし ／ 悪影響: 該当なし
 
-**Korea’s AI-Heavy Market Now Sets the Tone for Global Stocks** ★★★☆☆
+**Moonshot AI plans Hong Kong IPO within six months after Kimi breakthrough** ★★★☆☆
 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 恩恵: 該当なし ／ 悪影響: 該当なし
 
