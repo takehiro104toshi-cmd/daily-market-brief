@@ -1068,6 +1068,36 @@ class MarketNarrativeSummary:
 
 
 @dataclass
+class ExternalIntelligenceBundle:
+    """Article Intelligence Data Tank（別リポジトリ・別プロジェクト）から取得した
+    Published Intelligence Package の軽量な取り込み結果（v4.x External Data Foundation）。
+
+    Data Tank側の内部データ（全記事本体・重い検索インデックス）には一切触れず、
+    軽量な配信物（hot_articles等、各リストは呼び出し側で件数上限を再度適用済み）
+    だけを保持する。manifest_url/package_url が未設定・取得失敗時は
+    usage_state="disabled"/"fallback"/"unavailable" のまま全リストが空になり、
+    既存Engineの動作には一切影響しない（AnalysisBundleへの追加接続のみ・
+    既存Engineの入力としては使わない）。
+    """
+
+    usage_state: str = "disabled"       # latest / cached / stale / unavailable / fallback / disabled
+    freshness_label: str = ""           # latest / warning / stale
+    package_generated_at: str = ""       # Data Tank側のPackage生成時刻（UTC ISO8601）
+    fetched_at: str = ""                # Market Intelligence側の取得時刻（UTC ISO8601）
+    schema_version: str = ""
+    reason: str = ""                    # fallback/unavailable時の理由（ログ用途）
+    tank_total_articles: int = 0
+    tank_new_articles_24h: int = 0
+    hot_articles: List[dict] = field(default_factory=list)
+    global_drivers: List[dict] = field(default_factory=list)
+    market_reactions: List[dict] = field(default_factory=list)
+    risk_radar: List[dict] = field(default_factory=list)
+    theme_summary: List[dict] = field(default_factory=list)
+    event_clusters: List[dict] = field(default_factory=list)
+    historical_matches: List[dict] = field(default_factory=list)
+
+
+@dataclass
 class AnalysisBundle:
     """全AI分析モジュールの計算結果をまとめ、builder.pyへ渡すための入れ物。"""
 
@@ -1116,3 +1146,5 @@ class AnalysisBundle:
     market_narrative: Optional[MarketNarrativeSummary] = None
     # v3.5.2 Strategic Narrative Engine（朝会3分説明レベルの相場解説。既存エンジンの再利用のみ）
     strategic_narrative: Optional[StrategicNarrative] = None
+    # v4.x External Data Foundation（Article Intelligence Data Tank・別リポジトリ連携）
+    external_intelligence: Optional[ExternalIntelligenceBundle] = None

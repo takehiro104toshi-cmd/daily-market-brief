@@ -1636,6 +1636,61 @@ def _rashinban_card(rashinban: Optional[RashinbanKnowledge]) -> str:
     return _card("Rashinban Learning Source（学習ソース）", body, extra_class="digest", anchor="rashinban-learning")
 
 
+_EXT_INTEL_USAGE_LABEL = {
+    "latest": "最新（Data Tankから取得）",
+    "cached": "前回キャッシュを使用",
+    "stale": "古いキャッシュ（要確認）",
+    "unavailable": "取得不可（キャッシュなし）",
+    "fallback": "取得失敗のためフォールバック",
+    "disabled": "未設定（従来のニュース処理のみ）",
+}
+
+
+def _external_intelligence_card(bundle) -> str:
+    """「External Intelligence（Article Intelligence Data Tank）」カード（v4.x）。
+
+    別リポジトリのData Tankから取得した軽量Packageの取得状況だけを表示する
+    （記事本体は表示しない・既存Engineの分析結果には一切影響しない）。
+    bundle が None、または未設定（disabled）の場合は導入前と同じ表示に留める。
+    """
+    if bundle is None:
+        return ""
+    usage_label = _EXT_INTEL_USAGE_LABEL.get(bundle.usage_state, bundle.usage_state)
+    if bundle.usage_state == "disabled":
+        body = (
+            "<p class='legend'>external_intelligence.manifest_url / package_url が未設定のため、"
+            "Article Intelligence Data Tankとの連携は無効です（既存のニュース処理のみで通常動作します）。</p>"
+        )
+        return _card("External Intelligence（Data Tank連携）", body, extra_class="digest", anchor="external-intelligence")
+
+    rows = [
+        ("状態", _esc(usage_label)),
+        ("鮮度", _esc(bundle.freshness_label or NOT_AVAILABLE)),
+        ("Package生成時刻", _esc(bundle.package_generated_at or NOT_AVAILABLE)),
+        ("取得時刻", _esc(bundle.fetched_at or NOT_AVAILABLE)),
+        ("Data Tank総記事数", _esc(f"{bundle.tank_total_articles}件") if bundle.usage_state != "unavailable" else NOT_AVAILABLE),
+        ("直近24時間の新着", _esc(f"{bundle.tank_new_articles_24h}件") if bundle.usage_state != "unavailable" else NOT_AVAILABLE),
+        ("主要因候補", _esc(f"{len(bundle.global_drivers)}件")),
+        ("リスクレーダー", _esc(f"{len(bundle.risk_radar)}件")),
+    ]
+    rows_html = "".join(f"<div class='row'><span>{k}</span><span>{v}</span></div>" for k, v in rows)
+    warn_html = ""
+    if bundle.usage_state in ("stale", "unavailable", "fallback"):
+        warn_html = (
+            f"<p class='dq-warn'>⚠️ Data Tankの最新Packageを取得できず、{_esc(usage_label)}の状態です"
+            f"（理由: {_esc(bundle.reason or '不明')}）。既存のニュース処理は通常通り継続しています。</p>"
+        )
+    note = (
+        "<p class='legend'>Article Intelligence Data Tank（別リポジトリ）が生成した軽量な配信データの"
+        "取得状況のみを表示しています。記事本体・重い検索インデックスはData Tank側にのみ保持され、"
+        "本レポートへは転載しません。現時点では既存の分析Engineへの接続は行わず、参考情報として表示するのみです。</p>"
+    )
+    return _card(
+        "External Intelligence（Data Tank連携）", rows_html + warn_html + note,
+        extra_class="digest", anchor="external-intelligence",
+    )
+
+
 def _translation_status(analysis: AnalysisBundle) -> dict:
     """本日のニュース見出しから、翻訳の状況を機械的に集計する（v3.1・改善2/8）。
 
@@ -2640,6 +2695,7 @@ def build_html_report(
         _options_panel_html(),
         _news_freshness_card(freshness),
         _rashinban_card(rashinban),
+        _external_intelligence_card(getattr(analysis, "external_intelligence", None)),
         _digest_card(market, analysis),
         _card(
             "本レポートについて",

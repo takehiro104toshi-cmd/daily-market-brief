@@ -681,6 +681,27 @@ realtime:
 economic_calendar:
   url: ""
   sources: []
+
+# ===== v4.x External Data Foundation（Article Intelligence Data Tank 連携） =====
+# 別リポジトリ・別プロジェクトの Article Intelligence Data Tank が生成した軽量な
+# Published Intelligence Package（manifest.json / intelligence_package.json.gz）を
+# 取得するだけの薄いConsumer Client設定。manifest_url/package_urlが空欄の間は
+# 従来通り（ネットワークアクセスなし・disabled状態）で安全に動作する。
+# Data Tank側の障害・未設定でもレポート生成は止まらない（直前キャッシュへ
+# フォールバック、キャッシュも無ければ既存のニュース処理のみで継続）。
+external_intelligence:
+  enabled: true
+  manifest_url: ""     # 例: Data TankのGitHub Pages/raw配信のmanifest.json URL
+  package_url: ""       # 例: 同上 intelligence_package.json.gz のURL
+  timeout_seconds: 10
+  retry_count: 1
+  latest_minutes: 30    # これ以内なら usage_state="latest"
+  warning_minutes: 90   # これ以内なら freshness_label="warning"
+  stale_minutes: 360    # これを超えたキャッシュはfallback候補
+  cache_enabled: true
+  cache_dir: "data/external_intelligence_cache"
+  fallback_to_cache: true
+  fallback_to_legacy_news: true
   # 例（公開ソースが確認できたら設定する。すべて公開RSS/JSON/CSVのみ）:
   # sources:
   #   - { name: "自作イベントJSON", url: "https://raw.githubusercontent.com/<you>/<repo>/main/events.json", type: "json" }

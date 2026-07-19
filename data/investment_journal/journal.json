@@ -1,5 +1,32 @@
 [
   {
+    "date": "2026-07-01",
+    "top_news": [
+      "Trump targets Brazil's payments system while dollar stablecoins are quietly overtaking country's payments",
+      "Go Big or Go Bigger: Is the Vanguard Mega Cap Growth ETF or S&P 500 Growth ETF the Better Buy?",
+      "The 4% Rule Is Far From Dead. Here's How to Make It Work for You."
+    ],
+    "top_themes": [],
+    "scenario": {
+      "bull": 30,
+      "neutral": 40,
+      "bear": 30,
+      "dominant": "neutral"
+    },
+    "investment_thesis": [],
+    "market_regime": "リスクオン/オフの判断材料（VIX指数）が確認できません。 グロース優位/バリュー優位の判断材料（NASDAQ・TOPIX）が確認できません。",
+    "money_flow": [
+      "AI・半導体",
+      "金融・銀行",
+      "防衛・電力・インフラ"
+    ],
+    "top_picks": [],
+    "confidence": 0,
+    "weekly_events": [],
+    "market_ref": {},
+    "evaluations": {}
+  },
+  {
     "date": "2026-07-06",
     "top_news": [
       "円相場 162円台前半に値下がり 日米金利差意識され円安進む",
@@ -90,6 +117,81 @@
       "米ドル/円": 161.8560028076172,
       "NYダウ": 53055.91015625,
       "ナスダック": 26121.16015625
+    },
+    "evaluations": {}
+  },
+  {
+    "date": "2026-07-14",
+    "top_news": [
+      "Dave Ramsey: 'You can't outearn stupidity' — here's why teachers become millionaires so often and how to follow along",
+      "The AI Capex Question Every QQQ Holder Should Be Asking Right Now",
+      "Trump targets Brazil's payments system while dollar stablecoins are quietly overtaking country's payments"
+    ],
+    "top_themes": [],
+    "scenario": {
+      "bull": 30,
+      "neutral": 40,
+      "bear": 30,
+      "dominant": "neutral"
+    },
+    "investment_thesis": [],
+    "market_regime": "リスクオン/オフの判断材料（VIX指数）が確認できません。 グロース優位/バリュー優位の判断材料（NASDAQ・TOPIX）が確認できません。",
+    "money_flow": [
+      "AI・半導体",
+      "金融・銀行",
+      "防衛・電力・インフラ"
+    ],
+    "top_picks": [],
+    "confidence": 0,
+    "weekly_events": [],
+    "market_ref": {},
+    "evaluations": {}
+  },
+  {
+    "date": "2026-07-19",
+    "top_news": [
+      "AI may force these workers to retire earlier than planned",
+      "Not Done Yet Refunding Tariffs or Realizing AI’s Promise",
+      "ナスダック株価指数 一時2％超の下落 中国AIへの警戒感で売り"
+    ],
+    "top_themes": [
+      "AI",
+      "半導体",
+      "電力"
+    ],
+    "scenario": {
+      "bull": 40,
+      "neutral": 10,
+      "bear": 50,
+      "dominant": "bear"
+    },
+    "investment_thesis": [
+      "AI",
+      "半導体",
+      "防衛"
+    ],
+    "market_regime": "VIX指数は18.77と落ち着いた水準で、リスクオン優勢の目安です。 NASDAQがTOPIXを上回っており、グロース優位の目安です。",
+    "money_flow": [
+      "AI・半導体",
+      "金融・銀行",
+      "防衛・電力・インフラ"
+    ],
+    "top_picks": [
+      "トヨタ自動車",
+      "ソニーグループ",
+      "三菱UFJフィナンシャル・グループ"
+    ],
+    "confidence": 90,
+    "weekly_events": [
+      "Alphabet（GOOGL）決算発表",
+      "Tesla（TSLA）決算発表"
+    ],
+    "market_ref": {
+      "日経平均": 64141.12109375,
+      "TOPIX": 407.8999938964844,
+      "米ドル/円": 162.35299682617188,
+      "NYダウ": 52146.421875,
+      "ナスダック": 25520.240234375
     },
     "evaluations": {}
   }

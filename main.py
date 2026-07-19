@@ -24,6 +24,7 @@ import pytz
 from src.analysis import (
     ai_summary,
     call_priority,
+    external_intelligence,
     causal_chain,
     chat_topics,
     data_freshness,
@@ -73,6 +74,7 @@ from src.analysis import (
 )
 from src.analysis.models import AnalysisBundle, RashinbanKnowledge, SalesTalkBullets
 from src.analysis.sales_talk import build_sales_talk_bullets, render_sales_talk_markdown
+from src.data.external_intelligence_client import ExternalIntelligenceClient
 from src.collectors import (
     bloomberg,
     boj,
@@ -887,6 +889,24 @@ def generate_report(
             watchlist_quicklist_result,
             weekly_events_result,
         ),
+        None,
+    )
+
+    # v4.x External Data Foundation: Article Intelligence Data Tank（別リポジトリ）が
+    # 生成した軽量Published Intelligence Packageを取得する。manifest_url/package_url
+    # 未設定なら即座にdisabled状態を返し（ネットワークアクセスなし）、取得失敗時も
+    # 直前キャッシュへフォールバックする。既存Engineへは接続せず、AnalysisBundleへ
+    # 保持するだけ（将来の段階的接続の基盤）。Data Tank障害でレポート生成は止めない。
+    ext_intel_cfg = config.get("external_intelligence", {})
+    ext_intel_package, ext_intel_status = _safe_call(
+        "external_intelligence_fetch",
+        lambda: ExternalIntelligenceClient(ext_intel_cfg, base_dir=BASE_DIR, now=now).fetch_latest_package(),
+        (None, {"usage_state": "unavailable", "freshness_label": "", "package_generated_at": "",
+               "fetched_at": now.isoformat(), "schema_version": "", "reason": "client_error"}),
+    )
+    analysis_bundle.external_intelligence = _safe_call(
+        "external_intelligence_bundle",
+        lambda: external_intelligence.build_external_intelligence_bundle(ext_intel_package, ext_intel_status),
         None,
     )
 

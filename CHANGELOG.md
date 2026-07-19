@@ -4,6 +4,52 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.x (2026-07-17) — External Data Foundation（Article Intelligence Data Tank連携・Consumer Client）
+
+別リポジトリ・別プロジェクトとして新規作成した Article Intelligence Data Tank
+（数千〜数万件のニュース記事を取得・分析し、軽量なPublished Intelligence Package
+だけを配信する独立基盤）から、Market Intelligence System 側が**軽量なConsumer
+Client**だけを追加して接続できるようにした。既存Engineの分析ロジックは一切変更せず、
+AnalysisBundleへの追加接続（保持のみ）に留める。Data Tank未設定・障害時も
+レポート生成は通常通り継続する（完全な後方互換）。
+
+### 追加
+
+- `src/data/external_intelligence_client.py`【新規】: ExternalIntelligenceClient。
+  manifest取得→package取得→gzip展開→checksum検証→schema検証→cache保存→
+  timeout/retry→stale判定→fallback、を行う薄いクライアント。manifest_url/
+  package_url未設定なら即座にdisabled（ネットワークアクセスなし）。
+- `src/analysis/external_intelligence.py`【新規】: package/statusから
+  `ExternalIntelligenceBundle`を組み立てる（Market Intelligence側で件数上限を
+  再度防御的にキャップ）。
+- `src/analysis/models.py`: `ExternalIntelligenceBundle`データクラス追加、
+  `AnalysisBundle.external_intelligence`（デフォルトNone・後方互換）を追加。
+- `src/report/html_builder.py`: 「External Intelligence（Data Tank連携）」カードを
+  追加（取得状況のみ表示・記事本体は転載しない。bundle未設定/Noneなら空文字＝
+  従来通り）。
+- `config.yaml`: `external_intelligence`ブロック（enabled/manifest_url/package_url/
+  timeout_seconds/retry_count/latest_minutes/warning_minutes/stale_minutes/
+  cache_enabled/cache_dir/fallback_to_cache/fallback_to_legacy_news）を追加。
+  URL空欄の間は完全に無効化され、既存動作に一切影響しない。
+- `main.py`: `ExternalIntelligenceClient`の呼び出しを`_safe_call`で追加し、
+  `analysis_bundle.external_intelligence`へ格納するのみ（既存Engineの入力には
+  まだ使わない・将来の段階的接続の基盤）。
+- `tests/test_v4_external_intelligence.py`【新規】: manifest/package取得・
+  checksum/schema検証・latest/warning/stale判定・timeout/retry・cache更新/
+  fallback・legacy fallback・URL未設定時の後方互換・Data Quality表示・
+  件数上限・既存pytest互換など16件。
+
+### 関連: Article Intelligence Data Tank（別リポジトリ・別納品物）
+
+`article-intelligence-data-tank/` として独立プロジェクトを新規作成（本リポジトリの
+配下ではない）。記事取得・正規化・重複排除・分類・イベント統合・市場影響分析・
+永続保存・配信パッケージ生成を担う。詳細は当該プロジェクトの README.md /
+CHANGELOG.md を参照。
+
+### pytest
+
+419 passed（既存403＋新規16）。
+
 ## v4.x (2026-07-14) — Six Daily Report Schedule & Reliability Upgrade（1日6回・信頼性運用）
 
 レポートをJST基準で1日6回（07:30/09:10/11:30/12:40/15:40/17:20）自動生成する信頼性運用の
