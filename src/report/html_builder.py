@@ -222,6 +222,7 @@ body {
 }
 .compact-mode .legend { display: none; }
 .compact-mode p[style*="font-size:0."] { display: none; }
+.compact-mode .card-desc { display: none; }
 .hide-sales .sales-section { display: none; }
 .dashboard { background: #111827; color: #fff; }
 .dashboard h2 { color: #fff; }
@@ -502,11 +503,36 @@ function copySection(btn) {
   applyFavStates();  // ページ再読み込み後もお気に入り状態（☆/★・一覧）を復元する
   if (!compactBox || !salesBox || !darkBox) { return; }
 
+  // v4.4（②）: コンパクト表示では重要度60以下のカードを自動で折りたたむ
+  // （重要度80〜100・★の無いトップサマリーは開いたまま＝重要なものは常に見える）。
+  // 自動で畳んだカードにはauto-collapsedの印を付け、コンパクト解除時に
+  // その印が付いたものだけを開き直す（元から畳んであった営業メモ等はそのまま）。
+  // 畳まれたカードも▾ボタンで個別に開ける（class切り替えのためCSSに負けない）。
+  function applyCompactCollapse(on) {
+    var cards = document.querySelectorAll('.card[data-imp]');
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      var imp = parseInt(card.getAttribute('data-imp'), 10);
+      if (isNaN(imp) || imp > 60) { continue; }
+      var btn = card.querySelector('.collapse-btn');
+      if (on) {
+        if (!card.classList.contains('card-collapsed')) {
+          card.classList.add('card-collapsed', 'auto-collapsed');
+          if (btn) { btn.textContent = '\\u25B8'; }
+        }
+      } else if (card.classList.contains('auto-collapsed')) {
+        card.classList.remove('card-collapsed', 'auto-collapsed');
+        if (btn) { btn.textContent = '\\u25BE'; }
+      }
+    }
+  }
+
   function apply() {
     document.body.classList.toggle('compact-mode', compactBox.checked);
     document.body.classList.toggle('hide-sales', salesBox.checked);
     document.body.classList.toggle('favorites-only', !!(favsOnlyBox && favsOnlyBox.checked));
     root.setAttribute('data-theme', darkBox.checked ? 'dark' : 'light');
+    applyCompactCollapse(compactBox.checked);
   }
 
   compactBox.checked = localStorage.getItem('mkt_compact') === '1';
@@ -637,9 +663,14 @@ def _card(
     # v2.7（⑥）: ★から100点満点の重要度を機械的に換算して併記（★×20点）。
     # 何を先に読むべきかを一目で分かるようにする表示のみの機能。
     imp_html = ""
+    imp_attr = ""
     if stars_txt:
         importance = min(100, stars_txt.count("★") * 20)
         imp_html = f'<span class="imp">重要度{importance}</span>'
+        # v4.4（②）: コンパクト表示が「重要度の低いカードだけ」を自動で畳めるよう、
+        # 重要度をdata属性としてカードに持たせる（★の無いカード＝相場総括等の
+        # トップサマリーには付与しない＝コンパクト表示でも常に開いたまま）。
+        imp_attr = f' data-imp="{importance}"'
     title_html = _esc(label) + (f" {_stars_span(stars_txt)}{imp_html}" if stars_txt else "")
     # お気に入り（☆⇄★）はアンカーを持つ通常セクションのみ対象（メニュー・目次等のno-filterカードは除く）
     fav_btn = ""
@@ -656,7 +687,7 @@ def _card(
     desc = description or SECTION_DESCRIPTIONS.get(anchor or "", "")
     desc_html = f'<p class="card-desc">{_esc(desc)}</p>' if desc else ""
     return (
-        f'<div class="card {extra_class}"{id_attr}>{head_html}{desc_html}'
+        f'<div class="card {extra_class}"{id_attr}{imp_attr}>{head_html}{desc_html}'
         f'<div class="card-body">{body_html}{nav_html}</div></div>'
     )
 
@@ -1710,30 +1741,42 @@ def _ext_intel_cluster_list_html(heading: str, clusters: list) -> str:
 
     Tank側で既にMarket Reaction First・クラスタリング・スコアリングまで済んでいるため、
     ここでは並べ替え・再計算はせず、届いた順（Tank側のランキング順）でそのまま表示する。
+    v4.4（①情報整理）: importanceが0かつ関連記事1件のエントリはノイズ
+    （スコア未計算の旧データ・単発の無関係記事）とみなして表示から除外する。
+    有意なエントリが1件も無ければ見出しごと表示しない。
     """
     if not clusters:
         return ""
     items = []
     for c in clusters:
-        title = _esc(c.get("event_title") or "（タイトル不明）")
-        count = c.get("article_count", 0)
+        count = c.get("article_count", 0) or 0
         importance = c.get("importance_score", 0.0) or 0.0
+        if importance <= 0.0 and count <= 1:
+            continue
+        title = _esc(c.get("event_title") or "（タイトル不明）")
         countries = "・".join(c.get("countries", []) or [])
         meta = f"関連記事{count}件 ／ importance {importance:.2f}"
         if countries:
             meta += f" ／ {_esc(countries)}"
         items.append(f"<li><strong>{title}</strong><br><span class='legend'>{meta}</span></li>")
+    if not items:
+        return ""
     return f"<p class='ext-intel-subhead'>{_esc(heading)}</p><ul class='ext-intel-list'>{''.join(items)}</ul>"
 
 
 def _ext_intel_theme_summary_html(theme_summary: list) -> str:
-    """Data Tankのtheme_summary（テーマ別記事数・平均importance）を簡易表示する。"""
-    if not theme_summary:
+    """Data Tankのtheme_summary（テーマ別記事数・平均importance）を簡易表示する。
+
+    v4.4（①情報整理）: "uncategorized"（分類不能の印）はテーマではないため表示しない
+    （Tank側でも除外するが、旧Packageへの防御として表示側でも弾く）。
+    """
+    entries = [t for t in (theme_summary or []) if t.get("theme") and t.get("theme") != "uncategorized"]
+    if not entries:
         return ""
     items = "".join(
         f"<li>{_esc(t.get('theme', ''))}: {t.get('article_count', 0)}件"
         f"（平均importance {t.get('avg_importance', 0.0):.2f}）</li>"
-        for t in theme_summary
+        for t in entries
     )
     return f"<p class='ext-intel-subhead'>Data Tank発のテーマ集計</p><ul class='ext-intel-list'>{items}</ul>"
 

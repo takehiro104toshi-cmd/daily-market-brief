@@ -521,3 +521,62 @@ def test_strategist_view_mentions_confirmed_market_reaction():
     lookup = build_tank_signal_lookup(_bundle_with_signals())
     views = build_strategist_views([item], {}, {}, tank_signals=lookup)
     assert "実際の市場反応" in views[0].strategist_take
+
+
+# ---------- 37〜40: ①情報整理（Data Tankカードのノイズ除去）＋②コンパクト表示（v4.4） ----------
+
+def test_ext_intel_cluster_list_filters_noise_entries():
+    from src.report.html_builder import _ext_intel_cluster_list_html
+
+    clusters = [
+        {"event_title": "重要イベント", "article_count": 3, "importance_score": 0.7, "countries": ["US"]},
+        {"event_title": "無関係な単発記事", "article_count": 1, "importance_score": 0.0, "countries": ["GB"]},
+    ]
+    html_out = _ext_intel_cluster_list_html("Data Tank発の主要因", clusters)
+    assert "重要イベント" in html_out
+    assert "無関係な単発記事" not in html_out
+
+    # 全件ノイズなら見出しごと表示しない
+    all_noise = [{"event_title": "ノイズ", "article_count": 1, "importance_score": 0.0}]
+    assert _ext_intel_cluster_list_html("Data Tank発の主要因", all_noise) == ""
+
+
+def test_ext_intel_theme_summary_excludes_uncategorized():
+    from src.report.html_builder import _ext_intel_theme_summary_html
+
+    summary = [
+        {"theme": "uncategorized", "article_count": 614, "avg_importance": 0.0},
+        {"theme": "ai", "article_count": 48, "avg_importance": 0.5},
+    ]
+    html_out = _ext_intel_theme_summary_html(summary)
+    assert "ai: 48件" in html_out
+    assert "uncategorized" not in html_out
+    # uncategorizedしか無ければ何も表示しない
+    assert _ext_intel_theme_summary_html([{"theme": "uncategorized", "article_count": 1}]) == ""
+
+
+def test_cards_carry_importance_data_attribute():
+    from src.report.html_builder import _card
+
+    high = _card("重要セクション ★★★★★", "<p>本文</p>", anchor="high-sec")
+    low = _card("営業メモ ★★☆☆☆", "<p>本文</p>", anchor="low-sec")
+    plain = _card("トップサマリー", "<p>本文</p>", anchor="plain-sec")
+    assert 'data-imp="100"' in high
+    assert 'data-imp="40"' in low
+    assert "data-imp" not in plain  # ★の無いカードは常に開いたまま（対象外）
+
+
+def test_full_report_contains_compact_collapse_script():
+    from datetime import datetime
+    from src.report.html_builder import build_html_report
+    from src.utils import SourceRegistry
+    from tests.factories import full_bundle, full_market
+
+    report = build_html_report(
+        report_date=datetime(2026, 7, 20),
+        market=full_market(),
+        sources=SourceRegistry(),
+        analysis=full_bundle(),
+    )
+    assert "applyCompactCollapse" in report
+    assert 'data-imp="100"' in report  # ★★★★★セクションに重要度属性が付いている
