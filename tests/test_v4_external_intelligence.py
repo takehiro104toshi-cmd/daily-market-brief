@@ -14,8 +14,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from src.analysis.external_intelligence import build_external_intelligence_bundle
+from src.analysis.external_intelligence import build_external_intelligence_bundle, hot_articles_to_headlines
 from src.analysis.models import AnalysisBundle, ExternalIntelligenceBundle
+from src.collectors.news import dedupe_headlines, Headline
 from src.data.external_intelligence_client import (
     ExternalIntelligenceClient,
     classify_freshness,
@@ -304,3 +305,69 @@ def test_analysis_bundle_default_external_intelligence_is_none():
 def test_main_module_imports_and_wires_without_error():
     import main as main_module  # noqa: F401  # インポートできる（構文・依存関係エラーなし）
     assert hasattr(main_module, "ExternalIntelligenceClient")
+
+
+# ---------- 23〜26: hot_articlesを既存ニュースパイプラインへ合流させる（段階的接続） ----------
+
+def test_hot_articles_to_headlines_converts_allowlisted_fields():
+    hot_articles = [
+        {
+            "article_id": "a1",
+            "title": "FRBが追加利下げを示唆",
+            "url": "https://example.com/a1",
+            "source": "Federal Reserve Press Releases",
+            "published_at": "2026-07-20T09:00:00+09:00",
+            "source_trust": 0.97,
+            "public_excerpt": "本文の要約（これはHeadlineへ引き継がれない）",
+        }
+    ]
+    headlines = hot_articles_to_headlines(hot_articles)
+    assert len(headlines) == 1
+    h = headlines[0]
+    assert h.title == "FRBが追加利下げを示唆"
+    assert h.link == "https://example.com/a1"
+    assert h.source == "Data Tank: Federal Reserve Press Releases"
+    assert h.reliability == pytest.approx(0.97)
+    assert not hasattr(h, "public_excerpt")  # 本文相当のフィールドは構造的に引き継がない
+
+
+def test_hot_articles_to_headlines_skips_incomplete_entries():
+    hot_articles = [
+        {"article_id": "a1", "title": "", "url": "https://example.com/a1"},  # タイトル欠落
+        {"article_id": "a2", "title": "タイトルのみ", "url": ""},  # URL欠落
+        {"article_id": "a3", "title": "正常な記事", "url": "https://example.com/a3"},
+    ]
+    headlines = hot_articles_to_headlines(hot_articles)
+    assert len(headlines) == 1
+    assert headlines[0].title == "正常な記事"
+
+
+def test_hot_articles_to_headlines_defaults_missing_trust_to_neutral():
+    headlines = hot_articles_to_headlines([{"title": "情報源信頼度なし", "url": "https://example.com/a1"}])
+    assert headlines[0].reliability == pytest.approx(0.5)
+    assert headlines[0].source == "Data Tank"
+
+
+def test_tank_headlines_merge_and_dedupe_with_existing_rss():
+    # 既存RSS（低信頼度）とData Tank（高信頼度）が同じニュースを配信していた場合、
+    # 既存のdedupe_headlinesが信頼度の高い方（Data Tank由来）を自動的に残すことを確認する。
+    existing = [Headline(title="日銀、金融政策を維持", link="https://existing.example/1",
+                          source="Yahoo!ニュース 経済", reliability=0.6)]
+    tank = hot_articles_to_headlines([
+        {"title": "日銀、金融政策を維持", "url": "https://tank.example/1",
+         "source": "日本銀行 新着情報", "source_trust": 0.97},
+    ])
+    merged = dedupe_headlines(existing + tank)
+    assert len(merged) == 1  # 同一見出しとして統合される
+    assert merged[0].source == "Data Tank: 日本銀行 新着情報"  # 信頼度の高い方が採用される
+    assert "Yahoo!ニュース 経済" in merged[0].duplicate_sources
+
+
+def test_tank_headlines_added_as_new_when_no_overlap():
+    existing = [Headline(title="米国株が下落", link="https://existing.example/1", source="Yahoo!ニュース 経済")]
+    tank = hot_articles_to_headlines([
+        {"title": "TSMCがアリゾナ工場へ追加投資", "url": "https://tank.example/1",
+         "source": "Investing.com News", "source_trust": 0.7},
+    ])
+    merged = dedupe_headlines(existing + tank)
+    assert len(merged) == 2  # 重複しないニュースはそのまま両方残る

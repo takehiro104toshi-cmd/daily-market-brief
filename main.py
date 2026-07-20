@@ -408,6 +408,32 @@ def generate_report(
         {"jp_stocks": [], "us_stocks": []},
     )
 
+    # v4.x External Data Foundation → 段階的接続: Article Intelligence Data Tank
+    # （別リポジトリ）が生成した軽量Published Intelligence Packageを取得し、
+    # hot_articlesを既存のニュース収集パイプラインへ合流させる。既存の
+    # news.dedupe_headlines（タイトル正規化ベース）にそのまま乗るため、
+    # 同じニュースを既存RSSとData Tank双方が配信していた場合は信頼度の高い方へ
+    # 自動統合される。manifest_url/package_url未設定・取得失敗時は空リストの
+    # ままとなり、既存のニュース収集・レポート生成には一切影響しない。
+    logger.info("Article Intelligence Data Tank（別リポジトリ）の配信データを取得しています...")
+    ext_intel_cfg = config.get("external_intelligence", {})
+    ext_intel_package, ext_intel_status = _safe_call(
+        "external_intelligence_fetch",
+        lambda: ExternalIntelligenceClient(ext_intel_cfg, base_dir=BASE_DIR, now=now).fetch_latest_package(),
+        (None, {"usage_state": "unavailable", "freshness_label": "", "package_generated_at": "",
+               "fetched_at": now.isoformat(), "schema_version": "", "reason": "client_error"}),
+    )
+    ext_intel_bundle = _safe_call(
+        "external_intelligence_bundle",
+        lambda: external_intelligence.build_external_intelligence_bundle(ext_intel_package, ext_intel_status),
+        None,
+    )
+    tank_headlines = _safe_call(
+        "external_intelligence_headlines",
+        lambda: external_intelligence.hot_articles_to_headlines(ext_intel_bundle.hot_articles if ext_intel_bundle else []),
+        [],
+    )
+
     logger.info("公開ニュース見出しを取得しています...")
     limit = config.get("output", {}).get("headlines_per_source", 8)
     reliability_map = config.get("source_reliability", {})
@@ -446,7 +472,7 @@ def generate_report(
         if not fetched:
             failed_source_names.append(collector_name)
         extra_headlines.extend(fetched)
-    raw_headlines = headlines + extra_headlines  # 重複除去前の全見出し（鮮度統計用）
+    raw_headlines = headlines + extra_headlines + tank_headlines  # 重複除去前の全見出し（鮮度統計用）
     headlines = news.dedupe_headlines(raw_headlines)
 
     # v2.8/v3.0（①）: 英語見出しの自動翻訳。永続キャッシュ（translation_cache.json）を
@@ -485,8 +511,9 @@ def generate_report(
         [],
     )
     logger.info(
-        "追加情報源の取得結果: 追加見出し%d件（既存分と合わせて重複除去後 合計%d件）、EDINET%d件、マクロ指標%d件",
+        "追加情報源の取得結果: 追加見出し%d件・Data Tank由来%d件（既存分と合わせて重複除去後 合計%d件）、EDINET%d件、マクロ指標%d件",
         len(extra_headlines),
+        len(tank_headlines),
         len(headlines),
         len(edinet_documents),
         len(macro_data_points),
@@ -892,23 +919,11 @@ def generate_report(
         None,
     )
 
-    # v4.x External Data Foundation: Article Intelligence Data Tank（別リポジトリ）が
-    # 生成した軽量Published Intelligence Packageを取得する。manifest_url/package_url
-    # 未設定なら即座にdisabled状態を返し（ネットワークアクセスなし）、取得失敗時も
-    # 直前キャッシュへフォールバックする。既存Engineへは接続せず、AnalysisBundleへ
-    # 保持するだけ（将来の段階的接続の基盤）。Data Tank障害でレポート生成は止めない。
-    ext_intel_cfg = config.get("external_intelligence", {})
-    ext_intel_package, ext_intel_status = _safe_call(
-        "external_intelligence_fetch",
-        lambda: ExternalIntelligenceClient(ext_intel_cfg, base_dir=BASE_DIR, now=now).fetch_latest_package(),
-        (None, {"usage_state": "unavailable", "freshness_label": "", "package_generated_at": "",
-               "fetched_at": now.isoformat(), "schema_version": "", "reason": "client_error"}),
-    )
-    analysis_bundle.external_intelligence = _safe_call(
-        "external_intelligence_bundle",
-        lambda: external_intelligence.build_external_intelligence_bundle(ext_intel_package, ext_intel_status),
-        None,
-    )
+    # v4.x External Data Foundation: Article Intelligence Data Tank（別リポジトリ）の
+    # 取得・bundle化は上部（ニュース収集の前段）で完了済み（hot_articlesを既存ニュース
+    # パイプラインへ合流させるため）。ここでは重複取得を避け、既に組み立て済みの
+    # bundleをAnalysisBundleへ保持するだけ。
+    analysis_bundle.external_intelligence = ext_intel_bundle
 
     # v2.8（⑦）: 各カードの「なぜ今日見るべきか」を既存データから生成（HTMLのみ使用）
     why_today_map = _safe_call(

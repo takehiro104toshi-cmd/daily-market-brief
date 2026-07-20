@@ -4,6 +4,37 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.1 (2026-07-20) — External Intelligence 段階的接続（hot_articlesをニュースパイプラインへ合流）
+
+v4.x で追加したConsumer Client（取得・表示のみ）を一歩進め、Data Tankの
+`hot_articles`（allowlist済みの公開ビュー）を既存のニュース収集パイプラインへ
+実際に合流させた。大規模リファクタリングは行わず、既存の`news.dedupe_headlines`
+（タイトル正規化ベースの重複排除）へそのまま乗せる形で接続している。
+
+### 変更
+
+- `src/analysis/external_intelligence.py`: `hot_articles_to_headlines()`を追加。
+  Data Tankのhot_articles（title/url/source/published_at/source_trust）を
+  既存の`Headline`（`src/collectors/news.py`）へ変換する。`source_trust`
+  （0.0〜1.0）をそのまま`reliability`として引き継ぐため、既存RSSと同じ
+  ニュースをData Tankも配信していた場合は信頼度の高い方へ自動的に統合される。
+  本文（public_excerpt等）はHeadlineに保持フィールドが無いため引き継がない
+  （構造的に本文が混入しない）。
+- `main.py`: Data Tankの取得・bundle化を既存ニュース収集の直前へ移動し、
+  変換したHeadlineを`raw_headlines`（重複除去前）へ合流させた（重複取得は
+  行わない・取得失敗時は空リストのままで既存動作に影響なし）。
+- `src/report/html_builder.py`: 「External Intelligence（Data Tank連携）」カードの
+  説明文を、実際の接続状況に合わせて更新（「参考情報として表示するのみ」→
+  「重要ニュースランキング・テーマ分析等へ合流」）。
+- `tests/test_v4_external_intelligence.py`: `hot_articles_to_headlines`の
+  フィールド変換・欠損データのスキップ・信頼度デフォルト値、および既存
+  `dedupe_headlines`との統合（重複ニュースの統合・非重複ニュースの共存）を
+  検証するテストを5件追加。
+
+### pytest
+
+424 passed（既存419＋新規5）。
+
 ## v4.x (2026-07-17) — External Data Foundation（Article Intelligence Data Tank連携・Consumer Client）
 
 別リポジトリ・別プロジェクトとして新規作成した Article Intelligence Data Tank

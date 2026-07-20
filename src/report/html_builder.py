@@ -1682,8 +1682,10 @@ def _external_intelligence_card(bundle) -> str:
         )
     note = (
         "<p class='legend'>Article Intelligence Data Tank（別リポジトリ）が生成した軽量な配信データの"
-        "取得状況のみを表示しています。記事本体・重い検索インデックスはData Tank側にのみ保持され、"
-        "本レポートへは転載しません。現時点では既存の分析Engineへの接続は行わず、参考情報として表示するのみです。</p>"
+        "取得状況を表示しています。記事本体・重い検索インデックスはData Tank側にのみ保持され、"
+        "本レポートへは転載しません。上記「主要因候補」に含まれる記事（hot_articles）は、"
+        "既存の重要ニュースランキング・テーマ分析等へタイトル・情報源信頼度のみを引き継いだ形で"
+        "合流し、既存RSSと同じニュースを配信していた場合は信頼度の高い方へ自動的に統合されます。</p>"
     )
     return _card(
         "External Intelligence（Data Tank連携）", rows_html + warn_html + note,
