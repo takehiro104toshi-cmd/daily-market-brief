@@ -77,6 +77,25 @@
       "git_commit_sha": "3b3f8df0073c2cf3185a836175ef8d721d846d5a",
       "generation_status": "success",
       "html_valid": true
+    },
+    "market_close": {
+      "status": "success",
+      "scheduled_time": "15:40",
+      "started_at": "2026-07-20T16:26:12.477496+09:00",
+      "data_fetch_started_at": "2026-07-20T16:26:12.477496+09:00",
+      "trigger_type": "manual",
+      "is_recovery_run": false,
+      "workflow_run_id": "29724591167",
+      "generated_at": "2026-07-20T16:26:12.477496+09:00",
+      "report_build_completed_at": "2026-07-20T16:26:12.477496+09:00",
+      "retry_count": 0,
+      "slot_label": "大引けレポート",
+      "generated_at_jst": "2026-07-20T16:26:12.477496+09:00",
+      "generated_at_utc": "2026-07-20T07:26:12.477496+00:00",
+      "report_date_jst": "2026-07-20",
+      "git_commit_sha": "6356669b97d9b2230f2b4ffed5bd310579c49972",
+      "generation_status": "success",
+      "html_valid": true
     }
   }
 }
