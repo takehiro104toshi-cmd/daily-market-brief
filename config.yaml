@@ -691,8 +691,8 @@ economic_calendar:
 # フォールバック、キャッシュも無ければ既存のニュース処理のみで継続）。
 external_intelligence:
   enabled: true
-  manifest_url: ""     # 例: Data TankのGitHub Pages/raw配信のmanifest.json URL
-  package_url: ""       # 例: 同上 intelligence_package.json.gz のURL
+  manifest_url: "https://raw.githubusercontent.com/takehiro104toshi-cmd/article-intelligence-data-tank/main/published/latest/manifest.json"     # Article Intelligence Data Tank の配信manifest（raw配信・main）
+  package_url: "https://raw.githubusercontent.com/takehiro104toshi-cmd/article-intelligence-data-tank/main/published/latest/intelligence_package.json.gz"       # 同上 intelligence_package.json.gz（gzip）
   timeout_seconds: 10
   retry_count: 1
   latest_minutes: 30    # これ以内なら usage_state="latest"
