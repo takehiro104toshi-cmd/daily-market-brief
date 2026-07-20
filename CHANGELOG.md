@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.5 (2026-07-20) — 通信社系接頭辞をまたぐ重複ニュースの排除
+
+ライブ運用のレポートで、同一記事を別媒体が配信し片方だけに "Analysis:" が付く
+ケース（例:「Could AI chip boom make ASML…」と「Analysis:Could AI chip boom
+make ASML…」）が重複排除をすり抜け、Executive Summary・重要ニュースランキング・
+岡三ストラテジスト視点に同じニュースが2件並んでいた。見出し正規化に通信社系
+接頭辞の除去を追加して解消した。
+
+### 変更
+
+- `src/collectors/news.py`: `_normalize_title`の先頭処理に`_strip_wire_prefix`を追加。
+  Analysis / Exclusive / Breaking / Factbox / Explainer / Column / Insight /
+  Timeline / Opinion / Feature / UPDATE N- / WRAPUP N- / RPT / REFILE /
+  Live markets / Live / Graphic、および日本語（速報／独自／焦点／コラム／特集／
+  解説／分析）の接頭辞を1回だけ剥がしてから正規化する。剥がすと空になる異常
+  見出しは元のまま扱い、誤統合を防ぐ。この正規化はニュース収集の重複排除と
+  Data Tankシグナルのタイトル照合の両方で共通に使われるため、Tank由来・
+  既存RSS由来をまたぐ重複にも一貫して効く。
+- `tests/test_collectors.py`: Analysis接頭辞・UPDATE/日本語接頭辞をまたぐ統合、
+  接頭辞のみ見出しの非空保証を検証するテストを3件追加。
+
+### pytest
+
+440 passed（既存437＋新規3）。
+
 ## v4.4 (2026-07-20) — 情報の整理＋コンパクト表示の最適化
 
 ライブ運用のレポートで確認された表示ノイズ（主要因への無関係な単発記事の混入・

@@ -130,9 +130,27 @@ def fetch_headlines(
     return all_headlines
 
 
+# 通信社・編集部が付ける「内容ではない接頭辞」。同じ記事を別媒体が配信するとき
+# 片方だけに付くことがあり（例: "Analysis:Could AI…" と "Could AI…"）、
+# これを剥がさないと重複排除をすり抜けてランキングに同じニュースが並ぶ。
+_WIRE_PREFIX_RE = re.compile(
+    r"^\s*(?:analysis|exclusive|breaking|factbox|explainer|column|insight|timeline|"
+    r"opinion|feature|update\s*\d*|wrapup\s*\d*|rpt|refile|live\s*markets?|live|graphic|"
+    r"分析|速報|独自|焦点|コラム|特集|解説)\s*[:：\-ー―]+\s*",
+    re.IGNORECASE,
+)
+
+
+def _strip_wire_prefix(title: str) -> str:
+    """先頭の通信社系接頭辞（Analysis: / UPDATE 1- / 速報: 等）を1回だけ剥がす。
+    剥がすと空になる場合は元のまま返す（誤って全消ししない）。"""
+    stripped = _WIRE_PREFIX_RE.sub("", title, count=1)
+    return stripped if stripped.strip() else title
+
+
 def _normalize_title(title: str) -> str:
-    """重複判定用に見出しを正規化する（空白・全角/半角記号の揺れを吸収）。"""
-    normalized = title.strip().lower()
+    """重複判定用に見出しを正規化する（接頭辞・空白・全角/半角記号の揺れを吸収）。"""
+    normalized = _strip_wire_prefix(title.strip()).lower()
     normalized = re.sub(r"[\s　]+", "", normalized)
     normalized = re.sub(r"[【】\[\]()（）「」『』\-―ー、。,.!！?？:：]", "", normalized)
     return normalized

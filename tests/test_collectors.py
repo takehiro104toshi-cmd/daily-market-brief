@@ -64,6 +64,41 @@ def test_dedupe_headlines_handles_empty_list():
     assert dedupe_headlines([]) == []
 
 
+def test_dedupe_headlines_strips_wire_service_prefix():
+    # 同じ記事を別媒体が配信し、片方だけに "Analysis:" が付くケース（実運用で発生）。
+    # 接頭辞を無視して重複と判定し、信頼度の高い方を残す。
+    headlines = [
+        Headline(title="Analysis:Could AI chip boom make ASML Europe's first trillion-dollar firm?",
+                 link="https://cna.example/1", source="CNA", reliability=0.4),
+        Headline(title="Could AI chip boom make ASML Europe's first trillion-dollar firm?",
+                 link="https://yahoo.example/1", source="Yahoo", reliability=0.7),
+    ]
+    result = dedupe_headlines(headlines)
+    assert len(result) == 1
+    assert result[0].source == "Yahoo"
+
+
+def test_dedupe_headlines_strips_update_and_japanese_prefixes():
+    headlines = [
+        Headline(title="UPDATE 2-Toyota raises full-year outlook", link="https://a/1", source="A", reliability=0.5),
+        Headline(title="Toyota raises full-year outlook", link="https://b/1", source="B", reliability=0.5),
+        Headline(title="速報：日銀が金利を据え置き", link="https://c/1", source="C", reliability=0.5),
+        Headline(title="日銀が金利を据え置き", link="https://d/1", source="D", reliability=0.5),
+    ]
+    result = dedupe_headlines(headlines)
+    assert len(result) == 2  # 2組がそれぞれ統合される
+
+
+def test_dedupe_headlines_prefix_only_title_is_not_emptied():
+    # 接頭辞のみの見出し（異常データ）を空文字化して誤統合しないこと。
+    headlines = [
+        Headline(title="Analysis:", link="https://a/1", source="A", reliability=0.5),
+        Headline(title="Breaking:", link="https://b/1", source="B", reliability=0.5),
+    ]
+    result = dedupe_headlines(headlines)
+    assert len(result) == 2  # 別々の（非空の）キーとして扱われ、統合されない
+
+
 def test_nikkei_headlines_degrades_gracefully_when_unreachable():
     sources = SourceRegistry()
     result = nikkei.fetch_nikkei_headlines(
