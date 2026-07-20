@@ -250,6 +250,11 @@ table th { color: #666; font-weight: 600; font-size: 0.78rem; }
 .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .row:last-child { border-bottom: none; }
 .legend { font-size: 0.8rem; color: #555; background: #fffbe6; border: 1px solid #f0e2a4; border-radius: 8px; padding: 10px 12px; }
+.ext-intel-subhead { font-size: 0.85rem; font-weight: 600; margin: 12px 0 4px; color: #374151; }
+:root[data-theme="dark"] .ext-intel-subhead { color: #d1d5db; }
+.ext-intel-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.ext-intel-list li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+.ext-intel-list li:last-child { border-bottom: none; }
 .refresh-btn {
   display: block; text-align: center; margin: 0 0 14px 0; padding: 14px 16px;
   background: #2563eb; color: #fff; border-radius: 10px; font-weight: 600;
@@ -1680,17 +1685,57 @@ def _external_intelligence_card(bundle) -> str:
             f"<p class='dq-warn'>⚠️ Data Tankの最新Packageを取得できず、{_esc(usage_label)}の状態です"
             f"（理由: {_esc(bundle.reason or '不明')}）。既存のニュース処理は通常通り継続しています。</p>"
         )
+    drivers_html = _ext_intel_cluster_list_html("Data Tank発の主要因（Market Reaction First）", bundle.global_drivers[:5])
+    risk_html = _ext_intel_cluster_list_html("Data Tank発のリスクレーダー", bundle.risk_radar[:5])
+    theme_html = _ext_intel_theme_summary_html(bundle.theme_summary[:8])
     note = (
         "<p class='legend'>Article Intelligence Data Tank（別リポジトリ）が生成した軽量な配信データの"
         "取得状況を表示しています。記事本体・重い検索インデックスはData Tank側にのみ保持され、"
         "本レポートへは転載しません。上記「主要因候補」に含まれる記事（hot_articles）は、"
         "既存の重要ニュースランキング・テーマ分析等へタイトル・情報源信頼度のみを引き継いだ形で"
-        "合流し、既存RSSと同じニュースを配信していた場合は信頼度の高い方へ自動的に統合されます。</p>"
+        "合流し、既存RSSと同じニュースを配信していた場合は信頼度の高い方へ自動的に統合されます。"
+        "下記の「主要因」「リスクレーダー」「テーマ集計」は、Data Tank側が実際の市場反応・"
+        "クラスタリングまで済ませた精査済みの結果をそのまま表示しています（本レポート側で"
+        "再計算はしていません）。</p>"
     )
     return _card(
-        "External Intelligence（Data Tank連携）", rows_html + warn_html + note,
+        "External Intelligence（Data Tank連携）",
+        rows_html + warn_html + drivers_html + risk_html + theme_html + note,
         extra_class="digest", anchor="external-intelligence",
     )
+
+
+def _ext_intel_cluster_list_html(heading: str, clusters: list) -> str:
+    """Data Tankのglobal_drivers/risk_radar（_cluster_view相当）を簡易リスト表示する。
+
+    Tank側で既にMarket Reaction First・クラスタリング・スコアリングまで済んでいるため、
+    ここでは並べ替え・再計算はせず、届いた順（Tank側のランキング順）でそのまま表示する。
+    """
+    if not clusters:
+        return ""
+    items = []
+    for c in clusters:
+        title = _esc(c.get("event_title") or "（タイトル不明）")
+        count = c.get("article_count", 0)
+        importance = c.get("importance_score", 0.0) or 0.0
+        countries = "・".join(c.get("countries", []) or [])
+        meta = f"関連記事{count}件 ／ importance {importance:.2f}"
+        if countries:
+            meta += f" ／ {_esc(countries)}"
+        items.append(f"<li><strong>{title}</strong><br><span class='legend'>{meta}</span></li>")
+    return f"<p class='ext-intel-subhead'>{_esc(heading)}</p><ul class='ext-intel-list'>{''.join(items)}</ul>"
+
+
+def _ext_intel_theme_summary_html(theme_summary: list) -> str:
+    """Data Tankのtheme_summary（テーマ別記事数・平均importance）を簡易表示する。"""
+    if not theme_summary:
+        return ""
+    items = "".join(
+        f"<li>{_esc(t.get('theme', ''))}: {t.get('article_count', 0)}件"
+        f"（平均importance {t.get('avg_importance', 0.0):.2f}）</li>"
+        for t in theme_summary
+    )
+    return f"<p class='ext-intel-subhead'>Data Tank発のテーマ集計</p><ul class='ext-intel-list'>{items}</ul>"
 
 
 def _translation_status(analysis: AnalysisBundle) -> dict:

@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.2 (2026-07-20) — Data Tankの精査済み結果（主要因・リスク・テーマ集計）を表示
+
+Data Tank側は既に記事のクラスタリング・市場反応評価・重要度スコアリングまで
+済ませた`global_drivers`（Market Reaction First順の主要因）・`risk_radar`・
+`theme_summary`を配信パッケージに含めている。これまではExternal Intelligenceカードに
+件数しか表示していなかったが、この精査済みの中身（タイトル・関連記事数・
+importance・関連国）を実際に読み取って表示するようにした。daily-market-brief側で
+再計算・再ランキングは行わず、Data Tank側の結果をそのまま表示する（重複計算をしない）。
+
+### 変更
+
+- `src/report/html_builder.py`: `_ext_intel_cluster_list_html()` /
+  `_ext_intel_theme_summary_html()`を追加。External Intelligenceカードに
+  「Data Tank発の主要因」「Data Tank発のリスクレーダー」「Data Tank発のテーマ集計」の
+  3リストを追加表示（各上位5〜8件。Tank側のランキング順をそのまま使用）。
+  bundleがNone、またはリストが空の場合は何も追加表示しない（既存動作に影響なし）。
+- `tests/test_v4_external_intelligence.py`: 上記3リストの表示内容・空リスト時の
+  非表示・bundle=None時の空文字返却を検証するテストを3件追加。
+
+### pytest
+
+427 passed（既存424＋新規3）。
+
 ## v4.1 (2026-07-20) — External Intelligence 段階的接続（hot_articlesをニュースパイプラインへ合流）
 
 v4.x で追加したConsumer Client（取得・表示のみ）を一歩進め、Data Tankの

@@ -371,3 +371,54 @@ def test_tank_headlines_added_as_new_when_no_overlap():
     ])
     merged = dedupe_headlines(existing + tank)
     assert len(merged) == 2  # 重複しないニュースはそのまま両方残る
+
+
+# ---------- 27〜30: Data Tankの精査済み結果（global_drivers/risk_radar/theme_summary）の表示 ----------
+
+def _bundle_with_tank_analysis():
+    return ExternalIntelligenceBundle(
+        usage_state="latest",
+        freshness_label="latest",
+        tank_total_articles=661,
+        tank_new_articles_24h=175,
+        global_drivers=[
+            {"event_title": "米金利上昇でグロース株に売り", "article_count": 12, "importance_score": 0.82,
+             "countries": ["US"]},
+        ],
+        risk_radar=[
+            {"event_title": "台湾海峡での緊張再燃", "article_count": 5, "importance_score": 0.65,
+             "countries": ["TW", "CN"]},
+        ],
+        theme_summary=[
+            {"theme": "ai", "article_count": 20, "avg_importance": 0.7},
+            {"theme": "semiconductor", "article_count": 14, "avg_importance": 0.6},
+        ],
+    )
+
+
+def test_external_intelligence_card_renders_tank_drivers_and_risk_and_theme_content():
+    from src.report.html_builder import _external_intelligence_card
+
+    html = _external_intelligence_card(_bundle_with_tank_analysis())
+    assert "Data Tank発の主要因" in html
+    assert "米金利上昇でグロース株に売り" in html
+    assert "Data Tank発のリスクレーダー" in html
+    assert "台湾海峡での緊張再燃" in html
+    assert "Data Tank発のテーマ集計" in html
+    assert "ai: 20件" in html
+
+
+def test_external_intelligence_card_empty_lists_render_nothing_extra():
+    from src.report.html_builder import _external_intelligence_card
+
+    bundle = ExternalIntelligenceBundle(usage_state="latest", freshness_label="latest")
+    html = _external_intelligence_card(bundle)
+    assert "Data Tank発の主要因" not in html
+    assert "Data Tank発のリスクレーダー" not in html
+    assert "Data Tank発のテーマ集計" not in html
+
+
+def test_external_intelligence_card_none_bundle_returns_empty_string():
+    from src.report.html_builder import _external_intelligence_card
+
+    assert _external_intelligence_card(None) == ""
