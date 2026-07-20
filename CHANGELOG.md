@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.3 (2026-07-20) — Tankの市場反応スコアをニュースランキング・ストラテジスト採点へ統合
+
+Data Tank側は各記事について「どのイベントクラスタに属するか」「そのイベントで
+実際に市場が動いたか（market_reactions）」「市場影響度スコア」まで計測済みだが、
+これまでbrief側の採点（重要ニュースランキングの★・岡三ストラテジスト視点の8軸）には
+一切使われていなかった。本バージョンで、この計測済みシグナルを採点へ機械的に
+転記する（brief側での再計算・生成はしない。Tank未接続時は従来と完全に同じ採点）。
+
+### 変更
+
+- `src/analysis/external_intelligence.py`: `build_tank_signal_lookup()`を追加。
+  hot_articles を「タイトル正規化キー（news._normalize_title と同一）→
+  has_market_reaction / in_global_drivers / market_impact_score / importance_score」の
+  ルックアップへ変換する。既存の重複判定と同じ正規化を使うため、Tank由来でも
+  既存RSS由来でも「同じニュース」なら同じキーで引ける。
+- `src/analysis/news_ranking.py`: `build_news_ranking(..., tank_signals=None)`を追加。
+  一致した見出しへ「実際の市場反応が確認済み: +3（Market Reaction First）／
+  主要因クラスタ該当: +2／市場影響度スコア0.6以上: +1」を加点し、理由文にも明記。
+- `src/analysis/strategist_engine.py`: `score_headline_8axis(..., tank_signal=None)`・
+  `build_strategist_views(..., tank_signals=None)`を追加。8軸の「市場インパクト」を
+  市場反応確認済み+2／主要因該当・高影響度+1し、確認済みの場合はストラテジストの
+  見方に「相場への影響が既に現れている可能性」の一文を補足（他の7軸は不変）。
+- `main.py`: `build_tank_signal_lookup`を`_safe_call`で呼び、news_ranking・
+  strategist_engine の両方へ`tank_signals`を配線。取得失敗時は空dict＝従来動作。
+
+### pytest
+
+433 passed（既存427＋新規6）。
+
 ## v4.2 (2026-07-20) — Data Tankの精査済み結果（主要因・リスク・テーマ集計）を表示
 
 Data Tank側は既に記事のクラスタリング・市場反応評価・重要度スコアリングまで

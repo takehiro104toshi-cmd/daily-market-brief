@@ -14,7 +14,11 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from src.analysis.external_intelligence import build_external_intelligence_bundle, hot_articles_to_headlines
+from src.analysis.external_intelligence import (
+    build_external_intelligence_bundle,
+    build_tank_signal_lookup,
+    hot_articles_to_headlines,
+)
 from src.analysis.models import AnalysisBundle, ExternalIntelligenceBundle
 from src.collectors.news import dedupe_headlines, Headline
 from src.data.external_intelligence_client import (
@@ -422,3 +426,98 @@ def test_external_intelligence_card_none_bundle_returns_empty_string():
     from src.report.html_builder import _external_intelligence_card
 
     assert _external_intelligence_card(None) == ""
+
+
+# ---------- 31〜36: Tankの市場反応シグナル → news_ranking / strategist_engine の採点統合（v4.3） ----------
+
+def _bundle_with_signals():
+    return ExternalIntelligenceBundle(
+        usage_state="latest",
+        hot_articles=[
+            {"title": "FRBが緊急利下げを決定", "url": "https://tank.example/1",
+             "event_cluster_id": "ec-reaction", "market_impact_score": 0.9, "importance_score": 0.8},
+            {"title": "主要産油国が減産で合意", "url": "https://tank.example/2",
+             "event_cluster_id": "ec-driver", "market_impact_score": 0.5, "importance_score": 0.6},
+            {"title": "地方企業が新製品を発表", "url": "https://tank.example/3",
+             "event_cluster_id": "", "market_impact_score": 0.1, "importance_score": 0.2},
+        ],
+        global_drivers=[{"event_cluster_id": "ec-driver"}, {"event_cluster_id": "ec-reaction"}],
+        market_reactions=[{"event_cluster_id": "ec-reaction"}],
+    )
+
+
+def test_build_tank_signal_lookup_flags_reaction_and_drivers():
+    lookup = build_tank_signal_lookup(_bundle_with_signals())
+    from src.collectors.news import _normalize_title
+
+    reaction = lookup[_normalize_title("FRBが緊急利下げを決定")]
+    assert reaction["has_market_reaction"] is True
+
+    driver = lookup[_normalize_title("主要産油国が減産で合意")]
+    assert driver["has_market_reaction"] is False
+    assert driver["in_global_drivers"] is True
+
+    minor = lookup[_normalize_title("地方企業が新製品を発表")]
+    assert minor["has_market_reaction"] is False
+    assert minor["in_global_drivers"] is False
+    assert minor["market_impact_score"] == pytest.approx(0.1)
+
+
+def test_build_tank_signal_lookup_none_bundle_returns_empty():
+    assert build_tank_signal_lookup(None) == {}
+
+
+def test_news_ranking_boosts_headline_with_market_reaction():
+    from src.analysis.news_ranking import build_news_ranking
+
+    # 同条件の2見出し。片方だけTankで市場反応が確認済み → そちらが上位になる
+    headlines = [
+        Headline(title="A社が新研究所を設立", link="https://x/1", source="s1"),
+        Headline(title="B社が新研究所を設立", link="https://x/2", source="s2"),
+    ]
+    lookup = build_tank_signal_lookup(ExternalIntelligenceBundle(
+        usage_state="latest",
+        hot_articles=[{"title": "B社が新研究所を設立", "url": "https://x/2", "event_cluster_id": "ec1"}],
+        global_drivers=[],
+        market_reactions=[{"event_cluster_id": "ec1"}],
+    ))
+    items = build_news_ranking(headlines, [], {}, [], tank_signals=lookup)
+    assert items[0].headline.title == "B社が新研究所を設立"
+    assert "Market Reaction First加点" in items[0].reason
+
+
+def test_news_ranking_without_tank_signals_is_unchanged():
+    from src.analysis.news_ranking import build_news_ranking
+
+    headlines = [Headline(title="C社が新製品を発表", link="https://x/1", source="s1")]
+    baseline = build_news_ranking(headlines, [], {}, [])
+    explicit_none = build_news_ranking(headlines, [], {}, [], tank_signals=None)
+    assert baseline[0].stars == explicit_none[0].stars
+    assert baseline[0].reason == explicit_none[0].reason
+
+
+def test_8axis_market_impact_boosted_by_tank_reaction():
+    from src.analysis.strategist_engine import score_headline_8axis
+
+    headline = Headline(title="ごく普通の見出し", link="https://x/1", source="s1")
+    base = score_headline_8axis(headline, [], None, None, [], [], [], [])
+    boosted = score_headline_8axis(
+        headline, [], None, None, [], [], [], [],
+        tank_signal={"has_market_reaction": True},
+    )
+    assert boosted.market_impact == base.market_impact + 2
+    # 他の軸には影響しない
+    assert boosted.continuity == base.continuity
+    assert boosted.weeks_ahead == base.weeks_ahead
+
+
+def test_strategist_view_mentions_confirmed_market_reaction():
+    from src.analysis.strategist_engine import build_strategist_views
+    from src.analysis.models import NewsRankingItem
+
+    headline = Headline(title="FRBが緊急利下げを決定", link="https://x/1", source="s1")
+    item = NewsRankingItem(rank=1, stars="★★★★★", headline=headline, is_top_pick=True,
+                           reason="", affected_market="", affected_sector="")
+    lookup = build_tank_signal_lookup(_bundle_with_signals())
+    views = build_strategist_views([item], {}, {}, tank_signals=lookup)
+    assert "実際の市場反応" in views[0].strategist_take

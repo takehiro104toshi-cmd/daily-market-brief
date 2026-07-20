@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from ..collectors.news import Headline, parse_published_datetime
+from ..collectors.news import Headline, _normalize_title, parse_published_datetime
 from ..report.format_utils import stars, truncate_to_chars
 from .models import NewsRankingItem, RashinbanKnowledge
 from .source_trust import combined_trust_for_sources
@@ -191,6 +191,7 @@ def build_news_ranking(
     durable_themes: Optional[List[str]] = None,
     rashinban: Optional[RashinbanKnowledge] = None,
     now: Optional[datetime] = None,
+    tank_signals: Optional[Dict[str, dict]] = None,
 ) -> List[NewsRankingItem]:
     """ニュースを重要度順にランキングする。
 
@@ -211,6 +212,15 @@ def build_news_ranking(
     国家戦略等＝DURABLE_EVENT_KEYWORDS一致、またはdurable判定済み）は
     例外として減点しない。日時を解析できない記事は加減点なし
     （従来通り同点内の最後尾に回るのみ）。
+
+    tank_signals（v4.3・省略可能）: Data Tankの市場反応シグナル
+    （external_intelligence.build_tank_signal_lookup の戻り値）。タイトル
+    正規化キーが一致した見出しへ、Tank側で計測済みの結果に応じて加点する:
+      実際の市場反応が確認済み（Market Reaction First）: +3
+      Tankの主要因クラスタに該当: +2
+      Tankの市場影響度スコアが0.6以上: +1
+    いずれもTank側の計算結果の転記であり、brief側での再計算・生成はしない。
+    省略時（None/空）は従来と完全に同じ採点。
     """
     if not headlines:
         return []
@@ -232,6 +242,23 @@ def build_news_ranking(
             if matched_label:
                 analysis.score += 1
                 analysis.reason += f"岡三「羅針盤」（学習ソース）の重点テーマ「{matched_label}」にも該当します。"
+
+    # v4.3: Data Tankの市場反応シグナル。Tank側で「実際に市場が動いたか」まで
+    # 計測済みのイベントに関連する見出しを機械的に加点する（転記のみ・再計算なし）。
+    if tank_signals:
+        for headline, analysis in analyzed:
+            signal = tank_signals.get(_normalize_title(headline.title))
+            if not signal:
+                continue
+            if signal.get("has_market_reaction"):
+                analysis.score += 3
+                analysis.reason += "Data Tankで実際の市場反応（値動き）が確認されたイベントに関連しています（Market Reaction First加点）。"
+            elif signal.get("in_global_drivers"):
+                analysis.score += 2
+                analysis.reason += "Data Tankの主要因クラスタ（複数記事が集まる重要イベント）に該当しています。"
+            elif signal.get("market_impact_score", 0.0) >= 0.6:
+                analysis.score += 1
+                analysis.reason += "Data Tankの市場影響度スコアが高い記事です。"
 
     # v2.7: 鮮度最優先。24時間以内は加点・48時間超は大きく減点（影響期間の
     # 長いイベントは例外）。既存8軸の算出方法自体は変更しない。

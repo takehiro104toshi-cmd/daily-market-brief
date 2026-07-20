@@ -433,6 +433,14 @@ def generate_report(
         lambda: external_intelligence.hot_articles_to_headlines(ext_intel_bundle.hot_articles if ext_intel_bundle else []),
         [],
     )
+    # v4.3: Data Tankの市場反応シグナル（タイトル正規化キー → 計測済みスコア）。
+    # news_ranking / strategist_engine の採点へ転記する（brief側で再計算しない）。
+    # Tank未接続・取得失敗時は空dictとなり、採点は従来と完全に同じ。
+    tank_signals = _safe_call(
+        "external_intelligence_signals",
+        lambda: external_intelligence.build_tank_signal_lookup(ext_intel_bundle),
+        {},
+    )
 
     logger.info("公開ニュース見出しを取得しています...")
     limit = config.get("output", {}).get("headlines_per_source", 8)
@@ -586,6 +594,7 @@ def generate_report(
             durable_themes=config.get("durable_themes", []),
             rashinban=rashinban_knowledge,
             now=now,
+            tank_signals=tank_signals,
         ),
         [],
     )
@@ -738,7 +747,8 @@ def generate_report(
     strategist_views_result = _safe_call(
         "strategist_views",
         lambda: strategist_engine.build_strategist_views(
-            news_ranking_items, config, lookup, rashinban=rashinban_knowledge
+            news_ranking_items, config, lookup, rashinban=rashinban_knowledge,
+            tank_signals=tank_signals,
         ),
         [],
     )

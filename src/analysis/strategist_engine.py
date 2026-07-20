@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from ..collectors.news import Headline
+from ..collectors.news import Headline, _normalize_title
 from ..report.format_utils import stars
 from .models import NewsRankingItem, RashinbanKnowledge, StarScoreBreakdown, StrategistView
 
@@ -112,11 +112,17 @@ def score_headline_8axis(
     beneficiary_tickers: List[str],
     negative_tickers: List[str],
     watchlist_names: List[str],
+    tank_signal: Optional[dict] = None,
 ) -> StarScoreBreakdown:
     """8軸（各1〜5）でニュースの重要度を評価する。
 
     ①市場インパクト ②継続性 ③営業利用価値 ④日本株影響度 ⑤米国株影響度
     ⑥個別株へ展開できるか ⑦テーマ株へ展開できるか ⑧今後数週間重要か
+
+    tank_signal（v4.3・省略可能）: Data Tankの市場反応シグナル。実際の市場反応が
+    確認済みのイベントは「市場インパクト」軸を+2、主要因クラスタ該当または
+    市場影響度スコア0.6以上は+1する（Tank側の計測結果の転記のみ・再計算なし）。
+    省略時は従来と完全に同じ採点。
     """
     has_surprise = any(kw in headline.title for kw in SURPRISE_KEYWORDS)
     has_watchlist_mention = any(name in headline.title for name in watchlist_names)
@@ -129,6 +135,11 @@ def score_headline_8axis(
         market_impact += 2
     if has_watchlist_mention:
         market_impact += 1
+    if tank_signal:
+        if tank_signal.get("has_market_reaction"):
+            market_impact += 2
+        elif tank_signal.get("in_global_drivers") or tank_signal.get("market_impact_score", 0.0) >= 0.6:
+            market_impact += 1
 
     continuity = 5 if is_durable else (3 if matched_themes else 1)
 
@@ -218,12 +229,18 @@ def build_strategist_views(
     ticker_lookup: Dict,
     limit: int = MAX_VIEWS,
     rashinban: Optional[RashinbanKnowledge] = None,
+    tank_signals: Optional[Dict[str, dict]] = None,
 ) -> List[StrategistView]:
     """news_ranking（重要度順）の上位ニュースに、8ステップのパイプラインを適用する。
 
     rashinban（v2.6・省略可能）: 岡三「羅針盤」学習ソースの重点テーマに
     一致するテーマの見方へ、参照した旨の一文を補足する（本文転載はしない）。
     羅針盤ファイルが無い場合はNone/空となり、従来と完全に同じ動作。
+
+    tank_signals（v4.3・省略可能）: Data Tankの市場反応シグナル（タイトル
+    正規化キー → シグナルdict）。一致した見出しは「市場インパクト」軸へ反映し、
+    実際の市場反応が確認済みの場合はストラテジストの見方にも一文補足する。
+    省略時（None/空）は従来と完全に同じ動作。
     """
     themes = config.get("themes", [])
     sectors = config.get("sectors", {})
@@ -252,6 +269,8 @@ def build_strategist_views(
         beneficiary_names = ticker_names(beneficiary_tickers, ticker_lookup)
         negative_names = ticker_names(negative_tickers, ticker_lookup)
 
+        tank_signal = (tank_signals or {}).get(_normalize_title(headline.title))
+
         score = score_headline_8axis(
             headline=headline,
             matched_themes=matched_themes,
@@ -261,12 +280,16 @@ def build_strategist_views(
             beneficiary_tickers=beneficiary_tickers,
             negative_tickers=negative_tickers,
             watchlist_names=watchlist_names,
+            tank_signal=tank_signal,
         )
 
         strategist_take = _strategist_take(theme, sector, causal_rule)
         # v2.6: 羅針盤（学習ソース）の重点テーマに一致する場合のみ、参照した旨を一文補足
         if rashinban and theme in rashinban.emphasized_theme_labels:
             strategist_take += "岡三「羅針盤」（学習ソース）でも重点テーマとして言及されています。"
+        # v4.3: Data Tankで実際の市場反応が計測済みのイベントは、その旨を一文補足
+        if tank_signal and tank_signal.get("has_market_reaction"):
+            strategist_take += "Data Tank側で実際の市場反応（値動き）が確認されたイベントに関連しており、相場への影響が既に現れている可能性があります。"
 
         views.append(
             StrategistView(
