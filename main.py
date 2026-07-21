@@ -75,6 +75,7 @@ from src.analysis import (
 from src.analysis.models import AnalysisBundle, RashinbanKnowledge, SalesTalkBullets
 from src.analysis.sales_talk import build_sales_talk_bullets, render_sales_talk_markdown
 from src.data.external_intelligence_client import ExternalIntelligenceClient
+from src.data import private_insight_client
 from src.collectors import (
     bloomberg,
     boj,
@@ -935,6 +936,26 @@ def generate_report(
     # bundleをAnalysisBundleへ保持するだけ。
     analysis_bundle.external_intelligence = ext_intel_bundle
 
+    # v4.6 Rashinban Private Insight Vault: Worker（非公開KV）からallowlist済みの
+    # 派生情報だけを取得する。api_url/token未設定ならネットワークアクセスなしで
+    # disabled。取得失敗でもレポート生成は止めない（本文は構造的に取得できない）。
+    def _build_private_insight_outlook():
+        from src.analysis.models import PrivateInsightOutlook
+
+        summaries, pi_status = private_insight_client.fetch_derived_summaries(config, now=now)
+        today, week = private_insight_client.count_recent(summaries, now=now)
+        return PrivateInsightOutlook(
+            state=pi_status.get("state", "disabled"),
+            reason=pi_status.get("reason", ""),
+            fetched_at=pi_status.get("fetched_at", ""),
+            new_today=today, new_last7days=week,
+            summaries=summaries,
+        )
+
+    analysis_bundle.private_insight_outlook = _safe_call(
+        "private_insight_outlook", _build_private_insight_outlook, None,
+    )
+
     # v2.8（⑦）: 各カードの「なぜ今日見るべきか」を既存データから生成（HTMLのみ使用）
     why_today_map = _safe_call(
         "why_today",
@@ -983,6 +1004,7 @@ def generate_report(
             rashinban=rashinban_knowledge,
             why_today=why_today_map,
             realtime=config.get("realtime", {}),
+            private_insight_intake=config.get("private_insight_intake", {}),
             schedule=schedule_ctx,
         ),
         "<html><body><p>HTML版レポートの生成に失敗しました（取得不可）。</p></body></html>",

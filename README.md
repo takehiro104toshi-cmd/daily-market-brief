@@ -1192,6 +1192,39 @@ daily-market-brief/
 4. `notifications.line.enabled` が `config.yaml` で `false` になっていないか
    確認してください。
 
+## Rashinban Private Insight Vault（private記事の転送・v4.6）
+
+レポート画面（スマホ）に「🧠 Rashinban Private Insight Vault」カードが表示され、
+気になった記事の本文を貼り付けて **Data Tank の非公開領域へ転送** できます。
+Data Tank 側でAI分析（要約・所感・因果・市場影響・シナリオ形式の未来予測・検証条件）
+が行われ、派生情報のみが「🔮 Private Research Future Outlook」カードとして
+レポートに反映されます。
+
+**プライバシー設計（重要）**:
+
+- 記事本文は Cloudflare Worker + KV（非公開・AES-GCM暗号化）にのみ保存されます。
+  **GitHub Pages・公開リポジトリ・公開JSONには一切出ません**。
+- レポートHTMLに表示されるのは allowlist 済みの派生情報
+  （テーマ・シナリオ・確認指標・次回検証日など）だけです。
+- HTMLにAPIキー・トークンは埋め込まれません。送信時に入力するパスフレーズは
+  password欄からヘッダーで送られ、画面には保存されません。
+- 送信失敗時は本文が画面（下書き）に残り、コピー忘れで消えることはありません。
+
+**セットアップ（任意機能・未設定なら完全に無効のまま）**:
+
+1. `cloudflare/private-insight-worker.js` を Cloudflare Workers へデプロイ
+   （手順は `cloudflare/private-insight-wrangler.toml.example` 参照。
+   KV binding と Secrets: `INSIGHT_PASSPHRASE_HASH` / `INSIGHT_API_TOKEN` /
+   `ENCRYPTION_KEY_B64` / `ALLOWED_ORIGIN` を設定）。
+2. `config.yaml` の `private_insight_intake.api_url` に Worker のURLを設定。
+3. このリポジトリの Secrets に `INSIGHT_API_TOKEN`（Workerと同じ値）を登録
+   → レポート生成時に派生情報を取得してOutlookカードを表示。
+4. Data Tank リポジトリ側の Secrets に `INSIGHT_API_URL` / `INSIGHT_API_TOKEN`
+   を登録 → 毎時の分析ワークフローが有効化。
+
+> **注意**: 有料記事（日経電子版など）の本文は、ご自身が購読・取得した個人的な
+> private資料として非公開保存する前提です。媒体の利用規約の範囲内でご利用ください。
+
 ## 免責事項
 
 本ツールが生成するレポートは、無料で公開されている情報を機械的に収集・整理したものです。

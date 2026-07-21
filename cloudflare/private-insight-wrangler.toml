@@ -1,0 +1,27 @@
+# Rashinban Private Insight Vault — Worker設定例
+# 使い方:
+#   1. このファイルを private-insight-wrangler.toml へコピー（.gitignore推奨）
+#   2. kv_namespaces の id を自分のKVネームスペースIDへ置き換え
+#      （wrangler kv namespace create INSIGHT_KV で作成）
+#   3. Secretを設定:
+#        wrangler secret put PASSPHRASE_SHA256   ← パスフレーズのSHA-256(hex小文字)
+#        wrangler secret put INSIGHT_API_TOKEN   ← 分析パイプライン用の長いランダム文字列
+#        wrangler secret put ENCRYPTION_KEY_B64  ← 32byte鍵のbase64（openssl rand -base64 32）
+#   4. wrangler deploy -c private-insight-wrangler.toml
+#
+# PASSPHRASE_SHA256 の作り方（PowerShell）:
+#   $p=[Text.Encoding]::UTF8.GetBytes("あなたのパスフレーズ")
+#   -join([Security.Cryptography.SHA256]::Create().ComputeHash($p)|%{$_.ToString("x2")})
+
+name = "private-insight-vault"
+main = "private-insight-worker.js"
+compatibility_date = "2026-01-01"
+
+[[kv_namespaces]]
+binding = "INSIGHT_KV"
+id = "8dcd713beddf4f209c9d5b7af468253f"
+
+[vars]
+ALLOWED_ORIGIN = "https://takehiro104toshi-cmd.github.io"
+MAX_BODY_CHARS = "30000"
+RATE_LIMIT_PER_HOUR = "20"

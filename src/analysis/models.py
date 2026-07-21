@@ -1098,6 +1098,23 @@ class ExternalIntelligenceBundle:
 
 
 @dataclass
+class PrivateInsightOutlook:
+    """Rashinban Private Insight Vault の表示用バンドル（v4.6）。
+
+    Cloudflare Worker（非公開KV）から取得したallowlist済み派生情報だけを保持する。
+    記事本文（raw_body）を保持するフィールドは構造的に存在しない。
+    state: disabled（未設定）/ ok / unavailable（取得失敗）
+    """
+
+    state: str = "disabled"
+    reason: str = ""
+    fetched_at: str = ""
+    new_today: int = 0
+    new_last7days: int = 0
+    summaries: List[dict] = field(default_factory=list)  # Published Private Insight Summary
+
+
+@dataclass
 class AnalysisBundle:
     """全AI分析モジュールの計算結果をまとめ、builder.pyへ渡すための入れ物。"""
 
@@ -1148,3 +1165,5 @@ class AnalysisBundle:
     strategic_narrative: Optional[StrategicNarrative] = None
     # v4.x External Data Foundation（Article Intelligence Data Tank・別リポジトリ連携）
     external_intelligence: Optional[ExternalIntelligenceBundle] = None
+    # v4.6 Rashinban Private Insight Vault（private保存記事の派生情報のみ。本文は持たない）
+    private_insight_outlook: Optional[PrivateInsightOutlook] = None

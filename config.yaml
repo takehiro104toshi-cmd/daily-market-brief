@@ -716,3 +716,18 @@ investment_journal:
 # Future IntelligenceのConfidenceを上下限つきで実績補正する。
 theme_learning:
   dir: "data/theme_learning"
+
+# ===== v4.6 Rashinban Private Insight Vault =====
+# 気になった記事本文をスマホから貼り付け、Cloudflare Worker（非公開KV）へ転送して
+# AI分析・未来予測を生成する機能。api_urlが空の間は送信UI・取得とも無効で、
+# 既存レポートは従来どおり動作する。本文はこのリポジトリ・GitHub Pagesへ一切出ない。
+# 取得用トークンは GitHub Actions Secrets の INSIGHT_API_TOKEN にのみ設定する
+# （config・HTMLへは書かない）。
+private_insight_intake:
+  enabled: true
+  api_url: "https://private-insight-vault.takehiro104toshi.workers.dev/api/private-insight"
+  max_body_chars: 30000
+  timeout_seconds: 20
+  preserve_draft_on_failure: true
+  clear_after_success: true
+  show_optional_fields: false

@@ -4,6 +4,46 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.6 (2026-07-20) — Rashinban Private Insight Vault（private記事の転送・入力UI・Future Outlook）
+
+レポート画面から気になった記事本文を貼り付けてData Tankの非公開領域へ転送し、
+AI分析（要約・所感・因果・市場影響・シナリオ形式の未来予測・検証条件）の
+派生情報だけをレポートへ反映する機能。両リポジトリはPublicのため、本文は
+Cloudflare Worker + KV（非公開・AES-GCM暗号化）にのみ保存し、GitHub Pages・
+公開リポジトリ・公開JSONへは構造的に出ない設計（allowlist方式）。
+
+### 追加
+
+- `cloudflare/private-insight-worker.js`（新規・既存trigger-report-workerとは別モジュール）:
+  Private Intake API。POST /intake（保存）、GET /status・/list、POST /delete・/memo・
+  /reanalyze（人間向け・X-Insight-Keyパスフレーズ認証）、GET /queue・POST /analysis・
+  GET /derived（機械向け・Bearer認証）、GET /admin（認証付き管理画面）。
+  本文はAES-GCM暗号化してKVへ保存。レート制限・ハッシュ重複検知つき。
+  Secrets（パスフレーズハッシュ・トークン・暗号鍵）はWorker Secretのみで、HTMLへは埋め込まない。
+- `cloudflare/private-insight-wrangler.toml.example`: KV binding・Secrets設定手順。
+- `src/data/private_insight_client.py`（新規）: 派生情報の取得クライアント。
+  `config.private_insight_intake.api_url` とSecrets `INSIGHT_API_TOKEN` の両方が
+  揃わない限り**完全に無効**（ネットワークアクセスなし）。失敗時はunavailableを返し
+  例外を投げない（レポート生成は止まらない）。
+- `src/report/html_builder.py`: 「🧠 Rashinban Private Insight Vault」入力カード
+  （本文textarea＋パスフレーズpassword欄＋転送ボタン。送信失敗時は本文を画面に保持、
+  成功時のみクリア。localStorage下書き保存）と「🔮 Private Research Future Outlook」
+  カード（シナリオ・確認指標・次回検証日・AI所感。取得失敗時は注記のみ表示で
+  レポート本体は通常生成）を追加。
+- `src/analysis/models.py`: `PrivateInsightOutlook` dataclassと
+  `AnalysisBundle.private_insight_outlook`（デフォルトNoneで後方互換）。
+- `main.py`: `_safe_call`経由で派生情報取得を配線（失敗してもレポート継続）。
+- `config.yaml`: `private_insight_intake:` ブロック（enabled/api_url/max_body_chars等。
+  api_url空文字がデフォルト＝機能オフ）。
+- `.github/workflows/daily-market-brief.yml`: `INSIGHT_API_TOKEN` Secretのenv渡しを追加。
+- `tests/test_private_insight_vault.py`（新規11件）: クライアントの
+  disabled/ok/unavailable、入力カードのSecret非埋め込み、Outlookカード、
+  フルレポート互換を検証。
+
+### pytest
+
+451 passed（既存440＋新規11）。
+
 ## v4.5 (2026-07-20) — 通信社系接頭辞をまたぐ重複ニュースの排除
 
 ライブ運用のレポートで、同一記事を別媒体が配信し片方だけに "Analysis:" が付く

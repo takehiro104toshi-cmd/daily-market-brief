@@ -110,6 +110,8 @@ jobs:
           LINE_TO: ${{ secrets.LINE_TO }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+          # v4.6 Rashinban Private Insight Vault: 派生情報取得用（未設定なら機能は無効のまま）
+          INSIGHT_API_TOKEN: ${{ secrets.INSIGHT_API_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}

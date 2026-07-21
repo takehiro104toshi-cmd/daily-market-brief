@@ -1764,6 +1764,162 @@ def _ext_intel_cluster_list_html(heading: str, clusters: list) -> str:
     return f"<p class='ext-intel-subhead'>{_esc(heading)}</p><ul class='ext-intel-list'>{''.join(items)}</ul>"
 
 
+def _private_insight_intake_card(intake_cfg: Optional[dict]) -> str:
+    """🧠 Rashinban Private Insight Vault 入力カード（v4.6）。
+
+    スマホから記事本文を貼り付け、Cloudflare Worker（非公開KV）へ転送する。
+    セキュリティ:
+      - api_url以外の秘密情報（トークン・パスフレーズ）はHTMLへ一切埋め込まない。
+        パスフレーズはユーザーが端末で入力し、この端末のlocalStorageにのみ保持する。
+      - 本文はURLパラメータに載せない（POST bodyのみ）。
+      - 送信成功時のみ下書きを消去。失敗時は本文を保持（localStorageに下書き保存）。
+    api_url未設定時はセットアップ案内のみ表示（送信UIは出さない）。
+    """
+    cfg = intake_cfg or {}
+    api_url = (cfg.get("api_url") or "").rstrip("/")
+    max_chars = int(cfg.get("max_body_chars", 30000))
+    if not cfg.get("enabled", True):
+        return ""
+    if not api_url:
+        body = ("<p class='legend'>private_insight_intake.api_url が未設定のため、送信機能は無効です。"
+                "Cloudflare Worker（cloudflare/private-insight-worker.js）をデプロイし、"
+                "config.yamlへURLを設定すると、ここから記事を転送できるようになります。</p>")
+        return _card("🧠 Rashinban Private Insight Vault", body,
+                     extra_class="digest card-collapsed", anchor="private-insight-intake")
+
+    body = f"""
+<p class='legend'>気になった記事本文を貼り付けて転送すると、Data Tankの非公開領域へ保存され、
+AI分析・未来予測が生成されます。本文が公開ページ・公開リポジトリへ出ることはありません。
+（送信には端末ごとに1回パスフレーズの入力が必要です）</p>
+<textarea id='pi-body' rows='10' placeholder='ここに記事本文を貼り付け（必須）'
+  style='width:100%;box-sizing:border-box;font-size:16px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);'></textarea>
+<div class='row'><span>文字数</span><span><span id='pi-count'>0</span> / {max_chars}</span></div>
+<details class='more'><summary class='detail-btn'>任意項目（タイトル・出典・メモ等）</summary><div class='more-body'>
+<input id='pi-title' placeholder='記事タイトル（任意）' style='width:100%;box-sizing:border-box;margin:4px 0;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);'>
+<input id='pi-source' placeholder='出典（例: 日本経済新聞）' style='width:100%;box-sizing:border-box;margin:4px 0;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);'>
+<input id='pi-url' placeholder='記事URL（任意）' style='width:100%;box-sizing:border-box;margin:4px 0;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);'>
+<input id='pi-published' placeholder='記事日時（例: 2026-07-20）' style='width:100%;box-sizing:border-box;margin:4px 0;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);'>
+<textarea id='pi-note' rows='2' placeholder='自分のメモ・気になった理由（任意）' style='width:100%;box-sizing:border-box;margin:4px 0;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);'></textarea>
+</div></details>
+<input id='pi-key' type='password' placeholder='パスフレーズ（この端末に保存されます）'
+  style='width:100%;box-sizing:border-box;margin:8px 0 4px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);'>
+<button id='pi-send' type='button' onclick='piSend()'
+  style='display:block;width:100%;padding:14px;margin:8px 0;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;'>Data Tankへ転送して分析</button>
+<p id='pi-msg' class='legend' style='display:none'></p>
+<script>
+(function(){{
+  var API='{api_url}', MAX={max_chars};
+  var b=document.getElementById('pi-body'), c=document.getElementById('pi-count');
+  var k=document.getElementById('pi-key'), msg=document.getElementById('pi-msg');
+  try{{ b.value=localStorage.getItem('pi_draft')||''; k.value=localStorage.getItem('pi_key')||''; }}catch(e){{}}
+  function upd(){{ c.textContent=b.value.length; try{{localStorage.setItem('pi_draft',b.value);}}catch(e){{}} }}
+  b.addEventListener('input',upd); upd();
+  function show(t,ok){{ msg.style.display='block'; msg.textContent=t;
+    msg.style.color=ok?'#16a34a':'#dc2626'; }}
+  window.piSend=async function(){{
+    var body=b.value.trim();
+    if(!body){{ show('本文が空です。記事本文を貼り付けてください。',false); return; }}
+    if(body.length>MAX){{ show('本文が長すぎます（上限'+MAX+'字）。分割して送信してください。',false); return; }}
+    if(!k.value){{ show('パスフレーズを入力してください。',false); return; }}
+    var btn=document.getElementById('pi-send');
+    btn.disabled=true; btn.textContent='Data Tankへ安全に転送中…';
+    try{{ localStorage.setItem('pi_key',k.value); }}catch(e){{}}
+    try{{
+      var r=await fetch(API+'/intake',{{method:'POST',
+        headers:{{'Content-Type':'application/json','X-Insight-Key':k.value}},
+        body:JSON.stringify({{
+          body:body,
+          title:document.getElementById('pi-title').value,
+          source_name:document.getElementById('pi-source').value,
+          source_url:document.getElementById('pi-url').value,
+          article_published_at:document.getElementById('pi-published').value,
+          user_note:document.getElementById('pi-note').value,
+          client_timezone:(Intl.DateTimeFormat().resolvedOptions().timeZone||''),
+          source_page:'daily-market-brief', intake_method:'manual_paste'
+        }})}});
+      var d=await r.json().catch(function(){{return {{}};}});
+      if(r.ok&&d.ok){{
+        if(d.status==='duplicate'){{
+          show('この記事は保存済みです（送信履歴だけ追加しました）。ID: '+d.private_article_id,true);
+        }} else {{
+          show('保存しました。分析結果は生成後にレポートへ反映されます。ID: '+d.private_article_id,true);
+        }}
+        b.value=''; upd();  // 成功時のみ本文を消去
+        try{{localStorage.removeItem('pi_draft');}}catch(e){{}}
+      }} else {{
+        var reason=(d&&d.error)?('（'+d.error+'）'):'';
+        show('保存できませんでした'+reason+'。本文はこの画面に残っています。再送できます。',false);
+      }}
+    }}catch(e){{
+      show('保存できませんでした（通信エラー）。本文はこの画面に残っています。再送できます。',false);
+    }}
+    btn.disabled=false; btn.textContent='Data Tankへ転送して分析';
+  }};
+}})();
+</script>
+"""
+    return _card("🧠 Rashinban Private Insight Vault", body,
+                 extra_class="digest card-collapsed", anchor="private-insight-intake")
+
+
+_PI_CONF_LABEL = [(0.6, "中〜やや高"), (0.4, "中"), (0.2, "低〜中"), (0.0, "低")]
+
+
+def _pi_conf_label(v: float) -> str:
+    for threshold, label in _PI_CONF_LABEL:
+        if v >= threshold:
+            return label
+    return "低"
+
+
+def _private_insight_outlook_card(outlook) -> str:
+    """🔮 Private Research Future Outlook カード（v4.6）。
+
+    Worker（非公開KV）から取得したallowlist済み派生情報だけを表示する。
+    記事本文はbundleに構造的に存在しないため、表示のしようがない。
+    """
+    if outlook is None or outlook.state == "disabled":
+        return ""
+    if outlook.state != "ok":
+        body = ("<p class='dq-warn'>⚠️ Private Insightの取得に失敗しました"
+                f"（{_esc(outlook.reason or '不明')}）。既存レポートは通常通り生成されています。</p>")
+        return _card("🔮 Private Research Future Outlook", body,
+                     extra_class="digest", anchor="private-insight-outlook")
+
+    rows = "".join([
+        f"<div class='row'><span>本日の新規保存</span><span>{outlook.new_today}件</span></div>",
+        f"<div class='row'><span>直近7日の保存</span><span>{outlook.new_last7days}件</span></div>",
+        f"<div class='row'><span>保存済み記事（分析済み）</span><span>{len(outlook.summaries)}件</span></div>",
+    ])
+
+    items_html = ""
+    for s in outlook.summaries[:3]:
+        forecasts = s.get("forecast_summary", []) or []
+        top_fcs = "".join(
+            f"<li>{_esc(f.get('scenario_title',''))}"
+            f"（{_esc(f.get('horizon',''))}・信頼度{_pi_conf_label(float(f.get('confidence',0) or 0))}）</li>"
+            for f in forecasts[:3]
+        )
+        indicators = (forecasts[0].get("leading_indicators", []) if forecasts else [])[:4]
+        ind_html = "".join(f"<li>{_esc(i)}</li>" for i in indicators)
+        items_html += (
+            f"<p class='ext-intel-subhead'>📄 {_esc(s.get('title',''))}"
+            f"<span class='legend'>（{_esc(s.get('source_name','') or '出典未記入')}）</span></p>"
+            + (f"<p class='legend'>AI所感: {_esc(s.get('impression_hint',''))}</p>" if s.get("impression_hint") else "")
+            + (f"<ul class='ext-intel-list'>{top_fcs}</ul>" if top_fcs else "")
+            + (f"<p class='ext-intel-subhead'>確認指標</p><ul class='ext-intel-list'>{ind_html}</ul>" if ind_html else "")
+            + (f"<p class='legend'>次回検証日: {_esc(s.get('next_review_date','') or '未定')}</p>")
+        )
+    if not items_html:
+        items_html = "<p class='legend'>分析済みのprivate insightはまだありません（保存後、分析パイプラインが処理すると表示されます）。</p>"
+
+    note = ("<p class='legend'>Private Insight（自分で保存した記事）のallowlist済み派生情報のみを"
+            "表示しています。記事本文はData Tankの非公開領域にのみ保存され、本レポート・"
+            "公開リポジトリへは一切出ません。未来予測はシナリオ形式の仮説であり断定ではありません。</p>")
+    return _card("🔮 Private Research Future Outlook", rows + items_html + note,
+                 extra_class="digest", anchor="private-insight-outlook")
+
+
 def _ext_intel_theme_summary_html(theme_summary: list) -> str:
     """Data Tankのtheme_summary（テーマ別記事数・平均importance）を簡易表示する。
 
@@ -2748,6 +2904,7 @@ def build_html_report(
     why_today: Optional[Dict[str, str]] = None,
     realtime: Optional[Dict[str, str]] = None,
     schedule: Optional[dict] = None,
+    private_insight_intake: Optional[dict] = None,
 ) -> str:
     """AnalysisBundle から、スマホ閲覧前提のカードUI HTMLを1ファイルで組み立てる。
 
@@ -2786,6 +2943,8 @@ def build_html_report(
         _news_freshness_card(freshness),
         _rashinban_card(rashinban),
         _external_intelligence_card(getattr(analysis, "external_intelligence", None)),
+        _private_insight_intake_card(private_insight_intake),
+        _private_insight_outlook_card(getattr(analysis, "private_insight_outlook", None)),
         _digest_card(market, analysis),
         _card(
             "本レポートについて",
