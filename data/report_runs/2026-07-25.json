@@ -1,0 +1,25 @@
+{
+  "date": "2026-07-25",
+  "timezone": "Asia/Tokyo",
+  "slots": {
+    "pre_market": {
+      "status": "success",
+      "scheduled_time": "07:30",
+      "started_at": "2026-07-25T08:30:31.544126+09:00",
+      "data_fetch_started_at": "2026-07-25T08:30:31.544126+09:00",
+      "trigger_type": "schedule",
+      "is_recovery_run": false,
+      "workflow_run_id": "30133944677",
+      "generated_at": "2026-07-25T08:30:31.544126+09:00",
+      "report_build_completed_at": "2026-07-25T08:30:31.544126+09:00",
+      "retry_count": 0,
+      "slot_label": "寄り前レポート",
+      "generated_at_jst": "2026-07-25T08:30:31.544126+09:00",
+      "generated_at_utc": "2026-07-24T23:30:31.544126+00:00",
+      "report_date_jst": "2026-07-25",
+      "git_commit_sha": "7b8570d0d851c0754fcdf702bc289fc202907606",
+      "generation_status": "success",
+      "html_valid": true
+    }
+  }
+}
