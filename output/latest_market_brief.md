@@ -39,14 +39,14 @@
 
 ## 📱 今日の5分要約
 
-■今日の結論: 本日の相場は強気57%・普通13%・弱気30%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／セブン＆アイにソフトバンクなどが出資 AIを店舗効率化に
-■注目テーマ3つ: AI
-■見るべき指数: 米ドル/円157.40／VIX指数（恐怖指数）15.99／米10…
+■今日の結論: 本日の相場は強気59%・普通11%・弱気30%と見立てています。
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／日銀の金融政策 利上げ加速が焦点
+■注目テーマ3つ: AI／利上げ／金融
+■見るべき指数: 米ドル/円157.40／VIX指数（恐怖指数）15.99／米10年国債利回…
 
 ---
 ## 1. 今日の結論　★★★★★
-**米国市場はNYダウが前日比+0.53%と上昇。今日の相場は強気57%・弱気30%とAIは見立てています。**
+**米国市場はNYダウが前日比+0.53%と上昇。今日の相場は強気59%・弱気30%とAIは見立てています。**
 **為替は米ドル/円157.40円。金利・為替の動きが日本株の方向感を左右しそうです。**
 **日経平均の直近値は64,362.02円（前日比 +2,494.59 (+4.03%)）。**
 
@@ -68,13 +68,13 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「セブン＆アイにソフトバンクなどが出資 AIを店舗効率化に」（NHKニュース 経済）　★★★★★
-- **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
-- **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
-- **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
-- **金利への影響（AI分析）:** 金利への直接的な影響は限定的とみられます。
-- **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
-- **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+### 3. 「日銀の金融政策 利上げ加速が焦点」（Yahoo!ニュース 経済）　★★★★★
+- **理由（AI分析）:** テーマ「利上げ」に関連する、業種「金融」に関連する、「金融政策」の因果チェーンに該当するため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- **日本株への影響（AI分析）:** 三菱UFJフィナンシャル・グループなど「金融」関連銘柄への追い風が意識されやすい局面です。
+- **ドル円への影響（AI分析）:** 米ドル/円（現在157.40円）の変動要因として意識される可能性があります。
+- **金利への影響（AI分析）:** 米10年金利（現在4.74%）の変動を通じて株式市場に波及する可能性があります。
+- **恩恵銘柄:** 三菱UFJフィナンシャル・グループ ／ **悪影響銘柄:** ソフトバンクグループ、日本電信電話、リクルートホールディングス、Microsoft、Amazon、Alphabet、Meta Platforms、Palantir、Apple
+- **営業トーク:** 「「金融」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
 ---
 ## 3. 岡三ストラテジスト視点　★★★★★
@@ -98,7 +98,17 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. セブン＆アイにソフトバンクなどが出資 AIを店舗効率化に　★★★☆☆
+### 3. 日銀の金融政策 利上げ加速が焦点　★★★★☆
+- **ニュース:** 「日銀の金融政策 利上げ加速が焦点」（Yahoo!ニュース 経済）
+- **岡三ストラテジストならどう見るか:** 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+- **重要テーマ:** 金融政策
+- **関連セクター:** 金融
+- **恩恵銘柄:** 三菱UFJフィナンシャル・グループ
+- **悪影響銘柄:** ソフトバンクグループ、日本電信電話、リクルートホールディングス、Microsoft、Amazon、Alphabet、Meta Platforms、Palantir、Apple
+- **営業で話すポイント:** 「三菱UFJフィナンシャル・グループなどには追い風、ソフトバンクグループ、日本電信電話などには逆風が意識されやすい局面とお伝えできます。」
+- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性3 ／ 営業利用価値4 ／ 日本株影響度5 ／ 米国株影響度2 ／ 個別株へ展開できるか5 ／ テーマ株へ展開できるか5 ／ 今後数週間重要か3
+
+### 4. セブン＆アイにソフトバンクなどが出資 AIを店舗効率化に　★★★☆☆
 - **ニュース:** 「セブン＆アイにソフトバンクなどが出資 AIを店舗効率化に」（NHKニュース 経済）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
@@ -108,18 +118,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. Trump's AI executive order nears key deadline as regulation debate intensifies　★★★☆☆
+### 5. Trump's AI executive order nears key deadline as regulation debate intensifies　★★★☆☆
 - **ニュース:** 「Trump's AI executive order nears key deadline as regulation debate intensifies」（CNBC Top News）
-- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
-- **重要テーマ:** AI
-- **関連セクター:** 情報通信・生成AI
-- **恩恵銘柄:** 該当なし
-- **悪影響銘柄:** 該当なし
-- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
-- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
-
-### 5. Did China build a top-tier AI model by itself? A new report suggests Nvidia chips played a role.　★★★☆☆
-- **ニュース:** 「Did China build a top-tier AI model by itself? A new report suggests Nvidia chips played a role.」（MarketWatch Top Stories）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -199,10 +199,10 @@
   本日の関連見出し: 0件／EV普及は車載電池・関連部材・電池材料（資源）への需要拡大につながりやすい
 - **蓄電池** ★☆☆☆☆（フェーズ: 減速期 ／ 継続性: 限定的）
   本日の関連見出し: 0件／EV普及は車載電池・関連部材・電池材料（資源）への需要拡大につながりやすい
-- **金融** ★★☆☆☆（フェーズ: 黎明期 ／ 継続性: 中程度）
-  本日の関連見出し: 1件／金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
-- **金利** ★★☆☆☆（フェーズ: 黎明期 ／ 継続性: 中程度）
-  本日の関連見出し: 1件／金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+- **金融** ★★★☆☆（フェーズ: 成長初期 ／ 継続性: 中程度）
+  本日の関連見出し: 2件／金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+- **金利** ★★★☆☆（フェーズ: 成長初期 ／ 継続性: 中程度）
+  本日の関連見出し: 2件／金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
 - **為替** ★★☆☆☆（フェーズ: 黎明期 ／ 継続性: 中程度）
   本日の関連見出し: 1件／円安方向への動きは輸出関連の採算改善期待につながりやすい
 - **消費** ★☆☆☆☆（フェーズ: 減速期 ／ 継続性: 限定的）
@@ -260,9 +260,9 @@
   関連セクター: 自動車、電機・電線・素材、資源・エネルギー ／ 関連銘柄: トヨタ自動車、デンソー、Tesla、パナソニックHD、古河電工、など
 - **蓄電池**: 30/100（横ばい）— 既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
   関連セクター: 自動車、電機・電線・素材、資源・エネルギー ／ 関連銘柄: トヨタ自動車、デンソー、Tesla、パナソニックHD、古河電工、など
-- **金融**: 36/100（横ばい）— 本日1件の関連見出しが確認されています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
+- **金融**: 67/100（加速）— 本日2件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成長初期です。
   関連セクター: 金融 ／ 関連銘柄: 三菱UFJフィナンシャル・グループ
-- **金利**: 36/100（横ばい）— 本日1件の関連見出しが確認されています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
+- **金利**: 67/100（加速）— 本日2件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成長初期です。
   関連セクター: 金融 ／ 関連銘柄: 三菱UFJフィナンシャル・グループ
 - **為替**: 36/100（横ばい）— 本日1件の関連見出しが確認されています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
   関連セクター: 自動車、重工業・防衛 ／ 関連銘柄: トヨタ自動車、デンソー、Tesla、川崎重工業
@@ -316,7 +316,7 @@
   ドル円が前日比-1.74%（円高方向）ことから、「内需・消費」への資金動向は方向感に乏しく、中立的と考えられます。
   営業で話すポイント: 「内需・消費」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
 - **コモディティ・資源**: 中立
-  WTI原油が前日比+3.84%、金先物が前日比-0.04%ことから、「コモディティ・資源」への資金動向は方向感に乏しく、中立的と考えられます。
+  WTI原油が前日比+1.29%、金先物が前日比-1.24%ことから、「コモディティ・資源」への資金動向は方向感に乏しく、中立的と考えられます。
   関連テーマ: 資源
   関連セクター: 資源・エネルギー
   営業で話すポイント: 「コモディティ・資源」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
@@ -450,18 +450,18 @@
   競争環境: AI分析: トヨタ自動車、デンソー、Teslaなど、関連銘柄として意識される企業を中心とした競争環境にあると考えられます。 ／ 参入障壁: AI分析: 自動車、電機・電線・素材、資源・エネルギーなど関連業種の設備・技術・供給網が参入障壁になりやすいと考えられます。
   主なリスク: 分析材料不足: リスク要因を推定できる材料が確認できていません。
   判断根拠: causal_rules一致、サプライチェーン波及（恩恵銘柄）の確認
-- **金融**［AI分析］（現在フェーズ: 黎明期）
-  市場ステージ: AI分析: 現在のフェーズは「黎明期」と推定されます。金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+- **金融**［AI分析］（現在フェーズ: 成長初期）
+  市場ステージ: AI分析: 現在のフェーズは「成長初期」と推定されます。金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
   普及状況: AI分析: 話題化が始まっている段階で、実際の普及状況を示す材料はまだ限定的と考えられます。
   競争環境: AI分析: 三菱UFJフィナンシャル・グループなど、関連銘柄として意識される企業を中心とした競争環境にあると考えられます。 ／ 参入障壁: AI分析: 金融など関連業種の設備・技術・供給網が参入障壁になりやすいと考えられます。
-  主なリスク: 分析材料不足: リスク要因を推定できる材料が確認できていません。
-  判断根拠: causal_rules一致、本日の関連見出し1件、サプライチェーン波及（恩恵銘柄）の確認
-- **金利**［AI分析］（現在フェーズ: 黎明期）
-  市場ステージ: AI分析: 現在のフェーズは「黎明期」と推定されます。金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+  主なリスク: AI分析: 話題化・期待の高まりを背景に、材料出尽くしや期待先行によるボラティリティに注意が必要と考えられます。
+  判断根拠: causal_rules一致、本日の関連見出し2件、サプライチェーン波及（恩恵銘柄）の確認
+- **金利**［AI分析］（現在フェーズ: 成長初期）
+  市場ステージ: AI分析: 現在のフェーズは「成長初期」と推定されます。金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
   普及状況: AI分析: 話題化が始まっている段階で、実際の普及状況を示す材料はまだ限定的と考えられます。
   競争環境: AI分析: 三菱UFJフィナンシャル・グループなど、関連銘柄として意識される企業を中心とした競争環境にあると考えられます。 ／ 参入障壁: AI分析: 金融など関連業種の設備・技術・供給網が参入障壁になりやすいと考えられます。
-  主なリスク: 分析材料不足: リスク要因を推定できる材料が確認できていません。
-  判断根拠: causal_rules一致、本日の関連見出し1件、サプライチェーン波及（恩恵銘柄）の確認
+  主なリスク: AI分析: 話題化・期待の高まりを背景に、材料出尽くしや期待先行によるボラティリティに注意が必要と考えられます。
+  判断根拠: causal_rules一致、本日の関連見出し2件、サプライチェーン波及（恩恵銘柄）の確認
 - **為替**［AI分析］（現在フェーズ: 黎明期）
   市場ステージ: AI分析: 現在のフェーズは「黎明期」と推定されます。円安方向への動きは輸出関連の採算改善期待につながりやすい
   普及状況: AI分析: 話題化が始まっている段階で、実際の普及状況を示す材料はまだ限定的と考えられます。
@@ -741,22 +741,22 @@
   根拠: causal_rules一致、Sector Ranking該当、サプライチェーン解決
 
 ##### 金融
-- Momentum: 36/100（横ばい）
-- Lifecycle: 黎明期 ／ 継続性: 中程度
+- Momentum: 67/100（加速）
+- Lifecycle: 成長初期 ／ 継続性: 中程度
 - 関連テーマ: 金利、為替、決済
-- Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと
+- Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと／本日のニュース増加・Theme Momentum Scoreの上昇傾向が続くこと
 - Risk［AI分析］: 一過性の話題に留まり、構造的テーマとして定着しない可能性／金利動向・規制動向など外部環境の変化
-- Confidence: 33%
-  根拠: ニュースあり、causal_rules一致、Sector Ranking該当、サプライチェーン解決
+- Confidence: 65%
+  根拠: ニュース多数、Executive Summary一致、Momentum高、causal_rules一致、Sector Ranking該当、サプライチェーン解決
 
 ##### 金利
-- Momentum: 36/100（横ばい）
-- Lifecycle: 黎明期 ／ 継続性: 中程度
+- Momentum: 67/100（加速）
+- Lifecycle: 成長初期 ／ 継続性: 中程度
 - 関連テーマ: 金融、為替、住宅
-- Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと
+- Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと／本日のニュース増加・Theme Momentum Scoreの上昇傾向が続くこと
 - Risk［AI分析］: 一過性の話題に留まり、構造的テーマとして定着しない可能性／金利動向・規制動向など外部環境の変化
-- Confidence: 33%
-  根拠: ニュースあり、causal_rules一致、Sector Ranking該当、サプライチェーン解決
+- Confidence: 65%
+  根拠: ニュース多数、Executive Summary一致、Momentum高、causal_rules一致、Sector Ranking該当、サプライチェーン解決
 
 ##### 為替
 - Momentum: 36/100（横ばい）
@@ -871,8 +871,8 @@
 
 #### 次に来る業界（本日のモメンタム順）
 1. **AI**（関連見出し30件）— AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
-2. **金融**（関連見出し1件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
-3. **金利**（関連見出し1件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+2. **金融**（関連見出し2件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+3. **金利**（関連見出し2件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
 4. **為替**（関連見出し1件）— 円安方向への動きは輸出関連の採算改善期待につながりやすい
 5. **住宅**（関連見出し1件）— 建設・住宅関連の投資拡大は、電気工事・設備工事を手掛ける企業の受注環境改善につながりやすい
 
@@ -955,8 +955,8 @@
 - ★☆☆☆☆ **自動車**（減速期）
 - ★☆☆☆☆ **EV**（減速期）
 - ★☆☆☆☆ **蓄電池**（減速期）
-- ★★☆☆☆ **金融**（黎明期）
-- ★★☆☆☆ **金利**（黎明期）
+- ★★★☆☆ **金融**（成長初期）
+- ★★★☆☆ **金利**（成長初期）
 - ★★☆☆☆ **為替**（黎明期）
 - ★☆☆☆☆ **消費**（減速期）
 - ★☆☆☆☆ **人材**（減速期）
@@ -1014,12 +1014,12 @@
   Catalyst［AI分析］: causal_rulesが示す押し上げ要因: AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい／半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AIへの設備投資・需要拡大が続くこと／本日のニュース増加・Theme Momentum Scoreの上昇傾向が続くこと／構造的テーマとしての継続性が意識され続けること／日本、米国、中国、インドなどの政策的な重点分野として位置づけが強まること／市場シグナル上、資金が向かいやすい地合いが続くこと
   Risk［AI分析］: 金利動向・規制動向など外部環境の変化
   判断理由: Momentumは急加速（100/100）、Lifecycleは急成長期（継続性: 高い）、Confidenceは90%であることから、「注目継続」と考えられます（断定的な売買判断ではありません）。
-- **三菱UFJフィナンシャル・グループ（8306.T）**: 材料待ち
+- **三菱UFJフィナンシャル・グループ（8306.T）**: 注目継続
   関連テーマ: 金融、金利、決済
-  Momentum: 36/100（横ばい）／Lifecycle: 黎明期（継続性: 中程度）／Confidence: 33%
-  Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと
+  Momentum: 67/100（加速）／Lifecycle: 成長初期（継続性: 中程度）／Confidence: 65%
+  Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと／本日のニュース増加・Theme Momentum Scoreの上昇傾向が続くこと
   Risk［AI分析］: 一過性の話題に留まり、構造的テーマとして定着しない可能性／金利動向・規制動向など外部環境の変化
-  判断理由: Momentumは横ばい（36/100）、Lifecycleは黎明期（継続性: 中程度）、Confidenceは33%であることから、「材料待ち」と考えられます（断定的な売買判断ではありません）。
+  判断理由: Momentumは加速（67/100）、Lifecycleは成長初期（継続性: 中程度）、Confidenceは65%であることから、「注目継続」と考えられます（断定的な売買判断ではありません）。
 - **日立製作所（6501.T）**: 注目継続
   関連テーマ: AI、半導体、EV、蓄電池、住宅、建設
   Momentum: 100/100（急加速）／Lifecycle: 急成長期（継続性: 高い）／Confidence: 90%
@@ -1220,13 +1220,13 @@
 
 ##### 三菱UFJフィナンシャル・グループ（8306.T）
 - 関連テーマ: 金融、金利、決済（3件）
-- Momentum: 36/100（横ばい）
-- Lifecycle: 黎明期 ／ 継続性: 中程度
-- Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと
+- Momentum: 67/100（加速）
+- Lifecycle: 成長初期 ／ 継続性: 中程度
+- Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい／金融への設備投資・需要拡大が続くこと／本日のニュース増加・Theme Momentum Scoreの上昇傾向が続くこと
 - Risk［AI分析］: 一過性の話題に留まり、構造的テーマとして定着しない可能性／金利動向・規制動向など外部環境の変化／テーマの成熟・鈍化に伴う材料出尽くし感
-- Confidence: 33%
-- 現在の判断: 材料待ち
-- なぜ長期で見るのか: 「金融」というテーマの拡大が続く限り、causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすいことから、関連需要は構造的に増える可能性があると考えられます（現在のフェーズ: 黎明期、Momentum: 横ばい）。
+- Confidence: 65%
+- 現在の判断: 注目継続
+- なぜ長期で見るのか: 「金融」というテーマの拡大が続く限り、causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすいことから、関連需要は構造的に増える可能性があると考えられます（現在のフェーズ: 成長初期、Momentum: 加速）。
 - 今後注目するイベント: 決算、設備投資動向、金利動向
 - 関連するテーマ: 金融 → 金利 → 為替 → 決済
 - 投資ストーリー: 金融 → causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい → 金融への設備投資・需要拡大が続くこと → 金利・為替・決済への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
@@ -1618,6 +1618,30 @@
 - **崩れる条件［AI分析］:** テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 防衛 → causal_rulesが示す押し上げ要因: 防衛予算の拡大方針は、防衛関連の受注環境改善につながりやすい → 重工業・防衛への設備投資・需要拡大が続くこと → 宇宙・サイバーセキュリティ・資源への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
+##### 金融（Confidence 65%・Momentum 67/100）
+- **現在何が起きているか:** 本日2件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成長初期です。
+- **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい」が実現する場合、「金融」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
+- **恩恵を受ける業界:** 金融
+- **恩恵企業:** 三菱UFJフィナンシャル・グループ
+- **二次的恩恵企業（関連テーマ経由）:** トヨタ自動車、デンソー、Tesla、川崎重工業、ソフトバンクグループ
+- **まだ注目されにくい企業（因果チェーン2段階先）:** きんでん、日立製作所、東京エレクトロン、ニデック、ソニーグループ
+- **投資期間:** 半年・1年
+- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、金利動向、為替動向
+- **崩れる条件［AI分析］:** 一過性の話題に留まり、構造的テーマとして定着しない可能性、金利動向・規制動向など外部環境の変化
+- **投資仮説まとめ:** 金融 → causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい → 金融への設備投資・需要拡大が続くこと → 金利・為替・決済への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
+
+##### 金利（Confidence 65%・Momentum 67/100）
+- **現在何が起きているか:** 本日2件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成長初期です。
+- **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい」が実現する場合、「金利」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
+- **恩恵を受ける業界:** 金融
+- **恩恵企業:** 三菱UFJフィナンシャル・グループ
+- **二次的恩恵企業（関連テーマ経由）:** トヨタ自動車、デンソー、Tesla、川崎重工業、きんでん
+- **まだ注目されにくい企業（因果チェーン2段階先）:** ソフトバンクグループ、日本電信電話、リクルートホールディングス、Microsoft、東京エレクトロン
+- **投資期間:** 半年・1年
+- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、金利動向、為替動向
+- **崩れる条件［AI分析］:** 一過性の話題に留まり、構造的テーマとして定着しない可能性、金利動向・規制動向など外部環境の変化
+- **投資仮説まとめ:** 金利 → causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい → 金融への設備投資・需要拡大が続くこと → 金融・為替・住宅への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
+
 ##### 資源（Confidence 45%・Momentum 30/100）
 - **現在何が起きているか:** 既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
 - **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 原油価格の上昇は資源関連には追い風、輸送・製造コストの増加を通じて他業種には逆風となりやすい」が実現する場合、「資源」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
@@ -1629,30 +1653,6 @@
 - **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、資源価格動向、電力需給、政府政策（GX関連）、半導体市況、EV需要動向
 - **崩れる条件［AI分析］:** テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 資源 → causal_rulesが示す押し上げ要因: 原油価格の上昇は資源関連には追い風、輸送・製造コストの増加を通じて他業種には逆風となりやすい → 資源・エネルギーへの設備投資・需要拡大が続くこと → 電力・GX・半導体・EV・蓄電池への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
-
-##### 金融（Confidence 33%・Momentum 36/100）
-- **現在何が起きているか:** 本日1件の関連見出しが確認されています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
-- **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい」が実現する場合、「金融」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
-- **恩恵を受ける業界:** 金融
-- **恩恵企業:** 三菱UFJフィナンシャル・グループ
-- **二次的恩恵企業（関連テーマ経由）:** トヨタ自動車、デンソー、Tesla、川崎重工業、ソフトバンクグループ
-- **まだ注目されにくい企業（因果チェーン2段階先）:** きんでん、日立製作所、東京エレクトロン、ニデック、ソニーグループ
-- **投資期間:** 半年・1年
-- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、金利動向、為替動向
-- **崩れる条件［AI分析］:** 一過性の話題に留まり、構造的テーマとして定着しない可能性、金利動向・規制動向など外部環境の変化
-- **投資仮説まとめ:** 金融 → causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい → 金融への設備投資・需要拡大が続くこと → 金利・為替・決済への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
-
-##### 金利（Confidence 33%・Momentum 36/100）
-- **現在何が起きているか:** 本日1件の関連見出しが確認されています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
-- **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい」が実現する場合、「金利」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
-- **恩恵を受ける業界:** 金融
-- **恩恵企業:** 三菱UFJフィナンシャル・グループ
-- **二次的恩恵企業（関連テーマ経由）:** トヨタ自動車、デンソー、Tesla、川崎重工業、きんでん
-- **まだ注目されにくい企業（因果チェーン2段階先）:** ソフトバンクグループ、日本電信電話、リクルートホールディングス、Microsoft、東京エレクトロン
-- **投資期間:** 半年・1年
-- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、金利動向、為替動向
-- **崩れる条件［AI分析］:** 一過性の話題に留まり、構造的テーマとして定着しない可能性、金利動向・規制動向など外部環境の変化
-- **投資仮説まとめ:** 金利 → causal_rulesが示す押し上げ要因: 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい → 金融への設備投資・需要拡大が続くこと → 金融・為替・住宅への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
 ##### 為替（Confidence 28%・Momentum 36/100）
 - **現在何が起きているか:** 本日1件の関連見出しが確認されています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
@@ -2030,11 +2030,11 @@
 ## 5. 今日の相場シナリオ　★★★★☆
 | シナリオ | 確率 | 注目指標 |
 |---|---|---|
-| 強気 | 57% | NYダウ・S&P500 |
-| 普通（中立） | 13% | 米10年金利・為替（米ドル/円） |
+| 強気 | 59% | NYダウ・S&P500 |
+| 普通（中立） | 11% | 米10年金利・為替（米ドル/円） |
 | 弱気 | 30% | VIX指数 |
 
-> **AI分析（総括）:** NYダウが前日比+0.53%と上昇したこと、VIX指数が15.99と落ち着いた水準にあること、業種別ニュースで追い風（1件）が逆風（0件）を上回っていること、為替が円高方向に動いていることなどから、上記の配分が想定されます。
+> **AI分析（総括）:** NYダウが前日比+0.53%と上昇したこと、VIX指数が15.99と落ち着いた水準にあること、業種別ニュースで追い風（2件）が逆風（0件）を上回っていること、為替が円高方向に動いていることなどから、上記の配分が想定されます。
 
 **強気シナリオの理由（AI分析）:** NYダウが底堅く推移していること、VIX指数が落ち着いていること、業種別の追い風ニュースが優勢であることなどが続けば、上値を試す展開もあり得ると考えられます。
 
@@ -2052,7 +2052,7 @@
 - **弱気シナリオ:** 円高進行や米国株の軟調な地合いを受け、輸出関連株を中心に下押しする可能性があります。
 
 ### ドル円
-現在は157.40円付近で推移しています。米金利が上昇方向にあり、日米金利差の観点から円安圧力が意識されやすい局面です。日銀関連の報道（「日銀総裁 物価上振れリスクを意識」）が金融政策の思惑として注目されています。為替の先行きを断定することはできず、金融政策や金利動向を確認したい局面です。
+現在は157.40円付近で推移しています。米金利が上昇方向にあり、日米金利差の観点から円安圧力が意識されやすい局面です。日銀関連の報道（「日銀の金融政策 利上げ加速が焦点」）が金融政策の思惑として注目されています。為替の先行きを断定することはできず、金融政策や金利動向を確認したい局面です。
 - **注目材料:** 米10年金利（上昇方向）
 - **強気シナリオ:** 日米金利差の拡大観測が強まれば、円安方向（ドル高）へシフトするシナリオが意識される可能性があります。
 - **中立シナリオ:** 金利差・金融政策見通しが拮抗する場合、当面レンジ内で推移するシナリオも考えられます。
@@ -2084,7 +2084,7 @@
 
 ---
 ## 8. セクターランキング　★★★★☆
-- ↑ **金融** — 追い風ニュースが1件と逆風（0件）を上回っており、強含みが意識されやすい状況です。
+- ↑ **金融** — 追い風ニュースが2件と逆風（0件）を上回っており、強含みが意識されやすい状況です。
 - → **資源・エネルギー** — 本日時点で目立った材料は確認されておらず、様子見が意識されやすい状況です。
 - → **情報通信・生成AI** — 本日時点で目立った材料は確認されておらず、様子見が意識されやすい状況です。
 
@@ -2187,9 +2187,9 @@ NYダウ上昇
 | VIX指数（恐怖指数） | 15.99 | -6.44% | ★★★ | [🔗](https://finance.yahoo.com/quote/^VIX) |
 | SOX指数（フィラデルフィア半導体指数） | 11,311.08 | +0.07% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^SOX) |
 | ドル指数（DXY） | 99.80 | -0.21% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
-| WTI原油先物 | 86.80 | +3.84% | ★★★ | [🔗](https://finance.yahoo.com/quote/CL=F) |
-| 金先物（ゴールド） | 4,098.60 | -0.04% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 62,934.93 | -2.77% | ★★★ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| WTI原油先物 | 84.67 | +1.29% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
+| 金先物（ゴールド） | 4,049.10 | -1.24% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
+| ビットコイン | 62,958.92 | -2.73% | ★★★ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2218,56 +2218,56 @@ NYダウ上昇
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [セブン＆アイにソフトバンクなどが出資 AIを店舗効率化に](http://www3.nhk.or.jp/news/html/20260801/k10015193341000.html)
+### 3位 ★★★★★ [日銀の金融政策 利上げ加速が焦点](https://news.yahoo.co.jp/pickup/6590135?source=rss)
+- 出典（事実）: Yahoo!ニュース 経済
+- 理由（AI分析）: テーマ「利上げ」に関連する、業種「金融」に関連する、「金融政策」の因果チェーンに該当するため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 金利
+- 影響業種（AI分析）: 金融
+- 営業トーク: 「「金融」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 4位 ★★★★★ [セブン＆アイにソフトバンクなどが出資 AIを店舗効率化に](http://www3.nhk.or.jp/news/html/20260801/k10015193341000.html)
 - 出典（事実）: NHKニュース 経済
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [Trump's AI executive order nears key deadline as regulation debate intensifies](https://www.cnbc.com/2026/07/31/trump-ai-executive-order-nears-key-deadline-regulation-debate-heats-up.html)
+### 5位 ★★★★★ [Trump's AI executive order nears key deadline as regulation debate intensifies](https://www.cnbc.com/2026/07/31/trump-ai-executive-order-nears-key-deadline-regulation-debate-heats-up.html)
 - 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 5位 ★★★★★ [Did China build a top-tier AI model by itself? A new report suggests Nvidia chips played a role.](https://www.marketwatch.com/story/did-china-build-a-top-tier-ai-model-by-itself-a-new-report-suggests-nvidia-chips-played-a-role-ad4644cd?mod=mw_rss_topstories)
+### 6位 ★★★★★ [Did China build a top-tier AI model by itself? A new report suggests Nvidia chips played a role.](https://www.marketwatch.com/story/did-china-build-a-top-tier-ai-model-by-itself-a-new-report-suggests-nvidia-chips-played-a-role-ad4644cd?mod=mw_rss_topstories)
 - 出典（事実）: MarketWatch Top Stories
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 6位 ★★★★★ [How Leopold Aschenbrenner built a $45 billion AI hedge fund — and lost most of it in days](https://www.cnbc.com/2026/07/31/leopold-aschenbrenner-situational-awareness-fund-fire-sale.html)
+### 7位 ★★★★★ [How Leopold Aschenbrenner built a $45 billion AI hedge fund — and lost most of it in days](https://www.cnbc.com/2026/07/31/leopold-aschenbrenner-situational-awareness-fund-fire-sale.html)
 - 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 7位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
+### 8位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
 - 出典（事実）: Data Tank: BBC News — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの主要因クラスタ（複数記事が集まる重要イベント）に該当しています。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 8位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
+### 9位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
 - 出典（事実）: Data Tank: CNBC — Markets
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 9位 ★★★★★ [OpenAI says AI models went rogue during testing, triggering 'unprecedented' breach at startup](https://channelnewsasia.com/business/openai-says-ai-models-went-rogue-during-testing-triggering-unprecedented-breach-startup-6269186)
-- 出典（事実）: Data Tank: Channel News Asia — Business
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 10位 ★★★★★ [Can AI replace Expedia? Its CEO says travel is more complicated than that](https://channelnewsasia.com/experiences/expedia-ceo-ai-travel-booking-ariane-gorin-6265106)
+### 10位 ★★★★★ [OpenAI says AI models went rogue during testing, triggering 'unprecedented' breach at startup](https://channelnewsasia.com/business/openai-says-ai-models-went-rogue-during-testing-triggering-unprecedented-breach-startup-6269186)
 - 出典（事実）: Data Tank: Channel News Asia — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
@@ -2281,8 +2281,8 @@ NYダウ上昇
 | 米ドル/円 | 157.40 | 155 | 円安が進行しやすく、輸出関連株には追い風、輸入コストには逆風となりやすい水準です。 |
 | VIX指数（恐怖指数） | 15.99 | 20 | 落ち着いた相場地合いが意識されやすい水準です。 |
 | 米10年国債利回り | 4.74 | 4.5 | 金利上昇が株式のバリュエーションの重荷として意識されやすい水準です。 |
-| WTI原油先物 | 86.80 | 90 | 資源関連株には逆風、消費関連株には追い風が意識されやすい水準です。 |
-| 金先物（ゴールド） | 4,098.60 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
+| WTI原油先物 | 84.67 | 80 | インフレ再燃への警戒が意識されやすい水準です。 |
+| 金先物（ゴールド） | 4,049.10 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
 
 ---
 ## 14. テーマ分析　★★★★☆
@@ -2298,6 +2298,24 @@ NYダウ上昇
 - [Trump's AI executive order nears key deadline as regulation debate intensifies](https://www.cnbc.com/2026/07/31/trump-ai-executive-order-nears-key-deadline-regulation-debate-heats-up.html) — CNBC Top News
 - [Stocks Sink in Broad AI Rout Sparked by China's DeepSeek](https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main) — WSJ Markets
 - [DeepSeek Won't Sink U.S. AI Titans](https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main) — WSJ Markets
+
+### 第2位: 利上げ　★★★☆☆
+- **今強い理由（AI分析）:** 本日一部利上げに関する報道が出ており、金融株や金利敏感株への関心が意識されています。
+- **今後1週間（AI分析）:** 中央銀行関係者の発言が相場の振れ要因になりやすい状況です。
+- **今後1か月（AI分析）:** 次回会合までの経済指標次第でテーマの持続性が変わる可能性があります。
+- **今後3か月（AI分析）:** 金融政策サイクルの転換点として、引き続き注目される可能性があります。
+
+**関連見出し（事実）:**
+- [日銀の金融政策 利上げ加速が焦点](https://news.yahoo.co.jp/pickup/6590135?source=rss) — Yahoo!ニュース 経済
+
+### 第3位: 金融　★★★☆☆
+- **今強い理由（AI分析）:** 本日一部「金融」関連の報道が出ています。
+- **今後1週間（AI分析）:** 続報の有無が短期的な値動きの材料になりやすい状況です。
+- **今後1か月（AI分析）:** 関連ニュースの頻度が今後も高い状態が続くか注視が必要です。
+- **今後3か月（AI分析）:** 一過性の話題か構造的なテーマかは、今後のニュースの継続性次第と考えられます。
+
+**関連見出し（事実）:**
+- [日銀の金融政策 利上げ加速が焦点](https://news.yahoo.co.jp/pickup/6590135?source=rss) — Yahoo!ニュース 経済
 
 ---
 ## 15. 業界ランキング TOP10　★★★★☆
@@ -2315,6 +2333,7 @@ NYダウ上昇
 
 ### 第2位: 金融　★★★☆☆
 **追い風（事実）:**
+- [日銀の金融政策 利上げ加速が焦点](https://news.yahoo.co.jp/pickup/6590135?source=rss) — Yahoo!ニュース 経済
 - [大手銀行 8月の住宅ローン固定金利引き上げ 長期金利上昇で](http://www3.nhk.or.jp/news/html/20260801/k10015193091000.html) — NHKニュース 経済
 
 **逆風（事実）:**
@@ -2882,7 +2901,7 @@ NYダウ上昇
 > AIが本日時点の公開情報から機械的に算出した候補です。投資助言ではありません。
 
 ### 第1位: 三菱UFJフィナンシャル・グループ（8306.T）
-**理由（AI分析）:** 業種「金融」に追い風のニュース（1件）が出ており、三菱UFJフィナンシャル・グループは同テーマの構造的な成長を享受できる可能性があります。
+**理由（AI分析）:** 業種「金融」に追い風のニュース（2件）が出ており、三菱UFJフィナンシャル・グループは同テーマの構造的な成長を享受できる可能性があります。
 
 ### 第2位: トヨタ自動車（7203.T）
 **理由（AI分析）:** トヨタ自動車は本日時点で明確な業種シグナルが確認されませんでしたが、ウォッチリスト銘柄として長期候補に含めています。
@@ -2952,9 +2971,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「首相 3日に熊本の被災地訪問へ」（Yahoo!ニュース トピックス）
-- 「キオクシアなぜ急成長 背景を解説」（Yahoo!ニュース トピックス）
-- 「市川のマンションで爆発 周辺被害」（Yahoo!ニュース トピックス）
+- 「炎天下 片付け追われる熊本被災者」（Yahoo!ニュース トピックス）
+- 「死ぬかも がれきに顔が挟まり圧迫」（Yahoo!ニュース トピックス）
+- 「「マイナ保険証」8/1から完全移行」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -2963,7 +2982,7 @@ NYダウ上昇
 - **Q. パナソニックHDはまだ買える？**
   A. パナソニックHDの直近値は4,284.00（前日比+700.00 (+19.53%)）です。個別の売買判断はご自身の責任でご確認ください。
 - **Q. 日経平均は上がる？**
-  A. AIの見立てでは強気57%・普通13%・弱気30%です。将来を断定するものではなく、あくまで参考情報です。
+  A. AIの見立てでは強気59%・普通11%・弱気30%です。将来を断定するものではなく、あくまで参考情報です。
 - **Q. NISAって何？**
   A. 少額投資非課税制度の愛称。一定額までの投資利益が非課税になる制度です。
 - **Q. 今の相場は荒れてる？**
@@ -3038,24 +3057,24 @@ NYダウは前日比+276.97 (+0.53%)で推移しています。『AI』関連の
 ---
 ## 26. 朝会コメント　★★★☆☆
 ### 30秒バージョン
-おはようございます。本日の相場は強気57%、弱気30%と見立てています。最重要ニュースは「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI model…
+おはようございます。本日の相場は強気59%、弱気30%と見立てています。最重要ニュースは「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI model…
 
 ### 1分バージョン
-おはようございます。本日の相場は強気57%・中立13%・弱気30%と見立てています。NYダウが前日比+0.53%と上昇したこと、VIX指数が15.99と落ち着いた水準にあること、業種別ニュースで追い風（1件）が逆風（0件）を上回っていること、為替が円高方向に動いていることなどから、上記の配分が想定されます。
+おはようございます。本日の相場は強気59%・中立11%・弱気30%と見立てています。NYダウが前日比+0.53%と上昇したこと、VIX指数が15.99と落ち着いた水準にあること、業種別ニュースで追い風（2件）が逆風（0件）を上回っていること、為替が円高方向に動いていることなどから、上記の配分が想定されます。
 
 ### 3分バージョン
-おはようございます。本日の朝会コメントをお伝えします。本日の相場シナリオは、強気57%・中立13%・弱気30%です。NYダウが前日比+0.53%と上昇したこと、VIX指数が15.99と落ち着いた水準にあること、業種別ニュースで追い風（1件）が逆風（0件）を上回っていること、為替が円高方向に動いていることなどから、上記の配分が想定されます。強気シナリオの理由としては、NYダウが底堅く推移していること、VIX指数が落ち着いていること、業種別の追い風ニュースが優勢であることなどが続けば、上値を試す展開もあり得ると考えられます。一方で弱気シナリオの理由としては、一部に不透明な材料が残っていることなどを踏まえると、下押しリスクも意識される可能性があります。注目ニュースとして「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」があり、テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Apple」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
+おはようございます。本日の朝会コメントをお伝えします。本日の相場シナリオは、強気59%・中立11%・弱気30%です。NYダウが前日比+0.53%と上昇したこと、VIX指数が15.99と落ち着いた水準にあること、業種別ニュースで追い風（2件）が逆風（0件）を上回っていること、為替が円高方向に動いていることなどから、上記の配分が想定されます。強気シナリオの理由としては、NYダウが底堅く推移していること、VIX指数が落ち着いていること、業種別の追い風ニュースが優勢であることなどが続けば、上値を試す展開もあり得ると考えられます。一方で弱気シナリオの理由としては、一部に不透明な材料が残っていることなどを踏まえると、下押しリスクも意識される可能性があります。注目ニュースとして「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」があり、テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Apple」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 
 ---
 ## 27. 今日の会話ネタ　★★★☆☆
 1. 最近の株式市場は落ち着いた雰囲気のようですね（VIX指数 15.99）。
 2. 今、「AI」の話題がニュースでよく取り上げられていますね。
-3. 今日は「米財務長官ToDoメモに「円買い」」というニュースが話題になっています。
+3. 今日は「日銀の金融政策 利上げ加速が焦点」というニュースが話題になっています。
 
 ---
 ## 28. 想定質問と回答例　★★★☆☆
 **Q. 日経平均はまだ上がりますか？**
-A. AIの機械的な見立てでは強気57%・中立13%・弱気30%です。将来を断定するものではなく、あくまで情報整理としての参考値とお考えください。
+A. AIの機械的な見立てでは強気59%・中立11%・弱気30%です。将来を断定するものではなく、あくまで情報整理としての参考値とお考えください。
 
 **Q. 円安は続きますか？**
 A. 現在は米ドル/円157.40円付近です。米10年金利（4.74%）との金利差が引き続き注目材料とされています。為替の先行きを断定することはできず、金融政策や金利動向を確認したい局面です。
@@ -3112,7 +3131,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 
 ---
 ## 30. AIまとめ　★★☆☆☆
-> 本日の相場は強気57%・普通13%・弱気30%と見立てています。「金融」に追い風の材料が優勢で、関連銘柄への資金流入余地があります。テーマとしては「AI」が注目されています。いずれも公開情報に基づく機械的な考察であり、投資助言ではない点にご留意ください。
+> 本日の相場は強気59%・普通11%・弱気30%と見立てています。「金融」に追い風の材料が優勢で、関連銘柄への資金流入余地があります。テーマとしては「AI」が注目されています。いずれも公開情報に基づく機械的な考察であり、投資助言ではない点にご留意ください。
 
 ---
 ## 31. 引用　★★☆☆☆
@@ -3176,14 +3195,15 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo Finance](https://finance.yahoo.com/quote/KLAC)
 
 ### ニュース見出し
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590135?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590109?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590101?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590122?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590063?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590061?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590046?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590123?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6590113?source=rss)
+- [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015193321000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015193341000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015193331000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015192921000.html)
@@ -3191,15 +3211,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015192861000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015193171000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015193091000.html)
-- [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260731/k10015192391000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-01/india-push-for-overseas-capital-draws-over-40-billion-rbi-says)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-01/macau-gaming-revenue-falls-again-on-typhoon-world-cup)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-01/orlopp-to-hold-unicredit-talks-on-commerzbank-s-fate-and-hers)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-01/india-s-kerala-struggles-to-care-for-aging-population-with-fertility-rate-low)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-01/lawmakers-unveil-e15-legislation-allowing-blending-exemptions)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-30/danantara-dollar-debt-plan-grapples-with-global-bond-volatility)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-31/yen-s-intervention-rally-stalls-as-traders-alert-for-more-action)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-07-31/wall-street-week-warsh-s-waiting-game-eu-merger-rules-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-07-31/indian-firms-plan-fresh-price-hikes-testing-inflation-outlook)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-07-31/chip-war-stanford-university-scarlet-tom-s-must-read-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-07-31/-rush-bts-spacex-your-look-ahead-for-weekend-week-video)
 - [CNBC Top News](https://www.cnbc.com/2026/07/31/leopold-aschenbrenner-situational-awareness-fund-fire-sale.html)
 - [CNBC Top News](https://www.cnbc.com/2026/07/31/these-fed-alternative-indicators-show-inflation-is-at-lowest-in-years.html)
 - [CNBC Top News](https://www.cnbc.com/2026/07/31/trump-ai-executive-order-nears-key-deadline-regulation-debate-heats-up.html)
@@ -3240,14 +3259,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/filings/form-4-knightswift-transportation-for-31-july-93CH-4829527)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/knightswift-director-reid-dove-sells-35-million-in-stock-93CH-4829526)
-- [Investing.com News](https://www.investing.com/news/filings/form-4-block-inc-for-31-july-93CH-4829525)
-- [Investing.com News](https://www.investing.com/news/filings/form-s3asr-paramount-skydance-corp-for-31-july-93CH-4829524)
-- [Investing.com News](https://www.investing.com/news/filings/form-4-supernus-pharmaceuticals-inc-for-31-july-93CH-4829523)
-- [Investing.com News](https://www.investing.com/news/filings/form-4-onemain-holdings-inc-for-31-july-93CH-4829521)
-- [Investing.com News](https://www.investing.com/news/world-news/us-to-make-visa-bond-program-permanent-for-people-from-dozens-of-countries-4829520)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/onemain-holdings-svp-michael-hedlund-sells-160000-in-omf-stock-93CH-4829519)
+- [Investing.com News](https://www.investing.com/news/filings/form-4-first-financial-bancorp-for-1-august-93CH-4829555)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/adobe-svp--cao-jillian-forusz-sells-109961-in-stock-93CH-4829554)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/first-financial-bancorp-cfo-james-anderson-sells-134920-in-stock-93CH-4829553)
+- [Investing.com News](https://www.investing.com/news/filings/form-144-paccar-inc-for-1-august-93CH-4829552)
+- [Investing.com News](https://www.investing.com/news/filings/form-144-wex-inc-for-1-august-93CH-4829551)
+- [Investing.com News](https://www.investing.com/news/filings/form-144-castle-biosciences-for-1-august-93CH-4829550)
+- [Investing.com News](https://www.investing.com/news/filings/form-144-castle-biosciences-for-1-august-93CH-4829549)
+- [Investing.com News](https://www.investing.com/news/filings/form-144-paccar-inc-for-1-august-93CH-4829548)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-71-sec-announces-continuation-small-business-advisory-committee-meeting)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-70-small-business-forums-report-congress-highlights-recommendations-improve-capital-raising-policy)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-69-sec-announces-roundtable-preparations-24-hour-trading)
@@ -3289,29 +3308,29 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/bybit-tokenized-stocks-collateral-margin-loans?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/us-treasury-yields-rise-as-tips-challenge-the-inflation-narrative?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-two-week-lows-us-stocks-fail-copy-asia-rebound?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo Finance US](https://finance.yahoo.com/economy/policy/articles/fed-interest-rate-decision-rocks-163300252.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/cullen-frost-bankers-inc-q2-214511609.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/emcor-group-inc-q2-2026-214031583.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/brunswick-corporation-q2-2026-earnings-213611407.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/cnx-resources-corporation-q2-2026-215143119.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/want-trade-spacex-apple-1inch-194500911.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/avery-dennison-corporation-q2-2026-215106999.html)
-- [Yahoo Finance US](https://finance.yahoo.com/real-estate/articles/jones-lang-lasalle-incorporated-q2-215028821.html)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590118?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590122?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590119?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590110?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590123?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590121?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590131?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590129?source=rss)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/group-1-automotive-inc-q2-223528374.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/huntington-ingalls-industries-inc-q2-223533628.html)
+- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/credit-cards/article/20-best-chase-sapphire-preferred-card-benefits-172954435.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/5-charts-vc-backed-ipos-225013160.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/biggest-myth-p-500-run-223300073.html)
+- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/mortgages/article/when-will-mortgage-rates-go-down-from-a-one-year-high-190610094.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/sonic-automotive-inc-q2-2026-221709372.html)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590133?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590139?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590140?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590120?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590124?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590148?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590144?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590145?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193131000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193241000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193191000.html)
-- [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193381000.html)
+- [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193411000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193361000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193351000.html)
-- [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193371000.html)
+- [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260801/k10015193441000.html)
 
 ### 参照リンク
 - [株探(公式サイト・参照リンクのみ／自動取得なし)](https://kabutan.jp/)
