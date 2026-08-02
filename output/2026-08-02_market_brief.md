@@ -2189,7 +2189,7 @@ NYダウ上昇
 | ドル指数（DXY） | 99.80 | -0.21% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 84.67 | +1.29% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,107.00 | +0.17% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 63,378.13 | +0.90% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 63,380.47 | +0.90% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2481,7 +2481,7 @@ NYダウ上昇
 ### 第2位: Apple（AAPL）　★★★★★
 直近値: 308.91 / 前日比: -24.52 (-7.35%)（事実）
 
-- **短期（AI分析）:** 前日比-24.52 (-7.35%)。 関連見出し: 「Stocks to Watch: Apple, Amazon, SK Hynix, Roblox」（Yahoo Finance US）
+- **短期（AI分析）:** 前日比-24.52 (-7.35%)。 関連見出し: 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
@@ -2593,7 +2593,7 @@ NYダウ上昇
 直近値: 308.91 / 前日比: -24.52 (-7.35%)（事実）
 
 - **理由（AI分析）:** 前日比-24.52 (-7.35%)と値動きが大きく、本日の注目銘柄として選定しました。
-- **注目材料（AI分析）:** 「Stocks to Watch: Apple, Amazon, SK Hynix, Roblox」（Yahoo Finance US）
+- **注目材料（AI分析）:** 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
 - **短期見通し（AI分析）:** 業種「情報通信・生成AI」の材料が拮抗しており、短期的には方向感を欠く展開も考えられます。
 
 ### 第3位: Alphabet（GOOGL）　★★★★★
@@ -2645,7 +2645,7 @@ NYダウ上昇
 
 | 銘柄 | 評価 | 理由 |
 |---|---|---|
-| Apple（AAPL） | ★★★★★ | 「Stocks to Watch: Apple, Amazon, SK Hynix, Roblox」など関連ニュースあり。 |
+| Apple（AAPL） | ★★★★★ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
 | Microsoft（MSFT） | ★★★★★ | 「Microsoft has 3 secret weapons that could drive its stock 50% higher, analyst says」など関連ニュースあり。 |
 | NVIDIA（NVDA） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
 | Tesla（TSLA） | ★★★☆☆ | 業種「自動車」は強弱まちまちです。 |
@@ -2821,7 +2821,7 @@ NYダウ上昇
 ### Apple（AAPL）
 直近値: 308.91 / 前日比: -24.52 (-7.35%)（事実）
 
-- **今日の材料（AI分析）:** 前日比-24.52 (-7.35%)。 関連見出し: 「Stocks to Watch: Apple, Amazon, SK Hynix, Roblox」（Yahoo Finance US）
+- **今日の材料（AI分析）:** 前日比-24.52 (-7.35%)。 関連見出し: 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-29）
 - **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-29）
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -3011,7 +3011,7 @@ NYダウ上昇
 ### 今日の雑談（相場以外の公開ニュース）
 
 - 「近畿で初の酷暑日 和歌山県で40℃」（Yahoo!ニュース トピックス）
-- 「米大統領 イラン大規模攻撃を中止」（Yahoo!ニュース トピックス）
+- 「がれきから母の声 数時間で途絶え」（Yahoo!ニュース トピックス）
 - 「車中泊避難者が死亡 ガソリンは空」（Yahoo!ニュース トピックス）
 
 ### 想定質問
@@ -3250,6 +3250,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015192921000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015193041000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260801/k10015192861000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-02/south-korea-issues-heat-wave-alert-as-temperature-hits-record)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-01/modi-opposes-court-proceedings-for-protesters-urges-forgiveness)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-02/katayama-to-say-japan-us-acted-together-on-yen-reuters-reports)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-02/trump-says-us-to-cancel-iran-attack-subject-to-a-rapid-deal)
@@ -3257,7 +3258,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-02/crushed-by-kospi-rout-angry-koreans-rip-lee-and-vow-not-to-buy)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-01/loan-investors-are-pushing-back-as-fear-rises-credit-weekly)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-01/bloomberg-this-weekend-08-01-2026-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-01/bipartisan-governors-to-tackle-immigration-reform-video)
 - [CNBC Top News](https://www.cnbc.com/2026/08/01/glp-1-prescriptions-weight-loss-walmart-costco-amazon.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/01/tankers-near-oman-come-under-fire.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/01/best-buy-ceo-jason-bonfig-smaller-stores.html)
@@ -3298,6 +3298,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/commodities-news/ubs-explains-what-it-would-take-for-gold-prices-to-turn-higher-in-2h26-4829671)
 - [Investing.com News](https://www.investing.com/news/economy-news/ai-creates-twospeed-uk-jobs-market-as-demand-shifts-to-senior-tech-roles-4829670)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/why-us-stock-bubbles-keep-bursting-without-derailing-the-wider-market-4829669)
 - [Investing.com News](https://www.investing.com/news/earnings/organon-co-earnings-missed-by-050-revenue-fell-short-of-estimates-4829668)
@@ -3305,7 +3306,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Investing.com News](https://www.investing.com/news/world-news/thirteen-die-in-tourist-plane-crash-over-perus-nazca-lines-tvperu-says-4829649)
 - [Investing.com News](https://www.investing.com/news/economy-news/iran-threatens-regional-energy-fields-if-the-us-launches-fresh-attacks-4829658)
 - [Investing.com News](https://www.investing.com/news/world-news/fires-on-more-than-250000-acres-of-washington-state-prompt-evacuations-4829666)
-- [Investing.com News](https://www.investing.com/news/economy-news/exclusivejapan-to-announce-tokyo-washington-took-joint-action-on-yen-sources-say-4829661)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-71-sec-announces-continuation-small-business-advisory-committee-meeting)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-70-small-business-forums-report-congress-highlights-recommendations-improve-capital-raising-policy)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-69-sec-announces-roundtable-preparations-24-hour-trading)
@@ -3348,27 +3348,27 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/bank-of-italy-study-no-stablecoin-remittance-cost-advantages?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/pump-fun-employees-fired-tokens-vest?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo Finance US](https://finance.yahoo.com/economy/policy/articles/j-p-morgan-drops-fed-060300978.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/commodities/articles/soybeans-face-weakness-close-week-221110356.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/commodities/articles/corn-closes-july-weakness-221110478.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/commodities/articles/cotton-rallies-end-month-221110247.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/commodities/articles/wheat-collapses-close-july-221110474.html)
+- [Yahoo Finance US](https://www.barrons.com/articles/treasury-bond-yield-rising-2dcd0da1?siteid=yhoof2&yptr=yahoo)
 - [Yahoo Finance US](https://finance.yahoo.com/personal-finance/student-loans/article/best-student-loan-refinance-companies-104900001.html)
 - [Yahoo Finance US](https://finance.yahoo.com/personal-finance/student-loans/article/best-private-student-loans-135459013.html)
-- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/personal-loans/article/best-same-day-emergency-loans-220714166.html)
-- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/personal-loans/article/best-secured-personal-loans-224147862.html)
-- [Yahoo Finance US](https://www.wsj.com/livecoverage/stock-market-today-dow-sp-500-nasdaq-07-31-2026/card/stocks-to-watch-apple-amazon-sk-hynix-samsung-roblox-UVBiwSE6WbBhfL3eozHj?siteid=yhoof2&yptr=yahoo)
-- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/personal-loans/article/best-personal-loans-for-bad-credit-211415243.html)
-- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/personal-loans/article/best-personal-loans-202034980.html)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590254?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590237?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590255?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590256?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590246?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590245?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590247?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590252?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590260?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590258?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6590243?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015193881000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015194121000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015193991000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015193981000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015194131000.html)
-- [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015194171000.html)
+- [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015194141000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260802/k10015194081000.html)
 
 ### 参照リンク
