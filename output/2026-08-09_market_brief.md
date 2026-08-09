@@ -2178,7 +2178,7 @@ NYダウ上昇
 | ドル指数（DXY） | 99.60 | -0.37% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 78.18 | +1.15% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,399.70 | +3.72% | ★★★ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 64,772.41 | -0.20% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 64,779.17 | -0.19% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2445,7 +2445,7 @@ NYダウ上昇
 ### 第4位: NVIDIA（NVDA）　★★★★★
 直近値: 223.96 / 前日比: +4.97 (+2.27%)（事実）
 
-- **短期（AI分析）:** 前日比+4.97 (+2.27%)。 本日、個別の関連見出しは確認されませんでした。
+- **短期（AI分析）:** 前日比+4.97 (+2.27%)。 関連見出し: 「NVDL’s 2x Promise Delivered Only 17.21% While NVIDIA Soared 22.21% in One Year」（Yahoo Finance US）
 - **中期（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。
 - **長期（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
 
@@ -2557,7 +2557,7 @@ NYダウ上昇
 直近値: 223.96 / 前日比: +4.97 (+2.27%)（事実）
 
 - **理由（AI分析）:** 前日比+4.97 (+2.27%)と値動きが大きく、本日の注目銘柄として選定しました。
-- **注目材料（AI分析）:** 個別の関連見出しは確認されていません（取得不可または該当なし）。
+- **注目材料（AI分析）:** 「NVDL’s 2x Promise Delivered Only 17.21% While NVIDIA Soared 22.21% in One Year」（Yahoo Finance US）
 - **短期見通し（AI分析）:** 業種動向からの短期見通しは、本日時点では判断材料が不足しています。
 
 ### 第5位: ASML（ASML）　★★★★★
@@ -2597,7 +2597,7 @@ NYダウ上昇
 |---|---|---|
 | Apple（AAPL） | ★★★☆☆ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
 | Microsoft（MSFT） | ★★★☆☆ | 「Microsoft has 3 secret weapons that could drive its stock 50% higher, analyst says」など関連ニュースあり。 |
-| NVIDIA（NVDA） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
+| NVIDIA（NVDA） | ★★★★★ | 「NVDL’s 2x Promise Delivered Only 17.21% While NVIDIA Soared 22.21% in One Year」など関連ニュースあり。 |
 | Tesla（TSLA） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
 | Amazon（AMZN） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Alphabet（GOOGL） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
@@ -2789,7 +2789,7 @@ NYダウ上昇
 ### NVIDIA（NVDA）
 直近値: 223.96 / 前日比: +4.97 (+2.27%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+4.97 (+2.27%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比+4.97 (+2.27%)。 関連見出し: 「NVDL’s 2x Promise Delivered Only 17.21% While NVIDIA Soared 22.21% in One Year」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-08-26）
 - **今後1か月（AI分析）:** 今月中に決算発表（2026-08-26）が予定されており、業績見通しの変化が材料になりやすい状況です。業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
@@ -2960,9 +2960,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
+- 「原爆の記憶忘れる前に 語る97歳」（Yahoo!ニュース トピックス）
 - 「台風15号 11日午後に東北上陸恐れ」（Yahoo!ニュース トピックス）
-- 「長崎原爆の日 被爆者代表の誓い」（Yahoo!ニュース トピックス）
-- 「地震で煙突倒壊し息子犠牲 母は涙」（Yahoo!ニュース トピックス）
+- 「橋流され390人が孤立 下山始まる」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3201,14 +3201,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-09/romania-extends-reactor-output-by-nine-days-after-danube-blasts)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-09/europe-s-hot-stock-markets-are-creating-a-buzz-among-investors)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-09/china-issues-red-alert-airports-cancel-flights-as-typhoon-nears)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-09/china-s-inflation-cools-as-oil-shock-of-iran-war-starts-to-ease)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-09/korea-volatility-spike-ebbs-as-leveraged-trades-are-flushed-out)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-08/bloomberg-this-weekend-8-08-2026-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-08/zelenskyy-makes-debut-trip-to-serbia-as-russian-influence-wanes)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-08/private-credit-squeezed-by-bank-refinancings-credit-weekly)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-08/pointed-bloomberg-s-weekly-news-quiz-for-risk-takers-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-08/liv-golf-tries-to-survive-without-saudi-billions-video)
 - [CNBC Top News](https://www.cnbc.com/2026/08/08/uae-ship-targeted-missile-us-iran-tensions-stay-high.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/09/myspace-comeback-rival-social-media-giants.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/08/berkshire-hathaway-earnings-q2-2026.html)
@@ -3249,14 +3249,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/economy-news/spain-checks-200-italy-arrivals-in-border-controls-after-migration-row-4847719)
+- [Investing.com News](https://www.investing.com/news/commodities-news/talks-with-us-wont-happen-while-interim-deal-is-breached-iranian-minister-says-4847717)
+- [Investing.com News](https://www.investing.com/news/economy-news/fire-at-saudi-aramcos-jazan-refinery-extinguished-no-injuries-reported-4847703)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/european-laggards-are-rebounding--how-far-can-they-go-4847715)
+- [Investing.com News](https://www.investing.com/news/commodities-news/yemens-houthis-say-they-attacked-saudi-aramco-jazan-refinery-fire-extinguished-4847714)
 - [Investing.com News](https://www.investing.com/news/economy-news/ukraine-drone-attacks-put-russias-wildberries-and-banks-under-pressure-4847713)
 - [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-tests-62k-support-with-breakout-looming-live-levels-93CH-4829888)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/earnings-beats-ease-concerns-over-record-us-stock-rally-4847712)
-- [Investing.com News](https://www.investing.com/news/economic-indicators/german-trade-deficit-with-china-grows-as-beijing-relies-less-on-european-industry-4847711)
-- [Investing.com News](https://www.investing.com/news/economy-news/humanoids-are-as-much-a-compute-story-as-a-robotics-one-4847709)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/more-workers-join-strike-at-bhps-port-hedland-iron-ore-operations-4847699)
-- [Investing.com News](https://www.investing.com/news/company-news/more-workers-join-bhp-strike-at-port-hedland-iron-ore-hub-4847706)
-- [Investing.com News](https://www.investing.com/news/earnings/lyell-immunopharma-earnings-beat-by-022-revenue-fell-short-of-estimates-4847705)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-72-sec-establishes-financial-reporting-accounting-unit-enforcement-division)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-71-sec-announces-continuation-small-business-advisory-committee-meeting)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-70-small-business-forums-report-congress-highlights-recommendations-improve-capital-raising-policy)
@@ -3299,20 +3299,20 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/imf-domestic-stablecoins-dollar-token-demand?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/bybit-us-court-trace-funds-north-korea-hack?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/ondo-perps-hits-7-billion-215819332.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/live/stock-market-today-friday-august-7-nasdaq-dow-sp-500-july-jobs-report-surprises-100009572.html)
-- [Yahoo Finance US](https://finance.yahoo.com/technology/live/tech-stocks-today-shares-climb-after-rocky-week-140419479.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/china-yuchai-international-limited-q2-034042772.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/interface-inc-q2-2026-earnings-025203752.html)
 - [Yahoo Finance US](https://finance.yahoo.com/news/sec-drops-insider-trading-suit-021049395.html)
-- [Yahoo Finance US](https://finance.yahoo.com/energy/articles/oil-traders-stay-bearish-despite-230000144.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/sweetgreen-stumbles-again-turnaround-chances-232000031.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/intel-quashed-dividend-2024-now-230002940.html)
-- [Yahoo Finance US](https://finance.yahoo.com/technology/articles/nvidia-invest-3-billion-lancium-014211358.html)
+- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/banking/article/best-cd-rates-today-saturday-august-8-2026-best-cd-account-earns-415-apy-100000008.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/options/articles/nvdl-2x-promise-delivered-only-034559456.html)
+- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/mortgages/article/mortgage-and-refinance-interest-rates-today-saturday-august-8-2026-rates-mixed-this-weekend-100000461.html)
+- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/banking/article/how-to-open-a-checking-account-for-a-minor-213416031.html)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591104?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591092?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591081?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591096?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591079?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591085?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591095?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591088?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591105?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591107?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591100?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591098?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591102?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591097?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
