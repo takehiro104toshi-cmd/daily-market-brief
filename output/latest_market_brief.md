@@ -316,7 +316,7 @@
   ドル円が前日比-0.08%（円高方向）ことから、「内需・消費」への資金動向は方向感に乏しく、中立的と考えられます。
   営業で話すポイント: 「内需・消費」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
 - **コモディティ・資源**: 流入しやすい
-  WTI原油が前日比+1.42%、金先物が前日比+1.57%ことから、「コモディティ・資源」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
+  WTI原油が前日比+1.42%、金先物が前日比+0.38%ことから、「コモディティ・資源」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
   関連テーマ: 資源
   関連セクター: 資源・エネルギー
   営業で話すポイント: 「コモディティ・資源」は市場シグナル上、物色されやすい局面とお伝えできます。
@@ -2093,7 +2093,7 @@
 ## 9. マーケット分析　★★★★☆
 *AI分析・因果関係を矢印で整理*
 
-**米国株**: NYダウ -107.59 (-0.20%)／VIX 14.25（リスク回避の目安）
+**米国株**: NYダウ -107.58 (-0.20%)／VIX 14.25（リスク回避の目安）
 
 ↓
 
@@ -2172,15 +2172,15 @@ NYダウ下落
 |---|---|---|---|---|
 | 日経平均株価 | 68,713.80 | +0.59% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^N225) |
 | TOPIX連動型ETF(参考) | 437.80 | +0.55% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/1306.T) |
-| NYダウ | 53,732.40 | -0.20% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^DJI) |
+| NYダウ | 53,732.41 | -0.20% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^DJI) |
 | S&P500 | 7,785.76 | -0.17% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^GSPC) |
 | ナスダック総合 | 26,729.16 | -0.28% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^IXIC) |
 | VIX指数（恐怖指数） | 14.25 | -2.60% | ★★★ | [🔗](https://finance.yahoo.com/quote/^VIX) |
 | SOX指数（フィラデルフィア半導体指数） | 12,417.05 | -0.31% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^SOX) |
-| ドル指数（DXY） | 99.64 | -0.32% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
+| ドル指数（DXY） | 99.67 | -0.29% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 82.40 | +1.42% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
-| 金先物（ゴールド） | 4,432.00 | +1.57% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 63,071.64 | -0.52% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| 金先物（ゴールド） | 4,380.40 | +0.38% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
+| ビットコイン | 63,010.98 | -0.62% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2273,7 +2273,7 @@ NYダウ下落
 | VIX指数（恐怖指数） | 14.25 | 20 | 落ち着いた相場地合いが意識されやすい水準です。 |
 | 米10年国債利回り | 4.70 | 4.5 | 金利上昇が株式のバリュエーションの重荷として意識されやすい水準です。 |
 | WTI原油先物 | 82.40 | 80 | インフレ再燃への警戒が意識されやすい水準です。 |
-| 金先物（ゴールド） | 4,432.00 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
+| 金先物（ゴールド） | 4,380.40 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
 
 ---
 ## 14. テーマ分析　★★★★☆
@@ -2962,9 +2962,9 @@ NYダウ下落
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「中継 終戦81年の全国戦没者追悼式」（Yahoo!ニュース トピックス）
+- 「首相「反省」触れず 戦没者追悼式」（Yahoo!ニュース トピックス）
 - 「「死にに帰った」同級生 空襲犠牲」（Yahoo!ニュース トピックス）
-- 「インドネシアM7.7倒壊で2人死亡」（Yahoo!ニュース トピックス）
+- 「李大統領 日韓協力の拡大を表明」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3012,7 +3012,7 @@ NYダウ下落
 為替（米ドル/円159.30円）と米金利（4.70%）の組み合わせは、資産全体の通貨・金利エクスポージャーを見直すきっかけになる可能性があります。『AI』のような構造的テーマも話題になっています。短期の値動きよりも、資産配分・分散の観点から相場環境を確認したい局面です。
 
 ### 個人投資家向け
-日経平均は68,713.80付近、NYダウは前日比-107.59 (-0.20%)で推移しています。本日はAI関連のニュースが注目されています。投資判断は最新の情報をご自身でご確認いただきたい局面です。
+日経平均は68,713.80付近、NYダウは前日比-107.58 (-0.20%)で推移しています。本日はAI関連のニュースが注目されています。投資判断は最新の情報をご自身でご確認いただきたい局面です。
 
 ### NISA初心者向け
 NISA（少額投資非課税制度）は、一定額までの投資利益が非課税になる制度です。本日の市場は日経平均68,713.80、為替は米ドル/円159.30円という状況で、短期の値動きに一喜一憂せず、長期・積立・分散という基本を確認したい局面と考えられます。個別商品の選定は、ご自身の目的やリスク許容度に応じてご検討いただく話題です。
@@ -3021,7 +3021,7 @@ NISA（少額投資非課税制度）は、一定額までの投資利益が非�
 米ドル/円は159.30円で推移しており、日米の金利差（米10年金利4.70%）が変動要因の一つとして注目されています。市場のリスク許容度を示すVIX指数は落ち着いた水準との見方があり、為替の変動幅にも影響しうる局面として確認したい状況です。
 
 ### 米国株に関心がある顧客向け
-NYダウは前日比-107.59 (-0.20%)で推移しています。『AI』関連のテーマが引き続き注目されています。米金利・インフレ動向とあわせて、値動きの背景を確認したい局面です。
+NYダウは前日比-107.58 (-0.20%)で推移しています。『AI』関連のテーマが引き続き注目されています。米金利・インフレ動向とあわせて、値動きの背景を確認したい局面です。
 
 ### 日本株に関心がある顧客向け
 日経平均は68,713.80付近で推移しており、為替（米ドル/円159.30円）の動向が輸出関連株を中心に意識されやすい状況です。業種では『資源・エネルギー』が注目されています。業種ごとの追い風・逆風のバランスを確認したい局面と考えられます。
@@ -3251,14 +3251,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/california-water-service-director-krummel-sells-186350-in-shares-93CH-4861720)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/ra-capital-management-sells-6345m-in-septerna-stock-93CH-4861719)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/hartree-partners-buys-28589-in-hudson-technologies-stock-93CH-4861718)
+- [Investing.com News](https://www.investing.com/news/economy-news/us-canada-face-sticking-points-before-50-tariff-deadline-4861716)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/aerovironment-svp-chief-accounting-officer-sells-41381-in-stock-93CH-4861714)
 - [Investing.com News](https://www.investing.com/news/economy-news/how-fast-can-the-us-build-data-centers-amid-labour-concerns-4861712)
 - [Investing.com News](https://www.investing.com/news/earnings/lifeward-earnings-missed-by-007-revenue-topped-estimates-4861711)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/magnetar-financial-coreweave-10-owner-sells-334m-stock-93CH-4861710)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/ajb-investment-fund-ii-buys-49299-in-jewett-cameron-shares-93CH-4861709)
-- [Investing.com News](https://www.investing.com/news/earnings/clene-earnings-missed-by-075-revenue-topped-estimates-4861708)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/coreweave-crwv-10-owner-magnetar-financial-sells-2138-million-in-stock-93CH-4861706)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/magnetar-financial-sells-2316m-in-coreweave-stock-93CH-4861705)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-75-sec-charges-boiler-room-operator-three-entities-defrauding-retail-investors-74-million-pre-ipo)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-74-sec-charges-toms-river-trio-connection-alleged-47-million-fraud-targeting-orthodox-jewish)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-73-sec-charges-private-fund-adviser-adit-ventures-management-its-ceo-affiliated-general-partners)
@@ -3301,20 +3301,20 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/crypto-biz-bitcoin-self-custody-etf-inflows-strategy-riot-ai?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo Finance US](https://finance.yahoo.com/real-estate/articles/68-old-resort-hotel-mall-015339982.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/legence-corp-class-common-stock-210545360.html)
 - [Yahoo Finance US](https://finance.yahoo.com/media-advertising/articles/saga-communications-inc-q2-2026-211032071.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/ahead-sidus-space-earnings-heres-210159605.html)
-- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/pelthos-therapeutics-inc-q2-2026-210546098.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/brookfield-q2-earnings-call-highlights-210417898.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/world-indices/articles/asian-stocks-rise-us-inflation-010444910.html)
-- [Yahoo Finance US](https://finance.yahoo.com/news/macquarie-westpac-testify-kpmg-australia-210332909.html)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591791?source=rss)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/live/earnings-live-updates-applied-materials-stock-falls-after-solid-earnings-fail-to-impress-202302733.html)
+- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/beyond-air-inc-q1-2027-210809536.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/birkenstock-holding-plc-q3-2026-210825442.html)
+- [Yahoo Finance US](https://www.wsj.com/finance/stocks/u-s-stocks-rise-s-p-500-closes-at-record-high-after-inflation-data-22e8c3a0?siteid=yhoof2&yptr=yahoo)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/supercom-ltd-q2-2026-earnings-211515328.html)
+- [Yahoo Finance US](https://www.investors.com/news/spacex-northrop-grumman-lockheed-martin-golden-dome-sbi-test-citi-targets-defense-stocks/?src=A00220&yptr=yahoo)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591801?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591797?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591800?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591798?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591777?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591788?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591789?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591786?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591802?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591805?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591799?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591790?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
