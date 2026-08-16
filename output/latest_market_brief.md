@@ -2180,7 +2180,7 @@ NYダウ下落
 | ドル指数（DXY） | 99.67 | -0.29% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 82.40 | +1.42% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,380.40 | +0.38% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 63,086.77 | +0.18% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 62,976.93 | +0.00% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2468,7 +2468,7 @@ NYダウ下落
 ### 第7位: Tesla（TSLA）　★★★☆☆
 直近値: 342.27 / 前日比: +2.31 (+0.68%)（事実）
 
-- **短期（AI分析）:** 前日比+2.31 (+0.68%)。 本日、個別の関連見出しは確認されませんでした。
+- **短期（AI分析）:** 前日比+2.31 (+0.68%)。 関連見出し: 「I drove Tesla FSD, Rivian Autonomy+ ‘hands-free’ driving systems. Here’s how they compare」（CNBC Top News）
 - **中期（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。
 - **長期（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
 
@@ -2600,7 +2600,7 @@ NYダウ下落
 | Apple（AAPL） | ★★★☆☆ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
 | Microsoft（MSFT） | ★★★☆☆ | 「Microsoft has 3 secret weapons that could drive its stock 50% higher, analyst says」など関連ニュースあり。 |
 | NVIDIA（NVDA） | ★★★☆☆ | 前日比下落、個別の材料は確認されませんでした。 |
-| Tesla（TSLA） | ★★★☆☆ | 前日比上昇、個別の材料は確認されませんでした。 |
+| Tesla（TSLA） | ★★★☆☆ | 「I drove Tesla FSD, Rivian Autonomy+ ‘hands-free’ driving systems. Here’s how they compare」など関連ニュースあり。 |
 | Amazon（AMZN） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Alphabet（GOOGL） | ★★★☆☆ | 「Berkshire adds $17 billion to Alphabet stake」など関連ニュースあり。 |
 | Meta Platforms（META） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
@@ -2800,7 +2800,7 @@ NYダウ下落
 ### Tesla（TSLA）
 直近値: 342.27 / 前日比: +2.31 (+0.68%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+2.31 (+0.68%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比+2.31 (+0.68%)。 関連見出し: 「I drove Tesla FSD, Rivian Autonomy+ ‘hands-free’ driving systems. Here’s how they compare」（CNBC Top News）
 - **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-10-21）
 - **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-10-21）
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
@@ -2962,9 +2962,9 @@ NYダウ下落
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「戦地へ向かった父 1度の抱っこ」（Yahoo!ニュース トピックス）
-- 「インドネシアの地震 40人超が死亡」（Yahoo!ニュース トピックス）
-- 「子と川遊びしようと 男性溺れ死亡」（Yahoo!ニュース トピックス）
+- 「お盆休み最終日 Uターン混雑予想」（Yahoo!ニュース トピックス）
+- 「子の水難 助けに飛び込むのはNG」（Yahoo!ニュース トピックス）
+- 「韓国「親日派財産」没収 本格化へ」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3188,13 +3188,13 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 
 ### ニュース見出し
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591810?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591906?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591858?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591715?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591731?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591917?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591902?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591874?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591829?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591836?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591849?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6591836?source=rss)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199771000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199891000.html)
@@ -3218,7 +3218,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CNBC Top News](https://www.cnbc.com/2026/08/14/nvidia-discloses-21-billion-stake-in-spacex-at-end-of-second-quarter.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/15/cash-money-market-funds-bonds.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/15/berkshire-adds-17-billion-to-alphabet-stake.html)
-- [CNBC Top News](https://www.cnbc.com/2026/08/15/cannabis-marijuana-legalization-midterm-elections.html)
+- [CNBC Top News](https://www.cnbc.com/2026/08/15/rivian-tesla-self-driving-adas-fsd.html)
 - [CNBC Markets](https://www.cnbc.com/2026/08/13/wholesale-prices-were-flat-in-july-below-expectations-for-0point2percent-increase.html)
 - [CNBC Markets](https://www.cnbc.com/2026/08/13/iran-war-g7s-fastest-growing-economy.html)
 - [CNBC Markets](https://www.cnbc.com/2026/08/12/us-budget-deficit-surged-in-july-to-highest-level-since-march-2021.html)
@@ -3251,14 +3251,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/magnolia-oil--gas-director-khani-buys-200000-in-stock-93CH-4861865)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/huntington-ingalls-ceo-kastner-sells-425m-in-hii-stock-93CH-4861863)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/koppers-cao-bradley-pearce-sells-102020-in-shares-93CH-4861864)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/trex-svp-amy-fernandez-sells-52572-in-company-shares-93CH-4861862)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/sotera-health-president-rutz-sells-283m-in-common-stock-93CH-4861861)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/huntington-ingalls-director-victoria-harker-sells-240878-in-stock-93CH-4861860)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/why-nvidias-500bn-investment-mobilization-is-a-positive-for-the-stock-4861855)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/atmos-energy-director-william-ware-buys-50278-in-company-stock-93CH-4861854)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/how-can-disney-get-back-its-narrative-momentum-4861890)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/amalgamated-financial-director-mark-finser-sells-39880-in-shares-93CH-4861889)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/ufp-technologies-executive-chairman-bailly-sells-41m-in-shares-93CH-4861888)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/arlo-technologies-director-amy-rothstein-sells-149218-in-stock-93CH-4861887)
+- [Investing.com News](https://www.investing.com/news/economy-news/iran-war-commander-visits-uss-abraham-lincoln-as-carrier-prepares-to-return-home-4861886)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/extreme-networks-director-raj-khanna-sells-363001-in-stock-93CH-4861884)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/phillips-66-svp-and-controller-kluppel-sells-165m-in-stock-93CH-4861883)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/viasat-svp-robert-blair-sells-215m-in-common-stock-93CH-4861882)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-75-sec-charges-boiler-room-operator-three-entities-defrauding-retail-investors-74-million-pre-ipo)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-74-sec-charges-toms-river-trio-connection-alleged-47-million-fraud-targeting-orthodox-jewish)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-73-sec-charges-private-fund-adviser-adit-ventures-management-its-ceo-affiliated-general-partners)
@@ -3301,21 +3301,21 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/galaxy-lowers-clarity-act-odds-10?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/gen-z-favors-etfs-and-trades-less-than-older-cohorts-binance?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/sandisk-ceo-reveals-whats-next-013700105.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/mercadolibre-meli-bets-big-growth-221741258.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/host-hotels-hst-just-raised-215502105.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/jim-cramer-revealed-went-wrong-213604620.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/jim-cramer-said-domino-better-213509638.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/warren-buffett-named-3-stocks-140400163.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/diageo-deo-vs-constellation-stz-213214804.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/jim-cramer-continued-keep-faith-213135510.html)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591872?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591885?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591869?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591887?source=rss)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/applied-materials-stock-down-earnings-192729110.html)
+- [Yahoo Finance US](https://finance.yahoo.com/energy/articles/oil-set-weekly-gains-us-110155136.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/embraer-embj-raised-cash-flow-192652786.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/commodities/articles/nat-gas-prices-move-higher-192600415.html)
+- [Yahoo Finance US](https://finance.yahoo.com/small-business/articles/53-old-lawn-garden-giant-153300199.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/tiger-global-management-cuts-stakes-192754927.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/israel-largest-bank-partners-galaxy-193000565.html)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591906?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591904?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591916?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591888?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591890?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591891?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591884?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591912?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591896?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591918?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591919?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
