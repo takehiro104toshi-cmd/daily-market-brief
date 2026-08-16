@@ -40,9 +40,9 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気40%・普通26%・弱気34%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Bybit adds Unitree, Moonshot AI to pre-IPO perpetuals lineup
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Can SpaceX Leap to the AI Frontier?
 ■注目テーマ3つ: AI／円高／EV
-■見る…
+■見るべき指数: 米ドル/円159.30／VIX指数（恐…
 
 ---
 ## 1. 今日の結論　★★★★★
@@ -68,7 +68,7 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「Bybit adds Unitree, Moonshot AI to pre-IPO perpetuals lineup」（CoinTelegraph）　★★★★★
+### 3. 「Can SpaceX Leap to the AI Frontier?」（Investing.com News）　★★★★★
 - **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
@@ -98,7 +98,17 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. Bybit adds Unitree, Moonshot AI to pre-IPO perpetuals lineup　★★★☆☆
+### 3. Can SpaceX Leap to the AI Frontier?　★★★☆☆
+- **ニュース:** 「Can SpaceX Leap to the AI Frontier?」（Investing.com News）
+- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
+- **重要テーマ:** AI
+- **関連セクター:** 情報通信・生成AI
+- **恩恵銘柄:** 該当なし
+- **悪影響銘柄:** 該当なし
+- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
+- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
+
+### 4. Bybit adds Unitree, Moonshot AI to pre-IPO perpetuals lineup　★★★☆☆
 - **ニュース:** 「Bybit adds Unitree, Moonshot AI to pre-IPO perpetuals lineup」（CoinTelegraph）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
@@ -108,18 +118,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. Bond Traders Agonize Over AI Companies’ $70 Billion of Shadow Credit Backstops　★★★☆☆
+### 5. Bond Traders Agonize Over AI Companies’ $70 Billion of Shadow Credit Backstops　★★★☆☆
 - **ニュース:** 「Bond Traders Agonize Over AI Companies’ $70 Billion of Shadow Credit Backstops」（Bloomberg Markets(見出し)）
-- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
-- **重要テーマ:** AI
-- **関連セクター:** 情報通信・生成AI
-- **恩恵銘柄:** 該当なし
-- **悪影響銘柄:** 該当なし
-- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
-- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
-
-### 5. Drone Swarms Push AI Deeper Into Modern Warfare　★★★☆☆
-- **ニュース:** 「Drone Swarms Push AI Deeper Into Modern Warfare」（Bloomberg Markets(見出し)）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -316,7 +316,7 @@
   ドル円が前日比-0.08%（円高方向）ことから、「内需・消費」への資金動向は方向感に乏しく、中立的と考えられます。
   営業で話すポイント: 「内需・消費」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
 - **コモディティ・資源**: 流入しやすい
-  WTI原油が前日比+1.42%、金先物が前日比+0.38%ことから、「コモディティ・資源」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
+  WTI原油が前日比+1.42%、金先物が前日比+1.69%ことから、「コモディティ・資源」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
   関連テーマ: 資源
   関連セクター: 資源・エネルギー
   営業で話すポイント: 「コモディティ・資源」は市場シグナル上、物色されやすい局面とお伝えできます。
@@ -2180,8 +2180,8 @@ NYダウ下落
 | SOX指数（フィラデルフィア半導体指数） | 12,417.05 | -0.31% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^SOX) |
 | ドル指数（DXY） | 99.67 | -0.29% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 82.40 | +1.42% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
-| 金先物（ゴールド） | 4,380.40 | +0.38% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 63,049.18 | +0.12% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| 金先物（ゴールド） | 4,437.30 | +1.69% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
+| ビットコイン | 63,063.36 | +0.14% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2210,57 +2210,57 @@ NYダウ下落
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [Bybit adds Unitree, Moonshot AI to pre-IPO perpetuals lineup](https://cointelegraph.com/news/bybit-launches-unitree-pre-ipo-perpetual-as-crypto-platforms-push-into-private-markets?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
+### 3位 ★★★★★ [Can SpaceX Leap to the AI Frontier?](https://www.investing.com/news/stock-market-news/can-spacex-leap-to-the-ai-frontier-4861908)
+- 出典（事実）: Investing.com News
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 4位 ★★★★★ [Bybit adds Unitree, Moonshot AI to pre-IPO perpetuals lineup](https://cointelegraph.com/news/bybit-launches-unitree-pre-ipo-perpetual-as-crypto-platforms-push-into-private-markets?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - 出典（事実）: CoinTelegraph
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [Bond Traders Agonize Over AI Companies’ $70 Billion of Shadow Credit Backstops](https://www.bloomberg.com/news/articles/2026-08-15/bond-traders-agonize-over-ai-companies-70-billion-of-shadow-credit-backstops)
+### 5位 ★★★★★ [Bond Traders Agonize Over AI Companies’ $70 Billion of Shadow Credit Backstops](https://www.bloomberg.com/news/articles/2026-08-15/bond-traders-agonize-over-ai-companies-70-billion-of-shadow-credit-backstops)
 - 出典（事実）: Bloomberg Markets(見出し)
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 5位 ★★★★★ [Drone Swarms Push AI Deeper Into Modern Warfare](https://www.bloomberg.com/news/videos/2026-08-15/drone-swarms-push-ai-deeper-into-modern-warfare-video)
+### 6位 ★★★★★ [Drone Swarms Push AI Deeper Into Modern Warfare](https://www.bloomberg.com/news/videos/2026-08-15/drone-swarms-push-ai-deeper-into-modern-warfare-video)
 - 出典（事実）: Bloomberg Markets(見出し)
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 6位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
+### 7位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
 - 出典（事実）: Data Tank: BBC News — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの主要因クラスタ（複数記事が集まる重要イベント）に該当しています。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 7位 ★★★★★ [Popular EVP Lidio Soriano sells $523,515 in company stock](https://www.investing.com/news/insider-trading-news/popular-evp-lidio-soriano-sells-523515-in-company-stock-93CH-4861902)
+### 8位 ★★★★★ [Popular EVP Lidio Soriano sells $523,515 in company stock](https://www.investing.com/news/insider-trading-news/popular-evp-lidio-soriano-sells-523515-in-company-stock-93CH-4861902)
 - 出典（事実）: Investing.com News
 - 理由（AI分析）: テーマ「EV」に関連する、業種「自動車」に関連するため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 自動車
 - 営業トーク: 「「自動車」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 8位 ★★★★★ [米就業者 市場予想に反し減少 利上げ観測後退で円高ドル安進む](http://www3.nhk.or.jp/news/html/20260807/k10015199701000.html)
+### 9位 ★★★★★ [米就業者 市場予想に反し減少 利上げ観測後退で円高ドル安進む](http://www3.nhk.or.jp/news/html/20260807/k10015199701000.html)
 - 出典（事実）: NHKニュース 経済
 - 理由（AI分析）: テーマ「円高」に関連する、業種「金融」に関連する、「金融政策」の因果チェーンに該当するため、重要度が高いと判断しました。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 為替
 - 影響業種（AI分析）: 金融
 - 営業トーク: 「「金融」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 9位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
+### 10位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
 - 出典（事実）: Data Tank: CNBC — Markets
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 10位 ★★★★★ [OpenAI says AI models went rogue during testing, triggering 'unprecedented' breach at startup](https://channelnewsasia.com/business/openai-says-ai-models-went-rogue-during-testing-triggering-unprecedented-breach-startup-6269186)
-- 出典（事実）: Data Tank: Channel News Asia — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
@@ -2274,7 +2274,7 @@ NYダウ下落
 | VIX指数（恐怖指数） | 14.25 | 20 | 落ち着いた相場地合いが意識されやすい水準です。 |
 | 米10年国債利回り | 4.70 | 4.5 | 金利上昇が株式のバリュエーションの重荷として意識されやすい水準です。 |
 | WTI原油先物 | 82.40 | 80 | インフレ再燃への警戒が意識されやすい水準です。 |
-| 金先物（ゴールド） | 4,380.40 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
+| 金先物（ゴールド） | 4,437.30 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
 
 ---
 ## 14. テーマ分析　★★★★☆
@@ -2485,7 +2485,7 @@ NYダウ下落
 ### 第5位: Amazon（AMZN）　★★★☆☆
 直近値: 262.65 / 前日比: -2.48 (-0.94%)（事実）
 
-- **短期（AI分析）:** 前日比-2.48 (-0.94%)。 本日、個別の関連見出しは確認されませんでした。
+- **短期（AI分析）:** 前日比-2.48 (-0.94%)。 関連見出し: 「Rocket Lab, Amazon Win Space Force Contracts. SpaceX Closes Cursor Deal.」（Yahoo Finance US）
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
@@ -2597,7 +2597,7 @@ NYダウ下落
 直近値: 262.65 / 前日比: -2.48 (-0.94%)（事実）
 
 - **理由（AI分析）:** 前日比-2.48 (-0.94%)と値動きが大きく、本日の注目銘柄として選定しました。
-- **注目材料（AI分析）:** 個別の関連見出しは確認されていません（取得不可または該当なし）。
+- **注目材料（AI分析）:** 「Rocket Lab, Amazon Win Space Force Contracts. SpaceX Closes Cursor Deal.」（Yahoo Finance US）
 - **短期見通し（AI分析）:** 業種「情報通信・生成AI」の材料が拮抗しており、短期的には方向感を欠く展開も考えられます。
 
 ---
@@ -2632,7 +2632,7 @@ NYダウ下落
 | Microsoft（MSFT） | ★★★☆☆ | 「Microsoft has 3 secret weapons that could drive its stock 50% higher, analyst says」など関連ニュースあり。 |
 | NVIDIA（NVDA） | ★★★☆☆ | 前日比下落、個別の材料は確認されませんでした。 |
 | Tesla（TSLA） | ★★★☆☆ | 「I drove Tesla FSD, Rivian Autonomy+ ‘hands-free’ driving systems. Here’s how they compare」など関連ニュースあり。 |
-| Amazon（AMZN） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
+| Amazon（AMZN） | ★★★☆☆ | 「Rocket Lab, Amazon Win Space Force Contracts. SpaceX Closes Cursor Deal.」など関連ニュースあり。 |
 | Alphabet（GOOGL） | ★★★☆☆ | 「Berkshire adds $17 billion to Alphabet stake」など関連ニュースあり。 |
 | Meta Platforms（META） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Palantir（PLTR） | ★★★★★ | 業種「情報通信・生成AI」は強弱まちまちです。 |
@@ -2840,7 +2840,7 @@ NYダウ下落
 ### Amazon（AMZN）
 直近値: 262.65 / 前日比: -2.48 (-0.94%)（事実）
 
-- **今日の材料（AI分析）:** 前日比-2.48 (-0.94%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比-2.48 (-0.94%)。 関連見出し: 「Rocket Lab, Amazon Win Space Force Contracts. SpaceX Closes Cursor Deal.」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-29）
 - **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-29）
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2994,7 +2994,7 @@ NYダウ下落
 ### 今日の雑談（相場以外の公開ニュース）
 
 - 「お盆休み最終日 交通混雑がピーク」（Yahoo!ニュース トピックス）
-- 「千葉豪雨で露呈 都市型水害の課題」（Yahoo!ニュース トピックス）
+- 「米金融 新顔「ヨール街」に存在感」（Yahoo!ニュース トピックス）
 - 「首相異例の遥拝 保守層離反を警戒」（Yahoo!ニュース トピックス）
 
 ### 想定質問
@@ -3282,14 +3282,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/can-spacex-leap-to-the-ai-frontier-4861908)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/crocs-ceo-andrew-rees-sells-over-41m-in-stock-93CH-4861906)
+- [Investing.com News](https://www.investing.com/news/economy-news/chinese-refiner-hengli-accused-of-funding-iran-through-sanctioned-oil-purchases-4861903)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/popular-evp-lidio-soriano-sells-523515-in-company-stock-93CH-4861902)
 - [Investing.com News](https://www.investing.com/news/economy-news/fires-erupt-across-kyiv-after-russian-missile-strike-one-injured-4861901)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/everus-construction-vp-sanderson-sells-451077-in-company-stock-93CH-4861900)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/peter-thiel-buys-1-stake-in-argentinas-vista-energy-4861898)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/mckesson-director-bradley-lerman-sells-268589-in-shares-93CH-4861896)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/aehr-test-systems-vp-alistair-sporck-sells-108490-in-common-stock-93CH-4861895)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/just-13-of-us-largecap-stockpicking-funds-beat-benchmarks-over-decade-4861893)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/billionaire-peter-thiel-buys-1-stake-in-argentine-vaca-muerta-oil-firm-filing-shows-4861892)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-75-sec-charges-boiler-room-operator-three-entities-defrauding-retail-investors-74-million-pre-ipo)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-74-sec-charges-toms-river-trio-connection-alleged-47-million-fraud-targeting-orthodox-jewish)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-73-sec-charges-private-fund-adviser-adit-ventures-management-its-ceo-affiliated-general-partners)
@@ -3332,20 +3332,20 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/galaxy-lowers-clarity-act-odds-10?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/gen-z-favors-etfs-and-trades-less-than-older-cohorts-binance?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/sandisk-ceo-reveals-whats-next-013700105.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/weekly-wrap-bitcoin-treads-water-201500006.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/dear-reddit-stock-fans-mark-201127101.html)
-- [Yahoo Finance US](https://www.investors.com/news/technology/eton-stock-eton-pharmaceuticals-earnings-q2-2026/?src=A00220&yptr=yahoo)
-- [Yahoo Finance US](https://www.investors.com/news/technology/heartflow-stock-heartflow-earnings-q2-2026/?src=A00220&yptr=yahoo)
+- [Yahoo Finance US](https://finance.yahoo.com/real-estate/articles/creative-media-community-trust-corporation-205209063.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/digi-power-x-inc-q2-205051694.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/americas-gold-silver-corporation-q2-205047227.html)
+- [Yahoo Finance US](https://www.investors.com/news/space-force-sdn-contracts-rocket-lab-amazon-spacex-completes-cursor-deal/?src=A00220&yptr=yahoo)
 - [Yahoo Finance US](https://finance.yahoo.com/small-business/articles/53-old-lawn-garden-giant-153300199.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/article/wall-streets-riskiest-trades-are-suddenly-back-on-top-chart-of-the-day-100100027.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/us-regulator-approves-bank-charter-200528079.html)
+- [Yahoo Finance US](https://www.investors.com/news/reddit-stock-jumps-on-sp-500-news/?src=A00220&yptr=yahoo)
+- [Yahoo Finance US](https://www.investors.com/research/ibd-stock-of-the-day/sk-hynix-stock-forming-ipo-base/?src=A00220&yptr=yahoo)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591931?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591914?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591924?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591925?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591916?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591923?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591929?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591922?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591932?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591934?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6591933?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
