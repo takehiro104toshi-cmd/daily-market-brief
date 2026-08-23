@@ -40,8 +40,7 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気59%・普通11%・弱気30%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Nvidia customers reportedly warned about AI-related price hikes
-■注目テーマ3つ: AI／円高／利上げ…
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent…
 
 ---
 ## 1. 今日の結論　★★★★★
@@ -67,8 +66,8 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「Nvidia customers reportedly warned about AI-related price hikes」（CNBC Top News）　★★★★★
-- **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+### 3. 「Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent」（Yahoo Finance US）　★★★★★
+- **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Meta Platforms」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
 - **金利への影響（AI分析）:** 金利への直接的な影響は限定的とみられます。
@@ -97,7 +96,17 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. Nvidia customers reportedly warned about AI-related price hikes　★★★☆☆
+### 3. Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent　★★★☆☆
+- **ニュース:** 「Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent」（Yahoo Finance US）
+- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
+- **重要テーマ:** AI
+- **関連セクター:** 情報通信・生成AI
+- **恩恵銘柄:** 該当なし
+- **悪影響銘柄:** 該当なし
+- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
+- **重要度内訳（8軸）:** 市場インパクト3 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
+
+### 4. Nvidia customers reportedly warned about AI-related price hikes　★★★☆☆
 - **ニュース:** 「Nvidia customers reportedly warned about AI-related price hikes」（CNBC Top News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
@@ -107,18 +116,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. Nvidia customers notified about AI-related price hikes above 15%, Bloomberg News reports　★★★☆☆
+### 5. Nvidia customers notified about AI-related price hikes above 15%, Bloomberg News reports　★★★☆☆
 - **ニュース:** 「Nvidia customers notified about AI-related price hikes above 15%, Bloomberg News reports」（Investing.com News）
-- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
-- **重要テーマ:** AI
-- **関連セクター:** 情報通信・生成AI
-- **恩恵銘柄:** 該当なし
-- **悪影響銘柄:** 該当なし
-- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
-- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
-
-### 5. Juicy Yields Draw Junk Bond Buyers to Investment-Grade AI Debt　★★★☆☆
-- **ニュース:** 「Juicy Yields Draw Junk Bond Buyers to Investment-Grade AI Debt」（Bloomberg Markets(見出し)）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -2179,7 +2178,7 @@ NYダウ上昇
 | ドル指数（DXY） | 98.80 | -0.10% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 87.06 | -0.88% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,624.10 | +2.39% | ★★★ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 77,175.47 | -1.48% | ★★☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 76,999.73 | -1.70% | ★★☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2208,56 +2207,56 @@ NYダウ上昇
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [Nvidia customers reportedly warned about AI-related price hikes](https://www.cnbc.com/2026/08/22/nvidia-customers-reportedly-warned-about-ai-related-price-hikes-.html)
+### 3位 ★★★★★ [Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent](https://finance.yahoo.com/technology/ai/articles/meta-platforms-meta-undercuts-anthropic-201309099.html)
+- 出典（事実）: Yahoo Finance US
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Meta Platforms」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 4位 ★★★★★ [Nvidia customers reportedly warned about AI-related price hikes](https://www.cnbc.com/2026/08/22/nvidia-customers-reportedly-warned-about-ai-related-price-hikes-.html)
 - 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [Nvidia customers notified about AI-related price hikes above 15%, Bloomberg News reports](https://www.investing.com/news/stock-market-news/nvidia-customers-notified-about-airelated-price-hikes-above-15-bloomberg-news-reports-4872385)
+### 5位 ★★★★★ [Nvidia customers notified about AI-related price hikes above 15%, Bloomberg News reports](https://www.investing.com/news/stock-market-news/nvidia-customers-notified-about-airelated-price-hikes-above-15-bloomberg-news-reports-4872385)
 - 出典（事実）: Investing.com News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 5位 ★★★★★ [Juicy Yields Draw Junk Bond Buyers to Investment-Grade AI Debt](https://www.bloomberg.com/news/articles/2026-08-22/juicy-yields-draw-junk-bond-buyers-to-investment-grade-ai-debt)
+### 6位 ★★★★★ [Juicy Yields Draw Junk Bond Buyers to Investment-Grade AI Debt](https://www.bloomberg.com/news/articles/2026-08-22/juicy-yields-draw-junk-bond-buyers-to-investment-grade-ai-debt)
 - 出典（事実）: Bloomberg Markets(見出し)
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 6位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
+### 7位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
 - 出典（事実）: Data Tank: BBC News — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの主要因クラスタ（複数記事が集まる重要イベント）に該当しています。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 7位 ★★★★★ [米就業者 市場予想に反し減少 利上げ観測後退で円高ドル安進む](http://www3.nhk.or.jp/news/html/20260807/k10015199701000.html)
+### 8位 ★★★★★ [米就業者 市場予想に反し減少 利上げ観測後退で円高ドル安進む](http://www3.nhk.or.jp/news/html/20260807/k10015199701000.html)
 - 出典（事実）: NHKニュース 経済
 - 理由（AI分析）: テーマ「円高」に関連する、業種「金融」に関連する、「金融政策」の因果チェーンに該当するため、重要度が高いと判断しました。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 為替
 - 影響業種（AI分析）: 金融
 - 営業トーク: 「「金融」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 8位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
+### 9位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
 - 出典（事実）: Data Tank: CNBC — Markets
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 9位 ★★★★★ [OpenAI says AI models went rogue during testing, triggering 'unprecedented' breach at startup](https://channelnewsasia.com/business/openai-says-ai-models-went-rogue-during-testing-triggering-unprecedented-breach-startup-6269186)
-- 出典（事実）: Data Tank: Channel News Asia — Business
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 10位 ★★★★★ [Can AI replace Expedia? Its CEO says travel is more complicated than that](https://channelnewsasia.com/experiences/expedia-ceo-ai-travel-booking-ariane-gorin-6265106)
+### 10位 ★★★★★ [OpenAI says AI models went rogue during testing, triggering 'unprecedented' breach at startup](https://channelnewsasia.com/business/openai-says-ai-models-went-rogue-during-testing-triggering-unprecedented-breach-startup-6269186)
 - 出典（事実）: Data Tank: Channel News Asia — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
@@ -2481,7 +2480,7 @@ NYダウ上昇
 ### 第9位: Meta Platforms（META）　★★★☆☆
 直近値: 549.90 / 前日比: +4.07 (+0.75%)（事実）
 
-- **短期（AI分析）:** 前日比+4.07 (+0.75%)。 本日、個別の関連見出しは確認されませんでした。
+- **短期（AI分析）:** 前日比+4.07 (+0.75%)。 関連見出し: 「Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent」（Yahoo Finance US）
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
@@ -2602,7 +2601,7 @@ NYダウ上昇
 | Tesla（TSLA） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
 | Amazon（AMZN） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Alphabet（GOOGL） | ★★★★☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
-| Meta Platforms（META） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
+| Meta Platforms（META） | ★★★☆☆ | 「Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent」など関連ニュースあり。 |
 | Palantir（PLTR） | ★★★★★ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Arm Holdings（ARM） | ★★★★★ | 前日比下落、個別の材料は確認されませんでした。 |
 | TSMC（TSM） | ★★★☆☆ | 前日比上昇、個別の材料は確認されませんでした。 |
@@ -2826,7 +2825,7 @@ NYダウ上昇
 ### Meta Platforms（META）
 直近値: 549.90 / 前日比: +4.07 (+0.75%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+4.07 (+0.75%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比+4.07 (+0.75%)。 関連見出し: 「Meta Platforms (META) Undercuts Anthropic and OpenAI on Price With New Coding Agent」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-28）
 - **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-28）
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2961,9 +2960,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
+- 「文科省 来年度科研費を倍増要求へ」（Yahoo!ニュース トピックス）
 - 「ウ側に協力 特殊作戦担うロシア人」（Yahoo!ニュース トピックス）
-- 「4人死亡事故 東武建設を家宅捜索」（Yahoo!ニュース トピックス）
-- 「発火相次ぐ「モバ充」規制強化へ」（Yahoo!ニュース トピックス）
+- 「市の食料配布に4万人 動く自治体」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3201,14 +3200,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-23/new-zealand-labour-opposition-vows-to-restore-rbnz-dual-mandate)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-23/malaysia-rules-out-1-9-billion-takeover-of-passport-supplier)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-23/korean-traders-chase-40-coupons-as-risk-appetite-survives-rout)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-22/bloomberg-previews-jackson-hole-symposium-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-08-22/juicy-yields-draw-junk-bond-buyers-to-investment-grade-ai-debt)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-22/bloomberg-this-weekend-8-22-2026-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-22/pointed-bloomberg-s-weekly-news-quiz-for-risk-takers-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-22/us-colleges-face-a-shrinking-student-pipeline-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-22/sanctions-target-iran-s-weakened-regional-network-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-08-22/small-dogs-big-demand-as-dachshund-popularity-takes-off-video)
 - [CNBC Top News](https://www.cnbc.com/2026/08/22/coca-cola-innovation-labs-dirty-sodas-refreshers.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/22/us-canada-trade-talks-collapse-ushering-in-wave-of-new-tariffs.html)
 - [CNBC Top News](https://www.cnbc.com/2026/08/22/trump-reshuffled-his-portfolio-in-june-selling-names-like-meta-and-buying-berkshire-hathaway.html)
@@ -3249,6 +3248,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/commodities-news/iran-condemns-us-plans-to-announce-new-sanctions-4872376)
 - [Investing.com News](https://www.investing.com/news/economic-indicators/germanys-merz-to-press-cabinet-for-faster-progrowth-reforms-4872393)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/russia-stocks-lower-at-close-of-trade-moex-russia-index-unchanged-4872390)
 - [Investing.com News](https://www.investing.com/news/economy-news/us-iran-trade-warnings-as-new-sanctions-loom-and-hormuz-oil-flows-stall-4872251)
@@ -3256,7 +3256,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Investing.com News](https://www.investing.com/news/stock-market-news/canadas-unifor-union-gm-reach-tentative-agreements-4872388)
 - [Investing.com News](https://www.investing.com/news/forex-news/will-bessents-intervention-mark-a-turning-point-for-the-yen-4872387)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/nvidia-customers-notified-about-airelated-price-hikes-above-15-bloomberg-news-reports-4872385)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/paramount-and-california-to-hold-preliminary-talks-on-warner-bros-deal-nyt-reports-4872384)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-77-sec-charges-former-executives-fraud-connection-19-billion-collapse-subprime-auto-lender-tricolor)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-76-sec-proposes-new-regulation-crypto-assets)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-75-sec-charges-boiler-room-operator-three-entities-defrauding-retail-investors-74-million-pre-ipo)
@@ -3298,20 +3297,20 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-seeks-support-near-77k-btc-gold-100-day-highs?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/paul-ryan-foundation-digital-asset-plan-blockchain-based-benefits-pilot-on-canton?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-rally-crypto-stocks-canaan-strive-metaplanet?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
+- [Yahoo Finance US](https://finance.yahoo.com/small-business/articles/iconic-fast-food-fried-chicken-184700958.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/whale-rock-just-dumped-most-201854875.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/sec-charges-former-bank-america-202413058.html)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/meta-platforms-meta-undercuts-anthropic-201309099.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/e-l-f-beauty-elf-202928491.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/bill-gates-pulls-818m-berkshire-030700591.html)
-- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/bristol-myers-squibb-bmy-bets-192802764.html)
-- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/meet-petra-ai-runs-pe-192622263.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/article/bond-yields-head-higher-again-giving-back-almost-all-gains-since-treasury-department-intervention-165921301.html)
-- [Yahoo Finance US](https://finance.yahoo.com/energy/articles/conocophillips-cop-beats-earnings-names-193428889.html)
-- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/costco-makes-key-move-expand-161700061.html)
-- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/tgtx-stock-alert-know-takeover-193547123.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/currencies/articles/dollar-ends-little-changed-stocks-193443329.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/live/stock-market-today-friday-august-21-dow-sp-500-nasdaq-bitcoin-080533702.html)
+- [Yahoo Finance US](https://www.investors.com/news/technology/impinj-stock-tracking-chip-maker-revolutionize-logistics/?src=A00220&yptr=yahoo)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592747?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592729?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592737?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592731?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592740?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592734?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592735?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592739?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592755?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592754?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592750?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592732?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6592748?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
