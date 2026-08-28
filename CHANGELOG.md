@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.7 (2026-08-28) — Phase 0: Compass DNA解析（Investment Intelligence OS）
+
+Investment Intelligence OS計画のPhase 0として、`date/rashinban/` の
+「グローバル投資の羅針盤」10冊（2026/06/18〜07/01・55ページ）を全ページ解析し、
+紙面構造・データ分類・分析ルール・テーマ展開・FACT/ANALYSIS/FORECAST分離規約を
+リバースエンジニアリングした（ドキュメントのみの追加。既存コード・設定・CIは無変更）。
+
+### 追加
+
+- `docs/compass_dna/COMPASS_DNA_SPEC_v1.md`（新規）: 統合仕様17セクション。
+- `docs/compass_dna/MARKET_DATA_TAXONOMY.md`（新規）: CORE/SUPPORT/CONTEXTデータ分類。
+- `docs/compass_dna/ANALYSIS_RULE_CATALOG.md`（新規）: 分析ルールカタログ
+  （confidence: CONFIRMED/LIKELY/HYPOTHESIS、出典日付・ページ付き）。
+- `docs/compass_dna/THEME_DISCOVERY_RULES.md`（新規）: テーマ発火点7類型・展開手順・産業連鎖マップ。
+- `docs/compass_dna/REPORT_STRUCTURE_SPEC.md`（新規）: 紙面構造・曜日ローテーション仕様。
+- `docs/compass_dna/FACT_ANALYSIS_FORECAST_SPEC.md`（新規）: 三分類の言語仕様とEvidence Engine要件。
+- `docs/compass_dna/PHASE0_FINDINGS.md`（新規）: 主要発見10件・欠落ソース報告・Phase 1への示唆。
+- `docs/compass_dna/analysis_rules/market_rules.yaml`（新規）: ルールの機械可読サンプル（schema v0.1）。
+
 ## v4.6 (2026-07-20) — Rashinban Private Insight Vault（private記事の転送・入力UI・Future Outlook）
 
 レポート画面から気になった記事本文を貼り付けてData Tankの非公開領域へ転送し、
