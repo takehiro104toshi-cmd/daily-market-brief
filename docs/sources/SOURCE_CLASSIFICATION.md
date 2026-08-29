@@ -41,6 +41,11 @@
 
 ### CORE（7）＝日次ブリーフの必須ソース
 
+> **ADDENDUM（P1-C live validation 2026-08-29）**: 実測によりmof_whatsnew・jp_stat_releaseは
+> 404 DEADと確定しDISABLEへ変更（CORE∧DEAD禁止則）。現行COREは5本: fed_press /
+> boj_whatsnew / dmb_ecb_press / bls_latest / us_treasury（カタログv3.0.1が正。
+> 詳細: docs/ingestion/LIVE_VALIDATION_REPORT.md）。以下はP1-B時点の記録。
+
 | id | tier | 現在状態 | 備考 |
 |---|---|---|---|
 | fed_press | 1 | degraded | UA疑い。P1-Cで適正UA接続を最優先検証 |

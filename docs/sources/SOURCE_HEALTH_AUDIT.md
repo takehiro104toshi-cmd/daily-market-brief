@@ -1,5 +1,13 @@
 # SOURCE_HEALTH_AUDIT — 全86ソース死活監査（Phase 1-B / 2026-08-29）
 
+> **ADDENDUM（P1-C live validation 2026-08-29）**: 本文書のprovisional判定のうち13ソースを
+> GitHub Actions runnerからの実測で更新した（カタログv3.0.1・method=live_http）。
+> 主な変更: boj_whatsnew/theverge→HEALTHY実証、dmb_boj_whatsnew/mof_whatsnew/
+> jp_mof_press/jp_stat_release/uk_gov→404でDEAD確定、fed_press→本体稼働確定
+> （Legacy失敗はクライアント条件）。集計は healthy20/degraded1/auth2/dead8/unverified55、
+> CORE 7→5。詳細: `docs/ingestion/LIVE_VALIDATION_REPORT.md`。
+> 以下の本文はP1-B時点の監査記録として保存する（歴史を上書きしない）。
+
 対象: `knowledge/source_reliability/source_feeds.yaml` v3.0.0 の86ソース。
 方針: **実測evidenceのみで判定し、推測でhealthyを名乗らない**。カウントは全て実測。
 

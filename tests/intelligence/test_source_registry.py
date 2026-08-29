@@ -54,7 +54,7 @@ def feeds(catalog: dict) -> list[dict]:
 
 
 def test_version_and_size(catalog: dict, feeds: list[dict]) -> None:
-    assert catalog["version"] == "3.0.0"
+    assert catalog["version"].startswith("3.0.")  # 3.0.1=P1-C live実測反映
     assert len(feeds) == 86, "v2の86ソースを欠落なく引き継ぐ"
 
 
@@ -98,9 +98,10 @@ def test_historical_evidence_never_justifies_current_health(feeds: list[dict]) -
             if ch["method"] == "legacy_ci_report":
                 rc = f.get("recent_ci")
                 assert rc and rc["days_failed"] == 0, f"{f['id']}: CI実測の裏付けが必要"
-        # tank実績が豊富でも、currentなevidenceが無ければhealthyを名乗らない
+        # tank実績が豊富でも、currentなevidence（live実測/CI実測）が無ければ
+        # healthy等の現在判定を名乗らない
         observed = (f["historical"].get("articles_observed") or {}).get("count", 0)
-        if observed > 0 and "recent_ci" not in f:
+        if observed > 0 and "recent_ci" not in f and ch["method"] != "live_http":
             assert ch["state"] in ("unverified", "auth_required"), (
                 f"{f['id']}: tank実績のみでcurrent state={ch['state']} は不可"
             )

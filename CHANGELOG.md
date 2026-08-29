@@ -33,7 +33,20 @@
   fetcher 13/url_normalize 5/date_quality 5/dedup 4/live_validation 4）。
   すべて注入transportによる完全オフライン。
 - `docs/ingestion/`: RAW_INGESTION_ARCHITECTURE / FETCHER_CONTRACT /
-  RAW_STORAGE_SPEC / PARSER_ADAPTER_SPEC。
+  RAW_STORAGE_SPEC / PARSER_ADAPTER_SPEC / LIVE_VALIDATION_REPORT。
+
+### 改善
+
+- **最小live validation実施**（GitHub Actions runner・監督者承認gates・計14リクエスト・
+  Secrets不使用）: CORE実接続確認 boj_whatsnew/dmb_ecb_press=HEALTHY、theverge=Atom実証、
+  fed_press=本体稼働確定（Legacy CI失敗はクライアント条件=UAと確定）。
+- `source_feeds.yaml` **v3.0.1**: live実測13ソースのcurrent_healthを更新
+  （healthy 20/degraded 1/dead 8/unverified 55/auth 2、CORE 7→5）。歴史レイヤー不変。
+
+### 修正
+
+- live実測によるDEAD確定5件を反映: dmb_boj_whatsnew・mof_whatsnew・jp_mof_press
+  （**MOF公式RSS全滅＝一次情報空白**）・jp_stat_release・uk_gov（各replacement明示）。
 
 ## v4.14 (2026-08-29) — Phase 1-B: Source Registry & Health Audit
 

@@ -6,7 +6,7 @@
 # 別レイヤーで保持し、混同しない。過去に取れていたことは現在取れることを意味しない。
 # current_healthは観測evidenceからの導出値（正）。Secret値・認証情報は一切記載しない。
 id: source_reliability.source_feeds
-version: 3.0.0
+version: 3.0.1
 description: '自動取得対象フィードのCanonicalカタログ（86ソース）。Phase 1-B Source Registry & Health Auditで再構成: endpoint（取得口）/historical（tank実績）/recent_ci（Legacy
   CI実測）/current_health（現在死活の導出結果）/investment_value/role/duplicate_groupを分離保持'
 source: v2.0.0（tank config/sources.yaml＋data/article_store実測＋dmb collectors）を基礎に、Legacy CI日次レポート実測（output/2026-08-16..29のデータ品質カード）とsrc/collectors・config.yamlのURL突合で現在死活を判定
@@ -14,8 +14,8 @@ status: active
 evidence_layers:
   historical: tank記事ストア実測（観測窓 2026-06-22..2026-07-22）。過去実績であり現在正常の証明ではない
   recent_ci: Legacy日次レポートのデータ品質カード実測（2026-08-16..2026-08-29、14日分）。URL一致でカタログidへ対応付け
-  live_check: 2026-08-29時点、開発環境のegress遮断（proxy 403）によりlive HTTPチェックは実行不能。src/intelligence/sources/health_check.py
-    をネットワークのある環境で実行して補完する
+  live_check: P1-C live validation（GitHub Actions runner・2026-08-29・run1=11ソース/run2=3ソース・1ソース1リクエスト）。method=live_httpの
+    current_health はこの実測。残るソースは開発環境egress遮断のため未検証のまま
 vocabulary:
   current_health.state:
   - healthy
@@ -91,9 +91,9 @@ feeds:
       window: 2026-06-22..2026-07-22
   current_health:
     state: degraded
-    method: legacy_ci_report
+    method: live_http
     checked_at: '2026-08-29'
-    note: Legacy CI 14/14日取得失敗。tankは適正UAで2026-06〜07に14記事取得実績→クライアント条件（UA等）ブロック疑い。フィード自体の死活は本環境から未確認
+    note: 'live check 2026-08-29: HTTP200・RSS2・20件パース成功（フィード本体は稼働。Legacy CI 14/14失敗はクライアント条件=UA等と確定）。サンプル内で日付タグ未確認のため鮮度未確定→healthy昇格はしない'
   investment_value: MARKET_CRITICAL
   role: CORE
   recent_ci:
@@ -124,10 +124,10 @@ feeds:
       count: 36
       window: 2026-06-22..2026-07-22
   current_health:
-    state: unverified
-    method: live_check_blocked
+    state: healthy
+    method: live_http
     checked_at: '2026-08-29'
-    note: 現在未検証（開発環境egress遮断でlive check不能）。P1-C初回接続で最優先検証
+    note: 'live check 2026-08-29: HTTP200・RSS2・47件パース・最新2026-08-28（CORE実接続確認済み）'
   investment_value: MARKET_CRITICAL
   role: CORE
   duplicate_group: boj
@@ -243,12 +243,13 @@ feeds:
     tank_verification: unverified
     tank_enabled: false
   current_health:
-    state: unverified
-    method: live_check_blocked
+    state: dead
+    method: live_http
     checked_at: '2026-08-29'
-    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+    note: 'live check 2026-08-29: HTTP404（announcements.atom提供終了。gov.ukフィード構成変更）。新URL調査までの暫定代替は二次報道（guardian_business）'
   investment_value: HIGH
-  role: SUPPORT
+  role: DISABLE
+  replacement_source: guardian_business
 - id: us_treasury
   name: U.S. Department of the Treasury — Press
   lang: en
@@ -271,9 +272,9 @@ feeds:
     tank_enabled: false
   current_health:
     state: unverified
-    method: live_check_blocked
+    method: live_http
     checked_at: '2026-08-29'
-    note: 現在未検証（開発環境egress遮断でlive check不能）。P1-C初回接続で最優先検証
+    note: 'live check 2026-08-29: 2回の実行とも全attempt timeout（bot防御疑い）。endpoint実体・format未確定のまま。P1-D以降にUA/経路調整のうえ再検証'
   investment_value: MARKET_CRITICAL
   role: CORE
 - id: un_news
@@ -786,10 +787,10 @@ feeds:
       count: 59
       window: 2026-06-22..2026-07-22
   current_health:
-    state: unverified
-    method: live_check_blocked
+    state: healthy
+    method: live_http
     checked_at: '2026-08-29'
-    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+    note: 'live check 2026-08-29: HTTP200・Atom・10件パース・最新2026-08-29（Atom形式のlive実証）'
   investment_value: MEDIUM
   role: CONTEXT
 - id: reuters_business
@@ -1616,12 +1617,13 @@ feeds:
     tank_verification: unverified
     tank_enabled: false
   current_health:
-    state: unverified
-    method: live_check_blocked
+    state: dead
+    method: live_http
     checked_at: '2026-08-29'
-    note: 現在未検証（開発環境egress遮断でlive check不能）。P1-C初回接続で最優先検証
+    note: 'live check 2026-08-29: HTTP404（stat.go.jp/rss/index.rdf提供終了と確定）。JP公式統計の代替経路はestat_macro（APIキー設定後）'
   investment_value: MARKET_CRITICAL
-  role: CORE
+  role: DISABLE
+  replacement_source: estat_macro
 - id: jp_cao_new
   name: 内閣府 — 新着情報
   lang: ja
@@ -1670,14 +1672,14 @@ feeds:
     tank_verification: unverified
     tank_enabled: false
   current_health:
-    state: unverified
-    method: live_check_blocked
+    state: dead
+    method: live_http
     checked_at: '2026-08-29'
-    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+    note: 'live check 2026-08-29: HTTP404（new.xml提供終了と確定）。MOF公式RSS全滅の一部。暫定代替は二次報道（nhk_business）'
   investment_value: MARKET_CRITICAL
   role: DISABLE
   duplicate_group: mof
-  replacement_source: mof_whatsnew
+  replacement_source: nhk_business
 - id: jp_mlit_news
   name: 国土交通省 — 報道発表
   lang: ja
@@ -2096,7 +2098,7 @@ feeds:
     state: auth_required
     method: static_analysis
     checked_at: '2026-08-29'
-    note: EDINET API v2はSubscription-Keyパラメータ必須（キー未設定。Secret値は本カタログに保持しない）
+    note: 'EDINET API v2はSubscription-Keyパラメータ必須（キー未設定。Secret値は保持しない）。live check 2026-08-29: APIホスト到達確認（パラメータ無しGETは404仕様。認証挙動自体は未実証）'
   investment_value: HIGH
   role: SUPPORT
 - id: estat_macro
@@ -2203,9 +2205,9 @@ feeds:
     tank_enabled: true
   current_health:
     state: healthy
-    method: legacy_ci_report
+    method: live_http
     checked_at: '2026-08-29'
-    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+    note: 'Legacy CI 14/14日配信＋live check 2026-08-29: HTTP200・RSS2・86件パース（二重に実証）'
   investment_value: HIGH
   role: SUPPORT
   recent_ci:
@@ -2431,10 +2433,10 @@ feeds:
     tank_verification: unverified
     tank_enabled: true
   current_health:
-    state: degraded
-    method: legacy_ci_report
+    state: dead
+    method: live_http
     checked_at: '2026-08-29'
-    note: 'Legacy CI 14/14日取得失敗。原因候補: RDF形式（Legacyパーサー非対応疑い）またはクライアント条件。EN側boj_whatsnewはtank実績36記事'
+    note: 'live check 2026-08-29: HTTP404（whatsnew.rdf提供終了と確定。P1-B DEGRADED判定を実測で更新）。EN版boj_whatsnewが稼働中'
   investment_value: MARKET_CRITICAL
   role: DISABLE
   recent_ci:
@@ -2461,17 +2463,18 @@ feeds:
     tank_verification: unverified
     tank_enabled: true
   current_health:
-    state: degraded
-    method: legacy_ci_report
+    state: dead
+    method: live_http
     checked_at: '2026-08-29'
-    note: 'Legacy CI 14/14日取得失敗。原因候補: RDF形式またはクライアント条件。フィード自体の死活は本環境から未確認'
+    note: 'live check 2026-08-29: HTTP404（whatsnew.rdf提供終了と確定）。jp_mof_press(new.xml)も同日404でMOF公式RSSは全滅→一次情報の空白。新URL調査までの暫定代替は二次報道（nhk_business）'
   investment_value: MARKET_CRITICAL
-  role: CORE
+  role: DISABLE
   recent_ci:
     window: 2026-08-16..2026-08-29
     days_observed: 14
     days_failed: 14
   duplicate_group: mof
+  replacement_source: nhk_business
 - id: dmb_ecb_press
   name: ECB Press Releases
   lang: en
@@ -2491,9 +2494,9 @@ feeds:
     tank_enabled: true
   current_health:
     state: healthy
-    method: legacy_ci_report
+    method: live_http
     checked_at: '2026-08-29'
-    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+    note: 'live check 2026-08-29: HTTP200・RSS2・15件パース・最新2026-08-28（CORE実接続確認済み）'
   investment_value: MARKET_CRITICAL
   role: CORE
   recent_ci:
@@ -2522,7 +2525,8 @@ feeds:
     state: healthy
     method: legacy_ci_report
     checked_at: '2026-08-29'
-    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+    note: Legacy CI 14/14日配信（2026-08-16..29）で現在も稼働＝healthyの根拠。ただしlive check 2026-08-29はvNext汎用UAに403（bls.govはUA条件あり。P1-C
+      fetcherのUA調整が必要）
   investment_value: MARKET_CRITICAL
   role: CORE
   recent_ci:
