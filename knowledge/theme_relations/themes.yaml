@@ -2,9 +2,9 @@
 # keywords はニュース見出しの判定キーワード（旧Future Intelligence Engineの判定仕様を踏襲）。
 
 id: theme_relations.themes
-version: "1.0.0"
-description: "投資テーマの定義（label＋判定キーワード）と、長期継続テーマ（durable）の一覧"
-source: "config.yaml `macro_themes` および `durable_themes` より移設"
+version: "1.1.0"
+description: "投資テーマの定義（label＋判定キーワード）、長期継続テーマ、tank英語スラッグとの対応表"
+source: "config.yaml `macro_themes`/`durable_themes` より移設。en_aliasesはarticle-intelligence-data-tankの実測テーマ語彙45種（2026-06-22..07-22の記事3,056件）との突合で作成（Stage 1.5）"
 status: active
 
 themes:
@@ -37,6 +37,60 @@ themes:
   - { label: "消費", keywords: ["消費", "個人消費"] }
   - { label: "人材", keywords: ["人材", "人材紹介", "採用市場"] }
   - { label: "広告", keywords: ["広告", "広告収益"] }
+
+# tank記事コーパスの英語テーマスラッグ → 本ファイルのlabel（またはtheme_graphの
+# supplementary_nodes）への対応表。曖昧なものは対応付けず unmapped_tank_slugs に残す
+# （捏造マッピングをしない）。コモディティ系は暫定的に「資源」へ粗く集約（note参照）。
+en_aliases:
+  ai: "AI"
+  semiconductor: "半導体"
+  defense: "防衛"
+  fx: "為替"
+  electric_power: "電力"
+  logistics: "物流"
+  shipping: "物流"
+  auto: "自動車"
+  banking: "金融"
+  insurance: "金融"
+  monetary_policy: "金利"
+  rates: "金利"
+  biotech: "バイオ"
+  cyber: "サイバーセキュリティ"
+  consumption: "消費"
+  retail: "消費"
+  food: "食料"
+  healthcare: "医療"
+  space: "宇宙"
+  rare_earth: "資源"
+  oil: "資源"          # 粗い集約: エネルギー・コモディティの細分はPhase 6で再設計
+  natural_gas: "資源"
+  gold: "資源"
+  copper: "資源"
+  real_estate: "住宅"   # theme_graph supplementary_nodes の「住宅」
+
+# 対応先が無い（現行テーマ体系の語彙ギャップ）tankスラッグ。Phase 6でテーマ新設を検討
+# （特に地政学・通商/関税・インフレ・M&A・決算はCompass DNAでも頻出領域）
+unmapped_tank_slugs:
+  - chemicals
+  - diplomacy_war
+  - earnings
+  - elections
+  - employment
+  - gdp
+  - geopolitics
+  - inflation
+  - infrastructure
+  - materials
+  - mna
+  - north_korea
+  - regulation
+  - sanctions
+  - software
+  - taiwan
+  - tariffs
+  - ukraine
+  - us_china
+  - us_iran_middle_east
 
 # 長期継続テーマ（ニュース評価で継続性ボーナスの対象になるテーマ）
 durable_themes:

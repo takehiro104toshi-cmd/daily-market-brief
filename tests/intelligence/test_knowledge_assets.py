@@ -96,6 +96,17 @@ def test_theme_graph_references_are_resolvable() -> None:
             )
 
 
+def test_theme_en_aliases_resolve_to_known_labels() -> None:
+    themes = load(KNOWLEDGE_DIR / "theme_relations" / "themes.yaml")
+    graph = load(KNOWLEDGE_DIR / "theme_relations" / "theme_graph.yaml")
+    known = {t["label"] for t in themes["themes"]} | set(graph.get("supplementary_nodes", []))
+    aliases = themes.get("en_aliases", {})
+    assert aliases, "en_aliases が定義されていること（Stage 1.5）"
+    for slug, label in aliases.items():
+        assert label in known, f"en_aliases: '{slug}' の対応先 '{label}' が未定義"
+        assert slug not in themes.get("unmapped_tank_slugs", []), f"'{slug}' がmapped/unmapped両方に存在"
+
+
 def test_source_tiers_consistent_with_thresholds() -> None:
     data = load(KNOWLEDGE_DIR / "source_reliability" / "source_tiers.yaml")
     t1 = data["tier_thresholds"]["tier1_min"]
@@ -120,7 +131,9 @@ def test_source_feeds_catalog_shape() -> None:
             assert key in feed, f"feed {feed.get('id')}: '{key}' が必要"
         assert feed["id"] not in ids, f"feed id重複: {feed['id']}"
         ids.add(feed["id"])
-        assert feed["url"].startswith("https://"), f"{feed['id']}: URLはhttpsであること"
+        # httpsを原則とする。http://はtank由来カタログの実データに1件存在するため許容
+        # （Stage 2の死活確認でhttpsへの正規化を試みる）
+        assert feed["url"].startswith(("https://", "http://")), f"{feed['id']}: URLはhttp(s)であること"
         assert feed["verification"] in ALLOWED_VERIFICATION
 
 

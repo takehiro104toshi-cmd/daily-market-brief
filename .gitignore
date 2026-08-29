@@ -14,3 +14,9 @@ pages-site/
 # vNext（Investment Intelligence OS）の実行時生成データはgit管理しない方針
 # （docs/rebuild/STAGE1_VNEXT_FOUNDATION.md §7。Legacyのdata/配下既存パスには影響しない）
 data/vnext/
+
+# 研究用の社外秘資料はpublicリポジトリへコミットしない（README除く）
+research/source_docs/*
+!research/source_docs/compass
+research/source_docs/compass/*
+!research/source_docs/compass/README.md

@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.10 (2026-08-29) — Rebuild Stage 1.5: 2旧プロジェクト横断監査と選択的移行
+
+article-intelligence-data-tank（GitHub public・READ ONLYクローン）とdaily-market-briefを
+横断監査し、資産の取捨選択（REUSE/MIGRATE/REWRITE/REFERENCE_ONLY/ARCHIVE/DISCARD）を確定。
+安全な知識資産のみvNextへ移行した。Legacy本番・tankリポジトリはともに無変更。
+
+### 追加
+
+- `docs/rebuild/CROSS_REPO_ASSET_AUDIT.md`（新規）: tank全26モジュール監査
+  （記事モデル約70フィールド・feed_parser優位・**CLI起動不能バグで5週間停止中**等の
+  重大所見T1-T7）、dmbとの重複能力比較とCanonical決定、セキュリティ所見。
+- `docs/rebuild/ASSET_SELECTION_MATRIX.md`（新規）: 約70資産群の横断分類。
+  Phase 1-2コード母体=tank系、市場データ/スケジューラ/配信=dmb系、知識正本=knowledge/。
+- `docs/rebuild/HISTORICAL_DATA_INVENTORY.md`（新規）: 過去データ全実測
+  （tank記事3,056件 2026-06-22..07-22、dmbレポート59日分、journal 5件、theme_learning 0件等）。
+- `docs/rebuild/VNEXT_RECONCILIATION.md`（新規）: Stage 1基盤のKEEP/CHANGE/ADD/
+  REMOVE_LATER再評価。core契約・パッケージ構成はKEEP確定。
+- `docs/rebuild/RASHINBAN_INVENTORY.md`（新規）: 羅針盤PDFのファイルシステム実測棚卸し
+  （6月9冊＋7月1冊=10冊・全てpublicリポジトリにtracked、**8月分0冊**→Phase 0.5継続BLOCKED。
+  public露出の解消は要承認事項として整理）。
+- `research/source_docs/compass/README.md`（新規）: 8月PDFの安全な受け渡し手順
+  （PDF本体は.gitignoreで保護しコミット不能に）。
+
+### 改善
+
+- `knowledge/source_reliability/source_feeds.yaml` v2.0.0: tank `config/sources.yaml`
+  （70ソース・source_class/country/trust_score等）を正として統合、dmb固有16件を追加
+  （計86件）。tank記事ストア実測により**42ソースをverified化**（観測記事数付き）。
+- `knowledge/theme_relations/themes.yaml` v1.1.0: tankテーマ語彙45スラッグとの対応表
+  （en_aliases 25件・unmapped 20件）を追加。
+- `tests/intelligence/`: en_aliases整合テスト追加・URL検査をhttp(s)許容へ（35→36件）。
+- `.gitignore`: `research/source_docs/` 配下を保護（README除く）。
+
 ## v4.9 (2026-08-29) — Rebuild Stage 1: vNext骨格＋知識移設（Investment Intelligence OS）
 
 監督承認（LEGACY_AUDIT_APPROVED / GREENFIELD_REBUILD_AUTHORIZED）を受け、
