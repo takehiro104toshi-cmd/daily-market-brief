@@ -22,11 +22,15 @@ Phase順序は現行ロードマップを維持する（変更しない）。順
 - [x] P1-1 (M) スキーマ確定 — **P1-Aとして完了（2026-08-29）**: Source/RawItem/SourceDocument/
       Observation/Fact・Analysis・ForecastStatement/ForecastMetadata/EvidenceLink（schema 0.2.0、
       dataclass＋JSONL。docs/evidence/ 4文書参照。Stage 1のEvidenceRecord案は本設計で置換）
-- [ ] P1-2 (M) `sources/base.py`: fetcher基盤（UA・timeout・retry・fetched_at記録・raw body保存）。旧`safe_get`の後継＋**生レスポンス保存**（旧系の「原文へ遡れない」欠陥の解消）
+- [x] P1-2 (M) fetcher基盤 — **P1-Cとして完了（2026-08-30）**: `src/intelligence/ingestion/`
+      （transport/fetcher/raw_store。UA・timeout・retry・conditional GET・redirect記録・
+      FetchAttempt時系列・immutable raw保存。docs/ingestion/ 4文書参照）
 - [x] P1-3 (S) ソース定義のデータ化 — **P1-Bとして完了（2026-08-29）**: `knowledge/source_feeds.yaml`
       v3.0.0（86ソース。endpoint/historical/recent_ci/current_health/value/roleの層構造。
       docs/sources/ 4文書参照）
-- [ ] P1-4 (M) RSS/Atomパーサー: 旧`news.py`のロジック移植＋**Atom対応**（旧系はRSS2.0のみで Atomは無視される欠陥あり）＋重複統合ロジック移植
+- [x] P1-4 (M) RSS/Atomパーサー — **P1-Cで完了（2026-08-30）**: tank feed_parser移植＋
+      Atom対応＋**RDF対応追加**（CI恒常失敗3件の原因候補へ対処）。exact dedup（hash/URL/GUID）
+      まで実装。semantic重複統合はPhase 2
 - [ ] P1-5 (M) Evidence化パイプライン: 見出し/本文→文単位→statement_type付与（ルール＋LLM補助、LLM無しでも動くフォールバック必須）
 - [ ] P1-6 (S) Tier管理: config内source_reliabilityを `knowledge/source_tiers.yaml` へ移し、Tier1/2/3へ正規化
 - [ ] P1-7 (M) fixtureテスト基盤: 保存済みフィードでの取得〜Evidence化のゴールデンテスト

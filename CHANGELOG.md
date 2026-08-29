@@ -4,6 +4,37 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.15 (2026-08-30) — Phase 1-C: Raw Ingestion
+
+外部Sourceの取得情報を「改変・要約・AI解釈する前のRAW SOURCE EVIDENCE」として
+安全・再現可能・追跡可能に保存する層。**RAW DATA IS IMMUTABLE**（同一URLの内容更新は
+新RawItemとして積み、旧版を消さない）。P1-D正規化・Fact抽出・LLM処理は未着手。
+
+### 追加
+
+- `src/intelligence/ingestion/`（新パッケージ・God Fetcher禁止の8分割）:
+  model.py（FetchRequest/FetchResponse/FetchAttempt。資格情報ヘッダを型レベル拒否）、
+  transport.py（HttpTransport Protocol＋stdlib urllib実装・redirect chain記録・
+  エラー分類・redact_url）、fetcher.py（retry方針: timeout/5xx/429のみ・Retry-After尊重・
+  指数backoff・最大3試行、conditional GET=Attempt列からの導出、source isolation）、
+  raw_store.py（content-addressed blob＋JSONL。atomic write・冪等・crash-safe・
+  hash検証。RawRepository/FetchAttemptRepository充足）、feed_parser.py（tank移植＋
+  RDF対応追加。RSS2/Atom/RDF/JSON/HTML検出・正規化前entry無損失抽出・encoding多段解決）、
+  url_normalize.py（tank移植。original URL必須保持）、date_quality.py（source提供/
+  naive/欠損の分類のみ。補正しない）、dedup.py（exact hash/canonical URL/GUIDのみ）、
+  live_validation.py（監督者指定11ソースの最小live検証。Actions実行用）。
+- `src/intelligence/sources/model.py`: RawItemへendpoint_id/encoding/fetch_attempt_id
+  追加、SourceEndpointへendpoint_id（content-addressed自動導出）追加（0.x非破壊）。
+- `core/contracts.py`: RawRepository / FetchAttemptRepository Protocol追加。
+- `.github/workflows/p1c-live-validation.yml`: feature branch限定・triggerファイル
+  更新時のみ・contents:read・Secrets不使用の最小live検証（監督者承認のlive validation
+  gates対応。Legacy本番workflowとGitHub Pagesは無変更）。
+- `tests/intelligence/`: ingestion系テスト65件（model 7/raw_store 7/feed_parser 20/
+  fetcher 13/url_normalize 5/date_quality 5/dedup 4/live_validation 4）。
+  すべて注入transportによる完全オフライン。
+- `docs/ingestion/`: RAW_INGESTION_ARCHITECTURE / FETCHER_CONTRACT /
+  RAW_STORAGE_SPEC / PARSER_ADAPTER_SPEC。
+
 ## v4.14 (2026-08-29) — Phase 1-B: Source Registry & Health Audit
 
 全86ソースの実用性監査。**HISTORICALLY_OBSERVED ≠ CURRENTLY_HEALTHY** の分離を

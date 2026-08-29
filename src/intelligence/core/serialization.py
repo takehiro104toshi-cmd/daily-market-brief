@@ -112,6 +112,7 @@ def _decode_value(value: Any, hint: Any) -> Any:
 def register_domain_types() -> None:
     """全ドメイン型を登録する（import副作用を避けるため明示呼び出し）。"""
     from ..evidence import model as ev
+    from ..ingestion import model as ing
     from ..market import model as mk
     from ..sources import model as src
     from . import types as core_types
@@ -122,6 +123,7 @@ def register_domain_types() -> None:
         src.SourceDocument,
         src.SourceEndpoint,
         src.SourceHealthObservation,
+        ing.FetchAttempt,
         mk.Observation,
         ev.FactStatement,
         ev.AnalysisStatement,

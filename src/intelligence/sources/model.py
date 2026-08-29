@@ -55,12 +55,16 @@ class RawItem:
 
     raw_item_id: str  # content-addressed: raw_<sha256[:24]>
     source_id: str
-    locator: str  # 取得したURL等
+    locator: str  # 取得したURL等（redact済み）
     retrieved_at: datetime
     media_type: str = "application/octet-stream"
     content_hash: str = ""  # sha256 hex（本文全体）
     size_bytes: int = 0
-    storage_ref: str = ""  # 生データの保存先参照（path等）。空=原文非保存
+    storage_ref: str = ""  # 生データの保存先参照（content locator）。空=原文非保存
+    # --- Phase 1-C追加（0.x非破壊。取得パイプラインのtrace用） ---
+    endpoint_id: str = ""  # 由来するSourceEndpoint
+    encoding: str = ""  # HTTP charset等から判明した場合のみ（bodyの解釈ヒント）
+    fetch_attempt_id: str = ""  # 由来する取得試行（FetchAttempt）
     schema_version: str = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -191,6 +195,8 @@ class SourceEndpoint:
     declared_format: FeedFormat = FeedFormat.UNKNOWN
     auth_type: AuthType = AuthType.NONE
     usage_status: UsageStatus = UsageStatus.UNKNOWN
+    # Phase 1-C追加: 取得口の安定ID（未指定ならsource_id＋urlから決定的に導出）
+    endpoint_id: str = ""
     schema_version: str = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -198,6 +204,13 @@ class SourceEndpoint:
             raise ValueError("source_id is required")
         if not self.url.startswith(("https://", "http://")):
             raise ValueError("url must be http(s)")
+        if not self.endpoint_id:
+            object.__setattr__(self, "endpoint_id", self.make_id(self.source_id, self.url))
+
+    @staticmethod
+    def make_id(source_id: str, url: str) -> str:
+        """同一source×同一URLは常に同一endpoint_id（content-addressed）。"""
+        return content_id("ep", source_id, url)
 
 
 @dataclass(frozen=True, kw_only=True)

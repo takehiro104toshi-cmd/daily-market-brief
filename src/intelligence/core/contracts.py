@@ -19,8 +19,9 @@ from .types import LLMResult
 
 if TYPE_CHECKING:  # 型参照のみ（実行時循環importを避ける）
     from ..evidence.model import EvidenceLink, Statement
+    from ..ingestion.model import FetchAttempt
     from ..market.model import Observation
-    from ..sources.model import SourceDocument
+    from ..sources.model import RawItem, SourceDocument
 
 
 @runtime_checkable
@@ -112,4 +113,49 @@ class KnowledgeRepository(Protocol):
         ...
 
     def load(self, asset_id: str) -> Mapping[str, object]:
+        ...
+
+
+@runtime_checkable
+class RawRepository(Protocol):
+    """Raw Store（Phase 1-C）の永続化境界。append-only・immutable。
+
+    参照実装: ingestion/raw_store.py JsonlRawRepository（JSONL＋content-addressed blob）。
+    将来SQLite/Postgresへ差し替えてもdomain/fetcherは無変更。
+    """
+
+    def store_body(self, body: bytes) -> tuple:  # (content_hash, locator, created)
+        ...
+
+    def add_raw_item(self, item: "RawItem") -> bool:  # 冪等: 同一ID＋同一内容はFalse
+        ...
+
+    def get_raw_item(self, raw_item_id: str) -> Optional["RawItem"]:
+        ...
+
+    def read_body(self, item: "RawItem") -> bytes:  # metadata→body lookup
+        ...
+
+    def iter_raw_items(self) -> Iterable["RawItem"]:
+        ...
+
+
+@runtime_checkable
+class FetchAttemptRepository(Protocol):
+    """取得試行（FetchAttempt）の時系列記録境界。
+
+    304・timeout・403等でRawItemが生まれない試行も必ず記録する。
+    条件付きGETのvalidatorは観測列から導出する（二重保存しない）。
+    """
+
+    def add_attempt(self, attempt: "FetchAttempt") -> bool:
+        ...
+
+    def iter_attempts(self) -> Iterable["FetchAttempt"]:
+        ...
+
+    def attempts_for(self, source_id: str) -> Sequence["FetchAttempt"]:
+        ...
+
+    def latest_conditional(self, endpoint_id: str) -> tuple:  # (etag, last_modified)
         ...
