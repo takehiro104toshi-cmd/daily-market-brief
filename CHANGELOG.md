@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.8 (2026-08-29) — Legacy Audit & Greenfield Rebuild Design（Investment Intelligence OS）
+
+Investment Intelligence OSの方針変更（Brownfield Audit → Selective Migration →
+Greenfield Rebuild）に伴い、リポジトリ全資産（Python約25,500行・collectors 30/
+analysis 50/report 4系・CI・Pages・Cloudflare・tests 451件・データ資産）を監査し、
+再利用判定と新アーキテクチャ・移行計画を設計した（ドキュメントのみの追加。
+既存コード・設定・CI・Pagesは無変更）。
+
+### 追加
+
+- `docs/rebuild/LEGACY_AUDIT.md`（新規）: 現状アーキテクチャ・結合・技術的負債・
+  危険な前提（src/date死にコピー、羅針盤学習の三重不一致、requirements.txtの
+  anthropic欠落、公開リポジトリ内のCloudflare識別子追跡等）・再利用資産・障害の監査。
+- `docs/rebuild/REUSE_MATRIX.md`（新規）: 56資産のREUSE/PARTIAL_REUSE/REBUILD/
+  REMOVE_LATER/UNKNOWN判定（理由・依存・品質・リスク・推奨アクション付き）。
+- `docs/rebuild/TARGET_ARCHITECTURE.md`（新規）: Sources→Evidence→Data Bank→
+  Analysis→Reports→API→PWAのデータフロー、14サブシステムの疎結合設計、
+  新ディレクトリレイアウト案、FACT/ANALYSIS/FORECASTのデータ所有権規約。
+- `docs/rebuild/MIGRATION_PLAN.md`（新規）: 稼働中パイプラインを壊さない
+  Strangler方式の5段階移行計画・ロールバック手順・要承認事項一覧。
+- `docs/rebuild/REBUILD_ROADMAP.md`（新規）: Phase 0〜12の新アーキテクチャ前提
+  タスク分解（Phase順序は不変更・変更案はproposalとして分離）。
+
 ## v4.7 (2026-08-28) — Phase 0: Compass DNA解析（Investment Intelligence OS）
 
 Investment Intelligence OS計画のPhase 0として、`date/rashinban/` の
