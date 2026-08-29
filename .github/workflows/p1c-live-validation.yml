@@ -32,4 +32,10 @@ jobs:
       - name: Install minimal deps
         run: pip install pyyaml
       - name: Run minimal live validation (no bulk ingestion, no secrets)
-        run: python -m src.intelligence.ingestion.live_validation
+        run: |
+          IDS=$(sed -n 's/^ids: *//p' .github/p1c_live_validation_trigger | head -1)
+          if [ -n "$IDS" ]; then
+            python -m src.intelligence.ingestion.live_validation --ids "$IDS"
+          else
+            python -m src.intelligence.ingestion.live_validation
+          fi
