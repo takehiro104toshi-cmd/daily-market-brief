@@ -142,6 +142,8 @@ def test_no_secrets_or_account_identifiers() -> None:
     forbidden_patterns = [
         r"sk-ant", r"AKIA[0-9A-Z]{8,}", r"ghp_[A-Za-z0-9]{10,}", r"x-api-key",
         r"Bearer\s+[A-Za-z0-9._\-]{8,}", r"workers\.dev", r"[\w.+-]+@[\w-]+\.[\w.]+",
+        # Stage 1.6: APIキーのクエリ文字列混入（tank T7の教訓）
+        r"Subscription-Key=[A-Za-z0-9]{8,}", r"appId=[A-Za-z0-9]{8,}",
     ]
     for path in knowledge_yaml_paths() + [KNOWLEDGE_DIR / "README.md"]:
         text = path.read_text(encoding="utf-8")

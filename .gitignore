@@ -20,3 +20,11 @@ research/source_docs/*
 !research/source_docs/compass
 research/source_docs/compass/*
 !research/source_docs/compass/README.md
+
+# 社外秘（CONFIDENTIAL_SOURCE）: 羅針盤PDFはpublicリポジトリでtracking禁止
+# （docs/security/CONFIDENTIAL_RESEARCH_POLICY.md。既存履歴の除去はSECURITY_REMEDIATION_PLAN参照）
+date/rashinban/*.pdf
+
+# Cloudflare識別子（SENSITIVE_IDENTIFIER）: tracking禁止
+cloudflare/private-insight-wrangler.toml
+cloudflare/.wrangler/

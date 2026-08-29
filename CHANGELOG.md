@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.11 (2026-08-29) — Rebuild Stage 1.6: Security & Data Governance Remediation
+
+監督指示（SECURITY_GATE）に基づく是正。履歴書き換え・rotation・大量削除は未実施
+（計画のみ作成し承認待ち）。Legacy本番の実行時挙動は無変更。
+
+### 追加
+
+- `docs/security/DATA_CLASSIFICATION_POLICY.md`（新規）: PUBLIC〜SECRETの5分類＋
+  SENSITIVE_IDENTIFIER。Git/公開/クラウド/LLM送信/ログ/派生データの可否マトリクスと
+  Secret取り扱い規則（ヘッダ認証必須・redaction・クエリ文字列禁止）。
+- `docs/security/CONFIDENTIAL_RESEARCH_POLICY.md`（新規）: 羅針盤PDF等
+  CONFIDENTIAL_SOURCEの正式ルール（public repo/Pages/外部アップロード禁止・
+  LLM送信は明示承認制・派生は抽象化物のみGit可）と8月PDF受け入れ手順。
+- `docs/security/GIT_HISTORY_EXPOSURE_AUDIT.md`（新規）: 完全履歴437コミットの実測監査。
+  PDFは単一コミット`128f4b9`で追加・タグ/リリース/LFS/Pages/Actions artifactへの混入なし。
+  **Secretパターン履歴スキャン2,368blob=0件、tank側キー値流出=0件（ROTATION不要）**。
+  ※shallowクローン起因の「51コミット」誤認を訂正。
+- `docs/security/SECURITY_REMEDIATION_PLAN.md`（新規）: filter-repo手順・Private化代替案・
+  output/ cleanup計画・承認待ち事項A〜E。
+- `tests/intelligence/test_confidential_guard.py`（新規5件）: tracked PDFゼロ検査・
+  research配下README限定・check-ignore実地検証・識別子ファイル非tracking・
+  vNextコードの機密パス参照禁止（strict・Legacy例外なし）。
+
+### 改善
+
+- `.gitignore`: `date/rashinban/*.pdf`・Cloudflare識別子2ファイルを保護対象に追加。
+- 羅針盤PDF 10冊を`research/source_docs/compass/`へ複製（MD5検証済み・git非管理）の上、
+  `date/rashinban/*.pdf`と識別子2ファイルの**Git trackingを解除**
+  （ディスク上のファイル・履歴内blobは保持。履歴除去は承認待ち）。
+- `date/rashinban/README.md`: セキュリティ通知と復元手順を追記。
+- `tests/intelligence/test_knowledge_assets.py`: Secret検査パターンに
+  Subscription-Key=/appId=（クエリ文字列鍵）を追加。
+
 ## v4.10 (2026-08-29) — Rebuild Stage 1.5: 2旧プロジェクト横断監査と選択的移行
 
 article-intelligence-data-tank（GitHub public・READ ONLYクローン）とdaily-market-briefを
