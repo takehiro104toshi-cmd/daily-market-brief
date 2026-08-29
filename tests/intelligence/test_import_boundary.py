@@ -55,15 +55,14 @@ def test_vnext_does_not_import_legacy() -> None:
     assert not violations, "vNext→Legacyのimportは禁止:\n" + "\n".join(violations)
 
 
-def test_vnext_core_is_llm_vendor_neutral() -> None:
+def test_vnext_is_llm_vendor_neutral() -> None:
+    """P1-A拡張: core層に限らずvNext全域がベンダーSDKへ依存しないこと（provider中立）。"""
     violations = []
-    for path in (VNEXT_DIR / "core").rglob("*.py"):
-        if "__pycache__" in path.parts:
-            continue
+    for path in vnext_py_files():
         for name in _imports_of(path):
             if any(name == p or name.startswith(p + ".") for p in VENDOR_SDK_PREFIXES):
                 violations.append(f"{path.relative_to(REPO_ROOT)} imports {name}")
-    assert not violations, "core層はLLMベンダーSDKに依存しない:\n" + "\n".join(violations)
+    assert not violations, "vNextはLLMベンダーSDKに依存しない:\n" + "\n".join(violations)
 
 
 def test_legacy_does_not_import_vnext_yet() -> None:

@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.13 (2026-08-29) — Phase 1-A: Evidence Schema & Provenance（vNext schema 0.2.0）
+
+Phase 1認可を受けたP1-A実装。Evidence First Architectureの正式ドメインモデルを構築
+（Stage 1.7の履歴rewriteはMAINTENANCE TRACKへ分離・成果物保持）。
+Legacy挙動無変更・P1-B未着手・live取得/LLM呼出/DB runtimeなし。
+
+### 追加
+
+- `src/intelligence/core/`: time.py（tz-aware強制・時刻5種の分離）、ids.py（ULID＋
+  content-addressed＋slugの使い分け）、serialization.py（`_type`タグ付きJSON往復・
+  Decimal文字列化・float全面拒否）、types.py 0.2.0（VerificationState/Direction新設、
+  旧EvidenceRecord等を廃止しドメインへ再配置）、contracts.py更新（新型対応・UTC暦日契約）。
+- `src/intelligence/sources/model.py`: Source / RawItem / SourceDocument
+  （content-addressed ID・tierスナップショット・revision_of）。
+- `src/intelligence/market/model.py`: Observation（Decimal必須・raw/derived・
+  派生inputs provenance・改定は新レコード）。
+- `src/intelligence/evidence/`: model.py（Fact/Analysis/ForecastStatement分離・
+  ForecastMetadata・EvidenceLink many-to-many）、invariants.py（UNSUPPORTED検出・
+  CONFLICTING導出・分析トレース）、jsonl_store.py（参照実装ストア・重複ID規約）。
+- `tests/intelligence/`: evidence_fixtures.py（指示の10 syntheticケース＋因果チェーン）＋
+  新テスト70件（domain 25/serialization 38/store 7）・contracts書換8件・境界検査を
+  vNext全域ベンダー中立へ拡張。**総計553 passed**（Legacy 451＋vNext 102）。
+- `docs/evidence/`: EVIDENCE_DOMAIN_MODEL / PROVENANCE_MODEL / EVIDENCE_INVARIANTS /
+  STORAGE_DECISION（JSONL正本＋再構築可能SQLite索引の方針）。
+
 ## v4.12 (2026-08-29) — Rebuild Stage 1.7: Confidential History Remediation（準備完了・push保留）
 
 承認A〜Dに基づく履歴除去の実行段。PRE-FLIGHT→原本安全確認（3系統MD5一致）→

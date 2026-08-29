@@ -1,27 +1,36 @@
-"""vNext共有ドメイン型（最小セット）。
+"""vNext共有プリミティブ（schema 0.2.0 / Phase 1-A）。
 
-Stage 1の方針:
-- 旧AnalysisBundle（43フィールドのgod object）の轍を踏まず、ドメイン単位の
-  小さなfrozen dataclassに分離する。
-- FACT / ANALYSIS / FORECAST の分離を「文体」でなく「型」で強制する
-  （EvidenceRecordの検証。docs/compass_dna/FACT_ANALYSIS_FORECAST_SPEC.md §5）。
-- ここでは正式スキーマの確定はしない。Phase 1で拡張される前提の最小型定義のみ。
-  フィールド追加は後方互換（default付き）で行う。
+Stage 1版（0.1）からの変更（0.xのためbackward compatibility非保証・意図的な破壊的変更）:
+- EvidenceRecord / SourceMeta / ForecastAttributes / MarketObservation を廃止し、
+  正式ドメインモデルへ再配置した:
+    出所（provenance）  → src/intelligence/sources/model.py  (Source / SourceDocument / RawItem)
+    観測値              → src/intelligence/market/model.py   (Observation)
+    言明（claim）        → src/intelligence/evidence/model.py (Fact/Analysis/ForecastStatement,
+                                                              ForecastMetadata, EvidenceLink)
+- StatementTypeからFACT_UNVERIFIEDを削除（伝聞はFactStatement.attribution=REPORTED、
+  裏付け無しはVerificationState.UNSUPPORTEDとして直交表現する）。
+- VerificationState（検証状態）を新設。source tier・confidenceとは独立の軸
+  （tier=情報源の格 / verification=裏付け状態 / confidence=予測の確信度）。
+
+本モジュールに置くのは「複数ドメインが共有する列挙・定数・LLM境界型」のみ。
+God Model禁止——ドメイン型は各ドメインパッケージが所有する。
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
 from enum import Enum, IntEnum
-from typing import Optional, Tuple
+from typing import Tuple
+
+SCHEMA_VERSION = "0.2.0"
 
 
 class SourceTier(IntEnum):
-    """情報源の信頼階層（knowledge/source_reliability/source_tiers.yaml と対応）。
+    """情報源の格（knowledge/source_reliability/ と対応）。
 
-    TIER1: 一次情報（政府・中央銀行・取引所・規制当局・企業公式）
-    TIER2: 高信頼報道・市場データ
-    TIER3: 一般ニュース・その他
+    真実性の確率・検証状態・確信度そのものではない（別フィールドで扱う）。
+    TIER1: 一次情報（中央銀行・政府統計・取引所・企業IR・規制当局）
+    TIER2: 高品質なセカンダリソース（主要報道・市場データ）
+    TIER3: 一般ニュース等
     """
 
     TIER1 = 1
@@ -30,16 +39,34 @@ class SourceTier(IntEnum):
 
 
 class StatementType(str, Enum):
-    """文の種別。FACTとFORECASTを混同しないための中核タグ。"""
+    """言明の種別。FACTとFORECASTを混同しないための中核タグ。"""
 
     FACT = "fact"
-    FACT_UNVERIFIED = "fact_unverified"  # 伝聞・一部報道（語尾で減衰させて表示する）
     ANALYSIS = "analysis"
     FORECAST = "forecast"
 
 
+class VerificationState(str, Enum):
+    """検証状態（source tierとは独立の軸）。
+
+    UNVERIFIED  … 未検証（初期状態）
+    VERIFIED    … 裏付けEvidenceで確認済み
+    CONFLICTING … 相反するEvidenceが併存（どちらも自動削除しない）
+    STALE       … 有効期限切れ・鮮度喪失
+    RETRACTED   … 情報源自身が撤回
+    UNSUPPORTED … 裏付けEvidenceが存在しない（FACTを名乗る資格がない状態）
+    """
+
+    UNVERIFIED = "unverified"
+    VERIFIED = "verified"
+    CONFLICTING = "conflicting"
+    STALE = "stale"
+    RETRACTED = "retracted"
+    UNSUPPORTED = "unsupported"
+
+
 class Horizon(str, Enum):
-    """予測・分析の時間軸（Compass DNA JP-TIME-001 の語彙に対応）。"""
+    """時間軸（Compass DNA JP-TIME-001 の語彙に対応）。"""
 
     INTRADAY = "intraday"
     ONE_DAY = "1d"
@@ -48,85 +75,40 @@ class Horizon(str, Enum):
     LONG = "long"
 
 
-# FORECASTの確信度は0〜5の整数（FACT_ANALYSIS_FORECAST_SPEC.md §3の語彙ラダーに対応。
-# 5=投資妙味/押し目好機, 4=想定する, 3=期待, 2=注目, 1=可能性, 0=条件付き）
+class Direction(str, Enum):
+    """予測の方向（Compass DNAの5段階シグナル＋レンジ予測に対応）。"""
+
+    UP = "up"
+    SLIGHTLY_UP = "slightly_up"
+    FLAT = "flat"
+    SLIGHTLY_DOWN = "slightly_down"
+    DOWN = "down"
+    RANGE = "range"  # 為替レンジ予測など（ForecastMetadata.target_low/highと併用）
+
+
+# FORECASTの確信度は0〜5の整数（FACT_ANALYSIS_FORECAST_SPEC.md §3の語彙ラダー準拠。
+# 5=投資妙味/押し目好機, 4=想定する, 3=期待, 2=注目, 1=可能性, 0=条件付き）。
+# 将来のcalibration（Phase 5）はこの離散値と実績の対応表として実装できる。
 CONFIDENCE_MIN = 0
 CONFIDENCE_MAX = 5
 
 
-@dataclass(frozen=True)
-class SourceMeta:
-    """出典メタデータ。すべてのFACTはここへ遡れなければならない。"""
-
-    name: str
-    url: str
-    tier: SourceTier
-    retrieved_at: datetime
+def validate_confidence(value: int) -> int:
+    if not (CONFIDENCE_MIN <= value <= CONFIDENCE_MAX):
+        raise ValueError(
+            f"confidence must be in [{CONFIDENCE_MIN}, {CONFIDENCE_MAX}], got {value}"
+        )
+    return value
 
 
-@dataclass(frozen=True)
-class ForecastAttributes:
-    """FORECAST文にのみ付与される属性。検証可能性（Phase 5）の最小要件。"""
-
-    confidence: int  # CONFIDENCE_MIN..CONFIDENCE_MAX
-    horizon: Horizon
-    agent: str  # 予測主体: "system" / "会社計画" / "市場予想" など
-    invalidation_condition: str = ""  # 無効化条件（空も許すがPhase 5で必須化予定）
-
-    def __post_init__(self) -> None:
-        if not (CONFIDENCE_MIN <= self.confidence <= CONFIDENCE_MAX):
-            raise ValueError(
-                f"confidence must be in [{CONFIDENCE_MIN}, {CONFIDENCE_MAX}], got {self.confidence}"
-            )
-
-
-@dataclass(frozen=True)
-class EvidenceRecord:
-    """文単位のEvidence（最小形）。Phase 1で正式拡張される。
-
-    型レベルの不変条件:
-    - statement_type == FORECAST のとき forecast 属性は必須。
-    - FORECAST以外の文に forecast 属性を付けてはならない。
-    """
-
-    id: str
-    statement_text: str
-    statement_type: StatementType
-    source: SourceMeta
-    retrieved_at: datetime
-    event_date: Optional[date] = None
-    entities: Tuple[str, ...] = ()
-    themes: Tuple[str, ...] = ()
-    forecast: Optional[ForecastAttributes] = None
-
-    def __post_init__(self) -> None:
-        if self.statement_type is StatementType.FORECAST and self.forecast is None:
-            raise ValueError("FORECAST record requires forecast attributes")
-        if self.statement_type is not StatementType.FORECAST and self.forecast is not None:
-            raise ValueError("only FORECAST records may carry forecast attributes")
-
-
-@dataclass(frozen=True)
-class MarketObservation:
-    """市場指標の1観測値（時系列の1点）。
-
-    unit/calc_method をデータ自身が持つ（Compass DNAの発見: 指標ごとに
-    差分表現が異なる——%, %pt, 変化額, 乖離率——ため、値の解釈をメタデータ化する）。
-    """
-
-    metric_id: str  # 例: "nikkei225.close", "nikkei225.dev_25dma", "usdjpy.tokyo_0700"
-    value: Optional[float]  # 欠測はNone（値の捏造をしない）
-    unit: str  # 例: "index", "pct", "pct_point", "jpy", "trillion_jpy"
-    as_of: datetime
-    calc_method: str = "close"  # 例: "close", "pct_change_prev_close", "deviation_pct"
-    source: str = ""
-
-
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class LLMResult:
-    """LLM呼び出しの結果（provider中立）。"""
+    """LLM呼び出しの結果（provider中立）。
+
+    provider/modelは実行metadataであり、core domainは特定ベンダーへ依存しない。
+    """
 
     text: str
-    provider: str  # 実装側が名乗る識別子（例: "anthropic", "openai", "local"）
+    provider: str  # 実装側が名乗る識別子（例: "anthropic", "openai", "local", "null"）
     model: str
     input_evidence_ids: Tuple[str, ...] = field(default=())

@@ -19,7 +19,9 @@ Phase順序は現行ロードマップを維持する（変更しない）。順
 
 新規実装（`src/intelligence/sources/`, `src/intelligence/evidence/`）:
 
-- [ ] P1-1 (M) スキーマ確定: `RawDocument` / `SourceMeta(tier)` / `EvidenceRecord`（TARGET_ARCHITECTURE §4）。pydantic等は使わずdataclass＋JSONで開始
+- [x] P1-1 (M) スキーマ確定 — **P1-Aとして完了（2026-08-29）**: Source/RawItem/SourceDocument/
+      Observation/Fact・Analysis・ForecastStatement/ForecastMetadata/EvidenceLink（schema 0.2.0、
+      dataclass＋JSONL。docs/evidence/ 4文書参照。Stage 1のEvidenceRecord案は本設計で置換）
 - [ ] P1-2 (M) `sources/base.py`: fetcher基盤（UA・timeout・retry・fetched_at記録・raw body保存）。旧`safe_get`の後継＋**生レスポンス保存**（旧系の「原文へ遡れない」欠陥の解消）
 - [ ] P1-3 (S) ソース定義のデータ化: 旧collectors Family A（15ファイルの実質コピー）を1つの `knowledge/source_feeds.yaml`（url, tier, reliability, lang, format）へ集約
 - [ ] P1-4 (M) RSS/Atomパーサー: 旧`news.py`のロジック移植＋**Atom対応**（旧系はRSS2.0のみで Atomは無視される欠陥あり）＋重複統合ロジック移植

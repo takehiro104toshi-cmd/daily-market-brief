@@ -1,25 +1,31 @@
-"""vNext抽象契約（Protocol）。Stage 1ではインターフェース定義のみで実装しない。
+"""vNext抽象契約（Protocol）。schema 0.2.0（Phase 1-A更新）。
 
 設計方針:
-- ストレージ（Evidence/Market/News/Knowledge）と外部性（Clock/LLM）を
-  Protocolで抽象化し、各エンジンを注入可能・単体テスト可能にする
-  （docs/rebuild/TARGET_ARCHITECTURE.md §3-4）。
+- ストレージ（Evidence/Market/News/Knowledge）と外部性（Clock/LLM）をProtocolで
+  抽象化し、各エンジンを注入可能・単体テスト可能にする。
 - LLMProviderは特定ベンダーに固定しない。core層はベンダーSDKを一切importせず、
   実装（Anthropic / OpenAI / ローカル等のラッパー）は将来の別パッケージが提供する。
-- ここでのメソッドは最小集合。Phase 1〜2で後方互換に拡張する
-  （既存メソッドのシグネチャ変更ではなくメソッド追加で行う）。
+  provider/model名は実行metadata（LLMResult）として保持するだけで、
+  domain modelはproviderへ依存しない。
+- 参照実装: evidence/jsonl_store.py（EvidenceRepository＋MarketRepositoryを充足）。
+  将来Postgres等へ移行してもこの契約とdomain層は変えない。
 """
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Iterable, Mapping, Protocol, Sequence, runtime_checkable
+from typing import TYPE_CHECKING, Iterable, Mapping, Optional, Protocol, Sequence, runtime_checkable
 
-from .types import EvidenceRecord, LLMResult, MarketObservation
+from .types import LLMResult
+
+if TYPE_CHECKING:  # 型参照のみ（実行時循環importを避ける）
+    from ..evidence.model import EvidenceLink, Statement
+    from ..market.model import Observation
+    from ..sources.model import SourceDocument
 
 
 @runtime_checkable
 class Clock(Protocol):
-    """時刻の供給源。テストでは固定時刻を注入する（旧report_scheduleの作法を継承）。"""
+    """時刻の供給源。テストでは固定時刻を注入する。"""
 
     def now(self) -> datetime:
         """タイムゾーン付き現在時刻を返す。"""
@@ -30,10 +36,10 @@ class Clock(Protocol):
 class LLMProvider(Protocol):
     """ベンダー中立のLLM境界。
 
-    実装要件（Phase 3のLLM Writer等が前提とする契約）:
+    実装要件:
     - 利用不可（キー未設定・SDK未導入・障害）のとき is_available() が False を返し、
-      呼び出し側はルールベースのフォールバックを使う（旧llm_enhancerの縮退思想を継承）。
-    - complete() はEvidence参照付きの文章化にのみ使い、事実・数値の創作をしない。
+      呼び出し側はルールベースのフォールバックを使う。
+    - complete() はEvidence参照付きの文章化・抽出にのみ使い、事実・数値の創作をしない。
     """
 
     def is_available(self) -> bool:
@@ -45,25 +51,41 @@ class LLMProvider(Protocol):
 
 @runtime_checkable
 class EvidenceRepository(Protocol):
-    """Evidenceの永続化境界。全下流機能はここを経由してFACT/ANALYSIS/FORECASTへアクセスする。"""
+    """Evidence（文書・言明・リンク）の永続化境界。追記のみ・上書きしない。
 
-    def append(self, records: Iterable[EvidenceRecord]) -> int:
-        """レコードを追記し、書き込んだ件数を返す（追記のみ・上書きしない）。"""
+    重複ID規約: 同一内容→冪等スキップ / 異なる内容→エラー（改定はrevision_ofで新ID）。
+    """
+
+    def add_documents(self, docs: Iterable["SourceDocument"]) -> int:
         ...
 
-    def for_date(self, day: date) -> Sequence[EvidenceRecord]:
-        """指定日のEvidenceを返す（無ければ空列）。"""
+    def add_statements(self, statements: Iterable["Statement"]) -> int:
+        ...
+
+    def add_links(self, links: Iterable["EvidenceLink"]) -> int:
+        ...
+
+    def get_document(self, document_id: str) -> Optional["SourceDocument"]:
+        ...
+
+    def statements_on(self, day: date) -> Sequence["Statement"]:
+        """dayはUTC暦日として解釈する（created_at/event_timeのUTC日付でマッチ）。"""
+        ...
+
+    def links_for(self, claim_id: str) -> Sequence["EvidenceLink"]:
         ...
 
 
 @runtime_checkable
 class MarketRepository(Protocol):
-    """市場時系列の永続化境界（Phase 2 market store）。"""
+    """観測値時系列の永続化境界（Phase 2 market storeの契約）。"""
 
-    def record(self, observations: Iterable[MarketObservation]) -> int:
+    def record(self, observations: Iterable["Observation"]) -> int:
         ...
 
-    def series(self, metric_id: str, start: date, end: date) -> Sequence[MarketObservation]:
+    def series(
+        self, entity_id: str, metric: str, start: date, end: date
+    ) -> Sequence["Observation"]:
         ...
 
 
@@ -71,9 +93,8 @@ class MarketRepository(Protocol):
 class NewsRepository(Protocol):
     """構造化ニュース（News Bank）の永続化境界。
 
-    正式なNewsItemスキーマはPhase 2で確定するため、Stage 1では
-    Mapping（published_at / source / country / tickers / themes / summary /
-    importance 等のキーを想定）を受け渡す暫定契約とする。
+    正式なNewsItemスキーマはPhase 2で確定する（tank記事モデル約70フィールドが出発点）。
+    それまでの暫定契約としてMappingを受け渡す。
     """
 
     def save_items(self, items: Sequence[Mapping[str, object]]) -> int:
@@ -85,12 +106,10 @@ class NewsRepository(Protocol):
 
 @runtime_checkable
 class KnowledgeRepository(Protocol):
-    """knowledge/ 配下の宣言的知識資産への読み取り境界（書き込みはしない——知識は人が編集する）。"""
+    """knowledge/ 配下の宣言的知識資産への読み取り境界（書き込みはしない）。"""
 
     def list_assets(self) -> Sequence[str]:
-        """利用可能な資産ID（各YAMLトップレベルの `id`）の一覧。"""
         ...
 
     def load(self, asset_id: str) -> Mapping[str, object]:
-        """資産IDでパース済み内容を返す。未知のIDは KeyError。"""
         ...
