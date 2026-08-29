@@ -4,6 +4,37 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.9 (2026-08-29) — Rebuild Stage 1: vNext骨格＋知識移設（Investment Intelligence OS）
+
+監督承認（LEGACY_AUDIT_APPROVED / GREENFIELD_REBUILD_AUTHORIZED）を受け、
+Legacyとは独立した新開発本線 vNext の骨格と知識資産を作成した。
+**Legacy本番（main.py・AnalysisBundle・html_builder・CI・Pages・config.yaml）は無変更**。
+Phase 1（Source / Evidence Engine）の本格実装は未着手。
+
+### 追加
+
+- `src/intelligence/`（新規）: vNext中核パッケージ。core/types.py（ドメイン型:
+  SourceTier/StatementType/Horizon/SourceMeta/ForecastAttributes/EvidenceRecord/
+  MarketObservation/LLMResult）、core/contracts.py（Protocol契約: Clock/LLMProvider/
+  EvidenceRepository/MarketRepository/NewsRepository/KnowledgeRepository。実装なし・
+  LLMはベンダー中立）、および12ドメインパッケージ（責務docstring付き）。
+- `knowledge/`（新規）: 旧config.yamlからCOPY+NORMALIZEした知識資産。
+  causal_rules（market/rates/fx、全18ルールにID・confidence付与）、
+  theme_relations（themes 29件＋durable 7件、theme_graph 37ノード）、
+  source_reliability（source_tiers 23件、source_feeds 24本＋方針記録）、
+  compass_dna/market_rules.yaml（正本を移設。docs側は凍結注記のみ）。
+- `tests/intelligence/`（新規35件）: knowledge YAML検証（パース・メタデータ・
+  ルールID横断一意・グラフ参照整合・Tier整合・Secret混入なし）、import境界の
+  AST検査（vNext→Legacy禁止・core→ベンダーSDK禁止）、core契約テスト
+  （FACT/FORECAST分離の型強制・Protocol実装可能性）。
+- `docs/rebuild/STAGE1_VNEXT_FOUNDATION.md`（新規）: 実施記録・正規化判断・リスク。
+
+### 改善
+
+- `.gitignore`: vNext実行時データ `data/vnext/` を非git管理に（Legacy既存パスへ影響なし）。
+- `docs/rebuild/MIGRATION_PLAN.md`: Stage 1実施記録を追記。
+- `docs/compass_dna/analysis_rules/market_rules.yaml`: 正本移設の凍結注記を追記（内容不変）。
+
 ## v4.8 (2026-08-29) — Legacy Audit & Greenfield Rebuild Design（Investment Intelligence OS）
 
 Investment Intelligence OSの方針変更（Brownfield Audit → Selective Migration →

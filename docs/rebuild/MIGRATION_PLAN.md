@@ -82,6 +82,12 @@ Stage 5  旧コードをsrc/legacy/へ隔離 → 清掃（要承認）
 | 5 | date/→data/・research/への整理 | Stage 5でリネーム（Git履歴保持のためgit mv）。それまで現状維持 |
 | 6 | Secrets追加・変更（新系がLLM/API利用を広げる場合） | 都度事前承認 |
 
+## 5.1 実施記録
+
+- **Stage 1: 完了（2026-08-29）** — vNext骨格（src/intelligence/）＋knowledge/移設＋
+  境界テスト。詳細: `STAGE1_VNEXT_FOUNDATION.md`。差分: config.yamlのknowledge/への
+  読み替え（Stage 3想定）はまだ行っておらず、二重管理期間はknowledge/が正。
+
 ## 6. マイルストーンと完了判定
 
 | Stage | 完了判定 |

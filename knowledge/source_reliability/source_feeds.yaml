@@ -1,0 +1,65 @@
+# フィードカタログ。Stage 1で旧src/collectors（Family A 15ファイル＋news_sources）と
+# 旧config.yaml `source_classification` からCOPY+NORMALIZE。
+# 旧系では「1フィード=1 Pythonファイル」だったものをデータ化した（REUSE_MATRIX判定: REBUILD→data化）。
+#
+# verification: 旧collectorsのdocstring自身が「実ネットワーク未検証」と明記していたため、
+# 全フィードを unverified から開始する。Phase 1 Stage 2の死活確認で verified / dead に更新する。
+#   unverified   … 実地未確認（旧系からの引き継ぎ状態）
+#   likely_dead  … 提供終了が濃厚（監査所見）
+#   verified / dead … Stage 2の死活確認後に設定
+
+id: source_reliability.source_feeds
+version: "1.0.0"
+description: "自動取得対象フィードのカタログ（URL・言語・形式・検証状態）と、参照のみ/見送りソースの方針記録"
+source: "src/collectors/*.py の既定URL、config.yaml `news_sources`/`general_news_sources`/`source_classification` より抽出"
+status: active
+
+feeds:
+  # --- 日本語 一般・経済（旧news_sources / general_news_sources） ---
+  - { id: yahoo_jp_business,  name: "Yahoo!ニュース 経済",            url: "https://news.yahoo.co.jp/rss/topics/business.xml",             lang: ja, format: rss, verification: unverified }
+  - { id: yahoo_jp_reuters,   name: "ロイター(Yahoo!ニュース経由)",     url: "https://news.yahoo.co.jp/rss/media/reut/all.xml",              lang: ja, format: rss, verification: unverified }
+  - { id: nhk_business,       name: "NHKニュース 経済",                url: "https://www3.nhk.or.jp/rss/news/cat5.xml",                     lang: ja, format: rss, verification: unverified }
+  - { id: yahoo_jp_toppicks,  name: "Yahoo!ニュース トピックス",       url: "https://news.yahoo.co.jp/rss/topics/top-picks.xml",            lang: ja, format: rss, verification: unverified, note: "一般ニュース（雑談用）" }
+  - { id: nhk_general,        name: "NHKニュース 総合",                url: "https://www3.nhk.or.jp/rss/news/cat0.xml",                     lang: ja, format: rss, verification: unverified, note: "一般ニュース（雑談用）" }
+
+  # --- 報道・マーケット（旧Family A） ---
+  - { id: nikkei,             name: "日本経済新聞 電子版(見出し)",      url: "https://www.nikkei.com/rss/index.rdf",                          lang: ja, format: rdf,  verification: unverified }
+  - { id: bloomberg_markets,  name: "Bloomberg Markets(見出し)",       url: "https://feeds.bloomberg.com/markets/news.rss",                 lang: en, format: rss, verification: unverified }
+  - { id: reuters_business,   name: "Reuters Business(見出し)",        url: "https://www.reutersagency.com/feed/?best-topics=business-finance", lang: en, format: rss, verification: likely_dead, note: "reutersagency.com当該フィードは提供終了が濃厚（LEGACY_AUDIT §5-5）。Stage 2で代替を調査" }
+  - { id: cnbc_topnews,       name: "CNBC Top News",                   url: "https://www.cnbc.com/id/100003114/device/rss/rss.html",        lang: en, format: rss, verification: unverified }
+  - { id: cnbc_markets,       name: "CNBC Markets",                    url: "https://www.cnbc.com/id/20910258/device/rss/rss.html",         lang: en, format: rss, verification: unverified }
+  - { id: wsj_markets,        name: "WSJ Markets(見出し)",             url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",                lang: en, format: rss, verification: unverified }
+  - { id: marketwatch_top,    name: "MarketWatch Top Stories",         url: "https://feeds.marketwatch.com/marketwatch/topstories/",        lang: en, format: rss, verification: unverified }
+  - { id: marketwatch_market, name: "MarketWatch Market Pulse",        url: "https://feeds.marketwatch.com/marketwatch/marketpulse/",       lang: en, format: rss, verification: unverified }
+  - { id: investing_news,     name: "Investing.com News",              url: "https://www.investing.com/rss/news.rss",                       lang: en, format: rss, verification: unverified, note: "Bot対策で不安定の可能性（旧docstring注記）" }
+  - { id: yahoo_finance_us,   name: "Yahoo Finance US",                url: "https://finance.yahoo.com/news/rssindex",                      lang: en, format: rss, verification: unverified }
+
+  # --- 公式（政府・中銀・規制当局） ---
+  - { id: boj_whatsnew,       name: "日本銀行 What's New",             url: "https://www.boj.or.jp/rss/whatsnew.rdf",                       lang: ja, format: rdf, verification: unverified }
+  - { id: mof_whatsnew,       name: "財務省 新着情報",                  url: "https://www.mof.go.jp/rss/whatsnew.rdf",                       lang: ja, format: rdf, verification: unverified }
+  - { id: fed_press,          name: "Federal Reserve Press Releases",  url: "https://www.federalreserve.gov/feeds/press_all.xml",           lang: en, format: rss, verification: unverified }
+  - { id: sec_press,          name: "SEC Press Releases",              url: "https://www.sec.gov/news/pressreleases.rss",                   lang: en, format: rss, verification: unverified, note: "SECはUAに連絡先明記を要求。fetcher実装時に対応必須（LEGACY_AUDIT §5）" }
+  - { id: ecb_press,          name: "ECB Press Releases",              url: "https://www.ecb.europa.eu/rss/press.xml",                      lang: en, format: rss, verification: unverified }
+  - { id: bls_latest,         name: "BLS 最新統計",                    url: "https://www.bls.gov/feed/bls_latest.rss",                      lang: en, format: rss, verification: unverified }
+  - { id: eia_today,          name: "EIA Today in Energy",             url: "https://www.eia.gov/rss/todayinenergy.xml",                    lang: en, format: rss, verification: unverified }
+
+  # --- 暗号資産 ---
+  - { id: coindesk,           name: "CoinDesk",                        url: "https://www.coindesk.com/arc/outboundfeeds/rss/",              lang: en, format: rss, verification: unverified }
+  - { id: cointelegraph,      name: "CoinTelegraph",                   url: "https://cointelegraph.com/rss",                                lang: en, format: rss, verification: unverified }
+
+# 参照リンクのみ（自動取得しない）と見送りの方針記録（旧config `source_classification` を移設・保存）
+reference_only:
+  - "US Treasury（安定した公開RSSが未確認のため自動取得はせず参照リンクのみ）"
+  - "Bank of England（RSS構成の確証が低いため自動取得はせず参照リンクのみ）"
+  - "IMF / World Bank / OECD（統計ポータルであり定型RSSでの検知に不向き）"
+  - "Nasdaq / NYSE 公式（RSS形式が不安定なため見送り、参照リンクのみ）"
+  - "OpenAI Blog / Google AI Blog / Microsoft AI Blog / Meta AI Blog / AWS Blog / Oracle Newsroom（安定した公開RSSが未確認）"
+  - "NVIDIA / AMD / Intel / TSMC / ASML / Micron / Samsung / SK hynix Newsroom（定型RSSがなくスクレイピングが必要になるため）"
+  - "株探 / みんかぶ / moomoo / 楽天証券 / SBI証券 / JPX（参照リンク登録のみ。旧collectors Family B）"
+
+skipped:
+  - "Seeking Alpha RSS（利用規約・Bot対策のリスクが不明確なため見送り）"
+  - "Benzinga RSS（利用規約・Bot対策のリスクが不明確なため見送り）"
+  - "SEMI / TrendForce（公開RSSが未確認。TrendForceは有料レポートが中心）"
+  - "Baltic Exchange / Baltic Dry Index（公開の無償取得手段が未確認）"
+  - "Coinbase Blog（安定した公開RSSが未確認）"

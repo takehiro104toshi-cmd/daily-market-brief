@@ -1,13 +1,20 @@
-# market_rules.yaml — 羅針盤 Analysis Rule の機械可読サンプル（Phase 0）
+# market_rules.yaml — 羅針盤 Analysis Rule の機械可読表現（正本）
 #
-# 【Stage 1注記 2026-08-29】運用上の正本は knowledge/compass_dna/market_rules.yaml へ移設した。
-# 本ファイルはPhase 0成果物（研究記録）として凍結し、以後の更新は knowledge/ 側で行う。
-#
-# 位置づけ: ANALYSIS_RULE_CATALOG.md の一部ルールをYAML化した「補助表現」。
-# Phase 0 時点ではルールエンジンは実装しない（本ファイルは将来のスキーマ検討用）。
+# Stage 1（2026-08-29）で docs/compass_dna/analysis_rules/market_rules.yaml から移設。
+# 以後、**本ファイルが運用上の正本**であり、docs側はPhase 0成果物として凍結する。
+# 位置づけ: docs/compass_dna/ANALYSIS_RULE_CATALOG.md の一部ルールのYAML化。
+# vNextのルール評価器（Phase 3）はここを読む。まだルールエンジンは実装しない。
 # confidence: confirmed / likely / hypothesis（CATALOGの表記に対応）
 # evidence: 出典号（YYYY-MM-DD）とページ。
 # horizon: intraday / 1d / 1w / medium / long
+# 注: Phase 0.5（8月号Out-of-Sample検証）実施後に scope
+#     (STRUCTURAL / EDITORIAL_PATTERN / SAMPLE_SPECIFIC) を各ルールへ付与する予定。
+
+id: compass_dna.market_rules
+version: "0.1.0"
+description: "Compass DNA（Phase 0）から抽出した市場分析ルールの機械可読表現"
+source: "docs/compass_dna/analysis_rules/market_rules.yaml（Phase 0成果物）より移設。原資料は羅針盤2026-06-18..07-01の10冊"
+status: active
 
 schema_version: 0.1
 source_corpus: "Okasan Global Investment Compass 2026-06-18 .. 2026-07-01 (10 issues)"
