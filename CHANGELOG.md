@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.14 (2026-08-29) — Phase 1-B: Source Registry & Health Audit
+
+全86ソースの実用性監査。**HISTORICALLY_OBSERVED ≠ CURRENTLY_HEALTHY** の分離を
+カタログ構造とテストで機械強制。Legacy挙動無変更・P1-C ingestion未着手・
+bulk取得/LLM呼出/DB runtimeなし。
+
+### 追加
+
+- `src/intelligence/sources/model.py` 拡張: SourceCategory / HealthState / AuthType /
+  FeedFormat / UsageStatus enum＋`SourceEndpoint`（取得口）/`SourceHealthObservation`
+  （死活観測の時系列レコード・tz-aware必須・Secret保持不能）。God object化を回避し
+  Source（identity）と分離。serialization登録済み。
+- `src/intelligence/sources/health_check.py`: transport注入式の死活チェッカー
+  （判定表: HEALTHY/DEGRADED/AUTH_REQUIRED/RATE_LIMITED/MOVED/DEAD/UNVERIFIED、
+  形式判定 classify_format、鮮度抽出、現在状態の導出）。開発環境はegress遮断のため
+  live実行不能だが、ネットワークのある環境でそのまま実行可能な形で提供。
+- `docs/sources/`: SOURCE_REGISTRY_SPEC / SOURCE_HEALTH_AUDIT（86ソース監査結果:
+  HEALTHY18・DEGRADED3・AUTH2・DEAD3・UNVERIFIED60）/ SOURCE_CLASSIFICATION
+  （tier×投資価値×役割の3軸、CORE7・重複7グループ、P1-Cアダプタ形式一覧）/
+  SOURCE_FAILURE_POLICY（役割別障害時挙動の設計。実装はP1-C以降）。
+- `tests/intelligence/`: test_health_check.py（22件・全状態オフライン検証）＋
+  test_source_registry.py（12件・カタログ整合性/歴史・現在分離/CORE要件/重複/
+  Secretなし/roundtrip）。
+
+### 改善
+
+- `knowledge/source_reliability/source_feeds.yaml` を **v3.0.0** へ再構成:
+  endpoint / historical（tank実績を隔離保持）/ recent_ci（Legacy CI日次レポート
+  14日実測 2026-08-16..29）/ current_health（導出値・根拠method付き）/
+  investment_value / role / duplicate_group の層構造。86ソース・実績データは
+  欠落なく引き継ぎ。CI実測により恒常失敗6ソースを確定（DEAD3・DEGRADED3）。
+
+### 修正
+
+- `source_feeds.yaml` の `marketwatch_market` URLをLegacy collectors実体
+  （realtimeheadlines）へ訂正（旧値はurl_corrected_fromで保持）。
+
 ## v4.13 (2026-08-29) — Phase 1-A: Evidence Schema & Provenance（vNext schema 0.2.0）
 
 Phase 1認可を受けたP1-A実装。Evidence First Architectureの正式ドメインモデルを構築

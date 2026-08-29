@@ -119,3 +119,116 @@ def latest_revisions(documents: Tuple[SourceDocument, ...]) -> Tuple[SourceDocum
     """
     superseded = {d.revision_of for d in documents if d.revision_of}
     return tuple(d for d in documents if d.source_document_id not in superseded)
+
+
+# ---------------------------------------------------------------------------
+# Phase 1-B: Source Registry & Health（God object化を避け、3概念へ分離）
+#   Source                  … 情報源のidentity（既存）
+#   SourceEndpoint          … 取得口の技術属性（protocol/format/auth/usage）
+#   SourceHealthObservation … 死活観測の時系列レコード（現在状態≠履歴を分離）
+# ---------------------------------------------------------------------------
+from enum import Enum as _Enum  # noqa: E402
+
+
+class SourceCategory(str, _Enum):
+    """情報源カテゴリ（SourceTierとのmapping: docs/sources/SOURCE_CLASSIFICATION.md）。
+
+    PRIMARY_OFFICIAL       → Tier1（中央銀行・政府統計・取引所・企業IR・規制当局・国際機関）
+    HIGH_QUALITY_SECONDARY → Tier2（主要経済報道・専門金融メディア）
+    GENERAL_SECONDARY      → Tier3（一般ニュース）
+    MARKET_DATA_PROVIDER   → Tier2（相場・指標データ提供者）
+    OTHER                  → Tier3
+    """
+
+    PRIMARY_OFFICIAL = "primary_official"
+    HIGH_QUALITY_SECONDARY = "high_quality_secondary"
+    GENERAL_SECONDARY = "general_secondary"
+    MARKET_DATA_PROVIDER = "market_data_provider"
+    OTHER = "other"
+
+
+class HealthState(str, _Enum):
+    HEALTHY = "healthy"            # 到達可・パース可・鮮度良好
+    DEGRADED = "degraded"          # 到達はするが品質問題（0件継続・古い・ブロック疑い等）
+    AUTH_REQUIRED = "auth_required"  # 認証が無いと使えない（401 / APIキー未設定）
+    RATE_LIMITED = "rate_limited"  # 429等
+    MOVED = "moved"                # 恒久移転（canonical URLをreplacementへ記録）
+    DEAD = "dead"                  # 提供終了・恒常404/410・DNS消滅
+    UNVERIFIED = "unverified"      # 現時点で未検証（ネットワーク不能環境からのcheck不成立を含む）
+
+
+class AuthType(str, _Enum):
+    NONE = "none"
+    API_KEY_HEADER = "api_key_header"
+    API_KEY_QUERY = "api_key_query"    # 禁止予定（Secret規則）。移行対象の記録用
+    BEARER = "bearer"
+    OTHER = "other"
+
+
+class FeedFormat(str, _Enum):
+    RSS2 = "rss2"
+    ATOM = "atom"
+    RDF = "rdf"
+    JSON_API = "json_api"
+    HTML = "html"
+    UNKNOWN = "unknown"
+
+
+class UsageStatus(str, _Enum):
+    PUBLIC_FEED = "public_feed"    # 公開RSS/Atom等
+    API_TERMS = "api_terms"        # 利用規約付き公式API（EDINET/e-Stat等）
+    RESTRICTED = "restricted"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True, kw_only=True)
+class SourceEndpoint:
+    """取得口の技術属性（identityから分離）。"""
+
+    source_id: str
+    url: str
+    protocol: str = "https"
+    declared_format: FeedFormat = FeedFormat.UNKNOWN
+    auth_type: AuthType = AuthType.NONE
+    usage_status: UsageStatus = UsageStatus.UNKNOWN
+    schema_version: str = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if not self.source_id:
+            raise ValueError("source_id is required")
+        if not self.url.startswith(("https://", "http://")):
+            raise ValueError("url must be http(s)")
+
+
+@dataclass(frozen=True, kw_only=True)
+class SourceHealthObservation:
+    """死活観測1回分の記録（時系列で積む。現在状態はここから導出する）。
+
+    Secret値・認証情報は一切保持しない（auth関連はAuthType列挙のみ）。
+    """
+
+    health_obs_id: str  # obs時刻順ID: shealth_<ULID>
+    source_id: str
+    checked_at: datetime
+    state: HealthState
+    http_status: int = 0  # 0 = リクエスト不成立（ネットワーク不能等）
+    final_url: str = ""  # リダイレクト後の到達URL
+    permanent_redirect: bool = False
+    content_type: str = ""
+    detected_format: FeedFormat = FeedFormat.UNKNOWN
+    etag_present: bool = False
+    last_modified: Optional[datetime] = None
+    latest_item_at: Optional[datetime] = None
+    freshness_age_hours: Optional[int] = None
+    method: str = "live_http"  # live_http / legacy_ci_report / tank_shards 等のevidence種別
+    note: str = ""
+    schema_version: str = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if not self.health_obs_id:
+            raise ValueError("health_obs_id is required")
+        if not self.source_id:
+            raise ValueError("source_id is required")
+        ensure_aware(self.checked_at, "SourceHealthObservation.checked_at")
+        ensure_aware_or_none(self.last_modified, "last_modified")
+        ensure_aware_or_none(self.latest_item_at, "latest_item_at")

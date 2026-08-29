@@ -25,7 +25,7 @@ knowledge/
     theme_graph.yaml   テーマ間の因果関係グラフ（Theme Map / Phase 6 の種）
   source_reliability/  情報源の信頼度・Tier（旧config: source_reliability ほか）
     source_tiers.yaml  ソース別信頼度とTier1-3正規化
-    source_feeds.yaml  フィードカタログ（URL・検証状態。旧collectors 15ファイルから抽出）
+    source_feeds.yaml  フィードカタログv3（endpoint/historical/current_health等の層構造。docs/sources/参照）
   compass_dna/         Compass DNAのmachine-readable資産（Markdown仕様書は docs/compass_dna/）
     market_rules.yaml  Phase 0分析ルール（正本。docs側はPhase 0成果物として凍結）
 ```

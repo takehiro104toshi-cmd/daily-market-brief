@@ -124,17 +124,21 @@ def test_source_tiers_consistent_with_thresholds() -> None:
 
 
 def test_source_feeds_catalog_shape() -> None:
+    """v3.0.0（Phase 1-B）の層構造。詳細検証は test_source_registry.py が担う。"""
     data = load(KNOWLEDGE_DIR / "source_reliability" / "source_feeds.yaml")
+    assert data["version"].startswith("3."), "Phase 1-BでカタログはV3系"
     ids = set()
     for feed in data["feeds"]:
-        for key in ("id", "name", "url", "lang", "format", "verification"):
+        for key in ("id", "name", "lang", "endpoint", "historical",
+                    "current_health", "investment_value", "role"):
             assert key in feed, f"feed {feed.get('id')}: '{key}' が必要"
         assert feed["id"] not in ids, f"feed id重複: {feed['id']}"
         ids.add(feed["id"])
         # httpsを原則とする。http://はtank由来カタログの実データに1件存在するため許容
-        # （Stage 2の死活確認でhttpsへの正規化を試みる）
-        assert feed["url"].startswith(("https://", "http://")), f"{feed['id']}: URLはhttp(s)であること"
-        assert feed["verification"] in ALLOWED_VERIFICATION
+        # （死活確認到達後にhttpsへの正規化を試みる）
+        url = feed["endpoint"]["url"]
+        assert url.startswith(("https://", "http://")), f"{feed['id']}: URLはhttp(s)であること"
+        assert feed["historical"]["tank_verification"] in ALLOWED_VERIFICATION
 
 
 def test_no_secrets_or_account_identifiers() -> None:

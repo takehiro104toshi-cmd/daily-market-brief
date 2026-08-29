@@ -120,6 +120,8 @@ def register_domain_types() -> None:
         src.Source,
         src.RawItem,
         src.SourceDocument,
+        src.SourceEndpoint,
+        src.SourceHealthObservation,
         mk.Observation,
         ev.FactStatement,
         ev.AnalysisStatement,

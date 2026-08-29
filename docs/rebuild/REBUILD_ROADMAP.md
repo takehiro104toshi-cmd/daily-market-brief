@@ -23,12 +23,16 @@ Phase順序は現行ロードマップを維持する（変更しない）。順
       Observation/Fact・Analysis・ForecastStatement/ForecastMetadata/EvidenceLink（schema 0.2.0、
       dataclass＋JSONL。docs/evidence/ 4文書参照。Stage 1のEvidenceRecord案は本設計で置換）
 - [ ] P1-2 (M) `sources/base.py`: fetcher基盤（UA・timeout・retry・fetched_at記録・raw body保存）。旧`safe_get`の後継＋**生レスポンス保存**（旧系の「原文へ遡れない」欠陥の解消）
-- [ ] P1-3 (S) ソース定義のデータ化: 旧collectors Family A（15ファイルの実質コピー）を1つの `knowledge/source_feeds.yaml`（url, tier, reliability, lang, format）へ集約
+- [x] P1-3 (S) ソース定義のデータ化 — **P1-Bとして完了（2026-08-29）**: `knowledge/source_feeds.yaml`
+      v3.0.0（86ソース。endpoint/historical/recent_ci/current_health/value/roleの層構造。
+      docs/sources/ 4文書参照）
 - [ ] P1-4 (M) RSS/Atomパーサー: 旧`news.py`のロジック移植＋**Atom対応**（旧系はRSS2.0のみで Atomは無視される欠陥あり）＋重複統合ロジック移植
 - [ ] P1-5 (M) Evidence化パイプライン: 見出し/本文→文単位→statement_type付与（ルール＋LLM補助、LLM無しでも動くフォールバック必須）
 - [ ] P1-6 (S) Tier管理: config内source_reliabilityを `knowledge/source_tiers.yaml` へ移し、Tier1/2/3へ正規化
 - [ ] P1-7 (M) fixtureテスト基盤: 保存済みフィードでの取得〜Evidence化のゴールデンテスト
-- [ ] P1-8 (S) 死活監視: フィード別取得成功率の記録（observabilityの種。旧系は無警報で腐る欠陥あり）
+- [x] P1-8 (S) 死活監視 — **P1-Bで基盤完了（2026-08-29）**: SourceHealthObservation時系列モデル＋
+      health_check.py（transport注入式）＋全86ソース監査＋SOURCE_FAILURE_POLICY。
+      ランタイムでの定常記録・エスカレーションはP1-C fetcher実装時に接続
 
 Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日生成され、全FACTが出典・retrieved_atへ遡れる。
 
