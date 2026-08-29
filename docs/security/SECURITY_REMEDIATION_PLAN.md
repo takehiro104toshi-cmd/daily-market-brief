@@ -76,12 +76,12 @@ Claude-Sessionリンク等コミットメッセージは保持されるがSHA参
 - T7（Secret-in-URL潜在経路）は実流出なしを確認済み。恒久対応はvNext移植時の
   設計要件（ヘッダ認証・redaction）として `VNEXT_RECONCILIATION.md` §3-3 に反映済み。
 
-## 7. ユーザー承認待ち事項（まとめ）
+## 7. 承認事項の状態（Stage 1.7更新）
 
-| # | 事項 | 選択肢 |
-|---|---|---|
-| A | PDF履歴の除去方式 | filter-repo実施（§3手順） / リポジトリPrivate化 / 現状維持（非推奨） |
-| B | 本ブランチのmainマージ（tracking解除の本番反映） | 原本保有確認の上で承認 |
-| C | Cloudflare識別子の履歴除去をAに含めるか | 含める / 現在ツリー除去のみで良しとする |
-| D | Legacy CIへのpytest（Guard含む）ステップ追加 | Stage 2で実施承認 |
-| E | output/ cleanup（§5-2） | 方式選択と時期 |
+| # | 事項 | 決定（2026-08-29） | 実施状態 |
+|---|---|---|---|
+| A | PDF履歴の除去方式 | **APPROVED: filter-repo方式** | DRY RUN全PASS。**force pushのみ実行環境の権限ブロックで保留**（HISTORY_REMEDIATION_EXECUTION.md §5） |
+| B | mainへの反映 | **APPROVED IN PRINCIPLE**（migration手順の一部として） | 手順確定（rewrite→reset→merge→push。同 §7） |
+| C | Cloudflare識別子の履歴除去 | **APPROVED: Aと同一rewriteに含める** | 対象12パスに含めDRY RUN済み |
+| D | Legacy CIへのGuard組込み | **APPROVED** | workflowへ組込み済み（migration mergeで発効） |
+| E | output/ cleanup | **今回対象外**（別Stage: LEGACY_REPOSITORY_HYGIENE 候補として記録） | 未着手・変更なし |

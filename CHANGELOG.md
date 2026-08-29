@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.12 (2026-08-29) — Rebuild Stage 1.7: Confidential History Remediation（準備完了・push保留）
+
+承認A〜Dに基づく履歴除去の実行段。PRE-FLIGHT→原本安全確認（3系統MD5一致）→
+ローカルmirror/bundleバックアップ→DRY RUN（444コミット保持・対象12パスのみ除去・
+featureブランチツリーはバイト同一・rewrite後クローンで492 passed）まで完了。
+**force pushのみ実行環境の権限ブロックにより保留**（迂回せず停止。再開手段を文書化）。
+
+### 追加
+
+- `docs/security/HISTORY_REMEDIATION_EXECUTION.md`（新規）: 実行記録・EXECUTION GATE
+  停止事由・再開手段・rewrite後ブランチ戦略・コラボレータ影響・組織ガバナンス注記。
+- `docs/security/POST_REWRITE_VERIFICATION.md`（新規）: フレッシュクローン検証手順・
+  GitHub残存リスク（dangling object/キャッシュ/Support依頼の要否）・フォローアップ。
+- `docs/security/history_rewrite.sh`（新規）: 検証つきrewrite実行スクリプト
+  （フレッシュミラー→filter-repo→検証→レース検査→force push→リモート検証。冪等）。
+
+### 改善
+
+- `.github/workflows/daily-market-brief.yml`: **Security Guardステップを追加**（承認D。
+  機密ファイルがtrackingされた場合、レポート生成前にworkflowを失敗させる。
+  発効はmigration merge後）。
+- `docs/security/SECURITY_REMEDIATION_PLAN.md`: 承認事項A〜Eの決定・実施状態を反映。
+- `docs/security/GIT_HISTORY_EXPOSURE_AUDIT.md`: DRY RUN結果とリモート未反映状態を追記。
+
 ## v4.11 (2026-08-29) — Rebuild Stage 1.6: Security & Data Governance Remediation
 
 監督指示（SECURITY_GATE）に基づく是正。履歴書き換え・rotation・大量削除は未実施

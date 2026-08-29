@@ -57,6 +57,15 @@ LINE/SMTP資格情報の直書き。
 | GitHubユーザー名・publicリポジトリURL（両repo各所） | — | PUBLIC_IDENTIFIER | 対応不要 |
 | Worker URL（`config.yaml` private_insight_intake.api_url） | workers.devサブドメイン | SENSITIVE_IDENTIFIER（低） | エンドポイントは認証必須設計のため実害小。knowledge/への持込禁止をテストで担保済み。扱いは要判断（残置可） |
 
+## 3.5 Stage 1.7追記（履歴除去の進捗）
+
+- 承認A/Cに基づくfilter-repo除去のDRY RUNが完了（対象12パス・コミット444本保持・
+  PDF/識別子objects 0・無関係資産保持・テスト492 passed。
+  詳細: `HISTORY_REMEDIATION_EXECUTION.md` §4）。
+- **リモート履歴は本書§1の露出状態のまま**（force pushが実行環境の権限ブロックで保留。
+  再開手段は同 §5）。push完了後に`POST_REWRITE_VERIFICATION.md`の実測を記入し、
+  本書の露出結論を「除去済み（GitHub残存リスク除く）」へ更新する。
+
 ## 4. ROTATION判定
 
 **ROTATION_REQUIRED: なし。**
