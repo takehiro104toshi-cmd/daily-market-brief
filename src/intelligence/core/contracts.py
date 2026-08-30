@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Iterable, Mapping, Optional, Protocol, Sequenc
 from .types import LLMResult
 
 if TYPE_CHECKING:  # 型参照のみ（実行時循環importを避ける）
+    from ..databank.news_model import ArticleIdentity, NewsItem
+    from ..databank.query import NewsQuery
     from ..evidence.model import EvidenceLink, Statement
     from ..evidence_qa.model import EvidenceAssessment
     from ..ingestion.model import FetchAttempt
@@ -94,16 +96,33 @@ class MarketRepository(Protocol):
 
 @runtime_checkable
 class NewsRepository(Protocol):
-    """構造化ニュース（News Bank）の永続化境界。
+    """News Bank（Phase 2-A正式化。Stage 1の暫定Mapping契約を置換）。
 
-    正式なNewsItemスキーマはPhase 2で確定する（tank記事モデル約70フィールドが出発点）。
-    それまでの暫定契約としてMappingを受け渡す。
+    検索条件はdatabank/query.NewsQuery。実装参照: databank/sqlite_index.py
+    （JSONL正本から再構築可能なSQLite索引）。
     """
 
-    def save_items(self, items: Sequence[Mapping[str, object]]) -> int:
+    def add_news_items(self, items: Sequence["NewsItem"]) -> int:
         ...
 
-    def items_for(self, day: date) -> Sequence[Mapping[str, object]]:
+    def get_news_item(self, news_item_id: str) -> Optional["NewsItem"]:
+        ...
+
+    def search_news(self, query: "NewsQuery") -> Sequence["NewsItem"]:
+        ...
+
+
+@runtime_checkable
+class ArticleIdentityRepository(Protocol):
+    """Article identity（Phase 2-A設計/P2-B実装）の永続化境界。"""
+
+    def add_identities(self, identities: Sequence["ArticleIdentity"]) -> int:
+        ...
+
+    def get_identity(self, article_id: str) -> Optional["ArticleIdentity"]:
+        ...
+
+    def identity_for_document(self, source_document_id: str) -> Optional["ArticleIdentity"]:
         ...
 
 

@@ -44,6 +44,9 @@ class Observation:
     inputs: Tuple[str, ...] = field(default=())  # derivedの入力observation_id（provenance）
     source_id: str = ""  # 情報源（rawで必須）
     source_document_id: str = ""  # 由来文書（統計リリース等。無い取得経路は空）
+    # Phase 2-A追加（0.x非破壊）: 市場系列への紐付け（databank/market_model.MarketSeries）。
+    # 同じUSDJPYでもspot/Tokyo close/NY closeを別seriesとして区別するためのキー
+    series_id: str = ""
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None  # 改定で失効した場合等
     revision_of: Optional[str] = None  # 改定元observation_id（過去値は消さない）

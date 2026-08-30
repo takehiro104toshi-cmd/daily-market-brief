@@ -31,10 +31,15 @@ class _NullLLM:
 
 
 class _MemoryNewsRepo:
-    def save_items(self, items: Sequence[Mapping[str, object]]) -> int:
+    """Phase 2-A正式化後のNewsRepository契約（NewsItem型）を満たす最小実装。"""
+
+    def add_news_items(self, items) -> int:
         return len(items)
 
-    def items_for(self, day: date) -> Sequence[Mapping[str, object]]:
+    def get_news_item(self, news_item_id: str):
+        return None
+
+    def search_news(self, query):
         return []
 
 

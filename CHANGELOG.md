@@ -4,6 +4,41 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.18 (2026-08-30) — Phase 2-A: End-to-End Pilot + Data Bank Domain Schema
+
+Phase 1完了承認を受けたPhase 2初段。(1) Phase 1全層の実データ一本通し検証、
+(2) Market/News Data Bankの正式domain schema設計。P2-B semantic dedup・
+full backfill・LLM分類・自動scoringは未着手（禁止遵守）。
+
+### 追加
+
+- `src/intelligence/pipeline/`: e2e.py（Registry→Fetch→Raw→Normalize→QA→Gateの
+  実編成。mockなし・注入はtransportのみ・**NO FALSE EVIDENCE**を構造で保証）、
+  trace.py（Assessment→Document→Raw→Attempt→Endpoint→Sourceの逆引きtrace・
+  human-readable）、e2e_runner.py（Actions実行・少数source・bulk禁止）。
+- `src/intelligence/databank/`: news_model.py（ArticleIdentity/NewsItem/
+  NewsDocumentLink/NewsClassification/NewsScore/EntityReference/ThemeReference/
+  LegacyAnnotation。SourceDocument≠Article≠News Event分離・God NewsItem禁止・
+  classification provenance分離・LLM推測tagging型レベル拒否）、market_model.py
+  （MarketSeries・ObservationType・series_id導出規約。spot/Tokyo close/NY close
+  を別series強制）、validation.py（投入前gate 9検査項目）、query.py
+  （NewsQuery/MarketQuery契約）、sqlite_index.py（再構築可能SQLite索引・
+  domain層SQL禁止の隔離実装）。
+- `Observation.series_id`（0.x非破壊）・`SCHEMA_VERSION 0.3.0`
+  （migration戦略: docs/databank/DATA_BANK_ARCHITECTURE.md §5）。
+- contracts: NewsRepository正式化（NewsItem型へ置換）・ArticleIdentityRepository追加。
+- `.github/workflows/p2a-e2e-pilot.yml`: 実E2E pilot（feature branch限定・
+  Secrets不使用・7ソース各1リクエスト）。
+- tests: +29件（pipeline統合6・news model 8・market model 6・validation/query 9）。
+- `docs/databank/`: ARCHITECTURE / NEWS_DOMAIN_MODEL / MARKET_DATA_MODEL /
+  STORAGE_DECISION / TANK_BACKFILL_DRY_RUN / END_TO_END_VALIDATION（実測後追記）。
+
+### 改善
+
+- tank backfill dry run実施（20件・9 publishers・ja/en）: 20/20正規化成功・
+  validation 0件・LegacyAnnotation隔離実証。Article identityシグナル全3,056件実測
+  （canonical URL 100%ユニーク・cross-domain衝突0＝tank取込時dedup済みと確定）。
+
 ## v4.17 (2026-08-30) — Phase 1-E: Evidence QA / Trust Gate
 
 「存在する情報 ≠ 信頼できるEvidence」。Normalized層の出力を分析利用可能な

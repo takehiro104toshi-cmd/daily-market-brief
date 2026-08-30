@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from typing import Tuple
 
-SCHEMA_VERSION = "0.2.0"
+SCHEMA_VERSION = "0.3.0"  # 0.3.x = Phase 2-A Data Bank domain追加（0.x間は前方互換: 未知フィールド無視）
 
 
 class SourceTier(IntEnum):
