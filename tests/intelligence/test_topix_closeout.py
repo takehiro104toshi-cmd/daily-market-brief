@@ -694,3 +694,37 @@ class TestApiKeyCredential:
                                  fetch_error_kind="auth_error")
         assert state == G10_BLOCKED
         assert "auth_failure" in codes
+
+
+class TestDefaultHttpStatusHandling:
+    """非2xxを例外にせずステータスとして返す（run #11で検出した欠陥の回帰テスト）。
+
+    これが無いと403が例外経路へ流れ、api_key方式のメカニズム判定が実行されない。
+    """
+
+    def test_http_error_is_returned_as_status_not_raised(self, monkeypatch):
+        import urllib.error
+
+        from src.intelligence.market import jquants_topix as mod
+
+        def raising_urlopen(request, timeout=None):
+            raise urllib.error.HTTPError(
+                request.full_url, 403, "Forbidden", {},
+                __import__("io").BytesIO(b'{"message":"Forbidden"}'))
+
+        monkeypatch.setattr(mod.urllib.request, "urlopen", raising_urlopen)
+        status, body = mod._default_http("https://api.jquants.com/v1/x", "GET", {}, b"")
+        assert status == 403
+        assert b"Forbidden" in body
+
+    def test_negotiation_trail_recorded_when_both_mechanisms_rejected(self):
+        http_fn, calls = api_key_http(exchange_status=403, data_status=403)
+        provider = JQuantsTopixProvider(http_fn, env={ENV_API_KEY: API_KEY})
+        result = fetch_topix(provider)
+        assert result.error_kind == "auth_error"
+        # 構造化された診断（生の例外文字列ではない）
+        assert "api_key_mechanism_not_accepted" in result.error_detail
+        assert "http_403" in result.error_detail
+        assert provider.negotiation_trail == (
+            f"{MECHANISM_AS_REFRESH_TOKEN}:http_403",)
+        assert len(calls) == 2

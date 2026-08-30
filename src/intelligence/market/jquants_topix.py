@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import os
 import time as _time
+import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -170,13 +171,23 @@ def scrub(text: str, secrets: Tuple[str, ...]) -> str:
 
 
 def _default_http(url: str, method: str, headers: dict, payload: bytes) -> Tuple[int, bytes]:
+    """HTTP実行 → (status, body)。
+
+    **非2xxは例外にせずステータスとして返す**（urllibはHTTPErrorを送出するため
+    明示的に捕捉する）。これが無いと 401/403 が例外経路へ流れ、api_key方式の
+    搬送メカニズム判定（refreshToken交換 → Bearer）が実行されない
+    ——run #11実測で判明した欠陥の修正。
+    """
     request = urllib.request.Request(url, method=method)
     for key, value in headers.items():
         request.add_header(key, value)
     if payload:
         request.data = payload
-    with urllib.request.urlopen(request, timeout=_TIMEOUT) as resp:
-        return resp.status, resp.read()
+    try:
+        with urllib.request.urlopen(request, timeout=_TIMEOUT) as resp:
+            return resp.status, resp.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, (exc.read(8192) if exc.fp else b"")
 
 
 class AuthError(Exception):
