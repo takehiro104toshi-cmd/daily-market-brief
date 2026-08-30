@@ -20,7 +20,10 @@
   system ground truthとして固定しない。実credentialでの取得結果、または
   取得可能な公式documentation evidenceで確定する。
   → 必要access tierの断定は**保留**。判定は実測のfreshness verdictで行う。
-- **認証**: mailaddress/password → refreshToken → idToken（Bearer）。
+- **認証**: mailaddress/password → refreshToken → idToken（Bearer）という
+  一般に知られた流れをadapterのcapabilityとして実装している。ただし
+  **どの方式が現行APIで実際に有効かは実認証成功をもって記録する**（§5.2/§5.7）
+  ——成功していない方式をofficially supportedと断定しない。
 - **取得フィールド**: Date/Open/High/Low/Close（TOPIX指数値）。
 
 ## 3. 実装（`src/intelligence/market/jquants_topix.py`）
@@ -113,3 +116,12 @@ STEP 1で `present: false` / `auth_method: missing` → **TOPIX_CREDENTIAL_MISSI
 として正常停止（J-Quantsへの認証リクエスト0回）。以降のSTEPは
 NO_DATA・0行・NT倍率0行を正直に報告し、G10は**PARTIALLY_RESOLVED**
 （reason: `topix_credential_missing` / `adapter_implemented_not_live_validated`）。
+
+### 5.7 検証済みauth方式の記録（監督者P2-G.1レビュー反映）
+
+- adapterは3方式（`id_token` / `refresh_token` / `mail_password`）を
+  **capability**として保持する。
+- `auth_method`（解決できた方式）と `auth_method_validated`（**実APIのdata
+  endpointが200を返した方式**）を分けて記録・報告する。後者が空の間は、
+  どの方式も「現行APIで有効」と断定しない。
+- run #8時点: `auth_method: missing` / `auth_method_validated: ""`。

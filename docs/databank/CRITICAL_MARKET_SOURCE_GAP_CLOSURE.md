@@ -87,10 +87,22 @@ UST10Y_parが同じ2025ファイルを再取得して読み取りタイムアウ
 
 - G11の RESOLVED 判定は run #7 のlive実測に基づく（本事象は取得経路の
   intermittent失敗であり、識別・単位・provenance・QAの結論は変わらない）。
-- **提案（未実施・承認待ち）**: TreasuryParYieldProvider に run内の
-  年ファイル応答キャッシュを入れ、同一URLの重複取得を1回にする
-  （公式ソースへの負荷低減＋タイムアウト機会の削減）。P2-G.1の作業範囲は
-  TOPIXのみのため本phaseでは変更していない。
+- **対処済み（監督者承認 MINI TASK A）**: TreasuryParYieldProvider に
+  run-localの年ファイルキャッシュとpayload単位の1回再試行を実装した——§5.2。
+
+## 5.2 MINI TASK A: Treasury curve fetch dedup（監督者承認・実施済み）
+
+原則: **ONE SOURCE DOCUMENT MAY PRODUCE MULTIPLE OBSERVATIONS**。
+
+| 観点 | 実装 |
+|---|---|
+| 取得回数 | 1 backfill run中、**年ファイルごとに1回**だけ取得（複数年なら年ごと1回）。2系列で4リクエスト→**2リクエスト**（実測テスト固定） |
+| cache scope | providerインスタンス＝1 run（**run-local**）。恒久HTTP cacheは持たない（別runでは再取得することをテストで固定） |
+| provenance | 再利用時は `served_from_cache=True`。storeは**新規FetchAttemptを記録せず**、UST2Y_par / UST10Y_par の両Observationが**同一RawItem・同一FetchAttempt**を参照する（起きていない取得を記録しない） |
+| identity | **NO IDENTITY MERGE**: 同一payload由来でも `rates:UST2Y_par` ≠ `rates:UST10Y_par`。observation_id・series_id・列・値・単位は独立 |
+| 再試行 | payload単位で**1回だけ**（timeout等の一時障害のみ。HTTPステータス由来は再試行しない・失敗はキャッシュしないため次系列で再試行可能） |
+| 透明性 | 再利用の事実を `reused_run_cache_years:<年>` としてparse_issuesへ申告 |
+| 影響 | official par spread（10Y_par−2Y_par）は従来どおり生成（テスト固定） |
 
 ## 6. Phase 3 readiness gate判定
 

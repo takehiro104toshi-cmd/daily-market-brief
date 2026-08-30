@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.26 (2026-08-30) — Phase 2-G.1 レビュー反映: Treasury dedup / PLAN_CAPABILITY訂正
+
+監督者レビュー（P2G1_TOPIX_CLOSEOUT_ACCEPTED）の指摘反映。TOPIXのcredential
+待ち状態は変更なし（追加のnetwork retryは行っていない）。
+
+### 追加
+
+- **MINI TASK A（Treasury curve fetch dedup）**: ONE SOURCE DOCUMENT MAY
+  PRODUCE MULTIPLE OBSERVATIONS。同一年CSVを系列ごとに再取得せず、1 run中は
+  年ごと1回だけ取得してrun-localキャッシュから配る。再利用時は
+  `served_from_cache` を立て、storeは新規FetchAttemptを記録せず
+  **同一RawItem・同一FetchAttempt**を共有する（起きていない取得を記録しない）。
+  series identityは非マージ（UST2Y_par ≠ UST10Y_par。observation_id・列・値・
+  単位は独立）。payload単位で**1回だけ**再試行（run #8のtimeout対処）。
+- G10結果状態に **C: access_level_insufficient** / **D: auth_failure** を追加
+  （fetch失敗理由をreason codeへ写像）。
+- `auth_method_validated`: **実APIのdata endpointが200を返した方式のみ**を
+  検証済みとして記録（解決できた方式をsupportedと断定しない）。
+- テスト26件追加（計1,175 passed）。
+
+### 修正
+
+- **PLAN_CAPABILITY = UNVERIFIED**（監督者訂正）: 「Free=12週遅延 /
+  Light以上=当日利用可」等のJ-Quantsプラン能力をsystem ground truthとして
+  固定していた記述を、コード（access要件レポート）・カタログ・docsから撤回。
+  実credentialでの取得結果、または取得可能な公式documentation evidenceで
+  確定する。必要access tierの断定は保留し、判定は実測のfreshness verdictで行う。
+
+### 改善
+
+- NT倍率: TOPIXが遅延している期間は「current」として使わない旨をpilot出力へ明示。
+
 ## v4.25 (2026-08-30) — Phase 2-G.1: TOPIX Credentialed Live Closeout
 
 対象はTOPIX（G10）のみ。原則: **DO NOT LIE ABOUT FRESHNESS**（API接続成功と
