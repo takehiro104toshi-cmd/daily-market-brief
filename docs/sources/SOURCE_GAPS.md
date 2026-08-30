@@ -26,6 +26,6 @@ P1-D本線と分離した別管理トラック（監督者DESIGN CORRECTION 2）
 | # | ギャップ | 現況（live pilot実測） | 解決候補 | 状態 |
 |---|---|---|---|---|
 | G9 | **Stooq日足history制限** | `q/d/l/`エンドポイントはIP単位ダウンロード制限。共有IP（Actionsランナー）からHTTP 200のHTML制限ページ（4run実測） | ローカルIP実行では有効な経路として保持。runnerからはyfinance一次で回避済み | MITIGATED |
-| G10 | **TOPIX指数の供給元** | yfinanceに指数symbolなし（legacyの1306.TはETF——指数seriesへ流用しない）。Stooq ^tpxはG9で不達 | ローカル実行でのStooq取得／JPX公式値（PRIMARY_OFFICIAL）調査 | OPEN |
-| G11 | **JGB10Y・UST2Yの供給元** | Stooq 10jpy.b/2usy.bのみ定義（probe）——G9で不達。yfinance相当symbolなし | UST2Y: FRB H.15/財務省CMT等のPRIMARY_OFFICIAL調査。JGB10Y: JPX/財務省公表値調査 | OPEN |
+| G10 | **TOPIX指数の供給元** | yfinanceに指数symbolなし（legacyの1306.TはETF——指数seriesへ流用しない）。Stooq ^tpxはG9で不達。JPX公式サイトに自動取得向け公開CSV/API確認できず（P2-G probe run #6） | **P2-G: J-Quants（JPX公式系API）採用・adapter実装済み・API到達実証**。live取得はユーザーのJ-Quants登録＋repo secrets（JQUANTS_MAIL/PASSWORD）投入後に同pilotで自動実証（run #7はno_credentialsの正直なgap記録）。ETF代用はしない | **PARTIALLY_RESOLVED**（供給元決定・経路実装済み・credential待ち） |
+| G11 | **JGB10Y・UST2Yの供給元** | Stooq 10jpy.b/2usy.bのみ定義（probe）——G9で不達。yfinance相当symbolなし | **P2-G RESOLVED（live実測 run #7）**: JGB10Y=財務省国債金利情報（constant maturity 15時・265行 2025-07-28〜2026-08-27・latest 2.897 pct）。UST2Y=Treasury Daily Par Yield Curveの別概念series `rates:UST2Y_par`（274行 〜2026-08-28・latest 4.34 pct）＋official UST10Y_par並行系列＋official spread 274行。旧UST2Y（市場実勢）はidentity定義のみ維持——official値を混入しない | **RESOLVED**（両系列live成功・25DMA可能な約13ヶ月・QA/persistence/query PASS） |
 | G12 | **東証グロース250指数** | provider symbol未確認（カタログにidentityのみ定義・enabled:false） | JPX公式等の調査 | OPEN |

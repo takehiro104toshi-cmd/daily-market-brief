@@ -358,7 +358,7 @@ series:
     provider_symbols: { mof_japan: "10年" }
     preferred_source: mof_japan
     fallback_sources: []
-    probe: true                   # P2-G新経路——live実証後にfalse化
+    probe: false                  # P2-G live実証済み（run #7: 265行・2025-07-28〜2026-08-27）
     enabled: true
     role: CORE
     identity_notes: >-
@@ -408,7 +408,7 @@ series:
     provider_symbols: { treasury_gov: "2 Yr" }
     preferred_source: treasury_gov
     fallback_sources: []
-    probe: true                   # P2-G新経路——live実証後にfalse化
+    probe: false                  # P2-G live実証済み（run #7: 274行・2025-07-28〜2026-08-28）
     enabled: true
     role: CORE
     identity_notes: >-
@@ -433,7 +433,7 @@ series:
     provider_symbols: { treasury_gov: "10 Yr" }
     preferred_source: treasury_gov
     fallback_sources: []
-    probe: true                   # P2-G新経路——live実証後にfalse化
+    probe: false                  # P2-G live実証済み（run #7: 274行・official spread生成済み）
     enabled: true
     role: CORE
     identity_notes: >-

@@ -4,6 +4,52 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.24 (2026-08-30) — Phase 2-G: Critical Market Source Gap Closure
+
+原則: **NO PROXY SUBSTITUTION**（TOPIX→ETF・JGB10Y→別年限/入札・UST2Y→
+別概念yieldの代用禁止）。対象はTOPIX/JGB10Y/UST2Yの3系列のみ。
+live実測: probe run #6（source調査）＋run #7（requested 16 = success 15 +
+gap 1 + failed 0・raw 4,245・derived 16,444・persistence/backup全green）。
+
+### 追加
+
+- `src/intelligence/market/treasury_curve.py`【新規】: 米財務省Daily Treasury
+  Par Yield Curve provider（年別CSV・複数年は連結申告・fair-access UA実測）。
+  official par yieldは市場実勢index（^TNX型）と**別概念**のため
+  `rates:UST2Y_par` / `rates:UST10Y_par` の新seriesとして接続——
+  live実測 各274行（2025-07-28〜2026-08-28・latest 4.34 / 4.73 pct・
+  as_of 15:30 ET）。既存^TNX系列は無変更で併存。
+- `src/intelligence/market/mof_jgb.py`【新規】: 財務省国債金利情報provider
+  （jgbcm_all＋当月jgbcm の2ファイル実測構成・Shift_JIS・和暦→ISO決定論変換・
+  constant maturity 15時クローズ）→ JGB10Y series——live実測 265行
+  （〜2026-08-27・latest 2.897 pct・as_of 15:00 JST）。
+- `src/intelligence/market/jquants_topix.py`【新規】: J-Quants（JPX公式系API）
+  TOPIX provider（指数値そのもの・ETF/先物代用なし・credentialは環境変数
+  runtime injectionのみ・parse_float=strでfloat非経由・token非永続）。
+  credential未投入のためlive取得は正直なgap（no_credentials）——
+  ユーザーのJ-Quants登録＋repo secrets投入後に同pilotで自動実証。
+- `src/intelligence/market/p2g_probe.py`【新規】: 公式ソース実測調査プローブ。
+- official spread `rates:UST10Y_par_UST2Y_par.spread.derived_metric`——
+  live 274行生成（latest 0.390000 pct_point・calculation provenance付き。
+  ^TNX×official parの概念混合spreadは生成しない）。NT倍率は定義済み
+  （TOPIXデータ待ち・入力なしでは出力しない）。
+- `docs/databank/`【新規3ファイル】: CRITICAL_MARKET_SOURCE_GAP_CLOSURE /
+  OFFICIAL_RATE_SERIES_SPEC / TOPIX_SOURCE_DECISION。
+- テスト38件追加（計1,109 passed）。
+
+### 改善
+
+- カタログ1.1.0: PRIMARY_OFFICIAL providers（treasury_gov/mof_japan/jquants・
+  Tier1）追加・live実証済み3系列のprobe解除・旧UST2Y（市場実勢・実績ゼロ）は
+  identity定義のみへ（official値を混入しない）。
+- health.py: critical gapsの解決状態をカタログ＋ローカル実データから機械導出
+  （G11=RESOLVED・G10=PARTIALLY_RESOLVED。TOPIX未解決の間phase3はBLOCKED）。
+- pilot_runnerへ::P2G_GAPS::マーカー・ProviderFetchResult.media_type追加。
+
+### 修正
+
+- なし（既存系列・既存挙動の変更なし）。
+
 ## v4.23 (2026-08-30) — Phase 2-F: Data Bank QA / Query / Human Review
 
 原則: THE DATA BANK MUST BE EXPLAINABLE, CORRECTABLE, AND REBUILDABLE。

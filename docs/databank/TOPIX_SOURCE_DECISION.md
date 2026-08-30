@@ -36,7 +36,9 @@
 
 ## 4. 状態と解除条件
 
-- 機構（provider・カタログ・パイプライン・テスト）は完成。
+- 機構（provider・カタログ・パイプライン・テスト）は完成。live run #7では
+  adapterがpipeline内で実行され `no_credentials` の正直なgapとして記録された
+  （FetchAttempt保存・secret非含有URL・捏造ゼロ——経路の結線自体は実証済み）。
 - **live実証はユーザーのJ-Quants登録＋repo secretsへの
   JQUANTS_MAIL / JQUANTS_PASSWORD 追加後**、次のpilot runで自動実行される
   （成功後にカタログprobe:false化→G10 RESOLVED）。
