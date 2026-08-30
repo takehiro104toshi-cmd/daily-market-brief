@@ -4,6 +4,55 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.23 (2026-08-30) — Phase 2-F: Data Bank QA / Query / Human Review
+
+原則: THE DATA BANK MUST BE EXPLAINABLE, CORRECTABLE, AND REBUILDABLE。
+Phase 2最終統合ゲート。**zero unknown loss機械証明**（会計恒等式
+2,976+25+55=3,056）・P2-C/P2-D持ち越しwarningの意味論的解決（捏造・削除なし）・
+Phase 3が使う統一読み出し契約まで。分析エンジンは未実装（DO NOT遵守）。
+
+### 追加
+
+- `src/intelligence/review/`【新規7ファイル】: Human Reviewワークフロー
+  （ReviewItem/ReviewDecisionRecord append-only・ALLOWED_DECISIONS型制限・
+  decided_by=user:強制・manual優先適用・intake冪等・CLI。実データ88件 open——
+  架空のhuman decisionは投入しない）＋Identity Decision Ledger（CANDIDATE 25件へ
+  confidence/シグナル/algorithm版永続・post_hoc derivation明示・migration-safe）
+  ＋Revision/Syndication role精緻化（same_publisher_update 53・
+  cross_feed_same_article 2・UNKNOWN 0——DO NOT GUESS）。
+- MIGRATED_PROVENANCE（HISTORICAL v1.1.0）: legacy shard/fingerprintへtrace
+  可能な移行由来文書はmigrated_provenance PASS。実データ3,056件再評価
+  ACCEPT 0→3,008・missing_raw_item 3,056→0（旧評価保持・6,112件併存）。
+- Market Observation trust v2（MARKET_OBSERVATION v1.0.0＋ProviderTrace）:
+  provider経路provenanceで評価、SUPPORTS link非必須方向へ。live run #5で
+  raw 3,432件再評価 ACCEPT 0→3,432・missing_supporting_evidence_ref 3,432→0
+  （旧評価保持・trace欠落はWARN維持）。
+- 統一クエリ層: NewsQuery entity/classification_provenance/review_status・
+  MarketQuery複合（trading_date範囲/source/QA判定/current_only/latest_session）・
+  review_items索引・publisher時系列集計（OBSERVED COUNTのみ）。
+- Cross-domain foundation: TradingWindow（JST朝窓・東京セッション・実データ
+  導出の前米国セッション・event窓）＋fetch_window_slice（同一window取得のみ・
+  causal分析なし・UTC暦日join禁止）。
+- DataBankHealthReport（HEALTHY/DEGRADED/BLOCKED＋reason codes・
+  critical source gaps（TOPIX/JGB10Y/UST2Y）を常時表示）・Phase 2統合
+  reconciliation（重複ID/orphan/恒等式/QA被覆/schema版/SQLite一致の機械検査）。
+- backup/restore演習テスト（manifest→copy→1byte破壊検知→復元→SQLite再構築→
+  クエリ等価）・Phase 2全層統合トレーステスト。
+- `docs/databank/`【新規8ファイル】: HUMAN_REVIEW_WORKFLOW /
+  MIGRATED_PROVENANCE_SPEC / MARKET_OBSERVATION_TRUST_POLICY /
+  UNIFIED_QUERY_SPEC / DATA_BANK_HEALTH_SPEC / PHASE2_RECONCILIATION /
+  SCHEMA_INVENTORY / PHASE2_ACCEPTANCE_REPORT（8本）。
+- テスト52件追加（計1,071 passed）。
+
+### 改善
+
+- SqliteNewsIndex: entity横断検索・review status結合・親ディレクトリ自動作成。
+- SqliteMarketIndex: search_market複合検索（revision解決・最新セッション）。
+
+### 修正
+
+- なし（既存挙動の変更なし。旧trust policyの評価結果は全て保持）。
+
 ## v4.22 (2026-08-30) — Phase 2-E: News Classification / Metadata Enrichment
 
 原則: CLASSIFICATION IS NOT FACT / EVERY ENRICHMENT MUST HAVE PROVENANCE /
