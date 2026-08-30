@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Tuple
 
 from ..core.ids import new_id
 from ..core.types import SCHEMA_VERSION, SourceTier
-from ..evidence_qa.assess import assess_observation
+from ..evidence_qa.assess import ProviderTrace, assess_observation
 from ..evidence_qa.model import EvidenceAssessment, SourceInfo
 from ..evidence_qa.policy import TrustPolicy
 from .derived import derive_cross_series, derive_per_series
@@ -161,10 +161,17 @@ class MarketBackfillEngine:
 
         decisions: Dict[str, int] = {}
         source_info = self._source_info(result.provider_id)
+        # P2-F: provider経路provenance（policy.observation_provider_provenance=True の
+        # policyで評価する場合に使用。従来policyでは無視される——挙動不変）
+        trace = ProviderTrace(
+            provider_id=result.provider_id,
+            fetch_attempt_id=attempt_id,
+            raw_payload_ref=raw_item_id or "",
+        )
         for obs in new_obs:
             assessment = assess_observation(
                 obs, source_info=source_info, policy=self.policy,
-                reference_time=result.retrieved_at)
+                reference_time=result.retrieved_at, provider_trace=trace)
             self.store.add_assessment(assessment)
             decisions[assessment.decision.value] = decisions.get(assessment.decision.value, 0) + 1
 

@@ -30,6 +30,10 @@ class NewsQuery:
     theme: str = ""
     event_type: str = ""
     trust_decisions: Tuple[str, ...] = field(default=())  # GateDecision value（例: ("accept",)）
+    # --- Phase 2-F追加（0.x非破壊） ---
+    entity: str = ""  # entity系次元横断（central_bank/index/commodity/currency/person/government/company）
+    classification_provenance: str = ""  # いずれかの分類が持つprovenance（例: "user"）
+    review_status: str = ""  # 当該record（news_item/article）にかかるReviewItemのstatus
     limit: int = 100
 
     def __post_init__(self) -> None:
@@ -49,6 +53,13 @@ class MarketQuery:
     date_from: Optional[datetime] = None  # as_of範囲
     date_to: Optional[datetime] = None
     kinds: Tuple[str, ...] = field(default=())  # raw / derived
+    # --- Phase 2-F追加（0.x非破壊） ---
+    trading_date_from: str = ""  # セッション日範囲（"YYYY-MM-DD"。UTC日付joinの代替）
+    trading_date_to: str = ""
+    source_id: str = ""          # provider（per-Observation provenance）
+    qa_decision: str = ""        # 最新QA判定（例: "accept_with_warnings"）
+    current_only: bool = True    # True=改定解決済みのみ / False=全revision
+    latest_session_only: bool = False  # series毎に最新取引セッションの1件のみ
     limit: int = 1000
 
     def __post_init__(self) -> None:

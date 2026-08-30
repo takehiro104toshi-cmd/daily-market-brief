@@ -37,7 +37,13 @@ def _result(dim: QADimension, status: DimensionStatus, codes: Tuple[str, ...] = 
 # ---------------------------------------------------------------- 1. provenance
 
 
-def eval_document_provenance(doc: SourceDocument) -> DimensionResult:
+def eval_document_provenance(doc: SourceDocument, *, migrated_trace: bool = False) -> DimensionResult:
+    """文書provenance。migrated_trace=True は **MIGRATED_PROVENANCE**（P2-F）:
+    live RawItemは無いがlegacy shard / dataset fingerprint / record locatorまで
+    trace可能なことを呼び出し側が確認済み——missing_raw_item WARNではなく
+    migrated_provenance（情報コード・PASS）で評価する。
+    LIVE FETCH PROVENANCEとの区別はreason codeとして残る（偽装ではない）。
+    """
     codes = []
     if not doc.source_id:
         codes.append("missing_source_id")
@@ -47,6 +53,12 @@ def eval_document_provenance(doc: SourceDocument) -> DimensionResult:
         codes.append("missing_locator")
     if codes:
         return _result(QADimension.PROVENANCE, DimensionStatus.FAIL, tuple(codes))
+    if not doc.raw_item_id and migrated_trace and not doc.normalizer_version:
+        migrated_trace = False  # traceがあってもnormalizer不明なら通常WARN経路へ
+    if not doc.raw_item_id and migrated_trace:
+        return _result(QADimension.PROVENANCE, DimensionStatus.PASS,
+                       ("migrated_provenance",),
+                       "live RawItemなし・legacy shard/fingerprintへtrace可能（移行由来）")
     warns = []
     if not doc.raw_item_id:
         warns.append("missing_raw_item")  # 原文非保存の明示（tank記事等）。断絶とは区別
@@ -57,11 +69,29 @@ def eval_document_provenance(doc: SourceDocument) -> DimensionResult:
     return _result(QADimension.PROVENANCE, DimensionStatus.PASS)
 
 
-def eval_observation_provenance(obs: Observation) -> DimensionResult:
+def eval_observation_provenance(obs: Observation, *, provider_trace=None,
+                                use_provider_path: bool = False) -> DimensionResult:
+    """観測provenance。
+
+    use_provider_path=True（policy.observation_provider_provenance・P2-F）:
+    market観測はFactStatement型のSUPPORTS link（source_document_id）を必須とせず、
+    **provider経路**（Observation→provider payload→provider→FetchAttempt/import
+    provenance）で評価する。provider_trace（assess.ProviderTrace）が検証済みなら
+    provider_provenance_verified PASS、traceが欠落していればmissing_provider_trace WARN
+    （**provenance欠落は許容しない**）。
+    """
     if obs.kind is ObservationKind.RAW:
         if not obs.source_id:
             return _result(QADimension.PROVENANCE, DimensionStatus.FAIL,
                            ("missing_source_id",))
+        if use_provider_path:
+            if provider_trace is not None and provider_trace.verified:
+                return _result(QADimension.PROVENANCE, DimensionStatus.PASS,
+                               ("provider_provenance_verified",),
+                               "provider経路のprovenance確認済み（SUPPORTS link非必須）")
+            return _result(QADimension.PROVENANCE, DimensionStatus.WARN,
+                           ("missing_provider_trace",),
+                           "provider経路のtrace欠落（欠落は許容しない）")
         if not obs.source_document_id:
             return _result(QADimension.PROVENANCE, DimensionStatus.WARN,
                            ("missing_supporting_evidence_ref",),

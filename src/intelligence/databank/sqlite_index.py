@@ -55,13 +55,26 @@ CREATE TABLE IF NOT EXISTS trust_decisions (
     assessed_at TEXT NOT NULL,
     PRIMARY KEY (record_id, policy_name, assessed_at)
 );
+
+CREATE TABLE IF NOT EXISTS review_items (
+    review_id TEXT PRIMARY KEY,
+    record_id TEXT NOT NULL,
+    review_type TEXT NOT NULL,
+    status TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_review_record ON review_items(record_id);
 """
+
+#: NewsQuery.entityが横断する entity系次元（companyを含む）
+_ENTITY_DIMENSIONS_SQL = (
+    "company", "central_bank", "government", "person", "index", "commodity", "currency")
 
 
 class SqliteNewsIndex:
     """News Bankの検索索引（NewsQueryable充足）。正本から再構築可能。"""
 
     def __init__(self, path: Path) -> None:
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(path))
         self._conn.executescript(_SCHEMA)
         self._items: Dict[str, NewsItem] = {}
@@ -109,9 +122,18 @@ class SqliteNewsIndex:
         self._conn.commit()
         return len(rows)
 
+    def index_review_items(self, items) -> int:
+        """ReviewItem（latest状態）の索引（review_statusフィルタ用。P2-F追加）。"""
+        rows = [(r.review_id, r.record_id, r.review_type.value, r.status.value)
+                for r in items]
+        self._conn.executemany(
+            "INSERT OR REPLACE INTO review_items VALUES (?,?,?,?)", rows)
+        self._conn.commit()
+        return len(rows)
+
     def rebuild(self) -> None:
         """索引は導出物: 全消去して正本からindex_*で再構築する（スキーマ変更時の手順）。"""
-        for table in ("news_items", "classifications", "trust_decisions"):
+        for table in ("news_items", "classifications", "trust_decisions", "review_items"):
             self._conn.execute(f"DELETE FROM {table}")
         self._conn.commit()
         self._items.clear()
@@ -140,6 +162,22 @@ class SqliteNewsIndex:
             cls_filter("theme", query.theme, "c4")
         if query.event_type:
             cls_filter("event_type", query.event_type, "c5")
+        if query.entity:  # entity系次元の横断（P2-F）
+            marks = ",".join("?" for _ in _ENTITY_DIMENSIONS_SQL)
+            joins.append(
+                "JOIN classifications ce ON ce.news_item_id = n.news_item_id "
+                f"AND ce.dimension IN ({marks}) AND ce.value = ?")
+            params.extend([*_ENTITY_DIMENSIONS_SQL, query.entity])
+        if query.classification_provenance:
+            joins.append(
+                "JOIN classifications cp ON cp.news_item_id = n.news_item_id "
+                "AND cp.provenance = ?")
+            params.append(query.classification_provenance)
+        if query.review_status:
+            joins.append(
+                "JOIN review_items rv ON (rv.record_id = n.news_item_id "
+                "OR rv.record_id = n.article_id) AND rv.status = ?")
+            params.append(query.review_status)
         if query.trust_decisions:
             marks = ",".join("?" for _ in query.trust_decisions)
             joins.append(
@@ -190,6 +228,26 @@ class SqliteNewsIndex:
             "COUNT(DISTINCT n.news_item_id) AS n "
             "FROM classifications c JOIN news_items n ON n.news_item_id = c.news_item_id "
             f"WHERE {' AND '.join(where)} GROUP BY period, c.value ORDER BY period, c.value")
+        return list(self._conn.execute(sql, params))
+
+    def count_publishers_over_time(
+        self, *, granularity: str = "day", date_from: str = "", date_to: str = "",
+    ) -> List[tuple]:
+        """(期間, publisher, 記事数)。時系列集計foundation（分析判断はしない）。"""
+        fmt = {"day": "%Y-%m-%d", "week": "%Y-W%W", "month": "%Y-%m"}.get(granularity)
+        if fmt is None:
+            raise ValueError(f"unknown granularity: {granularity}")
+        where = ["published_at IS NOT NULL"]
+        params: List[str] = []
+        if date_from:
+            where.append("published_at >= ?")
+            params.append(date_from)
+        if date_to:
+            where.append("published_at <= ?")
+            params.append(date_to)
+        sql = (f"SELECT strftime('{fmt}', published_at) AS period, publisher, COUNT(*) "
+               f"FROM news_items WHERE {' AND '.join(where)} "
+               "GROUP BY period, publisher ORDER BY period, publisher")
         return list(self._conn.execute(sql, params))
 
     def count_values(self, dimension: str) -> Dict[str, int]:

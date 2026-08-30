@@ -199,6 +199,51 @@ class SqliteMarketIndex:
             (series_id, trading_date))
         return rows[0] if rows else None
 
+    def search_market(self, query) -> List[sqlite3.Row]:
+        """MarketQuery（databank/query.py・P2-F拡張）の実行。
+
+        series / instrument / metric / as_of範囲 / trading_date範囲 / kind /
+        source / 最新QA判定 / 改定解決 / series毎最新セッション をAND結合。
+        """
+        where = ["1=1"]
+        params: List = []
+        if query.series_id:
+            where.append("o.series_id = ?"); params.append(query.series_id)
+        if query.instrument_id:
+            where.append("o.series_id LIKE ?"); params.append(f"{query.instrument_id}.%")
+        if query.metric:
+            where.append("o.metric = ?"); params.append(query.metric)
+        if query.date_from:
+            where.append("o.as_of_utc >= ?"); params.append(query.date_from.isoformat())
+        if query.date_to:
+            where.append("o.as_of_utc <= ?"); params.append(query.date_to.isoformat())
+        if query.trading_date_from:
+            where.append("o.trading_date >= ?"); params.append(query.trading_date_from)
+        if query.trading_date_to:
+            where.append("o.trading_date <= ?"); params.append(query.trading_date_to)
+        if query.kinds:
+            marks = ",".join("?" for _ in query.kinds)
+            where.append(f"o.kind IN ({marks})"); params.extend(query.kinds)
+        if query.source_id:
+            where.append("o.source_id = ?"); params.append(query.source_id)
+        if query.current_only:
+            where.append(_NOT_SUPERSEDED)
+        if query.qa_decision:
+            where.append(
+                "(SELECT a.decision FROM assessments a WHERE a.record_id = o.observation_id "
+                " ORDER BY a.seq DESC LIMIT 1) = ?")
+            params.append(query.qa_decision)
+        sql = (f"SELECT o.* FROM observations o WHERE {' AND '.join(where)} "
+               f"ORDER BY o.series_id, o.trading_date, o.seq LIMIT ?")
+        params.append(int(query.limit) if not query.latest_session_only else 1000000)
+        rows = self._rows(sql, params)
+        if query.latest_session_only:
+            latest: Dict[str, sqlite3.Row] = {}
+            for row in rows:  # trading_date昇順→最後が最新セッション
+                latest[row["series_id"]] = row
+            rows = list(latest.values())[: int(query.limit)]
+        return rows
+
     def revision_chain(self, series_id: str, trading_date: str) -> List[sqlite3.Row]:
         """(series, セッション日)の全版（旧→新。改定履歴の監査用）。"""
         return self._rows(

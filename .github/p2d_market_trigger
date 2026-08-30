@@ -1,4 +1,4 @@
 # P2-D Market Data Bank live pilot trigger
 # このファイルの更新pushで .github/workflows/p2d-market-pilot.yml が起動する
 # （feature branch限定・1系列=1リクエスト・Secrets不使用）
-run: 2026-08-30T05:50Z p2d-live-pilot-attempt4-trace-fix
+run: 2026-08-30T07:00Z p2f-market-reassessment

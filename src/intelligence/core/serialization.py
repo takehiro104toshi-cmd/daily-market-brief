@@ -119,6 +119,9 @@ def register_domain_types() -> None:
     from ..enrichment import model as enr
     from ..evidence import model as ev
     from ..evidence_qa import model as qa
+    from ..review import identity_ledger as rvl
+    from ..review import model as rvm
+    from ..review import revision_roles as rvr
     from ..ingestion import model as ing
     from ..market import backfill as mkb
     from ..market import model as mk
@@ -154,6 +157,10 @@ def register_domain_types() -> None:
         enr.EnrichmentEvent,
         enr.ReviewQueueItem,
         enr.EnrichmentRun,
+        rvm.ReviewItem,
+        rvm.ReviewDecisionRecord,
+        rvl.IdentityLedgerEntry,
+        rvr.RevisionRoleRecord,
         mk.Observation,
         mkb.SeriesRunResult,
         mkb.MarketBackfillRun,

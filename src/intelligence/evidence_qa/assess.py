@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Mapping, Optional, Sequence, Tuple
 
@@ -26,6 +27,26 @@ from .model import (
     SourceInfo,
 )
 from .policy import TrustPolicy
+
+
+@dataclass(frozen=True, kw_only=True)
+class ProviderTrace:
+    """market観測のprovider経路provenance（transient・評価入力。P2-F）。
+
+    Observation → provider payload（生CSV/正規化スナップショット）→ provider →
+    FetchAttempt（live取得）または import provenance（移行由来）のtrace。
+    いずれか1つ以上が実在すればverified（呼び出し側が実在を確認して渡す）。
+    """
+
+    provider_id: str
+    fetch_attempt_id: str = ""      # live取得のFetchAttempt
+    raw_payload_ref: str = ""       # provider payloadのRawItem/blob参照
+    import_provenance: str = ""     # 移行由来のdataset fingerprint等
+
+    @property
+    def verified(self) -> bool:
+        return bool(self.provider_id) and bool(
+            self.fetch_attempt_id or self.raw_payload_ref or self.import_provenance)
 
 
 def load_source_info(catalog_feed: Mapping[str, object]) -> SourceInfo:
@@ -81,9 +102,10 @@ def assess_source_document(
     normalization_events: Sequence = (),
     existing_documents: Sequence[SourceDocument] = (),
     retracted_ids: frozenset = frozenset(),
+    migrated_trace: bool = False,  # P2-F: MIGRATED_PROVENANCE（呼び出し側がtrace実在を確認）
 ) -> EvidenceAssessment:
     results = [
-        dims.eval_document_provenance(doc),
+        dims.eval_document_provenance(doc, migrated_trace=migrated_trace),
         dims.eval_source_quality(source_info),
         dims.eval_source_health(source_info, policy),
         dims.eval_freshness(doc.published_at, policy, reference_time, horizon),
@@ -109,9 +131,12 @@ def assess_observation(
     reference_time: datetime,
     horizon: Optional[Horizon] = None,
     input_assessments: Sequence[EvidenceAssessment] = (),
+    provider_trace: Optional[ProviderTrace] = None,  # P2-F: provider経路provenance
 ) -> EvidenceAssessment:
     results = [
-        dims.eval_observation_provenance(obs),
+        dims.eval_observation_provenance(
+            obs, provider_trace=provider_trace,
+            use_provider_path=policy.observation_provider_provenance),
         dims.eval_source_quality(source_info),
         dims.eval_source_health(source_info, policy),
         dims.eval_freshness(obs.as_of, policy, reference_time, horizon),

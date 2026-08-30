@@ -77,6 +77,10 @@ REASON_CODES = (
     "normalization_rejected", "normalization_partial", "usage_restricted",
     "dependency_rejected", "dependency_limited", "dependency_unassessed",
     "weak_supporting_evidence",
+    # Phase 2-F: migrated / provider provenance（0.x追加）
+    "migrated_provenance",            # live RawItemなしだがlegacy shard/fingerprintへtrace可能
+    "provider_provenance_verified",   # market観測: provider経路のfetch/import provenance確認済み
+    "missing_provider_trace",         # market観測: provider経路のtraceが欠落（許容しない）
 )
 
 

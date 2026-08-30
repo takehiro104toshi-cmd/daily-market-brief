@@ -34,6 +34,11 @@ class TrustPolicy:
     source_dead_status: DimensionStatus = DimensionStatus.WARN  # 死活≠文書の正しさ（分離）
     usage_restricted_status: DimensionStatus = DimensionStatus.WARN
     dependency_rejected_status: DimensionStatus = DimensionStatus.LIMIT  # 自動削除しない
+    # Phase 2-F追加（0.x非破壊）: market観測のprovenance意味論。
+    # True = ObservationはFactStatement型のSUPPORTS linkを要求せず、
+    # provider経路（provider/raw payload/FetchAttempt・import provenance）で評価する。
+    # provenance欠落自体は引き続き許容しない（missing_provider_trace WARN）。
+    observation_provider_provenance: bool = False
 
     def freshness_status(self, age_hours: float) -> Tuple[DimensionStatus, str]:
         if age_hours <= self.fresh_hours:
@@ -94,8 +99,40 @@ HISTORICAL_V1 = TrustPolicy(
     superseded_status=DimensionStatus.WARN,  # 旧版も歴史として利用可（表示は警告）
 )
 
+#: 歴史データpolicy v1.1（P2-F追加）: v1.0との差は**MIGRATED_PROVENANCE意味論**——
+#: legacy shard/dataset fingerprint/record locatorまでtrace可能な移行由来文書は、
+#: missing_raw_item WARNではなくmigrated_provenance PASS（情報コード）で評価する。
+#: 移行traceの無い原文欠落は引き続きWARN。旧v1.0 assessmentは削除せず併存
+#: （NO RETROACTIVE DELETE——新旧比較可能）。
+HISTORICAL_V1_1 = TrustPolicy(
+    name="HISTORICAL",
+    version="1.1.0",
+    fresh_hours=24 * 365 * 100,
+    stale_hours=24 * 365 * 100,
+    published_unknown_status=DimensionStatus.WARN,
+    superseded_status=DimensionStatus.WARN,
+)
+
+#: market観測policy v1（P2-F追加・監督者RECOMMENDED MODEL）:
+#: Observation → provider/raw payload → source/provider → FetchAttempt/import provenance
+#: の経路で評価し、FactStatement型SUPPORTS linkを必須にしない
+#: （missing_supporting_evidence_ref を出さない）。provenance欠落は許容しない
+#: （trace無し→missing_provider_trace WARN）。freshness等はHISTORICALと同一
+#: （historical backfill文脈。日次文脈は将来MARKET_OBSERVATION_DAILYとして追加）。
+MARKET_OBSERVATION_V1 = TrustPolicy(
+    name="MARKET_OBSERVATION",
+    version="1.0.0",
+    fresh_hours=24 * 365 * 100,
+    stale_hours=24 * 365 * 100,
+    published_unknown_status=DimensionStatus.WARN,
+    superseded_status=DimensionStatus.WARN,
+    observation_provider_provenance=True,
+)
+
 _REGISTRY: Dict[Tuple[str, str], TrustPolicy] = {
-    (p.name, p.version): p for p in (GENERIC_V1, DAILY_MARKET_V1, HISTORICAL_V1)
+    (p.name, p.version): p
+    for p in (GENERIC_V1, DAILY_MARKET_V1, HISTORICAL_V1, HISTORICAL_V1_1,
+              MARKET_OBSERVATION_V1)
 }
 
 

@@ -168,6 +168,50 @@ def main(argv=None) -> int:
             "daily_market_issues": [i.code for i in daily.issues],
         }, ensure_ascii=False))
 
+    # P2-F: market observation QA意味論v2での再評価（旧HISTORICAL評価は削除せず保持——
+    # NO RETROACTIVE DELETE。新旧比較を機械出力する）
+    from ..evidence_qa.assess import ProviderTrace
+    from ..evidence_qa.policy import MARKET_OBSERVATION_V1
+
+    trace_by_series = {
+        r.series_id: ProviderTrace(provider_id=r.provider_id,
+                                   fetch_attempt_id=r.fetch_attempt_id,
+                                   raw_payload_ref=r.raw_item_id)
+        for r in run.results if r.status == "success"}
+    old_latest = {}
+    for a in store.qa.iter_assessments():
+        if a.policy_name == "HISTORICAL":
+            old_latest[a.record_id] = a  # append順=時系列（1パス導出）
+    old_counts: dict = {}
+    new_counts: dict = {}
+    old_missing_ref = new_missing_ref = reassessed = 0
+    reassess_ref = datetime.now(timezone.utc)
+    for obs in store.normalized.iter_observations():
+        if obs.kind.value != "raw":
+            continue
+        old = old_latest.get(obs.observation_id)
+        if old is not None:
+            old_counts[old.decision.value] = old_counts.get(old.decision.value, 0) + 1
+            if any(i.code == "missing_supporting_evidence_ref" for i in old.issues):
+                old_missing_ref += 1
+        new = assess_observation(
+            obs, source_info=provider_source_info(catalog, obs.source_id),
+            policy=MARKET_OBSERVATION_V1, reference_time=reassess_ref,
+            provider_trace=trace_by_series.get(obs.series_id))
+        store.add_assessment(new)
+        new_counts[new.decision.value] = new_counts.get(new.decision.value, 0) + 1
+        if any(i.code == "missing_supporting_evidence_ref" for i in new.issues):
+            new_missing_ref += 1
+        reassessed += 1
+    print("::P2F_REASSESS::" + json.dumps({
+        "reassessed_raw_observations": reassessed,
+        "old_policy": "HISTORICAL:1.0.0", "new_policy": "MARKET_OBSERVATION:1.0.0",
+        "old_decisions": old_counts, "new_decisions": new_counts,
+        "old_missing_supporting_evidence_ref": old_missing_ref,
+        "new_missing_supporting_evidence_ref": new_missing_ref,
+        "old_assessments_preserved": True,
+    }, ensure_ascii=False))
+
     # PART A gate: 別プロセス（restart相当）でcanonical読み戻し＋index全再構築＋latest一致
     parent_latest = {
         sid: _row_dict(store.index.latest_trading_session(sid)) for sid in succeeded}
