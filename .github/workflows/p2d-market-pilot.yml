@@ -31,27 +31,13 @@ jobs:
           python-version: "3.11"
       - name: Install minimal deps
         run: pip install pyyaml yfinance
-      # P2-G.1: J-Quantsが実際に要求する認証仕様をAPI応答で確認（秘密は送らない）
-      - name: P2-G.1 J-Quants auth contract probe (research only)
-        continue-on-error: true
-        run: python -m src.intelligence.market.p2g_probe jquants
-      # P2-G.1: 投入されたcredentialで**どの認証方式が実際に通るか**を実測。
-      # 秘密値・token値は一切出力しない（候補名・ステータス・件数のみ）。
-      # P2-G.2: J-Quants **V2**公式仕様の実測ディスカバリ（V1は2026-06-01終了）。
-      # パス実在判別→API Key搬送方式の特定。秘密は一切出力しない。
-      - name: P2-G.2 J-Quants V2 spec discovery
-        continue-on-error: true
-        env:
-          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
-        run: python -m src.intelligence.market.p2g2_v2_discovery
+      # P2-G.2: J-Quants **V2**が現行API（V1は2026-06-01終了）。
+      # V1エンドポイントのプローブは現行候補としては行わない
+      # （run #6〜#13の実測記録はdocs/へappend-onlyで保全済み）。
       # credentialはrepository secretsからのruntime injectionのみ
-      # （未設定なら空文字＝TOPIX_CREDENTIAL_MISSINGとして正常停止する）
+      # （未設定なら空文字＝TOPIX_CREDENTIAL_MISSINGとして正常停止する）。
       - name: Run market data bank live pilot (1 request per series)
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
           JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
-          JQUANTS_ID_TOKEN: ${{ secrets.JQUANTS_ID_TOKEN }}
-          JQUANTS_REFRESH_TOKEN: ${{ secrets.JQUANTS_REFRESH_TOKEN }}
-          JQUANTS_MAIL: ${{ secrets.JQUANTS_MAIL }}
-          JQUANTS_PASSWORD: ${{ secrets.JQUANTS_PASSWORD }}
         run: python -m src.intelligence.market.pilot_runner

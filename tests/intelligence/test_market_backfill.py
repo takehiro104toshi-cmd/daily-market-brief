@@ -43,7 +43,7 @@ class TestBackfillRun:
         assert run.series_requested == run.series_success + run.series_gap + run.series_failed
         assert run.observations_added == 10  # 5+5
         assert run.trust_policy == "HISTORICAL:1.0.0"
-        assert run.catalog_version == "1.1.0"
+        assert run.catalog_version == "1.2.0"
         by_id = {r.series_id: r for r in run.results}
         assert by_id["rates:JGB10Y.yield.closing.tokyo"].status == "gap"
         assert by_id["index:dji.close.closing.us"].status == "failed"

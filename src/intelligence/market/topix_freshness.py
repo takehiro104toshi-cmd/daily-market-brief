@@ -39,6 +39,22 @@ NO_DATA = "NO_DATA"
 PLAN_CAPABILITY_UNVERIFIED = "UNVERIFIED"
 PLAN_CAPABILITY_VERIFIED = "VERIFIED"
 
+#: 公式documentation evidence（J-Quants公式クイックスタートV2の実コード・実文言）。
+#: **entitlement次元のみ**が確定した根拠であり、プラン別の遅延・履歴範囲までは
+#: 断定しない（監督者訂正の趣旨を維持する）。
+PLAN_CAPABILITY_EVIDENCE_TOPIX_TIER = (
+    "公式クイックスタート(V2): TOPIX四本値(/indices/bars/daily/topix)は"
+    "「Lightプラン以上のプランで利用できるAPI」に分類。"
+    "データ更新時刻は毎営業日16:30頃（JST）"
+)
+#: TOPIX四本値の公表時刻（JST・公式クイックスタートV2記載）
+TOPIX_UPDATE_TIME_LOCAL = "16:30"
+
+#: V1 EOL（2026-06-01）起点の原因分類（jquants_v2.classify_v2_failure と対応）
+CAUSE_LEGACY_V1_ENDPOINT = "legacy_v1_endpoint"
+CAUSE_API_VERSION_MISMATCH = "api_version_mismatch"
+CAUSE_PLAN_NOT_ENTITLED = "plan_not_entitled"
+
 G10_RESOLVED = "RESOLVED"
 G10_HISTORICAL_ONLY = "HISTORICAL_RESOLVED_CURRENT_BLOCKED"
 G10_PARTIAL = "PARTIALLY_RESOLVED"
@@ -144,7 +160,7 @@ _DATASET_UNAVAILABLE_KINDS = ("no_data", "http_error", "identity_mismatch",
 
 def g10_state(
     freshness: TopixFreshness, *, credential_present: bool,
-    fetch_error_kind: str = "",
+    fetch_error_kind: str = "", failure_cause: str = "",
 ) -> Tuple[str, Tuple[str, ...]]:
     """freshness＋credential有無＋fetch結果 → G10状態（reason code必須）。
 
@@ -163,8 +179,16 @@ def g10_state(
         if not credential_present:
             return G10_PARTIAL, ("topix_credential_missing",
                                  "adapter_implemented_not_live_validated")
+        if failure_cause in (CAUSE_API_VERSION_MISMATCH, CAUSE_LEGACY_V1_ENDPOINT):
+            # 認証情報の問題ではなくAPI版数の問題（V1は2026-06-01終了）
+            return G10_BLOCKED, (failure_cause, f"error:{fetch_error_kind}")
+        if failure_cause == CAUSE_PLAN_NOT_ENTITLED:
+            return G10_BLOCKED, ("access_level_insufficient", failure_cause,
+                                 f"error:{fetch_error_kind}")
         if fetch_error_kind in _AUTH_FAILURE_KINDS:
-            return G10_BLOCKED, ("auth_failure", f"error:{fetch_error_kind}")
+            return G10_BLOCKED, (("auth_failure", f"error:{fetch_error_kind}")
+                                 + ((f"cause:{failure_cause}",) if failure_cause
+                                    else ()))
         if fetch_error_kind in _DATASET_UNAVAILABLE_KINDS:
             return G10_BLOCKED, ("access_level_insufficient",
                                  "authenticated_but_dataset_unavailable",
@@ -202,11 +226,16 @@ def access_requirement_report(
         "observed_lag_days": freshness.lag_days,
         "observed_gap_sessions": freshness.gap_sessions,
         "observed_latest_trading_date": freshness.latest_trading_date,
-        "plan_capability": PLAN_CAPABILITY_UNVERIFIED,
+        "plan_capability": (PLAN_CAPABILITY_VERIFIED if plan_capability_evidence
+                            else PLAN_CAPABILITY_UNVERIFIED),
+        "plan_capability_scope": (
+            "entitlement次元のみ（どのプランで当該APIを使えるか）。"
+            "プラン別の遅延日数・履歴範囲は依然UNVERIFIED——実取得結果で確定する"),
         "plan_capability_evidence": (
             plan_capability_evidence
             or "未取得（公式docsはJS描画で本文を機械抽出できず・"
                "実credentialでの取得結果も未取得）"),
+        "topix_update_time_local": TOPIX_UPDATE_TIME_LOCAL,
         "required_access_level": (
             "現行取得内容で要件充足（実測ベース）" if freshness.morning_usable else
             "未確定——現行アクセスでは当日分が観測できていない。"

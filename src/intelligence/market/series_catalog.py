@@ -30,6 +30,9 @@ class ProviderInfo:
     endpoint_template: str = ""
     response_format: str = ""
     provider_normalized: bool = False
+    #: APIの版数（例: "v2"）。版数が provenance 上で識別できるようにする
+    #: （既定は空——版数概念のないproviderに影響を与えない）
+    api_version: str = ""
     notes: str = ""
 
 
@@ -192,6 +195,7 @@ def load_catalog(path: Path = DEFAULT_CATALOG_PATH) -> SeriesCatalog:
             endpoint_template=str(p.get("endpoint_template", "")),
             response_format=str(p.get("response_format", "")),
             provider_normalized=bool(p.get("provider_normalized", False)),
+            api_version=str(p.get("api_version", "") or ""),
             notes=str(p.get("notes", "") or ""),
         )
         for pid, p in (data.get("providers") or {}).items()

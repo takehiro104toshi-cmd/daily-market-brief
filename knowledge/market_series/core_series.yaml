@@ -23,7 +23,7 @@
 #   legacy実績のないprovider symbol（取得失敗はSOURCE GAPとして扱いエラーにしない）。
 
 id: market_series_core
-version: "1.1.0"
+version: "1.2.0"
 description: >-
   Market Data BankのCORE系列カタログ（series identity＋取得運用フィールド。
   Phase 2-D PART B / Phase 2-G official source gap closure）。
@@ -32,6 +32,11 @@ source: "監督者指示（P2-D/P2-G directive）＋legacy config.yaml stooq_sym
 status: active
 updated: "2026-08-30"
 changelog: >-
+  1.2.0（P2-G.2）: J-Quants V1（2026-06-01終了）からV2へ移行。TOPIXの
+  endpoint_templateをV2の専用パス /v2/indices/bars/daily/topix へ、認証を
+  API Key方式（env JQUANTS_API_KEY のruntime injection）へ更新。series identity
+  （index:topix.close.closing.tokyo）とNO PROXY SUBSTITUTION原則は不変。
+  J-Quants/TOPIX経路以外（treasury_gov / mof_japan / 他系列）は無変更。
   1.1.0（P2-G）: PRIMARY_OFFICIAL providers追加（treasury_gov / mof_japan /
   jquants）。UST2Y/UST10Yのofficial par yield系列を新設（既存^TNX系列とは
   概念が異なるため別series——NO SILENT MIXING）。JGB10Yを財務省国債金利情報へ、
@@ -95,18 +100,24 @@ providers:
   jquants:
     source_type: PRIMARY_OFFICIAL
     tier: 1
-    endpoint_template: "https://api.jquants.com/v1/indices/topix"
+    endpoint_template: "https://api.jquants.com/v2/indices/bars/daily/topix"
+    api_version: "v2"
     response_format: json
     provider_normalized: false
     notes: >-
-      J-Quants（JPX子会社 JPX Market Innovation & Research 運営の公式データAPI）。
-      /indices/topixはTOPIX指数値そのもの（ETF・先物ではない）。認証は
-      環境変数からのruntime injectionのみ（JQUANTS_MAIL/JQUANTS_PASSWORD等）
+      J-Quants（JPX子会社 JPX Market Innovation & Research 運営の公式データAPI）
+      **V2**。V1は2026-06-01に終了しており現行仕様ではない。
+      /v2/indices/bars/daily/topix はTOPIX指数値そのもの（ETF・先物ではない）。
+      認証はAPI Keyをリクエストヘッダで送る方式（V1のtoken交換は廃止）。
+      ヘッダ名は実装定数 jquants_v2.AUTH_HEADER を正とする
+      （ヘッダ名リテラルをknowledge/へ持ち込まない——秘密混入防止ガード）。
+      値は環境変数 JQUANTS_API_KEY からのruntime injectionのみ
       ——secretをGit/config/カタログへ保存しない。
-      **PLAN_CAPABILITY = UNVERIFIED**: 各プランの遅延・履歴範囲は公式
-      ドキュメントから機械取得できておらず、system ground truthとして固定
-      しない。実credentialでの取得結果、または取得可能な公式documentation
-      evidenceで確定する（TOPIX_SOURCE_DECISION.md参照）。
+      応答は {"data": [...], "pagination_key": ...}・四本値項目はV2短縮名
+      （O/H/L/C）。データ更新は毎営業日16:30頃（JST）。
+      **PLAN_CAPABILITY**: TOPIX四本値がLightプラン以上である点のみ公式
+      クイックスタート(V2)で確認済み。プラン別の遅延日数・履歴範囲は依然
+      UNVERIFIEDで、実取得結果により確定する（TOPIX_SOURCE_DECISION.md参照）。
 
 defaults:
   frequency: daily
@@ -156,7 +167,7 @@ series:
     enabled: true
     role: CORE
     identity_notes: >-
-      TOPIX指数現物終値（P2-G: J-Quants=JPX公式系APIの/indices/topix値。
+      TOPIX指数現物終値（P2-G.2: J-Quants **V2** /indices/bars/daily/topix値。
       **TOPIX ≠ 1306.T等ETF ≠ TOPIX先物**——ETF/先物を指数seriesへ流用しない）。
       credentialは環境変数runtime injectionのみ。未設定・取得不能なら
       SOURCE GAPとして正直に欠測とする（代用で埋めない）。

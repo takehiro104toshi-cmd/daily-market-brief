@@ -94,7 +94,7 @@ def main(argv=None) -> int:
     bank_root = market_bank_root(root)
     catalog = load_catalog(Path(args.catalog))
     store = MarketBankStore(bank_root)
-    from .jquants_topix import JQuantsTopixProvider
+    from .jquants_v2 import JQuantsV2TopixProvider
     from .mof_jgb import MofJgbYieldProvider
     from .treasury_curve import TreasuryParYieldProvider
 
@@ -104,7 +104,9 @@ def main(argv=None) -> int:
         # P2-G: PRIMARY_OFFICIAL経路（critical source gap closure）
         "treasury_gov": TreasuryParYieldProvider(UrllibTransport()),
         "mof_japan": MofJgbYieldProvider(UrllibTransport()),
-        "jquants": JQuantsTopixProvider(),  # credentialは環境変数runtime injectionのみ
+        # P2-G.2: J-Quants **V2**（V1は2026-06-01終了——V1実装は現行候補にしない）。
+        # credentialは環境変数JQUANTS_API_KEYのruntime injectionのみ。
+        "jquants": JQuantsV2TopixProvider(),
     }
     engine = MarketBackfillEngine(store, catalog, providers, HISTORICAL_V1,
                                   sleeper=time.sleep)
@@ -264,27 +266,32 @@ def main(argv=None) -> int:
     }, ensure_ascii=False))
 
     # P2-G.1: TOPIX CREDENTIALED LIVE CLOSEOUT（STEP 1-8。秘密は一切出力しない）
-    from .jquants_topix import credential_status
+    from .jquants_v2 import credential_status_v2
     from .topix_freshness import (
+        PLAN_CAPABILITY_EVIDENCE_TOPIX_TIER,
         TOPIX_SERIES_ID,
         access_requirement_report,
         evaluate_topix_freshness,
         g10_state,
     )
 
-    cred = credential_status()
+    cred = credential_status_v2()
     topix_result = next(
         (r for r in run.results if r.series_id == TOPIX_SERIES_ID), None)
     topix_rows = store.index.query(series_id=TOPIX_SERIES_ID, kind="raw", limit=100000)
     freshness = evaluate_topix_freshness(store.index, now=datetime.now(timezone.utc))
+    _jq_probe = providers.get("jquants")
     state, reason_codes = g10_state(
         freshness, credential_present=bool(cred["present"]),
-        fetch_error_kind=(topix_result.error_kind if topix_result else ""))
+        fetch_error_kind=(topix_result.error_kind if topix_result else ""),
+        failure_cause=getattr(_jq_probe, "last_failure_cause", ""))
     # 実際にAPIで通った方式のみ（成功していない方式をsupportedと断定しない）
     _jq = providers.get("jquants")
     cred["auth_method_validated"] = getattr(_jq, "last_auth_method_validated", "")
-    cred["mechanism_validated"] = getattr(_jq, "last_mechanism_validated", "")
-    cred["negotiation_trail"] = list(getattr(_jq, "negotiation_trail", ()))
+    cred["failure_cause"] = getattr(_jq, "last_failure_cause", "")
+    # 実測したV2応答のschema項目名（値は含まない。仕様確認の証跡）
+    cred["observed_top_keys"] = list(getattr(_jq, "observed_top_keys", ()))
+    cred["observed_row_fields"] = list(getattr(_jq, "observed_row_fields", ()))
 
     topix_qa: dict = {}
     topix_ids = {row["observation_id"] for row in topix_rows}
@@ -319,9 +326,12 @@ def main(argv=None) -> int:
             "error_kind": topix_result.error_kind if topix_result else "",
             "error_detail": (topix_result.error_detail[:160] if topix_result else ""),
             "records_seen": topix_result.records_seen if topix_result else 0,
+            "api_version": cred["api_version"],
             "auth_method_validated": cred["auth_method_validated"],
-            "mechanism_validated": cred["mechanism_validated"],
-            "negotiation_trail": cred["negotiation_trail"],
+            "failure_cause": cred["failure_cause"],
+            "observed_top_keys": cred["observed_top_keys"],
+            "observed_row_fields": cred["observed_row_fields"],
+            "pages": getattr(_jq, "pages_fetched", 0),
         },
         "step3_historical": {
             "raw_rows": len(topix_rows),
@@ -331,7 +341,9 @@ def main(argv=None) -> int:
             "unit": topix_rows[-1]["unit"] if topix_rows else "",
         },
         "step4_freshness": freshness.as_dict(),
-        "step5_access_requirement": access_requirement_report(freshness),
+        "step5_access_requirement": access_requirement_report(
+            freshness,
+            plan_capability_evidence=PLAN_CAPABILITY_EVIDENCE_TOPIX_TIER),
         "step6_ingestion_qa": {
             "qa_decisions": topix_qa,
             "latest": _row_dict(store.index.latest_trading_session(TOPIX_SERIES_ID)),

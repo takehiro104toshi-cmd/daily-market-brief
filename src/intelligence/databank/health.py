@@ -23,7 +23,7 @@ from ..core.types import SCHEMA_VERSION
 #: 機械導出する——「コードを書いた」だけではRESOLVEDにならない。
 CRITICAL_MARKET_GAPS = (
     ("index:topix.close.closing.tokyo", "index:topix.close.closing.tokyo",
-     "G10", "TOPIX指数（ETF代用禁止。P2-G: J-Quants公式系API経路——credential要）"),
+     "G10", "TOPIX指数（ETF代用禁止。P2-G.2: J-Quants **V2** 公式系API経路——API Key要。V1は2026-06-01終了）"),
     ("rates:JGB10Y.yield.closing.tokyo", "rates:JGB10Y.yield.closing.tokyo",
      "G11", "JGB10Y（別期間/商品の代用禁止。P2-G: 財務省国債金利情報経路）"),
     ("rates:UST2Y.yield.closing.us", "rates:UST2Y_par.yield.closing.us",
@@ -179,9 +179,10 @@ def build_health_report(data_root: Path) -> Dict:
     )
 
     def _topix_state(local_rows: int, source_validated: bool):
-        from ..market.jquants_topix import credential_status
+        # P2-G.2: 現行APIはV2（V1は2026-06-01終了）。credential判定もV2方式で行う
+        from ..market.jquants_v2 import credential_status_v2
 
-        credential_present = bool(credential_status()["present"])
+        credential_present = bool(credential_status_v2()["present"])
         if local_rows and market_db.exists():
             from ..market.store import SqliteMarketIndex
 
