@@ -14,10 +14,12 @@
 
 ## 2. J-Quants調査結果
 
-- **プラン**: Freeプラン=登録のみで利用可・**約2年分・12週間遅延**。
-  Light（月額・有料）以上で遅延なしの当日値＋長期履歴。
-  → **歴史バックフィルはFreeで可能・Phase 3朝の当日値運用にはLight以上が必要**
-  （個人利用は規約上想定されている——最終確認はユーザーの契約時に）。
+- **プラン能力: PLAN_CAPABILITY = UNVERIFIED**（監督者訂正・P2-G.1レビュー）。
+  各プランの遅延日数・履歴範囲は**公式ドキュメントから機械取得できていない**
+  （§5.1のとおりdocsはJS描画）。「Free=12週遅延／Light以上=当日利用可」等を
+  system ground truthとして固定しない。実credentialでの取得結果、または
+  取得可能な公式documentation evidenceで確定する。
+  → 必要access tierの断定は**保留**。判定は実測のfreshness verdictで行う。
 - **認証**: mailaddress/password → refreshToken → idToken（Bearer）。
 - **取得フィールド**: Date/Open/High/Low/Close（TOPIX指数値）。
 
@@ -99,7 +101,7 @@ fetch経路は無変更）。
 
 - `CURRENT_USABLE` … 基準系列と同一の最新セッションまで揃っている
 - `DELAYED_NOT_CURRENT` … 基準より遅れている（`gap_sessions` で遅れ
-  セッション数を提示。Freeプランの遅延はここに落ちる）
+  セッション数を提示。遅延プランで取得した場合はここに落ちる）
 - `NO_DATA` … 観測なし
 
 G10状態は `RESOLVED` / `HISTORICAL_RESOLVED_CURRENT_BLOCKED` /

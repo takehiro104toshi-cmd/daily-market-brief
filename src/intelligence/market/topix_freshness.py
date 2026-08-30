@@ -34,6 +34,11 @@ CURRENT_USABLE = "CURRENT_USABLE"
 DELAYED_NOT_CURRENT = "DELAYED_NOT_CURRENT"
 NO_DATA = "NO_DATA"
 
+#: plan能力（遅延・履歴範囲）の確証状態——公式documentation evidenceまたは
+#: 実credentialでの取得結果が得られるまでUNVERIFIEDを維持する（推測で断定しない）
+PLAN_CAPABILITY_UNVERIFIED = "UNVERIFIED"
+PLAN_CAPABILITY_VERIFIED = "VERIFIED"
+
 G10_RESOLVED = "RESOLVED"
 G10_HISTORICAL_ONLY = "HISTORICAL_RESOLVED_CURRENT_BLOCKED"
 G10_PARTIAL = "PARTIALLY_RESOLVED"
@@ -130,10 +135,26 @@ def evaluate_topix_freshness(
         reason_codes=("reference_series_unavailable", f"lag_days:{lag_days}"))
 
 
+#: credential有りでデータ0件のとき、fetch失敗理由をG10のreason codeへ写像する
+#: （監督者指定の結果状態 C: ACCESS_LEVEL_INSUFFICIENT / D: AUTH_FAILURE）
+_AUTH_FAILURE_KINDS = ("auth_error",)
+_DATASET_UNAVAILABLE_KINDS = ("no_data", "http_error", "identity_mismatch",
+                              "schema_error", "no_symbol")
+
+
 def g10_state(
-    freshness: TopixFreshness, *, credential_present: bool
+    freshness: TopixFreshness, *, credential_present: bool,
+    fetch_error_kind: str = "",
 ) -> Tuple[str, Tuple[str, ...]]:
-    """freshness＋credential有無 → G10状態（reason code必須）。
+    """freshness＋credential有無＋fetch結果 → G10状態（reason code必須）。
+
+    監督者指定の結果状態:
+      A. auth＋history＋current freshness PASS → RESOLVED
+      B. auth＋history PASSだがcurrent freshness FAIL
+         → HISTORICAL_RESOLVED_CURRENT_BLOCKED
+      C. auth PASSだが期待するTOPIX datasetを取得できない
+         → BLOCKED / access_level_insufficient
+      D. auth FAIL → BLOCKED / auth_failure
 
     RESOLVED は「live取得済み＋25DMA可能な履歴＋当日セッション利用可能」の
     3条件が揃った場合のみ（fetch成功だけでは宣言しない）。
@@ -142,7 +163,15 @@ def g10_state(
         if not credential_present:
             return G10_PARTIAL, ("topix_credential_missing",
                                  "adapter_implemented_not_live_validated")
-        return G10_BLOCKED, ("topix_fetch_failed_with_credential",)
+        if fetch_error_kind in _AUTH_FAILURE_KINDS:
+            return G10_BLOCKED, ("auth_failure", f"error:{fetch_error_kind}")
+        if fetch_error_kind in _DATASET_UNAVAILABLE_KINDS:
+            return G10_BLOCKED, ("access_level_insufficient",
+                                 "authenticated_but_dataset_unavailable",
+                                 f"error:{fetch_error_kind}")
+        return G10_BLOCKED, (("topix_fetch_failed_with_credential",)
+                             + ((f"error:{fetch_error_kind}",)
+                                if fetch_error_kind else ()))
     if not freshness.history_ok:
         return G10_PARTIAL, ("insufficient_history_for_25dma",
                              f"rows:{freshness.history_rows}")
@@ -154,11 +183,16 @@ def g10_state(
                                  "current_session_not_available") + freshness.reason_codes
 
 
-def access_requirement_report(freshness: TopixFreshness) -> Dict[str, object]:
+def access_requirement_report(
+    freshness: TopixFreshness, *, plan_capability_evidence: str = ""
+) -> Dict[str, object]:
     """STEP 5: plan/access判断のための事実報告（コード側で回避しない）。
 
-    観測された遅延と、Morning Compassが必要とする鮮度を並べて提示するだけ。
-    plan選択はユーザーの判断事項。
+    **PLAN_CAPABILITY = UNVERIFIED**（監督者訂正・P2-G.1レビュー）:
+    「Free=12週遅延 / Light以上=当日利用可」等のplan能力は公式ドキュメントから
+    機械取得できていない。system ground truthとして固定せず、
+    実credentialでの取得結果、または取得可能な公式documentation evidenceで
+    確定する。ここでは**観測事実**のみを提示し、plan選択はユーザーの判断事項。
     """
     return {
         "morning_compass_requirement":
@@ -168,10 +202,16 @@ def access_requirement_report(freshness: TopixFreshness) -> Dict[str, object]:
         "observed_lag_days": freshness.lag_days,
         "observed_gap_sessions": freshness.gap_sessions,
         "observed_latest_trading_date": freshness.latest_trading_date,
+        "plan_capability": PLAN_CAPABILITY_UNVERIFIED,
+        "plan_capability_evidence": (
+            plan_capability_evidence
+            or "未取得（公式docsはJS描画で本文を機械抽出できず・"
+               "実credentialでの取得結果も未取得）"),
         "required_access_level": (
-            "現行取得内容で要件充足" if freshness.morning_usable else
-            "遅延のないTOPIX指数配信を含むJ-Quants有料プラン（Light以上）"
-            "——Freeプランは公表上12週遅延"),
+            "現行取得内容で要件充足（実測ベース）" if freshness.morning_usable else
+            "未確定——現行アクセスでは当日分が観測できていない。"
+            "必要なaccess tierは実credentialでの取得結果または公式documentation"
+            "evidenceで確定する（プラン名を推測で断定しない）"),
         "no_proxy_fallback":
             "1306.T等ETF・TOPIX先物・近似指数への自動fallbackは行わない",
     }

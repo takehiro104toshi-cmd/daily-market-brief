@@ -102,8 +102,11 @@ providers:
       J-Quants（JPX子会社 JPX Market Innovation & Research 運営の公式データAPI）。
       /indices/topixはTOPIX指数値そのもの（ETF・先物ではない）。認証は
       環境変数からのruntime injectionのみ（JQUANTS_MAIL/JQUANTS_PASSWORD等）
-      ——secretをGit/config/カタログへ保存しない。Freeプランは12週遅延・
-      約2年分（当日値にはLight以上が必要——TOPIX_SOURCE_DECISION.md参照）。
+      ——secretをGit/config/カタログへ保存しない。
+      **PLAN_CAPABILITY = UNVERIFIED**: 各プランの遅延・履歴範囲は公式
+      ドキュメントから機械取得できておらず、system ground truthとして固定
+      しない。実credentialでの取得結果、または取得可能な公式documentation
+      evidenceで確定する（TOPIX_SOURCE_DECISION.md参照）。
 
 defaults:
   frequency: daily

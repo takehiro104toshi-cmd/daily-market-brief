@@ -289,7 +289,15 @@ class MarketBankStore:
             body_size = len(result.body)
             if not result.error_kind:
                 raw_item_id = RawItem.make_id(result.provider_id, result.url, content_hash)
-                if self.raw.get_raw_item(raw_item_id) is not None:
+                existing = self.raw.get_raw_item(raw_item_id)
+                if existing is not None:
+                    if result.served_from_cache:
+                        # run内キャッシュ由来＝**新規のネットワーク取得は起きていない**。
+                        # 起きていない取得をFetchAttemptとして記録しない（捏造しない）。
+                        # 同一source documentから複数系列のObservationを作る正規経路
+                        # （ONE SOURCE DOCUMENT MAY PRODUCE MULTIPLE OBSERVATIONS）で、
+                        # provenanceは初回のRawItem/FetchAttemptを共有する。
+                        return existing.fetch_attempt_id or attempt_id, raw_item_id
                     # 同一内容の再取得: 既存RawItem（初回provenance）を保持し追記しない。
                     # 今回の試行自体は下のFetchAttemptとして必ず記録される。
                     self.raw.add_attempt(self._attempt_for(

@@ -210,7 +210,10 @@ class JQuantsTopixProvider:
         # resolver優先。env指定は既定resolverの入力（既存呼び出し互換）
         self._resolver: JQuantsCredentialResolver = resolver or EnvCredentialResolver(
             os.environ if env is None else env)
-        self.last_auth_method: str = ""  # 報告用（秘密を含まない）
+        self.last_auth_method: str = ""  # 解決した方式（秘密を含まない）
+        #: **実際にAPIで通った**方式のみを記録する。成功していない方式を
+        #: officially supportedと断定しないための区別（監督者P2-G.1レビュー）。
+        self.last_auth_method_validated: str = ""
 
     @property
     def provider_id(self) -> str:
@@ -267,6 +270,7 @@ class JQuantsTopixProvider:
         # ---- STEP 1: credential presence check（未設定ならネットワークを叩かない）
         cred = self._resolver.resolve()
         self.last_auth_method = cred.method
+        self.last_auth_method_validated = ""
         if not cred.present:
             return ProviderFetchResult(
                 **base, error_kind="no_credentials", error_detail=cred.detail)
@@ -319,6 +323,8 @@ class JQuantsTopixProvider:
                     parse_issues=tuple(issues) + schema_issues, error_kind=kind,
                     error_detail=";".join(schema_issues)[:160])
             issues.extend(schema_issues)
+            # ここまで到達＝Authorizationがdata endpointで受理された
+            self.last_auth_method_validated = cred.method
             bodies.append(body)
             rows.extend(payload.get("topix") or [])
             pagination_key = str(payload.get("pagination_key") or "")
@@ -362,6 +368,8 @@ def credential_status(resolver: Optional[JQuantsCredentialResolver] = None) -> D
     return {
         "present": resolution.present,
         "auth_method": resolution.method,
+        # 解決できた方式＝「使える方式」ではない。実API成功のみが検証済み
+        "auth_method_validated": "",
         "source_env_names": list(resolution.source_names),
         "accepted_env_names": list(ACCEPTED_ENV_VARS),
         "detail": resolution.detail,

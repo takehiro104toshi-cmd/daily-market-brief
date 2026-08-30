@@ -73,6 +73,11 @@ class ProviderFetchResult:
     error_detail: str = ""
     provider_normalized: bool = False  # True=ライブラリ前処理済み応答（生HTTPではない）
     media_type: str = "text/csv"  # raw保存時のmedia type（JSON API providerが上書き）
+    #: True=このresultはrun内キャッシュ由来（**新規のネットワーク取得を行っていない**）。
+    #: storeはこの場合FetchAttemptを新規記録せず、既存RawItemの取得試行を参照する
+    #: （実際に起きていない取得を記録しない——ONE SOURCE DOCUMENT MAY PRODUCE
+    #: MULTIPLE OBSERVATIONS）。
+    served_from_cache: bool = False
 
     @property
     def ok(self) -> bool:

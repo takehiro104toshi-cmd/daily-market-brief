@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import csv
 import io
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from ..ingestion.model import FetchRequest
 from ..ingestion.transport import DEFAULT_TIMEOUT, HttpTransport, redact_url
@@ -106,16 +107,108 @@ def parse_treasury_par_yield_csv(
     return tuple(records), tuple(issues)
 
 
-class TreasuryParYieldProvider:
-    """Daily Treasury Par Yield CurveのMarketDataProvider実装（年ファイル単位）。"""
+@dataclass(frozen=True, kw_only=True)
+class _YearPayload:
+    """1暦年ファイルの取得結果（run-localキャッシュの値）。"""
 
-    def __init__(self, transport: HttpTransport, *, timeout: float = DEFAULT_TIMEOUT) -> None:
+    year: int
+    status_code: int = 0
+    body: bytes = b""
+    retrieved_at: datetime
+    elapsed_ms: int = 0
+    network_calls: int = 0      # 実際に行ったHTTPリクエスト回数（0=キャッシュ再利用）
+    error_kind: str = ""
+    error_detail: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return not self.error_kind
+
+
+class TreasuryParYieldProvider:
+    """Daily Treasury Par Yield CurveのMarketDataProvider実装（年ファイル単位）。
+
+    **ONE SOURCE DOCUMENT MAY PRODUCE MULTIPLE OBSERVATIONS**（P2-G.1 MINI TASK A）:
+    2Y/10Y等の複数系列は同一の年CSVに含まれる。同じ年ファイルを系列ごとに
+    ネットワーク再取得せず、**1 backfill run中は年ごとに1回**だけ取得して
+    run-localキャッシュから配る（複数年なら年ごと1回）。
+    - キャッシュはこのインスタンスのスコープ（＝1 run）。恒久HTTP cacheは持たない。
+    - 再利用時は `served_from_cache=True` を立て、storeは新規FetchAttemptを
+      記録せず既存RawItemの取得試行を参照する（起きていない取得を記録しない）。
+    - series identityは混ぜない: 同一payload由来でも UST2Y_par ≠ UST10Y_par。
+      各Observationはseries_id・列・値・単位を独立に保持する。
+    - 一時障害（timeout等）はpayload単位で**1回だけ**再試行する
+      （run #8でUST10Y_parが読み取りタイムアウトした実測を受けた措置）。
+    """
+
+    #: 再試行してよい一時障害（HTTPステータス由来の失敗は再試行しない）
+    RETRYABLE_ERROR_KINDS = ("timeout", "connection", "dns", "tls", "protocol")
+
+    def __init__(self, transport: HttpTransport, *, timeout: float = DEFAULT_TIMEOUT,
+                 retries: int = 1) -> None:
         self._transport = transport
         self._timeout = timeout
+        self._retries = max(0, int(retries))
+        self._year_cache: Dict[int, _YearPayload] = {}  # run-local（年→payload）
 
     @property
     def provider_id(self) -> str:
         return TREASURY_PROVIDER_ID
+
+    # ------------------------------------------------------------- payload取得
+
+    def _request_year(self, year: int, *, now: datetime) -> _YearPayload:
+        """1年分のCSVを1リクエストで取得（ネットワーク実行）。"""
+        url = TREASURY_YEAR_CSV_URL.format(year=year)
+        request = FetchRequest(
+            source_id=self.provider_id,
+            endpoint_id=f"{self.provider_id}:{year}",
+            url=url,
+            headers=(("User-Agent", TREASURY_USER_AGENT),
+                     ("Accept", "text/csv, text/plain;q=0.9, */*;q=0.5")),
+            requested_at=now,
+        )
+        response = self._transport.send(request, timeout=self._timeout)
+        if response.error_kind:
+            return _YearPayload(
+                year=year, status_code=response.status_code,
+                retrieved_at=response.retrieved_at, elapsed_ms=response.elapsed_ms,
+                network_calls=1, error_kind=response.error_kind,
+                error_detail=response.error_detail)
+        if response.status_code != 200:
+            return _YearPayload(
+                year=year, status_code=response.status_code, body=response.body,
+                retrieved_at=response.retrieved_at, elapsed_ms=response.elapsed_ms,
+                network_calls=1, error_kind="http_error",
+                error_detail=f"HTTP {response.status_code}")
+        return _YearPayload(
+            year=year, status_code=response.status_code, body=response.body,
+            retrieved_at=response.retrieved_at, elapsed_ms=response.elapsed_ms,
+            network_calls=1)
+
+    def _year_payload(self, year: int, *, now: datetime) -> _YearPayload:
+        """run-localキャッシュ経由の取得（成功のみキャッシュ・一時障害は1回再試行）。"""
+        cached = self._year_cache.get(year)
+        if cached is not None:
+            return _YearPayload(
+                year=cached.year, status_code=cached.status_code, body=cached.body,
+                retrieved_at=cached.retrieved_at, elapsed_ms=0, network_calls=0)
+        payload = self._request_year(year, now=now)
+        attempts_left = self._retries
+        while (not payload.ok and payload.error_kind in self.RETRYABLE_ERROR_KINDS
+               and attempts_left > 0):
+            attempts_left -= 1
+            retried = self._request_year(year, now=now)
+            payload = _YearPayload(
+                year=retried.year, status_code=retried.status_code, body=retried.body,
+                retrieved_at=retried.retrieved_at, elapsed_ms=retried.elapsed_ms,
+                network_calls=payload.network_calls + retried.network_calls,
+                error_kind=retried.error_kind, error_detail=retried.error_detail)
+        if payload.ok:
+            self._year_cache[year] = payload  # 失敗はキャッシュしない
+        return payload
+
+    # ------------------------------------------------------------- 系列取得
 
     def fetch_daily_history(
         self, spec: SeriesSpec, *, start: date, end: date
@@ -131,42 +224,35 @@ class TreasuryParYieldProvider:
         years = list(range(start.year, end.year + 1))
         bodies: List[bytes] = []
         issues: List[str] = []
+        reused: List[int] = []
+        network_calls = 0
         last_url = ""
         status = 0
         elapsed = 0
         retrieved_at = now
         for year in years:
-            url = TREASURY_YEAR_CSV_URL.format(year=year)
-            last_url = url
-            request = FetchRequest(
-                source_id=self.provider_id,
-                endpoint_id=f"{self.provider_id}:{year}",
-                url=url,
-                headers=(("User-Agent", TREASURY_USER_AGENT),
-                         ("Accept", "text/csv, text/plain;q=0.9, */*;q=0.5")),
-                requested_at=now,
-            )
-            response = self._transport.send(request, timeout=self._timeout)
-            status = response.status_code
-            elapsed += response.elapsed_ms
-            retrieved_at = response.retrieved_at
-            if response.error_kind:
+            last_url = TREASURY_YEAR_CSV_URL.format(year=year)
+            payload = self._year_payload(year, now=now)
+            status = payload.status_code
+            elapsed += payload.elapsed_ms
+            retrieved_at = payload.retrieved_at
+            network_calls += payload.network_calls
+            if not payload.ok:
                 return ProviderFetchResult(
                     provider_id=self.provider_id, series_id=spec.series_id,
-                    symbol=symbol, url=redact_url(url), status_code=status,
-                    retrieved_at=retrieved_at, elapsed_ms=elapsed,
-                    error_kind=response.error_kind, error_detail=response.error_detail)
-            if response.status_code != 200:
-                return ProviderFetchResult(
-                    provider_id=self.provider_id, series_id=spec.series_id,
-                    symbol=symbol, url=redact_url(url), status_code=status,
-                    retrieved_at=retrieved_at, elapsed_ms=elapsed, body=response.body,
-                    error_kind="http_error", error_detail=f"HTTP {response.status_code}")
-            bodies.append(response.body)
+                    symbol=symbol, url=redact_url(last_url), status_code=status,
+                    retrieved_at=retrieved_at, elapsed_ms=elapsed, body=payload.body,
+                    error_kind=payload.error_kind, error_detail=payload.error_detail)
+            if payload.network_calls == 0:
+                reused.append(year)
+            bodies.append(payload.body)
 
         body = b"\n".join(bodies)
         if len(bodies) > 1:
             issues.append("concatenated_year_files:" + ",".join(str(y) for y in years))
+        if reused:
+            # 再利用の事実を申告（同一payloadから複数系列を作った証跡）
+            issues.append("reused_run_cache_years:" + ",".join(str(y) for y in reused))
         records, parse_issues = parse_treasury_par_yield_csv(body, symbol)
         issues.extend(parse_issues)
         in_range = tuple(
@@ -174,7 +260,8 @@ class TreasuryParYieldProvider:
         base = dict(
             provider_id=self.provider_id, series_id=spec.series_id, symbol=symbol,
             url=redact_url(last_url), status_code=status,
-            retrieved_at=retrieved_at, elapsed_ms=elapsed, body=body)
+            retrieved_at=retrieved_at, elapsed_ms=elapsed, body=body,
+            served_from_cache=network_calls == 0)
         if not in_range:
             kind = "parse_error" if not records else "no_data"
             return ProviderFetchResult(

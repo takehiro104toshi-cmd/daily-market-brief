@@ -497,13 +497,107 @@ class TestG10StateTransition:
         assert {"live_authenticated_fetch", "history_ge_25dma",
                 "current_session_available"} <= set(codes)
 
-    def test_access_requirement_report_names_tier_and_forbids_proxy(self):
+    def test_access_requirement_report_states_facts_and_forbids_proxy(self):
+        # 監督者訂正: plan名を推測で断定しない（PLAN_CAPABILITY=UNVERIFIED）
         report = access_requirement_report(
             freshness(DELAYED_NOT_CURRENT, codes=("gap_sessions:12",)))
-        assert "Light" in str(report["required_access_level"])
+        assert "未確定" in str(report["required_access_level"])
         assert "1306" in report["no_proxy_fallback"]
         assert report["observed_verdict"] == DELAYED_NOT_CURRENT
 
     def test_resolved_report_does_not_demand_upgrade(self):
         report = access_requirement_report(freshness(CURRENT_USABLE))
         assert "要件充足" in str(report["required_access_level"])
+
+
+# ================================================================ P2-G.1 レビュー反映
+
+from src.intelligence.market.topix_freshness import (  # noqa: E402
+    PLAN_CAPABILITY_UNVERIFIED,
+)
+
+
+class TestValidatedAuthMethod:
+    """解決できた方式＝使える方式ではない。実API成功のみを検証済みとする。"""
+
+    def test_not_validated_when_credentials_missing(self):
+        http_fn, _calls = jquants_http({"": topix_payload(sessions(3))})
+        provider = JQuantsTopixProvider(http_fn, env={})
+        fetch_topix(provider)
+        assert provider.last_auth_method == METHOD_MISSING
+        assert provider.last_auth_method_validated == ""
+
+    def test_not_validated_when_auth_fails(self):
+        http_fn, _calls = jquants_http({"": topix_payload(sessions(3))},
+                                       auth_refresh_status=401)
+        provider = JQuantsTopixProvider(
+            http_fn, env={"JQUANTS_REFRESH_TOKEN": SECRET_TOKEN})
+        result = fetch_topix(provider)
+        assert result.error_kind == "auth_error"
+        assert provider.last_auth_method == METHOD_REFRESH_TOKEN
+        assert provider.last_auth_method_validated == ""   # 断定しない
+
+    def test_validated_only_after_successful_data_fetch(self):
+        http_fn, _calls = jquants_http({"": topix_payload(sessions(3))})
+        provider = JQuantsTopixProvider(
+            http_fn, env={"JQUANTS_REFRESH_TOKEN": SECRET_TOKEN})
+        assert fetch_topix(provider).ok
+        assert provider.last_auth_method_validated == METHOD_REFRESH_TOKEN
+
+    def test_credential_status_reports_unvalidated_by_default(self):
+        status = credential_status(EnvCredentialResolver(
+            {"JQUANTS_ID_TOKEN": ID_TOKEN}))
+        assert status["present"] is True
+        assert status["auth_method"] == METHOD_ID_TOKEN
+        assert status["auth_method_validated"] == ""   # 実API成功まで空
+
+
+class TestG10ResultStatesCandD:
+    """監督者指定の結果状態 C（access不足）/ D（auth失敗）。"""
+
+    def test_auth_failure_is_blocked_with_auth_failure_reason(self):
+        state, codes = g10_state(freshness(NO_DATA, rows=0),
+                                 credential_present=True,
+                                 fetch_error_kind="auth_error")
+        assert state == G10_BLOCKED
+        assert "auth_failure" in codes
+
+    @pytest.mark.parametrize("kind", ["no_data", "http_error", "identity_mismatch",
+                                      "schema_error"])
+    def test_dataset_unavailable_is_access_level_insufficient(self, kind):
+        state, codes = g10_state(freshness(NO_DATA, rows=0),
+                                 credential_present=True, fetch_error_kind=kind)
+        assert state == G10_BLOCKED
+        assert "access_level_insufficient" in codes
+        assert f"error:{kind}" in codes
+
+    def test_unknown_error_keeps_generic_reason(self):
+        state, codes = g10_state(freshness(NO_DATA, rows=0),
+                                 credential_present=True, fetch_error_kind="timeout")
+        assert state == G10_BLOCKED
+        assert "topix_fetch_failed_with_credential" in codes
+
+
+class TestPlanCapabilityUnverified:
+    """PLAN_CAPABILITY = UNVERIFIED（推測でtierを断定しない）。"""
+
+    def test_report_marks_plan_capability_unverified(self):
+        report = access_requirement_report(freshness(DELAYED_NOT_CURRENT))
+        assert report["plan_capability"] == PLAN_CAPABILITY_UNVERIFIED
+        assert report["plan_capability_evidence"]
+
+    def test_report_does_not_assert_a_specific_plan_name(self):
+        report = access_requirement_report(freshness(DELAYED_NOT_CURRENT))
+        text = str(report["required_access_level"])
+        assert "Light" not in text and "12週" not in text
+        assert "未確定" in text
+
+    def test_evidence_can_be_supplied_once_observed(self):
+        report = access_requirement_report(
+            freshness(DELAYED_NOT_CURRENT),
+            plan_capability_evidence="live fetch: latest=2026-06-05 gap=12 sessions")
+        assert "live fetch" in report["plan_capability_evidence"]
+
+    def test_current_usable_report_states_requirement_met_by_measurement(self):
+        report = access_requirement_report(freshness(CURRENT_USABLE))
+        assert "実測" in str(report["required_access_level"])

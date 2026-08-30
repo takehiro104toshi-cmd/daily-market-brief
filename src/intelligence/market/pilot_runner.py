@@ -277,7 +277,12 @@ def main(argv=None) -> int:
         (r for r in run.results if r.series_id == TOPIX_SERIES_ID), None)
     topix_rows = store.index.query(series_id=TOPIX_SERIES_ID, kind="raw", limit=100000)
     freshness = evaluate_topix_freshness(store.index, now=datetime.now(timezone.utc))
-    state, reason_codes = g10_state(freshness, credential_present=bool(cred["present"]))
+    state, reason_codes = g10_state(
+        freshness, credential_present=bool(cred["present"]),
+        fetch_error_kind=(topix_result.error_kind if topix_result else ""))
+    # 実際にAPIで通った方式のみ（成功していない方式をsupportedと断定しない）
+    cred["auth_method_validated"] = getattr(
+        providers.get("jquants"), "last_auth_method_validated", "")
 
     topix_qa: dict = {}
     topix_ids = {row["observation_id"] for row in topix_rows}
@@ -312,6 +317,7 @@ def main(argv=None) -> int:
             "error_kind": topix_result.error_kind if topix_result else "",
             "error_detail": (topix_result.error_detail[:160] if topix_result else ""),
             "records_seen": topix_result.records_seen if topix_result else 0,
+            "auth_method_validated": cred["auth_method_validated"],
         },
         "step3_historical": {
             "raw_rows": len(topix_rows),
@@ -326,9 +332,38 @@ def main(argv=None) -> int:
             "qa_decisions": topix_qa,
             "latest": _row_dict(store.index.latest_trading_session(TOPIX_SERIES_ID)),
         },
-        "step7_nt_ratio": {"rows": len(nt_rows), "latest_provenance": nt_provenance},
+        "step7_nt_ratio": {
+            "rows": len(nt_rows), "latest_provenance": nt_provenance,
+            # TOPIXが遅延している期間のNT倍率は「current」として使わない
+            "current_usable": freshness.morning_usable,
+            "usability_note": ("同一trading_dateの現物指数close同士のみ生成。"
+                               "TOPIXがDELAYED_NOT_CURRENTの間は当日入力として"
+                               "使用しない（履歴分析用途のみ）"),
+        },
         "step8_gap_state": {"gap": "G10", "state": state,
                             "reason_codes": list(reason_codes)},
+    }, ensure_ascii=False))
+
+    # P2-G.1 MINI TASK A: Treasury年ファイルの重複取得排除の実証
+    treasury_attempts = [a for a in store.raw.iter_attempts()
+                         if a.source_id == "treasury_gov"]
+    treasury_series = [r for r in run.results if r.provider_id == "treasury_gov"
+                       or r.series_id.startswith("rates:UST") and "_par" in r.series_id]
+    print("::P2G1_TREASURY_DEDUP::" + json.dumps({
+        "series": [{"series_id": r.series_id, "status": r.status,
+                    "records": r.records_seen, "added": r.observations_added,
+                    "raw_item_id": r.raw_item_id,
+                    "fetch_attempt_id": r.fetch_attempt_id,
+                    "issue_sample": list(r.issue_sample)}
+                   for r in treasury_series],
+        "treasury_fetch_attempts_recorded": len(treasury_attempts),
+        "distinct_treasury_urls": len({a.url for a in treasury_attempts}),
+        "shared_raw_item": (len({r.raw_item_id for r in treasury_series
+                                 if r.raw_item_id}) == 1
+                            and len(treasury_series) > 1),
+        "shared_fetch_attempt": (len({r.fetch_attempt_id for r in treasury_series
+                                      if r.fetch_attempt_id}) == 1
+                                 and len(treasury_series) > 1),
     }, ensure_ascii=False))
 
     # PART A gate: 別プロセス（restart相当）でcanonical読み戻し＋index全再構築＋latest一致
