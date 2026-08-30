@@ -107,13 +107,26 @@ class _RedirectRecorder(urllib.request.HTTPRedirectHandler):
 
 class UrllibTransport:
     """標準ライブラリのみの実HTTP実装。gzip非対応の素朴なGET（Accept-Encodingは送らない＝
-    サーバは非圧縮で返す。フィード用途ではサイズ影響軽微で、依存ゼロを優先）。"""
+    サーバは非圧縮で返す。フィード用途ではサイズ影響軽微で、依存ゼロを優先）。
 
-    def __init__(self, *, max_body_bytes: int = DEFAULT_MAX_BODY_BYTES) -> None:
+    auth_headers_provider（任意）: 監督者DESIGN CORRECTION 1のruntime credential注入点。
+    永続FetchRequestはSecretを持てないまま（SECRET MUST NEVER BE PERSISTED）、
+    送信直前の**ephemeralなrequestヘッダにのみ**資格情報を合成する
+    （SECRET MUST NEVER BE USED ではない）。providerの返す値は
+    serialization・JSONL・RawItem・FetchAttempt・log・error detailへ一切流れない。
+    """
+
+    def __init__(
+        self,
+        *,
+        max_body_bytes: int = DEFAULT_MAX_BODY_BYTES,
+        auth_headers_provider=None,  # Callable[[FetchRequest], Mapping[str, str]] | None
+    ) -> None:
         self.max_body_bytes = max_body_bytes
+        self._auth_headers_provider = auth_headers_provider
 
-    def send(self, request: FetchRequest, *, timeout: float = DEFAULT_TIMEOUT) -> FetchResponse:
-        started = _time.monotonic()
+    def _headers_for(self, request: FetchRequest) -> dict:
+        """送信ヘッダの組み立て（ephemeral。テスト可能に分離）。"""
         headers = {name: value for name, value in request.headers}
         headers.setdefault("User-Agent", DEFAULT_USER_AGENT)
         headers.setdefault("Accept", DEFAULT_ACCEPT)
@@ -121,6 +134,13 @@ class UrllibTransport:
             headers["If-None-Match"] = request.etag
         if request.last_modified:
             headers["If-Modified-Since"] = request.last_modified
+        if self._auth_headers_provider is not None:
+            headers.update(self._auth_headers_provider(request))  # メモリ内のみ
+        return headers
+
+    def send(self, request: FetchRequest, *, timeout: float = DEFAULT_TIMEOUT) -> FetchResponse:
+        started = _time.monotonic()
+        headers = self._headers_for(request)
 
         recorder = _RedirectRecorder()
         opener = urllib.request.build_opener(recorder)

@@ -33,7 +33,9 @@ Phase順序は現行ロードマップを維持する（変更しない）。順
       まで実装。semantic重複統合はPhase 2
 - [ ] P1-5 (M) Evidence化パイプライン: 見出し/本文→文単位→statement_type付与（ルール＋LLM補助、LLM無しでも動くフォールバック必須）
 - [ ] P1-6 (S) Tier管理: config内source_reliabilityを `knowledge/source_tiers.yaml` へ移し、Tier1/2/3へ正規化
-- [ ] P1-7 (M) fixtureテスト基盤: 保存済みフィードでの取得〜Evidence化のゴールデンテスト
+- [x] P1-7 (M) fixtureテスト基盤 — **P1-Dで実質完了(2026-08-30)**: synthetic fixtureで
+      取得（scripted transport）〜正規化（SourceDocument/Observation）まで完全オフライン
+      検証。Fact化のゴールデンテストはP1-E Evidence QAで拡張
 - [x] P1-8 (S) 死活監視 — **P1-Bで基盤完了（2026-08-29）**: SourceHealthObservation時系列モデル＋
       health_check.py（transport注入式）＋全86ソース監査＋SOURCE_FAILURE_POLICY。
       ランタイムでの定常記録・エスカレーションはP1-C fetcher実装時に接続

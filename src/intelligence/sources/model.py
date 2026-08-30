@@ -96,6 +96,17 @@ class SourceDocument:
     raw_item_id: str = ""  # 由来する生ペイロード（空=原文非保存を明示）
     summary: str = ""  # 権利上安全な短い要約/抜粋のみ（本文全文は持たない）
     revision_of: Optional[str] = None  # 訂正・改定元のsource_document_id（過去値は消さない）
+    # --- Phase 1-D追加（0.x非破壊。正規化層のtrace） ---
+    canonical_locator: str = ""  # 正規化URL（dedup補助。locator=originalの代替ではない）
+    media_type: str = ""
+    guid: str = ""  # source供給のitem ID（entry guid / Atom id / rdf:about / article_id等）
+    published_raw: str = ""  # source供給の公開日時文字列そのまま（常に保持）
+    date_quality: str = ""  # ingestion.date_quality.DateQualityのvalue
+    published_inferred: bool = False  # published_atが決定論推定値ならTrue（機械可読）
+    published_inferred_from: str = ""  # 推定根拠（"url_date"等）
+    content_fingerprint: str = ""  # normalized contentのsha256（minor差分比較用。semantic dedupではない）
+    normalizer_name: str = ""  # 生成したnormalizer（決定論的再現のtrace）
+    normalizer_version: str = ""
     schema_version: str = SCHEMA_VERSION
 
     def __post_init__(self) -> None:

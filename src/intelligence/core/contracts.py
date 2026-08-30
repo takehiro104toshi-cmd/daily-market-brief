@@ -21,6 +21,7 @@ if TYPE_CHECKING:  # 型参照のみ（実行時循環importを避ける）
     from ..evidence.model import EvidenceLink, Statement
     from ..ingestion.model import FetchAttempt
     from ..market.model import Observation
+    from ..normalization.model import NormalizationEvent
     from ..sources.model import RawItem, SourceDocument
 
 
@@ -158,4 +159,55 @@ class FetchAttemptRepository(Protocol):
         ...
 
     def latest_conditional(self, endpoint_id: str) -> tuple:  # (etag, last_modified)
+        ...
+
+
+@runtime_checkable
+class SourceDocumentRepository(Protocol):
+    """正規化済み文書（Phase 1-D）の永続化境界。append-only・immutable。
+
+    参照実装: normalization/store.py JsonlNormalizedStore。
+    """
+
+    def add_documents(self, documents: Sequence["SourceDocument"]) -> int:
+        ...
+
+    def get_document(self, source_document_id: str) -> Optional["SourceDocument"]:
+        ...
+
+    def iter_documents(self) -> Iterable["SourceDocument"]:
+        ...
+
+    def documents_for_raw_item(self, raw_item_id: str) -> Sequence["SourceDocument"]:
+        ...
+
+
+@runtime_checkable
+class ObservationRepository(Protocol):
+    """正規化済み数値観測の永続化境界（P1-D）。"""
+
+    def add_observations(self, observations: Sequence["Observation"]) -> int:
+        ...
+
+    def get_observation(self, observation_id: str) -> Optional["Observation"]:
+        ...
+
+    def iter_observations(self) -> Iterable["Observation"]:
+        ...
+
+
+@runtime_checkable
+class NormalizationEventRepository(Protocol):
+    """正規化処理イベント（processing event）の時系列記録境界。
+
+    record content（SourceDocument/Observation）と処理時刻を分離するための置き場。
+    """
+
+    def add_event(self, event: "NormalizationEvent") -> bool:
+        ...
+
+    def iter_events(self) -> Iterable["NormalizationEvent"]:
+        ...
+
+    def events_for_raw_item(self, raw_item_id: str) -> Sequence["NormalizationEvent"]:
         ...

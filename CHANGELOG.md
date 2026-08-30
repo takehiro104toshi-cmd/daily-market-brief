@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.16 (2026-08-30) — Phase 1-D: Normalization & Evidence Creation
+
+異種Raw data（RSS2/Atom/RDF/JSON/tank記事）を共通domain語彙へ変換する
+NORMALIZED EVIDENCE LAYER。RAW/PARSED/NORMALIZED/INTERPRETEDの層分離を確立し、
+**正規化は完全決定論**（LLM・現在時刻・乱数・外部検索へ非依存。処理時刻は
+NormalizationEventのみが保持）。自由文Fact生成はP1-E対象のため未実装（禁止遵守）。
+
+### 追加
+
+- `src/intelligence/normalization/`（新パッケージ・1機能=1ファイル×9）:
+  model.py（NormalizationStatus/Issue/Event/Result・決定論的doc ID導出）、
+  text.py（NFC・entity・空白のみ。意味変更/翻訳禁止・content_fingerprint）、
+  dates.py（published_raw/parsed/inferred/quality分離・URL日付の決定論推定・
+  基準時刻=retrieved_atで現在時刻非依存・unknown許容）、language.py（BCP-47系・
+  不明はund）、units.py（pct/bps/ratio明示変換・unit無視同一視の拒否）、
+  feed_normalizer.py（RSS2/Atom/RDF共通entry→SourceDocument・決定論的revision判定）、
+  observation_normalizer.py（JsonProviderSpec宣言mapping・parse_float=Decimal・
+  raw/derived区別・決定論的obs ID）、store.py（data/vnext/normalized/ JSONL・
+  append-only・冪等・crash-safe）、tank_article_normalizer.py（tank記事互換。
+  INTERPRETED系フィールドは意図的に不採用）。
+- `src/intelligence/ingestion/auth.py`＋UrllibTransport注入フック
+  （監督者DESIGN CORRECTION 1: SECRET MUST NEVER BE PERSISTED≠NEVER BE USED。
+  ephemeralヘッダのみ・永続経路ゼロをテストで検証）。
+- `src/intelligence/sources/model.py`: SourceDocumentへP1-D正規化フィールド10件を
+  0.x非破壊追加（canonical_locator/guid/published_raw/date_quality/published_inferred
+  /published_inferred_from/content_fingerprint/media_type/normalizer_name/version）。
+- `core/contracts.py`: SourceDocumentRepository / ObservationRepository /
+  NormalizationEventRepository Protocol追加。
+- `tests/intelligence/`: normalization系＋auth 53件（text/lang 7・dates 9・
+  feed_normalizer 11・observation/units 13・store 5・tank互換 5（実shard sample検証
+  含む・clone不在環境ではskip）・auth 3）。
+- `docs/normalization/`: ARCHITECTURE / SOURCE_DOCUMENT_SPEC / DATE_NORMALIZATION_SPEC /
+  OBSERVATION_NORMALIZATION_SPEC / NORMALIZATION_INVARIANTS（N1〜N17）。
+- `docs/sources/SOURCE_GAPS.md`: SOURCE_GAP/CONNECTIVITY TRACK（G1〜G8。
+  P1-D以降のblockerにしない別管理）。
+
 ## v4.15 (2026-08-30) — Phase 1-C: Raw Ingestion
 
 外部Sourceの取得情報を「改変・要約・AI解釈する前のRAW SOURCE EVIDENCE」として

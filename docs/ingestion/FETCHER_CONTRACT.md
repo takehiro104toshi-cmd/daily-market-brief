@@ -19,9 +19,20 @@ class HttpTransport(Protocol):
 source_id / endpoint_id / url / method / headers（タプル）/ etag / last_modified /
 requested_at（tz-aware必須）。
 
-**Secret規律（型レベル強制）**: `Authorization` / `Cookie` / `X-Api-Key` /
-`Subscription-Key` 等の資格情報ヘッダは構築時にValueError。資格情報の注入機構は
-P1-D以降にheader方式・redaction前提で設計する（PARSER_ADAPTER_SPEC §5）。
+**Secret規律（型レベル強制・P1-D改訂）**: `Authorization` / `Cookie` / `X-Api-Key` /
+`Subscription-Key` 等の資格情報ヘッダは**永続形（FetchRequest）**では構築時にValueError。
+原則は「SECRET MUST NEVER BE **PERSISTED**」であり「NEVER BE USED」ではない
+（監督者DESIGN CORRECTION 1）。runtime注入は次のarchitectureで行う:
+
+```
+Persisted FetchRequest（Secretなし）
+  → CredentialResolver（ingestion/auth.py。環境変数から解決）
+    → Ephemeral Transport Request（Secretはメモリ内のみ）
+      → HttpTransport（UrllibTransport auth_headers_provider）
+```
+
+providerの返す値はserialization・JSONL・RawItem・FetchAttempt・logging・error detailへ
+一切流れず、URL保存時はredact（テストで機械検証）。
 
 ## 3. FetchResponse（transient）
 

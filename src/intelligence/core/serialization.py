@@ -114,6 +114,7 @@ def register_domain_types() -> None:
     from ..evidence import model as ev
     from ..ingestion import model as ing
     from ..market import model as mk
+    from ..normalization import model as norm
     from ..sources import model as src
     from . import types as core_types
 
@@ -124,6 +125,8 @@ def register_domain_types() -> None:
         src.SourceEndpoint,
         src.SourceHealthObservation,
         ing.FetchAttempt,
+        norm.NormalizationIssue,
+        norm.NormalizationEvent,
         mk.Observation,
         ev.FactStatement,
         ev.AnalysisStatement,
