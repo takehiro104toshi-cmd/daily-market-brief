@@ -74,3 +74,19 @@ class TestObservationRoundtrip:
         del encoded["trading_date"]  # 0.3.x時代のレコード相当
         decoded = serialization.decode(encoded)
         assert decoded.trading_date == ""  # 前方互換: defaultで受ける
+
+
+class TestPilotTraceRendering:
+    def test_render_trace_on_populated_bank(self, tmp_path):
+        # live pilot 3回目の実障害（QAIssue属性名）の再発防止: trace描画をオフラインで固定
+        from src.intelligence.market.pilot_runner import render_trace
+        engine = MarketBackfillEngine(
+            MarketBankStore(tmp_path / "market"), catalog(),
+            stub_provider({"s=^nkx": (200, NIKKEI_CSV)}), HISTORICAL_V1)
+        engine.run(start=date(2026, 8, 1), end=date(2026, 8, 29), now=RETRIEVED,
+                   series_ids=(NIKKEI,))
+        text = render_trace(engine.store, NIKKEI)
+        assert "latest observation obs_" in text
+        assert "decision=accept_with_warnings" in text
+        assert "policy=HISTORICAL:1.0.0" in text
+        assert "index row:" in text

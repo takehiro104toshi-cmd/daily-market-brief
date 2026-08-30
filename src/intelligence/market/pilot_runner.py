@@ -72,7 +72,7 @@ def render_trace(store: MarketBankStore, series_id: str) -> str:
         lines.append(
             f"  qa {assessment.assessment_id}: decision={assessment.decision.value} "
             f"policy={assessment.policy_name}:{assessment.policy_version} "
-            f"issues={[i.reason_code for i in assessment.issues]}")
+            f"issues={[i.code for i in assessment.issues]}")
     for item in raw_items.values():
         if item.source_id == obs.source_id:
             lines.append(
@@ -165,7 +165,7 @@ def main(argv=None) -> int:
             "observation_id": obs.observation_id, "trading_date": obs.trading_date,
             "historical_decision": "accept_with_warnings",
             "daily_market_decision": daily.decision.value,
-            "daily_market_issues": [i.reason_code for i in daily.issues],
+            "daily_market_issues": [i.code for i in daily.issues],
         }, ensure_ascii=False))
 
     # PART A gate: 別プロセス（restart相当）でcanonical読み戻し＋index全再構築＋latest一致
