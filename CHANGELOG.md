@@ -4,6 +4,67 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.28 (2026-08-30) — Phase 2-G.2: J-Quants V1→V2 migration（TOPIX経路）
+
+### 追加
+
+- `src/intelligence/market/jquants_v2.py`【新規】: **V2専用**のTOPIX provider。
+  Base URL `https://api.jquants.com/v2`・TOPIX専用パス
+  `/indices/bars/daily/topix`・応答 `{"data": [...], "pagination_key": ...}`・
+  V2短縮項目名（`O`/`H`/`L`/`C`、`Date`は不変）に対応。
+- `JQuantsV2CredentialResolver`: 認証は**API Keyをリクエストヘッダで送る方式**
+  （V1のtoken交換は廃止）。`JQUANTS_API_KEY` **のみ**受理し、V1のenv名
+  （MAIL / PASSWORD / REFRESH_TOKEN / ID_TOKEN）は**V2では受理しない**
+  ——旧仕様をV2の既定へ持ち込まないことをテストで固定。
+- 原因分類 `classify_v2_failure()`: `api_version_mismatch` /
+  `plan_not_entitled` / `credential_rejected` を応答messageから機械分類する。
+- `ProviderInfo.api_version`（既定は空・後方互換）とカタログ
+  `providers.jquants.api_version: v2`。
+- テスト34件追加（`tests/intelligence/test_jquants_v2.py`【新規】）。
+
+### 改善
+
+- **PLAN_CAPABILITY**: entitlement次元のみ VERIFIED（TOPIX四本値は
+  **Lightプラン以上**・更新は毎営業日16:30頃JST——公式クイックスタートV2）。
+  プラン別の遅延日数・履歴範囲は依然 **UNVERIFIED**（実取得結果で確定する）。
+- 秘密安全の強化: 応答本文をエラー診断へ載せる前に**部分一致でも遮断**し、
+  API Gatewayが返す SHA-256/Base64 ダイジェストのエコーも除去する。
+  API Keyはヘッダのみで送り、永続化されるURLへ載せない。
+- workflowをV2 pilotのみへ整理（EOL済みV1を現行候補として叩き続けない）。
+- カタログ1.2.0（endpoint_templateをV2専用パスへ）。series identity
+  `index:topix.close.closing.tokyo` と NO PROXY SUBSTITUTION 原則は不変。
+
+### 修正
+
+- **run #7〜#12の403の再分類**: J-Quants V1は2026-06-01に終了しており、
+  当時のV1エンドポイントへのアクセスは `legacy_v1_endpoint` /
+  `api_version_mismatch` を主要原因候補とする（credential不正と断定しない）。
+  過去の実測記録はappend-onlyで保全し、`TOPIX_SOURCE_DECISION.md` §7で
+  解釈のみを訂正した。
+- `g10_state()` が版数不整合を `auth_failure` として報告しないよう分岐を追加。
+- V2 providerで、jquantsのsymbolを持たない系列を渡すと
+  `ProviderFetchResult` のキーワード重複でTypeErrorになる不具合を修正
+  （`no_symbol` のGAPとして正常に返す。回帰テスト追加）。
+
+### 実測（live pilot run #14・2026-08-30）
+
+- **V2 endpoint到達・契約識別まで成立**: `GET /v2/indices/bars/daily/topix` は
+  HTTP 403だが応答は *"This API is not available on your subscription. If you
+  want more data, please check other plans: …"*。V1時代の内容のない
+  `{"message":"Forbidden"}` とは異なり、**サーバがサブスクリプションを特定した
+  うえでの権限拒否**である——endpoint・API版数・API Keyの搬送方式は正しい。
+- G10 = **BLOCKED**（`access_level_insufficient` / `plan_not_entitled`）。
+  残る障害は**プラン権限のみ**で、TOPIX四本値は**Lightプラン以上**が条件
+  （公式ドキュメントとlive応答の2系統で一致）。
+- `auth_method_validated` は**空のまま**（data endpointの200を得ていないため、
+  認証方式を「実APIで検証済み」とは宣言しない）。
+- TOPIX raw 0行 → freshness `NO_DATA`・NT倍率0行（片側だけで生成しない）。
+- 併走系列は無変更で成功: JGB10Y 265行（〜2026-08-27・2.897 pct）／
+  UST2Y_par 274行（〜2026-08-28・4.34 pct）／UST10Y_par 274行（4.73 pct）／
+  official spread 274行（0.39 pct_point）。Treasury dedupは
+  FetchAttempt 1件・RawItem共有を維持。
+- 永続化検証 PASS（canonical 20,689観測＝index再構築一致・recovered_lines 0）。
+
 ## v4.27 (2026-08-30) — Phase 2-G.1: API Key認証方式の実測判定とTOPIX authenticated pilot
 
 ### 追加

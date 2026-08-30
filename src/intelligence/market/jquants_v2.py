@@ -188,12 +188,20 @@ def validate_topix_v2_payload(payload: object) -> Tuple[str, Tuple[str, ...]]:
         if overlap:
             return "identity_mismatch", (f"non_index_fields:{','.join(overlap)}",)
         code = row.get("Code", row.get("code"))
-        if code is not None and str(code) != TOPIX_INDEX_CODE:
+        if code is not None and not _is_topix_code(code):
+            # 誤検知（"0000" と 0 の表記差）を吸収しつつ、別指数・個別銘柄は拒否する。
+            # 取り違えて取り込むより、GAPとして可視化するほうが安全。
             return "identity_mismatch", (f"unexpected_index_code:{str(code)[:12]}",)
         for required in (DATE_FIELD, CLOSE_FIELD):
             if required not in row:
                 issues.append(f"row{i}_missing_{required.lower()}")
     return "", tuple(issues)
+
+
+def _is_topix_code(code: object) -> bool:
+    """指数コードがTOPIX（0000）か。``"0000"`` / ``0`` の表記差を同一視する。"""
+    normalized = str(code).strip().lstrip("0") or "0"
+    return normalized == (TOPIX_INDEX_CODE.lstrip("0") or "0")
 
 
 def _default_http(url: str, method: str, headers: dict, payload: bytes) -> Tuple[int, bytes]:
@@ -263,8 +271,9 @@ class JQuantsV2TopixProvider:
         self.observed_top_keys = ()
         self.pages_fetched = 0
         if not symbol:
+            # baseのurlを空へ差し替える（**base と url= の二重指定はTypeError）
             return ProviderFetchResult(
-                **base, url="", error_kind="no_symbol",
+                **{**base, "url": ""}, error_kind="no_symbol",
                 error_detail="catalogに本providerのsymbolなし")
 
         # ---- STEP 1: credential presence（未設定ならネットワークを叩かない）

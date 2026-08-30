@@ -3,6 +3,11 @@
 原則: **TOPIX ≠ TOPIX ETF（1306.T等） ≠ TOPIX先物**。ETF・先物を指数seriesへ
 投入しない（NO PROXY SUBSTITUTION——監督者裁定）。
 
+> **読む順序（2026-08-30 P2-G.2以降）**: 現行仕様は **§7（V1→V2 migration）** が正。
+> §1〜§6は **J-Quants V1時代の実測記録**であり、V1は2026-06-01に終了している。
+> 過去の観測はappend-onlyで保全するため削除・書き換えをしていない——
+> **現行APIの仕様として §1〜§6 のエンドポイント・認証方式を使わないこと**。
+
 ## 1. 実測監査（probe run #6・2026-08-30）
 
 | 経路 | 実測 | 判定 |
@@ -180,3 +185,112 @@ API Key値は error_detail・URL・raw payload・FetchAttempt・ログのいず�
 
 投入値が正しい種類・有効期限内であれば、次のpilot runでSTEP 2-8が自動実行され、
 G10はA〜Dのいずれかへ機械遷移する。
+
+## 7. P2-G.2 V1→V2 migration（監督者訂正・2026-08-30）
+
+### 7.1 §6の再解釈（記録は改竄せず、解釈を訂正する）
+
+**J-Quants V1 APIは2026-06-01に終了した**（V2が現行）。§6で「認証方式が確認
+できず」と記録した run #10〜#12 の403は、**credential不正と断定できない**。
+主要原因候補を `LEGACY_V1_ENDPOINT_USED` / `API_VERSION_MISMATCH` へ再分類する。
+
+§5・§6の実測記録（403の内容・試した搬送方式・日時）は**そのまま残す**
+（append-only。過去の観測を消さない・書き換えない）。変わったのは
+**解釈**であって観測ではない。
+
+run #13の実測がこれを裏づける:
+
+| リクエスト | 実測レスポンス | 含意 |
+|---|---|---|
+| `GET /v1/indices/topix` | 403 `{"message":"Forbidden"}` | 旧ルートは形だけ残存 |
+| `GET /v2/indices/topix` 他 `/v2/*` 8候補 | 403 `{"message":"The requested endpoint does not exist. Please check the URL, HTTP method, and API version:https://jpx-jquants.com/spec/"}` | **パス自体が存在しない**（＝認証以前の版数・パス不整合） |
+| `Authorization: Bearer <key>` | 403（AWSのSigV4形式エラー） | Bearerは搬送方式として誤り |
+| API Keyヘッダ（正式方式） | 上と同じ「endpoint does not exist」 | **認証は拒否されておらず、パスが誤っていた** |
+
+→ 403の原因は「API Keyが無効」ではなく「**V1由来のパスをV2として叩いていた**」
+可能性が高い。§6.3で挙げた「mail+password / refreshToken を投入せよ」という
+次アクションは**撤回**する（V2ではtoken方式そのものが廃止されている）。
+
+### 7.2 確認したV2公式仕様（一次情報。V1から推測変換していない）
+
+| 項目 | 確認値 | 根拠 |
+|---|---|---|
+| Base URL | `https://api.jquants.com/v2` | 公式クイックスタート(V2)の `API_URL` 実値 |
+| 認証 | ダッシュボード発行のAPI Keyをリクエストヘッダで送る（token交換は廃止・API Keyに有効期限なし） | 同上（`headers = {…: api_key}`） |
+| TOPIX endpoint | `GET /v2/indices/bars/daily/topix` | 公式仕様ページ／クイックスタート(V2) |
+| クエリ | `from` / `to`（`20210901` と `2021-09-01` の両表記可）・`pagination_key` | 同上 |
+| 応答エンベロープ | `{"data": [ ... ], "pagination_key": ...}` | 同上（V1の `{"topix": [...]}` ではない） |
+| 項目名 | V2で短縮（`Open`→`O` / `High`→`H` / `Low`→`L` / `Close`→`C`。`Date` は不変） | 公式「V1 API から V2 API への変更点」 |
+| 提供プラン | TOPIX四本値は**Lightプラン以上** | 公式クイックスタート(V2)のプラン別API一覧 |
+| 更新時刻 | **毎営業日16:30頃（JST）** | 同上 |
+| V1の扱い | **2026-06-01終了** | 公式「V1 API から V2 API への変更点」 |
+
+### 7.3 PLAN_CAPABILITYの現在地（過度に断定しない）
+
+- **VERIFIED（entitlement次元のみ）**: TOPIX四本値は Light プラン以上。
+  この1点は公式ドキュメント evidence で確定した。
+- **UNVERIFIED（据え置き）**: プラン別の遅延日数・履歴取得範囲。
+  「Free = 12週遅延」等は system ground truth として固定しない
+  ——実取得結果（freshness verdict）で判定する。
+- 更新16:30（JST）という公表時刻は、Morning Compass（JST朝）が
+  **前営業日終値**を使う設計と整合する（当日終値を朝に求めない）。
+
+### 7.4 実装（`src/intelligence/market/jquants_v2.py`・V1とは完全分離）
+
+- `JQuantsV2TopixProvider` … V2専用。V1のパス・token交換を一切参照しない。
+- `JQuantsV2CredentialResolver` … `JQUANTS_API_KEY` **のみ**受理する。
+  V1のenv名（`JQUANTS_MAIL` / `JQUANTS_PASSWORD` / `JQUANTS_REFRESH_TOKEN` /
+  `JQUANTS_ID_TOKEN`）は**V2では受理しない**——旧仕様をV2の既定へ持ち込まない
+  ことをテストで固定している。
+- provenance … provider は `jquants`（供給元は同一）、版数は `api_version = v2`。
+  永続化locatorのURLに `/v2/` が残るため、保存済みデータからも版数を判別できる。
+- identity guard … ETFのNAV・先物の限月/清算値・TOPIX以外の指数コードを含む
+  応答は `identity_mismatch` として**1行も取り込まない**（NO PROXY SUBSTITUTION）。
+- 原因分類 … `api_version_mismatch` / `plan_not_entitled` /
+  `credential_rejected` を応答messageから機械分類する。**版数の問題を
+  auth_failureとして報告しない**（今回の誤診断を再発させない）。
+- 秘密安全 … API Keyはヘッダのみ（URLへ載せない＝永続化されない）。応答本文を
+  診断へ載せる前に部分一致でも遮断し、API Gatewayが返す
+  SHA-256/Base64ダイジェストのエコーも除去する。
+- V1実装 `jquants_topix.py` は**参照用として残す**が、workflow・pilot・
+  catalogのいずれからも現行候補として呼ばれない。
+
+### 7.5 V2 authenticated live pilot（run #14・2026-08-30T14:37-14:48Z）
+
+| STEP | 実測 |
+|---|---|
+| 1 credential presence | `present: true` / `auth_method: api_key_header` / `api_version: v2` / 由来 `JQUANTS_API_KEY` |
+| 2 V2 authenticated probe | **HTTP 403**・`cause=plan_not_entitled`・応答message: *"This API is not available on your subscription. If you want more data, please check other plans: …"* |
+| 3 historical | raw 0行・25DMA不可 |
+| 4 freshness | `NO_DATA`（morning_usable=false・`no_topix_observations`） |
+| 5 access要件 | `plan_capability: VERIFIED`（entitlement次元）。TOPIX四本値は**Lightプラン以上** |
+| 6 QA / canonical | TOPIX観測0のため判定なし |
+| 7 NT倍率 | 0行（入力欠落日は生成しない——片側だけで捏造しない） |
+| 8 G10 | **BLOCKED**（reason: `access_level_insufficient` / `plan_not_entitled` / `error:auth_error`） |
+
+**この応答が意味すること（run #10〜#12との決定的な差）**:
+
+- V1時代の403は `{"message":"Forbidden"}` という**内容のない拒否**だった。
+- V2では**サブスクリプションを特定したうえで**「このAPIはあなたの契約では
+  利用できない」と返っている。つまり **endpoint・API版数・API Keyの搬送方式は
+  正しく、サーバ側は契約を識別できている**。残る障害は**プラン権限のみ**。
+- ただし `auth_method_validated` は**空のまま**にしている——data endpointの
+  200を1度も得ていないため、「認証方式が実APIで検証済み」とは宣言しない
+  （成功していないものをvalidatedと書かない規律を維持）。
+
+**PLAN_CAPABILITYの現在地**:
+
+- entitlement次元は **VERIFIED**（公式ドキュメントとlive応答の**2系統**で一致）。
+- プラン別の遅延日数・履歴範囲は依然 **UNVERIFIED**（データを1行も取得できて
+  いないため、実測で確定できない）。
+
+**必要なユーザー操作（コード側では回避しない）**:
+
+1. J-Quantsの契約プランを **Light以上** へ変更する（TOPIX四本値の提供条件）。
+   API Key自体の再発行は不要——同じ `JQUANTS_API_KEY` のまま次のpilot runで
+   STEP 2以降が自動実行される。
+2. 変更後、freshnessが `CURRENT_USABLE` なら G10 = RESOLVED、
+   遅延データのみなら `HISTORICAL_RESOLVED_CURRENT_BLOCKED` へ機械遷移する。
+
+**やらないこと**: 1306.T等ETF・TOPIX先物・近似指数での代用
+（NO PROXY SUBSTITUTION）。プラン制約をコードで迂回することもしない。

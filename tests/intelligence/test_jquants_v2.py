@@ -57,7 +57,7 @@ CATALOG = load_catalog(Path("knowledge/market_series/core_series.yaml"))
 TOPIX_SPEC = CATALOG.get(TOPIX_SERIES_ID)
 NIKKEI_SERIES_ID = "index:nikkei225.close.closing.tokyo"
 
-API_KEY = "jq-v2-api-key-DO-NOT-LEAK-8SWZI7BJ"
+API_KEY = "TEST-ONLY-SYNTHETIC-JQUANTS-V2-KEY"
 
 
 # ---------------------------------------------------------------- fixtures
@@ -150,6 +150,17 @@ class TestV2Credential:
         assert result.error_kind == "no_credentials"
         assert log == []                       # 大量retryどころか1回も叩かない
         assert result.records == ()
+
+    def test_series_without_jquants_symbol_reports_gap_without_crash(self):
+        """symbol未定義の系列でもproviderは例外を投げずGAPとして返す。"""
+        spec = CATALOG.get("index:growth250.close.closing.tokyo")
+        assert spec.symbol_for("jquants") is None
+        p, log = provider()
+        result = p.fetch_daily_history(spec, start=date(2026, 7, 1),
+                                       end=date(2026, 8, 28))
+        assert result.error_kind == "no_symbol"
+        assert result.url == ""
+        assert log == []
 
     def test_api_key_sent_as_header_never_in_url(self):
         p, log = provider()
@@ -264,6 +275,16 @@ class TestV2Schema:
     def test_topix_index_code_accepted(self):
         payload = {"data": [{"Date": "2026-08-28", "C": "2700", "Code": "0000"}]}
         assert validate_topix_v2_payload(payload)[0] == ""
+
+    def test_topix_index_code_zero_padding_variants_accepted(self):
+        """"0000" と 0 の表記差でTOPIXを取りこぼさない（誤検知の抑制）。"""
+        for code in ("0000", 0, "0", " 0000 "):
+            payload = {"data": [{"Date": "2026-08-28", "C": "2700", "Code": code}]}
+            assert validate_topix_v2_payload(payload)[0] == "", code
+
+    def test_securities_code_rejected_even_zero_padded(self):
+        payload = {"data": [{"Date": "2026-08-28", "C": "2700", "Code": "1306"}]}
+        assert validate_topix_v2_payload(payload)[0] == "identity_mismatch"
 
     def test_identity_mismatch_ingests_zero_rows(self):
         payload = {"data": [{"Date": "2026-08-28", "C": "2700", "FundCode": "1306"}]}
