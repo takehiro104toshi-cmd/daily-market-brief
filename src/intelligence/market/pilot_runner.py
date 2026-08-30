@@ -281,8 +281,10 @@ def main(argv=None) -> int:
         freshness, credential_present=bool(cred["present"]),
         fetch_error_kind=(topix_result.error_kind if topix_result else ""))
     # 実際にAPIで通った方式のみ（成功していない方式をsupportedと断定しない）
-    cred["auth_method_validated"] = getattr(
-        providers.get("jquants"), "last_auth_method_validated", "")
+    _jq = providers.get("jquants")
+    cred["auth_method_validated"] = getattr(_jq, "last_auth_method_validated", "")
+    cred["mechanism_validated"] = getattr(_jq, "last_mechanism_validated", "")
+    cred["negotiation_trail"] = list(getattr(_jq, "negotiation_trail", ()))
 
     topix_qa: dict = {}
     topix_ids = {row["observation_id"] for row in topix_rows}
@@ -318,6 +320,8 @@ def main(argv=None) -> int:
             "error_detail": (topix_result.error_detail[:160] if topix_result else ""),
             "records_seen": topix_result.records_seen if topix_result else 0,
             "auth_method_validated": cred["auth_method_validated"],
+            "mechanism_validated": cred["mechanism_validated"],
+            "negotiation_trail": cred["negotiation_trail"],
         },
         "step3_historical": {
             "raw_rows": len(topix_rows),

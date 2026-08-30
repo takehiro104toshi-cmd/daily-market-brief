@@ -45,14 +45,23 @@ _TIMEOUT = 30.0
 METHOD_ID_TOKEN = "id_token"
 METHOD_REFRESH_TOKEN = "refresh_token"
 METHOD_MAIL_PASSWORD = "mail_password"
+#: 型が宣言されていない汎用credential（利用者が「API Key」として投入した値）。
+#: **どの搬送方式が正しいかは実APIでの成功をもって決める**（推測で断定しない）。
+METHOD_API_KEY = "api_key"
 METHOD_MISSING = "missing"
+
+#: api_key方式で試す搬送メカニズム（順序固定・上限2回。無制限の総当たりはしない）
+MECHANISM_AS_REFRESH_TOKEN = "api_key_as_refresh_token"
+MECHANISM_AS_BEARER = "api_key_as_bearer"
 
 #: 受理する環境変数名（**名前のみ**を報告に使う。値は決して出さない）
 ENV_ID_TOKEN = "JQUANTS_ID_TOKEN"
 ENV_REFRESH_TOKEN = "JQUANTS_REFRESH_TOKEN"
 ENV_MAIL = "JQUANTS_MAIL"
 ENV_PASSWORD = "JQUANTS_PASSWORD"
-ACCEPTED_ENV_VARS = (ENV_ID_TOKEN, ENV_REFRESH_TOKEN, ENV_MAIL, ENV_PASSWORD)
+ENV_API_KEY = "JQUANTS_API_KEY"
+ACCEPTED_ENV_VARS = (ENV_ID_TOKEN, ENV_REFRESH_TOKEN, ENV_MAIL, ENV_PASSWORD,
+                     ENV_API_KEY)
 
 #: http_fn(url, method, headers, payload) -> (status_code, body_bytes)
 HttpFn = Callable[[str, str, dict, bytes], Tuple[int, bytes]]
@@ -136,6 +145,15 @@ class EnvCredentialResolver:
                 secrets={"mail": Secret(mail), "password": Secret(password)},
                 source_names=(ENV_MAIL, ENV_PASSWORD),
                 detail="mail/password → refreshToken → idToken（auth 2往復）")
+        api_key = self._env.get(ENV_API_KEY, "").strip()
+        if api_key:
+            # 型宣言のない値。搬送方式は実APIで確かめる（下のnegotiate参照）
+            return CredentialResolution(
+                method=METHOD_API_KEY, secrets={"api_key": Secret(api_key)},
+                source_names=(ENV_API_KEY,),
+                detail="API Key（搬送方式は実API応答で判定。"
+                       f"試行順: {MECHANISM_AS_REFRESH_TOKEN} → "
+                       f"{MECHANISM_AS_BEARER}・上限2回）")
         return CredentialResolution(
             method=METHOD_MISSING,
             detail="credential未設定（runtime injectionのみ受理: "
@@ -214,6 +232,10 @@ class JQuantsTopixProvider:
         #: **実際にAPIで通った**方式のみを記録する。成功していない方式を
         #: officially supportedと断定しないための区別（監督者P2-G.1レビュー）。
         self.last_auth_method_validated: str = ""
+        #: api_key方式で試した搬送メカニズムの足跡（秘密を含まない）
+        self.negotiation_trail: Tuple[str, ...] = ()
+        #: 実APIで通った搬送メカニズム（未検証なら空）
+        self.last_mechanism_validated: str = ""
 
     @property
     def provider_id(self) -> str:
@@ -221,10 +243,30 @@ class JQuantsTopixProvider:
 
     # ------------------------------------------------------------- auth
 
-    def _id_token(self, cred: CredentialResolution) -> str:
-        """CredentialResolution → idToken。失敗はAuthError（秘密を含まない）。"""
+    def _id_token(self, cred: CredentialResolution) -> Tuple[str, str]:
+        """CredentialResolution → (bearer_token, mechanism)。
+
+        失敗はAuthError（秘密を含まない短いコードのみ）。
+        api_key方式は**搬送メカニズムを実APIで判定**する（上限2回）:
+          1. refreshTokenとして交換 → 成功すればidTokenを得る
+          2. 失敗ならBearerへ直挿し（最終判定はdata endpointの応答）
+        どちらも「現行仕様である」と断定はせず、成功したものだけを記録する。
+        """
         if cred.method == METHOD_ID_TOKEN:
-            return cred.secrets["id_token"].reveal()
+            return cred.secrets["id_token"].reveal(), METHOD_ID_TOKEN
+
+        if cred.method == METHOD_API_KEY:
+            api_key = cred.secrets["api_key"].reveal()
+            status, body = self._http(
+                f"{JQUANTS_BASE}/token/auth_refresh?refreshtoken="
+                + urllib.parse.quote(api_key), "POST", {}, b"")
+            if status == 200:
+                token = json.loads(body).get("idToken", "")
+                if token:
+                    return token, MECHANISM_AS_REFRESH_TOKEN
+            # 交換不可 → Bearer直挿しを試す（data endpointの応答で最終判定）
+            self.negotiation_trail = (f"{MECHANISM_AS_REFRESH_TOKEN}:http_{status}",)
+            return api_key, MECHANISM_AS_BEARER
 
         if cred.method == METHOD_MAIL_PASSWORD:
             status, body = self._http(
@@ -249,7 +291,7 @@ class JQuantsTopixProvider:
         id_token = json.loads(body).get("idToken", "")
         if not id_token:
             raise AuthError("auth_refresh_no_id_token")
-        return id_token
+        return id_token, cred.method
 
     # ------------------------------------------------------------- fetch
 
@@ -271,14 +313,17 @@ class JQuantsTopixProvider:
         cred = self._resolver.resolve()
         self.last_auth_method = cred.method
         self.last_auth_method_validated = ""
+        self.last_mechanism_validated = ""
+        self.negotiation_trail = ()
         if not cred.present:
             return ProviderFetchResult(
                 **base, error_kind="no_credentials", error_detail=cred.detail)
         secrets = cred.secret_values()
 
         started = _time.monotonic()
+        mechanism = ""
         try:
-            id_token = self._id_token(cred)
+            id_token, mechanism = self._id_token(cred)
         except AuthError as exc:
             return ProviderFetchResult(
                 **base, error_kind="auth_error",
@@ -306,6 +351,13 @@ class JQuantsTopixProvider:
                     **base, error_kind="connection", status_code=status,
                     error_detail=scrub(f"{type(exc).__name__}: {str(exc)[:120]}", secrets))
             if status != 200:
+                if cred.method == METHOD_API_KEY and status in (401, 403):
+                    trail = self.negotiation_trail + (f"{mechanism}:http_{status}",)
+                    return ProviderFetchResult(
+                        **base, status_code=status, body=b"",
+                        error_kind="auth_error",
+                        error_detail=("api_key_mechanism_not_accepted: "
+                                      + ",".join(trail)))
                 return ProviderFetchResult(
                     **base, status_code=status, body=b"",
                     error_kind="http_error", error_detail=f"HTTP {status}")
@@ -325,6 +377,7 @@ class JQuantsTopixProvider:
             issues.extend(schema_issues)
             # ここまで到達＝Authorizationがdata endpointで受理された
             self.last_auth_method_validated = cred.method
+            self.last_mechanism_validated = mechanism
             bodies.append(body)
             rows.extend(payload.get("topix") or [])
             pagination_key = str(payload.get("pagination_key") or "")
@@ -370,6 +423,7 @@ def credential_status(resolver: Optional[JQuantsCredentialResolver] = None) -> D
         "auth_method": resolution.method,
         # 解決できた方式＝「使える方式」ではない。実API成功のみが検証済み
         "auth_method_validated": "",
+        "mechanism_validated": "",
         "source_env_names": list(resolution.source_names),
         "accepted_env_names": list(ACCEPTED_ENV_VARS),
         "detail": resolution.detail,

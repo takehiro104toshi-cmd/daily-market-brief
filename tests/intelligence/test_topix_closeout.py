@@ -601,3 +601,96 @@ class TestPlanCapabilityUnverified:
     def test_current_usable_report_states_requirement_met_by_measurement(self):
         report = access_requirement_report(freshness(CURRENT_USABLE))
         assert "実測" in str(report["required_access_level"])
+
+
+# ================================================================ API Key方式（P2-G.1）
+
+from src.intelligence.market.jquants_topix import (  # noqa: E402
+    ENV_API_KEY,
+    MECHANISM_AS_BEARER,
+    MECHANISM_AS_REFRESH_TOKEN,
+    METHOD_API_KEY,
+)
+
+API_KEY = "api-key-value-xyz"
+
+
+def api_key_http(*, exchange_status=200, data_status=200, days=None, calls=None):
+    """API Keyの搬送方式を切り替えられるstub（呼び出し回数も記録）。"""
+    log = calls if calls is not None else []
+    payload = topix_payload(days or sessions(3))
+
+    def http_fn(url, method, headers, body):
+        log.append({"url": url, "method": method, "headers": dict(headers)})
+        if "/token/auth_refresh" in url:
+            if exchange_status != 200:
+                return exchange_status, b'{"message":"Forbidden"}'
+            return 200, json.dumps({"idToken": ID_TOKEN}).encode()
+        if data_status != 200:
+            return data_status, b'{"message":"Forbidden"}'
+        return 200, json.dumps(payload).encode()
+
+    return http_fn, log
+
+
+class TestApiKeyCredential:
+    def test_resolver_accepts_api_key_env(self):
+        resolution = EnvCredentialResolver({ENV_API_KEY: API_KEY}).resolve()
+        assert resolution.method == METHOD_API_KEY
+        assert resolution.source_names == (ENV_API_KEY,)
+        assert resolution.present
+        # 説明文へ値を出さない
+        assert API_KEY not in resolution.detail
+
+    def test_typed_credentials_take_precedence_over_untyped_api_key(self):
+        resolution = EnvCredentialResolver({
+            ENV_API_KEY: API_KEY, "JQUANTS_REFRESH_TOKEN": SECRET_TOKEN}).resolve()
+        assert resolution.method == METHOD_REFRESH_TOKEN
+
+    def test_api_key_exchanged_as_refresh_token_records_mechanism(self):
+        http_fn, calls = api_key_http()
+        provider = JQuantsTopixProvider(http_fn, env={ENV_API_KEY: API_KEY})
+        result = fetch_topix(provider)
+        assert result.ok
+        assert provider.last_auth_method == METHOD_API_KEY
+        assert provider.last_auth_method_validated == METHOD_API_KEY
+        assert provider.last_mechanism_validated == MECHANISM_AS_REFRESH_TOKEN
+        assert any(c["headers"].get("Authorization") == f"Bearer {ID_TOKEN}"
+                   for c in calls)
+
+    def test_api_key_falls_back_to_bearer_and_records_mechanism(self):
+        http_fn, calls = api_key_http(exchange_status=403)
+        provider = JQuantsTopixProvider(http_fn, env={ENV_API_KEY: API_KEY})
+        result = fetch_topix(provider)
+        assert result.ok
+        assert provider.last_mechanism_validated == MECHANISM_AS_BEARER
+        assert any(c["headers"].get("Authorization") == f"Bearer {API_KEY}"
+                   for c in calls)
+
+    def test_api_key_rejected_by_all_mechanisms_is_bounded_auth_error(self):
+        http_fn, calls = api_key_http(exchange_status=403, data_status=403)
+        provider = JQuantsTopixProvider(http_fn, env={ENV_API_KEY: API_KEY})
+        result = fetch_topix(provider)
+        assert result.error_kind == "auth_error"
+        assert "api_key_mechanism_not_accepted" in result.error_detail
+        assert MECHANISM_AS_REFRESH_TOKEN in result.error_detail
+        assert MECHANISM_AS_BEARER in result.error_detail
+        # 上限2回（交換1＋data 1）——総当たりしない
+        assert len(calls) == 2
+        assert provider.last_auth_method_validated == ""   # 断定しない
+        assert provider.last_mechanism_validated == ""
+
+    def test_api_key_value_never_appears_in_error_or_locator(self):
+        http_fn, _calls = api_key_http(exchange_status=403, data_status=403)
+        provider = JQuantsTopixProvider(http_fn, env={ENV_API_KEY: API_KEY})
+        result = fetch_topix(provider)
+        assert API_KEY not in result.error_detail
+        assert API_KEY not in result.url
+        assert API_KEY.encode() not in result.body
+
+    def test_api_key_auth_failure_maps_to_g10_blocked(self):
+        state, codes = g10_state(freshness(NO_DATA, rows=0),
+                                 credential_present=True,
+                                 fetch_error_kind="auth_error")
+        assert state == G10_BLOCKED
+        assert "auth_failure" in codes
