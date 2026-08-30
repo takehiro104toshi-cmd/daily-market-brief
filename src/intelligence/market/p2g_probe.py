@@ -36,6 +36,7 @@ TREASURY_BASE = (
     "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/"
     "daily-treasury-rates.csv"
 )
+JQUANTS_BASE = "https://api.jquants.com/v1"
 
 
 def _printable(text: str, limit: int) -> str:
@@ -84,7 +85,34 @@ def probe(name: str, url: str, *, ua: str = BROWSER_UA, method: str = "GET",
     return out
 
 
+def probe_jquants_auth_contract() -> None:
+    """P2-G.1: J-Quantsが**実際に要求する認証仕様**をAPI応答で確認する。
+
+    秘密は送らない（空bodyや無認証で叩き、返るエラーメッセージから必須項目を読む）。
+    env変数名を「永久に正しい仕様」と仮定しないための実測。
+    """
+    probe("jquants_auth_user_contract",
+          f"{JQUANTS_BASE}/token/auth_user", method="POST", payload=b"{}",
+          note="必須フィールド名をAPI応答から確認（mailaddress/password等）")
+    probe("jquants_auth_refresh_contract",
+          f"{JQUANTS_BASE}/token/auth_refresh", method="POST", payload=b"",
+          note="refreshtokenの受け渡し方（query/body）をAPI応答から確認")
+    probe("jquants_topix_unauthenticated",
+          f"{JQUANTS_BASE}/indices/topix?from=2026-08-01&to=2026-08-28",
+          note="無認証時の応答（Authorizationヘッダ要求の確認）")
+    probe("jquants_docs_auth", "https://jpx.gitbook.io/j-quants-en/api-reference/refreshtoken",
+          note="公式ドキュメント（認証仕様）到達確認")
+    probe("jquants_docs_topix", "https://jpx.gitbook.io/j-quants-en/api-reference/topix",
+          note="公式ドキュメント（TOPIX endpoint仕様）到達確認")
+
+
 def main() -> int:
+    group = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if group == "jquants":
+        probe_jquants_auth_contract()
+        print("::P2G_PROBE_DONE::")
+        return 0
+
     # --- U.S. Treasury Daily Treasury Par Yield Curve Rates ---
     t2026 = (f"{TREASURY_BASE}/2026/all?type=daily_treasury_yield_curve"
              f"&field_tdr_date_value=2026&page&_format=csv")

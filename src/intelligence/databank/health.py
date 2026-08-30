@@ -11,6 +11,7 @@ CRITICAL SOURCE GAPS（TOPIX/JGB10Y/UST2Y——Phase 3 blocker）は解決状況
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
 
@@ -30,6 +31,9 @@ CRITICAL_MARKET_GAPS = (
 )
 
 HEALTHY, DEGRADED, BLOCKED = "HEALTHY", "DEGRADED", "BLOCKED"
+
+#: live実証済みだがcanonicalが本data rootに無い（market runner運用の正直な申告）
+SOURCE_VALIDATED_NOT_LOCAL = "SOURCE_VALIDATED_DATA_NOT_LOCAL"
 
 
 def _file_inventory(root: Path) -> List[Dict]:
@@ -164,25 +168,68 @@ def build_health_report(data_root: Path) -> Dict:
         finally:
             conn.close()
 
+    # P2-G.1: TOPIXはfreshness（当日利用可否）まで見て状態を決める
+    #   ——「APIが繋がった」だけでRESOLVEDにしない（DO NOT LIE ABOUT FRESHNESS）
+    from ..market.topix_freshness import (
+        G10_PARTIAL,
+        G10_RESOLVED,
+        TOPIX_SERIES_ID,
+        evaluate_topix_freshness,
+        g10_state,
+    )
+
+    def _topix_state(local_rows: int, source_validated: bool):
+        from ..market.jquants_topix import credential_status
+
+        credential_present = bool(credential_status()["present"])
+        if local_rows and market_db.exists():
+            from ..market.store import SqliteMarketIndex
+
+            index = SqliteMarketIndex(market_db)
+            try:
+                freshness = evaluate_topix_freshness(
+                    index, now=datetime.now(timezone.utc))
+            finally:
+                index.close()
+            state, codes = g10_state(freshness, credential_present=credential_present)
+            return state, codes, freshness.as_dict()
+        if source_validated:
+            return (SOURCE_VALIDATED_NOT_LOCAL,
+                    ("live_validated_on_runner", "market_bank_not_local"), {})
+        return (G10_PARTIAL,
+                ("topix_credential_missing" if not credential_present
+                 else "topix_not_live_validated",
+                 "adapter_implemented_not_live_validated"), {})
+
     gaps = []
-    unresolved = 0
+    blocking = 0
     for gap_series, resolving_series, gap_id, note in CRITICAL_MARKET_GAPS:
         spec = catalog.get(resolving_series) if catalog is not None else None
         source_validated = bool(spec is not None and spec.enabled and not spec.probe)
         local_rows = _series_rows(resolving_series)
-        if source_validated and local_rows >= 25:
-            status = "resolved"
+        freshness_detail: Dict = {}
+        if gap_series == TOPIX_SERIES_ID:
+            status, reason_codes, freshness_detail = _topix_state(
+                local_rows, source_validated)
+        elif source_validated and local_rows >= 25:
+            status, reason_codes = G10_RESOLVED, ("live_validated", "history_ge_25dma")
         elif source_validated:
-            status = "source_validated_data_not_local"
+            status, reason_codes = (SOURCE_VALIDATED_NOT_LOCAL,
+                                    ("live_validated_on_runner", "market_bank_not_local"))
         else:
-            status = "unresolved"
-            unresolved += 1
-        gaps.append({"series_id": gap_series, "resolving_series": resolving_series,
-                     "gap": gap_id, "status": status, "local_raw_rows": local_rows,
-                     "note": note})
+            status, reason_codes = G10_PARTIAL, ("source_not_live_validated",)
+        if status not in (G10_RESOLVED, SOURCE_VALIDATED_NOT_LOCAL):
+            blocking += 1
+        entry = {"series_id": gap_series, "resolving_series": resolving_series,
+                 "gap": gap_id, "status": status,
+                 "reason_codes": list(reason_codes),
+                 "local_raw_rows": local_rows, "note": note}
+        if freshness_detail:
+            entry["freshness"] = freshness_detail
+        gaps.append(entry)
     components["phase3_readiness"] = {
-        "state": BLOCKED if unresolved else DEGRADED,
-        "reason_codes": (["critical_market_source_gaps_unresolved"] if unresolved
+        "state": BLOCKED if blocking else DEGRADED,
+        "reason_codes": (["critical_market_source_gaps_unresolved"] if blocking
                          else ["gap_closure_validated_awaiting_supervisor_promotion"]),
         "critical_source_gaps": gaps,
     }

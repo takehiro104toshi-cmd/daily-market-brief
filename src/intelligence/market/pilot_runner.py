@@ -263,6 +263,74 @@ def main(argv=None) -> int:
             "index:nikkei225_topix.nt_ratio.derived_metric", kind="derived")),
     }, ensure_ascii=False))
 
+    # P2-G.1: TOPIX CREDENTIALED LIVE CLOSEOUT（STEP 1-8。秘密は一切出力しない）
+    from .jquants_topix import credential_status
+    from .topix_freshness import (
+        TOPIX_SERIES_ID,
+        access_requirement_report,
+        evaluate_topix_freshness,
+        g10_state,
+    )
+
+    cred = credential_status()
+    topix_result = next(
+        (r for r in run.results if r.series_id == TOPIX_SERIES_ID), None)
+    topix_rows = store.index.query(series_id=TOPIX_SERIES_ID, kind="raw", limit=100000)
+    freshness = evaluate_topix_freshness(store.index, now=datetime.now(timezone.utc))
+    state, reason_codes = g10_state(freshness, credential_present=bool(cred["present"]))
+
+    topix_qa: dict = {}
+    topix_ids = {row["observation_id"] for row in topix_rows}
+    for a in store.qa.iter_assessments():
+        if a.record_id in topix_ids:
+            key = f"{a.policy_name}:{a.decision.value}"
+            topix_qa[key] = topix_qa.get(key, 0) + 1
+
+    nt_rows = store.index.query(
+        series_id="index:nikkei225_topix.nt_ratio.derived_metric",
+        kind="derived", limit=100000)
+    nt_provenance = None
+    if nt_rows:
+        sample = store.normalized.get_observation(nt_rows[-1]["observation_id"])
+        nt_provenance = {
+            "observation_id": sample.observation_id,
+            "trading_date": sample.trading_date,
+            "value": str(sample.value),
+            "unit": sample.unit,
+            "input_count": len(sample.inputs),
+            "inputs": list(sample.inputs),
+            "calculation_method": sample.calculation_method,
+        }
+
+    print("::P2G1_TOPIX::" + json.dumps({
+        "step1_credential": cred,
+        "step2_api_probe": {
+            "attempted": topix_result is not None,
+            "status": topix_result.status if topix_result else "not_run",
+            "provider": topix_result.provider_id if topix_result else "",
+            "http": topix_result.http_status if topix_result else 0,
+            "error_kind": topix_result.error_kind if topix_result else "",
+            "error_detail": (topix_result.error_detail[:160] if topix_result else ""),
+            "records_seen": topix_result.records_seen if topix_result else 0,
+        },
+        "step3_historical": {
+            "raw_rows": len(topix_rows),
+            "first": topix_rows[0]["trading_date"] if topix_rows else "",
+            "last": topix_rows[-1]["trading_date"] if topix_rows else "",
+            "meets_25dma": len(topix_rows) >= 25,
+            "unit": topix_rows[-1]["unit"] if topix_rows else "",
+        },
+        "step4_freshness": freshness.as_dict(),
+        "step5_access_requirement": access_requirement_report(freshness),
+        "step6_ingestion_qa": {
+            "qa_decisions": topix_qa,
+            "latest": _row_dict(store.index.latest_trading_session(TOPIX_SERIES_ID)),
+        },
+        "step7_nt_ratio": {"rows": len(nt_rows), "latest_provenance": nt_provenance},
+        "step8_gap_state": {"gap": "G10", "state": state,
+                            "reason_codes": list(reason_codes)},
+    }, ensure_ascii=False))
+
     # PART A gate: 別プロセス（restart相当）でcanonical読み戻し＋index全再構築＋latest一致
     parent_latest = {
         sid: _row_dict(store.index.latest_trading_session(sid)) for sid in succeeded}

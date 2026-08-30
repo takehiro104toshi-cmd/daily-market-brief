@@ -31,16 +31,17 @@ jobs:
           python-version: "3.11"
       - name: Install minimal deps
         run: pip install pyyaml yfinance
-      # P2-G: 公式ソース調査プローブ（Treasury/MOF/JPX/J-Quants到達性。取得・保存なし）
-      - name: P2-G official source probe (research only)
+      # P2-G.1: J-Quantsが実際に要求する認証仕様をAPI応答で確認（秘密は送らない）
+      - name: P2-G.1 J-Quants auth contract probe (research only)
         continue-on-error: true
-        env:
-          JQUANTS_MAIL: ${{ secrets.JQUANTS_MAIL }}
-          JQUANTS_PASSWORD: ${{ secrets.JQUANTS_PASSWORD }}
-        run: python -m src.intelligence.market.p2g_probe
+        run: python -m src.intelligence.market.p2g_probe jquants
+      # credentialはrepository secretsからのruntime injectionのみ
+      # （未設定なら空文字＝TOPIX_CREDENTIAL_MISSINGとして正常停止する）
       - name: Run market data bank live pilot (1 request per series)
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_ID_TOKEN: ${{ secrets.JQUANTS_ID_TOKEN }}
+          JQUANTS_REFRESH_TOKEN: ${{ secrets.JQUANTS_REFRESH_TOKEN }}
           JQUANTS_MAIL: ${{ secrets.JQUANTS_MAIL }}
           JQUANTS_PASSWORD: ${{ secrets.JQUANTS_PASSWORD }}
         run: python -m src.intelligence.market.pilot_runner
