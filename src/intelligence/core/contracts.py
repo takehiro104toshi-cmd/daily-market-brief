@@ -19,6 +19,7 @@ from .types import LLMResult
 
 if TYPE_CHECKING:  # 型参照のみ（実行時循環importを避ける）
     from ..evidence.model import EvidenceLink, Statement
+    from ..evidence_qa.model import EvidenceAssessment
     from ..ingestion.model import FetchAttempt
     from ..market.model import Observation
     from ..normalization.model import NormalizationEvent
@@ -210,4 +211,24 @@ class NormalizationEventRepository(Protocol):
         ...
 
     def events_for_raw_item(self, raw_item_id: str) -> Sequence["NormalizationEvent"]:
+        ...
+
+
+@runtime_checkable
+class EvidenceAssessmentRepository(Protocol):
+    """Evidence QA評価（Phase 1-E）の永続化境界。append-only（上書き禁止）。
+
+    「現在の判定」は履歴からの導出（latest_for）。旧policy versionの評価も保存され続ける。
+    """
+
+    def add_assessment(self, assessment: "EvidenceAssessment") -> bool:
+        ...
+
+    def iter_assessments(self) -> Iterable["EvidenceAssessment"]:
+        ...
+
+    def assessments_for(self, record_id: str) -> Sequence["EvidenceAssessment"]:
+        ...
+
+    def latest_for(self, record_id: str, policy_name: Optional[str] = None) -> Optional["EvidenceAssessment"]:
         ...

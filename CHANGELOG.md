@@ -4,6 +4,32 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.17 (2026-08-30) — Phase 1-E: Evidence QA / Trust Gate
+
+「存在する情報 ≠ 信頼できるEvidence」。Normalized層の出力を分析利用可能な
+Evidenceへ昇格させる品質関門。**13次元の独立評価**（単一scoreへ潰さない）＋
+ACCEPT / ACCEPT_WITH_WARNINGS / LIMITED_USE / REJECT のGate判定。
+LLMによるFact抽出は未実装（SCOPE CORRECTION遵守。検証はsynthetic fixture）。
+
+### 追加
+
+- `src/intelligence/evidence_qa/`（新パッケージ×7）: model.py（QADimension 13次元/
+  DimensionResult/QAIssue/GateDecision/EvidenceAssessment/SourceInfo・reason code
+  語彙約50固定）、policy.py（TrustPolicy name＋version・GENERIC/DAILY_MARKET v1・
+  version上書き拒否registry）、dimensions.py（純関数評価器: provenance/source品質/
+  死活と文書有効性の分離/freshness＋horizon/日付品質/hash完全性/改定・撤回（明示
+  evidenceのみ）/転載検知/数値sanity（NaN・不可能負値・異常%・通貨不整合。補正なし）/
+  正規化品質/利用権利）、gate.py（FAIL→REJECT等の明示合成規則）、assess.py
+  （record種別別評価＋依存伝播: 上流REJECT→下流LIMITED（自動削除しない）・
+  corroboration独立性=転載10件≠独立10source）、store.py（append-only assessment
+  履歴・latest_for導出）、report.py（品質メトリクス集計＋人間可読レポート。
+  Black Box判定禁止）。
+- `core/contracts.py`: EvidenceAssessmentRepository Protocol追加。
+- `tests/intelligence/`: qa_fixtures.py（監督者指定synthetic fixture一式）＋
+  QAテスト49件（documents 17/statements 12/observation 11/policy・store・report 9）。
+- `docs/evidence_qa/`: EVIDENCE_QA_ARCHITECTURE / TRUST_POLICY_SPEC /
+  EVIDENCE_GATE_RULES / CONFLICT_REVISION_POLICY / QUALITY_METRICS_SPEC。
+
 ## v4.16 (2026-08-30) — Phase 1-D: Normalization & Evidence Creation
 
 異種Raw data（RSS2/Atom/RDF/JSON/tank記事）を共通domain語彙へ変換する
