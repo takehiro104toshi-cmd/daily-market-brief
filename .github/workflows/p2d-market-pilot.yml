@@ -31,7 +31,16 @@ jobs:
           python-version: "3.11"
       - name: Install minimal deps
         run: pip install pyyaml yfinance
-      - name: Run market data bank live pilot (1 request per series, no secrets)
+      # P2-G: 公式ソース調査プローブ（Treasury/MOF/JPX/J-Quants到達性。取得・保存なし）
+      - name: P2-G official source probe (research only)
+        continue-on-error: true
+        env:
+          JQUANTS_MAIL: ${{ secrets.JQUANTS_MAIL }}
+          JQUANTS_PASSWORD: ${{ secrets.JQUANTS_PASSWORD }}
+        run: python -m src.intelligence.market.p2g_probe
+      - name: Run market data bank live pilot (1 request per series)
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_MAIL: ${{ secrets.JQUANTS_MAIL }}
+          JQUANTS_PASSWORD: ${{ secrets.JQUANTS_PASSWORD }}
         run: python -m src.intelligence.market.pilot_runner
