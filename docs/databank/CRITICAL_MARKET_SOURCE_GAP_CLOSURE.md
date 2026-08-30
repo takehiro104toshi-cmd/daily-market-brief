@@ -58,6 +58,40 @@ backup manifest verify 0/0/0。
 TOPIXはprobe:true維持。healthの`phase3_readiness`はカタログ＋ローカル実データから
 状態を機械導出（TOPIX未解決の間BLOCKED）。
 
+## 5.1 P2-G.1 追記（TOPIX credentialed closeout / live run #8）
+
+TOPIX専用のクローズアウト（詳細: TOPIX_SOURCE_DECISION.md §5）:
+
+- **STEP 1** credential presence → `present:false` / `auth_method:missing` →
+  **TOPIX_CREDENTIAL_MISSING** として正常停止（J-Quantsへの認証リクエスト
+  **0回**——credential無しをfailure扱いして大量retryしない）
+- **STEP 2-4** API probe/historical/freshness → いずれも 0件・`NO_DATA` を
+  正直に報告（fetch成功していないのでRESOLVED判定へは進まない）
+- **STEP 5** access要件（必要tier・観測遅延・Morning Compass要件）を提示し
+  ユーザーのplan判断事項として停止。**proxy fallbackなし**
+- **STEP 7** NT倍率 0行（TOPIX入力欠落日は生成しない設計どおり）
+- **STEP 8** G10 = **PARTIALLY_RESOLVED**（reason: `topix_credential_missing`,
+  `adapter_implemented_not_live_validated`）
+
+run #8全体: requested 16 = success 14 + gap 1 + **failed 1**、raw 3,971・
+derived 15,128、MARKET_OBSERVATION再評価3,971件全ACCEPT、別プロセス
+persistence 19,099観測・index再構築一致・latest 14/14、backup verify 0/0/0。
+
+### 観測された不安定性（隠さない）
+
+`rates:UST10Y_par` が run #8 で **timeout により failed**（run #7では成功・
+274行）。トレース上、UST2Y_parが2025/2026の年ファイルを取得した直後に
+UST10Y_parが同じ2025ファイルを再取得して読み取りタイムアウト（20秒）。
+**同一年ファイルを系列ごとに取り直している**（2系列×2年＝4リクエスト）ことが
+一因と考えられる。この回はofficial spreadも0行。
+
+- G11の RESOLVED 判定は run #7 のlive実測に基づく（本事象は取得経路の
+  intermittent失敗であり、識別・単位・provenance・QAの結論は変わらない）。
+- **提案（未実施・承認待ち）**: TreasuryParYieldProvider に run内の
+  年ファイル応答キャッシュを入れ、同一URLの重複取得を1回にする
+  （公式ソースへの負荷低減＋タイムアウト機会の削減）。P2-G.1の作業範囲は
+  TOPIXのみのため本phaseでは変更していない。
+
 ## 6. Phase 3 readiness gate判定
 
 - UST2Y: live＋historical **PASS** / JGB10Y: live＋historical **PASS** /

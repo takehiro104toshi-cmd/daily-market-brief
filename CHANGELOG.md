@@ -4,6 +4,49 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.25 (2026-08-30) — Phase 2-G.1: TOPIX Credentialed Live Closeout
+
+対象はTOPIX（G10）のみ。原則: **DO NOT LIE ABOUT FRESHNESS**（API接続成功と
+履歴取得と当日利用可否を区別する）＋**NO PROXY FALLBACK**。
+live実測: run #8（success 14 / gap 1 / failed 1・raw 3,971・derived 15,128・
+persistence 19,099観測一致・backup verify 0/0/0）。
+
+### 追加
+
+- credential resolver契約 `JQuantsCredentialResolver`＋`EnvCredentialResolver`:
+  id_token / refresh_token / mail_password を優先順に解決し、方式名と由来env名
+  **のみ**を報告。J-Quantsの認証仕様変更（token/API key方式等）はresolverの
+  差し替えで吸収する（env名を恒久仕様と仮定しない）。
+- credential safety: `Secret`型でrepr/str封鎖・全error_detailのscrub・
+  認証応答の非永続・locator/raw payloadへの秘密非混入。credential未設定時は
+  **ネットワークを1回も叩かず**正常停止（TOPIX_CREDENTIAL_MISSING）。
+- schema/identity guard `validate_topix_payload`: 銘柄コード・NAV・限月・
+  清算値等を含む応答を`identity_mismatch`で拒否（ETF NAV/先物を1行も
+  取り込まない）。
+- `src/intelligence/market/topix_freshness.py`【新規】: 当日利用可否を
+  **同一東京セッションの実データ基準**で判定（休日カレンダーを推測しない）。
+  CURRENT_USABLE / DELAYED_NOT_CURRENT / NO_DATA＋lag_days・gap_sessions。
+  G10状態遷移（RESOLVED / HISTORICAL_RESOLVED_CURRENT_BLOCKED /
+  PARTIALLY_RESOLVED / BLOCKED）＋reason code必須。access要件レポート
+  （必要tier・観測遅延をユーザー判断事項として提示）。
+- pilot `::P2G1_TOPIX::` STEP1-8マーカー（秘密を一切出力しない）＋
+  J-Quants認証仕様の実API応答プローブ。
+- テスト40件追加（計1,149 passed）。
+
+### 改善
+
+- health.py: G10をfreshness込みで機械判定（`SOURCE_VALIDATED_DATA_NOT_LOCAL`
+  状態を追加。live実証済みだがcanonicalが本rootに無い場合の正直な申告）。
+- workflowのcredential注入を4変数（ID_TOKEN/REFRESH_TOKEN/MAIL/PASSWORD）へ
+  拡張——repository secretsのみ・値はGit/configへ保存しない。
+
+### 修正
+
+- なし（TOPIX以外の系列・既存挙動は変更していない）。
+  ※run #8で `rates:UST10Y_par` がtimeoutでfailed（run #7は成功）。
+  同一年ファイルの重複取得が一因と見られるが、P2-G.1の範囲外のため
+  **提案のみ**（CRITICAL_MARKET_SOURCE_GAP_CLOSURE.md §5.1）。
+
 ## v4.24 (2026-08-30) — Phase 2-G: Critical Market Source Gap Closure
 
 原則: **NO PROXY SUBSTITUTION**（TOPIX→ETF・JGB10Y→別年限/入札・UST2Y→

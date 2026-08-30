@@ -39,8 +39,75 @@
 - 機構（provider・カタログ・パイプライン・テスト）は完成。live run #7では
   adapterがpipeline内で実行され `no_credentials` の正直なgapとして記録された
   （FetchAttempt保存・secret非含有URL・捏造ゼロ——経路の結線自体は実証済み）。
-- **live実証はユーザーのJ-Quants登録＋repo secretsへの
-  JQUANTS_MAIL / JQUANTS_PASSWORD 追加後**、次のpilot runで自動実行される
-  （成功後にカタログprobe:false化→G10 RESOLVED）。
+- **live実証はユーザーのJ-Quants登録＋repo secretsへのcredential追加後**、
+  次のpilot runで自動実行される（成功後にカタログprobe:false化→G10判定）。
 - それまでG10は**PARTIALLY_RESOLVED**（供給元決定・経路実装済み・live未実証）
   としてSOURCE_GAPS.md／health reportに正直に表示する。
+
+## 5. P2-G.1 closeout（credential resolver・freshness gating／run #8実測）
+
+### 5.1 認証仕様の実測確認（env名を恒久仕様と仮定しない）
+
+runner上の実API/ドキュメント実測（run #8 probe）:
+
+| 対象 | 実測 |
+|---|---|
+| `POST /v1/token/auth_refresh`（token無し） | **403** `{"message":"Forbidden"}` |
+| `GET /v1/indices/topix`（無認証） | **403** `{"message":"Forbidden"}`——Authorization必須 |
+| 公式ドキュメント（gitbook 2ページ） | HTTP 200だが**JavaScript SPAシェル**（9,219B・本文はJS描画）。静的取得では仕様本文を機械抽出できず |
+
+→ **確認できたのは「両endpointが実在し認証必須」までで、フィールド名までは
+positiveに確定できていない**（この事実を隠さない）。だからこそ認証方式は
+`JQuantsCredentialResolver` 契約の背後へ隔離し、仕様変更時は
+**resolverの差し替えのみ**で吸収できる形にした。実credential投入時の
+実挙動が最終確認となる。
+
+### 5.2 credential resolver契約（実装）
+
+優先順位付きで解決し、方式名と由来env名**だけ**を報告する（値は出さない）:
+
+| method | 必要env | 認証往復 |
+|---|---|---|
+| `id_token` | `JQUANTS_ID_TOKEN` | 0回（露出最小） |
+| `refresh_token` | `JQUANTS_REFRESH_TOKEN` | 1回（auth_refresh） |
+| `mail_password` | `JQUANTS_MAIL` ＋ `JQUANTS_PASSWORD` | 2回 |
+| `missing` | — | **0回**（正常停止） |
+
+将来のtoken/API key方式等は新resolverを実装して差し替える（provider本体・
+fetch経路は無変更）。
+
+### 5.3 credential safety（実装＋テスト固定）
+
+- `Secret`型でrepr/strを封鎖（うっかりログ出力を型で防ぐ）
+- 全 `error_detail` を既知の秘密値でscrub（例外文言経由の漏出も遮断）
+- 認証応答（refreshToken/idToken）は**保存しない**——raw payloadはTOPIX
+  endpoint応答のみ
+- 永続化locator（FetchAttempt/RawItem）に token・pagination_key を含めない
+- credential未設定時は**ネットワークを1回も叩かず**停止（大量retryしない）
+
+### 5.4 identity guard（ETF NAV・先物の混入拒否）
+
+応答行に銘柄コード・NAV・限月・清算値等のフィールドが現れた場合は
+`identity_mismatch` として**1行も取り込まず**拒否する（TOPIX Price Index
+以外を指数seriesへ入れない）。
+
+### 5.5 freshness gating（DO NOT LIE ABOUT FRESHNESS）
+
+「APIが繋がった」だけではRESOLVEDにしない。当日利用可否は
+**同一東京セッションの実データ**（既定: 日経平均）を基準に判定する
+（休日カレンダーを推測しない）:
+
+- `CURRENT_USABLE` … 基準系列と同一の最新セッションまで揃っている
+- `DELAYED_NOT_CURRENT` … 基準より遅れている（`gap_sessions` で遅れ
+  セッション数を提示。Freeプランの遅延はここに落ちる）
+- `NO_DATA` … 観測なし
+
+G10状態は `RESOLVED` / `HISTORICAL_RESOLVED_CURRENT_BLOCKED` /
+`PARTIALLY_RESOLVED` / `BLOCKED` の4値＋reason codeで機械決定する。
+
+### 5.6 run #8実測（credential未投入）
+
+STEP 1で `present: false` / `auth_method: missing` → **TOPIX_CREDENTIAL_MISSING**
+として正常停止（J-Quantsへの認証リクエスト0回）。以降のSTEPは
+NO_DATA・0行・NT倍率0行を正直に報告し、G10は**PARTIALLY_RESOLVED**
+（reason: `topix_credential_missing` / `adapter_implemented_not_live_validated`）。
