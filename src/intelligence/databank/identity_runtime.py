@@ -18,6 +18,7 @@ from typing import Callable, Mapping, Optional, Sequence, Tuple
 from ..core.ids import new_id
 from ..sources.model import SourceDocument
 from .article_store import ArticleIdentityEvent, IdentityEventType, JsonlArticleStore
+from .identity_blocking import BlockingIndex
 from .identity_decision import IdentityDecision, IdentityDecisionKind
 from .identity_resolver import (
     ALGORITHM_VERSION,
@@ -91,13 +92,36 @@ class IdentityRuntime:
         self._clock = clock
         self._docs: dict = {}  # document_id -> SourceDocument（member照合用）
         self._syndicated: set = set()
+        # 候補生成のblocking index（総当たりO(n²)禁止——IDENTITY SCALING指示）
+        self._blocking = BlockingIndex()
 
-    def _articles_with_docs(self):
-        result = []
-        for identity in self._store.iter_identities():
-            members = [self._docs[d] for d in identity.member_document_ids if d in self._docs]
-            result.append((identity, members))
-        return result
+    def _candidate_articles(self, doc: SourceDocument):
+        """blocking indexで絞った候補documentの所属articleのみをresolverへ渡す。"""
+        candidate_ids = self._blocking.candidates(doc)
+        by_article: dict = {}
+        for doc_id in sorted(candidate_ids):
+            identity = self._store.identity_for_document(doc_id)
+            if identity is None or doc_id not in self._docs:
+                continue
+            by_article.setdefault(identity.article_id, (identity, []))[1].append(
+                self._docs[doc_id])
+        return list(by_article.values())
+
+    def preload(self, documents) -> int:
+        """resume用: 既存canonical文書でin-memory索引（docs/blocking/syndicated）を再構築。
+
+        導出物の再構築であり二重保存ではない（storeのevent replayと同型の思想）。
+        """
+        count = 0
+        for doc in documents:
+            if doc.source_document_id not in self._docs:
+                self._docs[doc.source_document_id] = doc
+                self._blocking.add(doc)
+                count += 1
+        for e in self._store.iter_events():
+            if e.event_type is IdentityEventType.MARK_SYNDICATED and e.document_id:
+                self._syndicated.add(e.document_id)
+        return count
 
     def ingest_document(self, doc: SourceDocument) -> IngestResult:
         """文書1件をidentity判定し、eventとして永続する。CANDIDATEはmergeしない。"""
@@ -114,7 +138,8 @@ class IdentityRuntime:
                     matched_signals=(), reason_codes=()),
                 article=existing)
 
-        decision = resolve(doc, self._articles_with_docs(), thresholds=self._thresholds)
+        decision = resolve(doc, self._candidate_articles(doc), thresholds=self._thresholds)
+        self._blocking.add(doc)
         now = self._clock()
         actor = f"algorithm:{ALGORITHM_VERSION}"
 

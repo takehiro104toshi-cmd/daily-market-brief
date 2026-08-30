@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.20 (2026-08-30) — Phase 2-C: Historical Tank Backfill
+
+tank 3,056記事のvNext正式移行（BACKFILL IS A DATA MIGRATION, NOT A FILE COPY）。
+**full実行完了**: 3,056/3,056 success・会計完全一致・REVISION 55統合検出・
+CANDIDATE 25 queue保存・validation 0 issues。データ本体はGit非管理
+（data/vnext/databank/）。P2-D未着手・新解釈生成ゼロ（禁止遵守）。
+
+### 追加
+
+- `databank/backfill_inventory.py`: 実測inventory（件数・分布・欠損・重複ID・
+  invalid JSON・schema variants）＋input fingerprint（shard×sha256）＋決定論的
+  record列挙。
+- `databank/identity_blocking.py`: 候補生成のBlockingIndex（exact key＋
+  title prefix/日付×sourceバケット。**総当たりO(n²)禁止**への回答。3,056件で
+  メモリ58MB・二次劣化なし）。IdentityRuntimeへ統合＋resume用preload。
+- `databank/backfill.py`: BackfillRun manifest（fingerprint・version群・会計・
+  checkpoint）/ RejectRecord ledger（黙って捨てない）/ JsonlNewsBankStore
+  （news_items=追記ログ最新正・legacy_annotations・reject_ledger・backfill_runs）/
+  BackfillEngine（chunk 250・checkpoint/resume・冪等・source mapping
+  exact_name 42/42実測・LEGACY_UNKNOWN安全表現・FetchAttempt捏造なし）/ reconcile。
+- tests: +14件（backfill 10: inventory/fingerprint/run会計/reject ledger/
+  legacy隔離/unknown source/冪等再実行/crash→resume同値ほか・blocking 4、
+  計835 passed）。
+- `docs/databank/`: HISTORICAL_BACKFILL_ARCHITECTURE / BACKFILL_RUN_SPEC /
+  TANK_BACKFILL_REPORT / HISTORICAL_DATA_QUALITY / BACKFILL_RECONCILIATION。
+
+### 改善
+
+- 実運用発見: **同一canonical URLの更新版55組を検出・統合**（tankは正規化前URLで
+  別レコード扱い——URL正規化＋fingerprintの実データ価値を実証）。CANDIDATE 25件は
+  P2-B校正が予言したハザード族（FERC通番8・Yahoo定型7・ECBカレンダー等）で全て非merge。
+
 ## v4.19 (2026-08-30) — Phase 2-B: Article Identity / Dedup / Revision
 
 Article Identity Layer。最上位原則 **FALSE MERGE IS WORSE THAN MISSED MERGE**
