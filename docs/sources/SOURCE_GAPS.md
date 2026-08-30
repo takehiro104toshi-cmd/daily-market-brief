@@ -20,3 +20,12 @@ P1-D本線と分離した別管理トラック（監督者DESIGN CORRECTION 2）
   実施時はlive validationワークフローと同様の最小アクセス原則に従う。
 - 本トラックの変更がsource_feeds.yamlへ入る際は、current_healthの更新規律
   （実測evidenceのみ・歴史非上書き）に従う。
+
+## Market Data Bank関連（Phase 2-D追加・2026-08-30）
+
+| # | ギャップ | 現況（live pilot実測） | 解決候補 | 状態 |
+|---|---|---|---|---|
+| G9 | **Stooq日足history制限** | `q/d/l/`エンドポイントはIP単位ダウンロード制限。共有IP（Actionsランナー）からHTTP 200のHTML制限ページ（4run実測） | ローカルIP実行では有効な経路として保持。runnerからはyfinance一次で回避済み | MITIGATED |
+| G10 | **TOPIX指数の供給元** | yfinanceに指数symbolなし（legacyの1306.TはETF——指数seriesへ流用しない）。Stooq ^tpxはG9で不達 | ローカル実行でのStooq取得／JPX公式値（PRIMARY_OFFICIAL）調査 | OPEN |
+| G11 | **JGB10Y・UST2Yの供給元** | Stooq 10jpy.b/2usy.bのみ定義（probe）——G9で不達。yfinance相当symbolなし | UST2Y: FRB H.15/財務省CMT等のPRIMARY_OFFICIAL調査。JGB10Y: JPX/財務省公表値調査 | OPEN |
+| G12 | **東証グロース250指数** | provider symbol未確認（カタログにidentityのみ定義・enabled:false） | JPX公式等の調査 | OPEN |

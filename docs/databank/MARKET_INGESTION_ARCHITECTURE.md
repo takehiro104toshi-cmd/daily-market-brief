@@ -3,11 +3,12 @@
 ## 1. 層構成（provider非依存のdomain）
 
 ```
-StooqDailyHistoryProvider ──┐ providers.py（MarketDataProvider Protocol実装）
-  （将来: yfinance等）      │   1系列=1リクエストで日足CSV履歴を取得
+YfinanceDailyHistoryProvider（一次）─┐ providers.py（MarketDataProvider Protocol実装）
+StooqDailyHistoryProvider（fallback）┘   1系列=1リクエストで日足履歴を取得
                             ▼
               ProviderFetchResult（transient・stringトークンのまま）
-                            │  body=生CSV → BlobStore（raw保存）
+                            │  body=生CSV（stooq）/整形スナップショット（yfinance・
+                            │  provider_normalized=true明示）→ BlobStore（raw保存）
                             │  FetchAttempt必ず記録（失敗も。P1-C再利用）
                             ▼
               ingest.build_observations（純関数・決定論）
@@ -21,10 +22,11 @@ StooqDailyHistoryProvider ──┐ providers.py（MarketDataProvider Protocol�
 ```
 
 domain（ingest/store/derived）はStooq・yfinanceを知らない。依存は
-`MarketDataProvider` Protocolのみ。**LEGACY REUSE**: Stooqのsymbol体系は
-legacy `config.yaml` stooq_symbols（^nkx/^tpx/^dji/^spx/^ndq/^vix/usdjpy/eurusd/
-10usy.b/cl.f/gc.f——全て実績あり）を、HTTP/リトライ/redactはP1-Cの
-`ingestion/transport.py` をadapter経由で再利用（legacyコードの改変ゼロ）。
+`MarketDataProvider` Protocolのみ。**LEGACY REUSE**: provider構成はlegacy
+`src/collectors/market_data.py` の本番実績アーキテクチャ（yfinance一次・
+Stooqフォールバック）を忠実に再現し、symbolはlegacy `config.yaml` の実績値
+（Yahoo: ^N225/^DJI/^GSPC等・Stooq: ^nkx/^dji等）、HTTP/リトライ/redactは
+P1-Cの `ingestion/transport.py` をadapter経由で再利用（legacyコードの改変ゼロ）。
 
 ## 2. RAW保存（provider応答の生値）
 
@@ -71,8 +73,10 @@ Evidence QAの `eval_observation_validity`（P1-E）が検知する。
   同値 → 重複保存せず `source_change_confirmed_equal` 記録のみ。
   異値 → revision＋ `source_changes`（"日付:旧→新"）としてrun結果に記録。
 - 品質レポートは系列内の複数provider混在を `fallback_used` として表面化する。
-- P2-D時点の実providerはStooq 1系統のみ（fallback系は設計＋テストで固定。
-  cross-source diff比較は複数provider導入時に有効化）。
+- provider chainはpreferred→fallback順（カタログ宣言）。失敗した試行も
+  FetchAttemptとrun manifestのfallback_errorsに必ず残る。
+- cross-source diff比較（同一series×同日を複数providerで照合）はStooqが
+  使える環境（ローカルIP）で有効化される——**自動上書きは常に禁止**（検知・報告のみ）。
 
 ## 8. 派生（PART F: foundation only）
 

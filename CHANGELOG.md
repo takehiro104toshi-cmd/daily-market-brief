@@ -4,6 +4,63 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.21 (2026-08-30) — Phase 2-D: Market Data Bank
+
+原則: A NUMBER WITHOUT IDENTITY AND CONTEXT IS NOT MARKET DATA。
+**live pilot成功**（Actions run #4）: 12系列×約13ヶ月の日足を実取得——raw 3,432＋
+派生13,080=canonical 16,512件・QA全件・**別プロセス永続化検証gate通過**
+（fresh process再オープン・index全再構築・latest 12/12一致）・backup manifest検証OK。
+データ本体はGit非管理（Data BankはGitリポジトリではない）。P2-E未着手（禁止遵守）。
+
+### 追加
+
+- `knowledge/market_series/core_series.yaml`【新規】: MarketSeries正式カタログ
+  v1.0.0（19系列。series_id規約検証・指数/ETF/先物・spot/fixingの非混同・
+  yield=pct固定・session/as_of_policy・provider種別 PRIMARY_OFFICIAL vs
+  MARKET_DATA_PROVIDER・派生定義・enabled/probe/GAP意味論）＋
+  `src/intelligence/market/series_catalog.py`【新規】loader/validator。
+- `src/intelligence/market/providers.py`【新規】: MarketDataProvider Protocol＋
+  **yfinance一次**（legacy本番構成再現・provider_normalized=true・float供給を
+  provider_float_transitとして全件申告）＋**Stooqフォールバック**（生CSV保存・
+  legacy UA再利用・非CSV応答の診断snippet）。
+- `src/intelligence/market/ingest.py`【新規】: 決定論正規化（stringトークン→
+  Decimal直接・trading_date/as_of分離のセッションモデル・欠測非補完・
+  週末/未来/重複の検知のみ・content-addressed ID・revision_of・source切替記録）。
+- `src/intelligence/market/derived.py`【新規】: 派生基盤（return_1d/5d・25DMA・
+  乖離率・金利スプレッド・NT倍率。inputs＋calculation_method:version必須・
+  Decimal 6桁ROUND_HALF_EVEN固定・欠測非補間）。
+- `src/intelligence/market/store.py`【新規】: MarketBankStore（JSONL canonical＋
+  SqliteMarketIndex。latest_trading_session / latest_as_of / latest_revision_for /
+  revision_chainの**latest意味論明示**・改定解決・decision結合クエリ・全再構築）。
+- `src/intelligence/market/backfill.py`【新規】: provider chainエンジン（fallback
+  発動の必須記録・全試行FetchAttempt永続・run manifest MarketBackfillRun・
+  GAP/FAILED区分・冪等・HISTORICAL QA・依存伝播付き派生QA）。
+- `src/intelligence/core/paths.py`【新規】＋config.yaml `vnext.data_root`:
+  INTELLIGENCE_DATA_ROOT環境変数→config→既定の解決（絶対パス固定なし）。
+- `src/intelligence/core/backup.py`【新規】: backup manifest基盤（file inventory×
+  sha256×schema version・verify照合）。
+- `src/intelligence/market/persistence_check.py`【新規】: 別プロセス永続化検証
+  （canonical読み戻し・index空から再構築・latest照合）＋
+  `pilot_runner.py`【新規】＋`quality_report.py`【新規】＋
+  `.github/workflows/p2d-market-pilot.yml`【新規】＋trigger。
+- Observation.trading_date追加（0.x非破壊）・SCHEMA_VERSION 0.4.0。
+- tests: +95件（catalog/identity安全・provider・ingest・derived・store/latest・
+  backfill/fallback・persistence subprocess・quality・trace描画。**931 passed**）。
+- docs/databank: MARKET_SERIES_CATALOG_SPEC / MARKET_INGESTION_ARCHITECTURE /
+  MARKET_STORAGE_AND_PERSISTENCE / MARKET_SOURCE_MAPPING /
+  MARKET_BACKFILL_REPORT / MARKET_DATA_QUALITY。SOURCE_GAPSへG9〜G12追記。
+
+### 改善
+
+- live実測でprovider実態を確定: StooqのhistoryエンドポイントはIP制限で
+  Actionsランナーから不達（HTML制限ページ）→ legacyの本番実績構成
+  （yfinance一次）へ整合。TOPIXは1306.T ETFを指数へ流用せず正直にGAP化。
+
+### 修正
+
+- 同一内容再取得時のRawItem ID衝突（初回provenance保持・試行のみ追記へ）。
+- pilot trace描画のQAIssue属性名誤り（オフライン回帰テスト追加）。
+
 ## v4.20 (2026-08-30) — Phase 2-C: Historical Tank Backfill
 
 tank 3,056記事のvNext正式移行（BACKFILL IS A DATA MIGRATION, NOT A FILE COPY）。
