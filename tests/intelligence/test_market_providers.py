@@ -105,3 +105,53 @@ class TestStooqProvider:
         provider = stub_provider({})
         result = provider.fetch_daily_history(spec, start=date(2026, 8, 1), end=date(2026, 8, 29))
         assert result.error_kind == "no_symbol"
+
+
+class TestYfinanceProvider:
+    def _provider(self, rows):
+        from src.intelligence.market.providers import YfinanceDailyHistoryProvider
+        return YfinanceDailyHistoryProvider(history_fn=lambda symbol, start, end: rows)
+
+    def test_offline_stub_success_and_float_disclosure(self):
+        spec = spec_for("index:nikkei225.close.closing.tokyo")
+        provider = self._provider([("2026-08-28", 39310.25, 1050000.0),
+                                   ("2026-08-27", 39250.0, 1100000.0)])
+        result = provider.fetch_daily_history(spec, start=date(2026, 8, 1), end=date(2026, 8, 29))
+        assert result.ok and result.provider_id == "yfinance"
+        # provider-normalized（ライブラリ前処理）とfloat供給の事実が申告される
+        assert result.provider_normalized is True
+        assert "provider_float_transit" in result.parse_issues
+        # トークンはrepr(float)（stringのままingestへ渡る）・日付昇順
+        assert [r.trading_date for r in result.records] == ["2026-08-27", "2026-08-28"]
+        assert result.records[1].close == "39310.25"
+        assert result.body.startswith(b"Date,Close,Volume\n")
+
+    def test_nan_close_becomes_missing(self):
+        spec = spec_for("index:nikkei225.close.closing.tokyo")
+        provider = self._provider([("2026-08-28", None, None)])
+        result = provider.fetch_daily_history(spec, start=date(2026, 8, 1), end=date(2026, 8, 29))
+        assert result.records[0].close == ""  # 欠測のまま（0にしない）
+
+    def test_empty_history_is_no_data(self):
+        spec = spec_for("index:nikkei225.close.closing.tokyo")
+        result = self._provider([]).fetch_daily_history(
+            spec, start=date(2026, 8, 1), end=date(2026, 8, 29))
+        assert result.error_kind == "no_data"
+
+    def test_library_exception_classified(self):
+        from src.intelligence.market.providers import YfinanceDailyHistoryProvider
+
+        def boom(symbol, start, end):
+            raise RuntimeError("network down")
+
+        spec = spec_for("index:nikkei225.close.closing.tokyo")
+        result = YfinanceDailyHistoryProvider(history_fn=boom).fetch_daily_history(
+            spec, start=date(2026, 8, 1), end=date(2026, 8, 29))
+        assert result.error_kind == "connection"
+        assert "RuntimeError" in result.error_detail
+
+    def test_no_symbol_series_reports_gap_kind(self):
+        spec = spec_for("rates:JGB10Y.yield.closing.tokyo")  # yfinance symbolなし
+        result = self._provider([("2026-08-28", 1.0, None)]).fetch_daily_history(
+            spec, start=date(2026, 8, 1), end=date(2026, 8, 29))
+        assert result.error_kind == "no_symbol"

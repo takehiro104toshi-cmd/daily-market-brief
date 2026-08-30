@@ -38,6 +38,9 @@ class SeriesRunResult:
     series_id: str
     symbol: str = ""
     status: str = ""  # success / gap / failed
+    provider_id: str = ""  # 成功したprovider（per-series provenanceのrun側要約）
+    fallback_used: bool = False  # preferred以外のproviderで成功（silent switch禁止の記録）
+    fallback_errors: Tuple[str, ...] = ()  # 失敗したprovider試行 "provider:error_kind"
     http_status: int = 0
     error_kind: str = ""
     error_detail: str = ""
@@ -96,29 +99,51 @@ class MarketBackfillEngine:
         self,
         store: MarketBankStore,
         catalog: SeriesCatalog,
-        provider: MarketDataProvider,
+        provider,  # MarketDataProvider または {provider_id: MarketDataProvider}
         policy: TrustPolicy,
         sleeper=None,  # Callable[[float], None]（系列間の礼儀sleep。テストはno-op注入）
     ) -> None:
         self.store = store
         self.catalog = catalog
-        self.provider = provider
+        self.providers: Dict[str, MarketDataProvider] = (
+            dict(provider) if isinstance(provider, dict)
+            else {provider.provider_id: provider})
         self.policy = policy
         self.sleeper = sleeper
-        self._source_info = provider_source_info(catalog, provider.provider_id)
+
+    def _source_info(self, provider_id: str) -> SourceInfo:
+        return provider_source_info(self.catalog, provider_id)
 
     # ------------------------------------------------------------- 1系列
 
     def run_series(self, spec: SeriesSpec, *, start: date, end: date) -> SeriesRunResult:
-        result = self.provider.fetch_daily_history(spec, start=start, end=end)
-        attempt_id, raw_item_id = self.store.record_provider_fetch(
-            result, new_id("fetch", result.retrieved_at))
+        """provider chain（preferred→fallback順）で取得。fallback発動は必ず記録される。"""
+        chain = [pid for pid in (spec.preferred_source, *spec.fallback_sources)
+                 if pid in self.providers and spec.symbol_for(pid)]
+        if not chain:
+            return SeriesRunResult(
+                series_id=spec.series_id, status="gap", error_kind="no_provider",
+                error_detail="実providerとsymbolの組が無い（カタログGAP）", probe=spec.probe)
+
+        result = None
+        attempt_id = ""
+        raw_item_id = None
+        fallback_errors = []
+        for pid in chain:
+            candidate = self.providers[pid].fetch_daily_history(spec, start=start, end=end)
+            attempt_id, raw_item_id = self.store.record_provider_fetch(
+                candidate, new_id("fetch", candidate.retrieved_at))
+            result = candidate
+            if candidate.ok:
+                break
+            fallback_errors.append(f"{pid}:{candidate.error_kind}")
 
         if not result.ok:
             status = "gap" if spec.probe or result.error_kind in ("no_data", "no_symbol") \
                 else "failed"
             return SeriesRunResult(
                 series_id=spec.series_id, symbol=result.symbol, status=status,
+                provider_id="", fallback_errors=tuple(fallback_errors),
                 http_status=result.status_code, error_kind=result.error_kind,
                 error_detail=result.error_detail,
                 fetch_attempt_id=attempt_id, raw_item_id=raw_item_id or "",
@@ -135,15 +160,19 @@ class MarketBackfillEngine:
         added = self.store.add_observations(new_obs)
 
         decisions: Dict[str, int] = {}
+        source_info = self._source_info(result.provider_id)
         for obs in new_obs:
             assessment = assess_observation(
-                obs, source_info=self._source_info, policy=self.policy,
+                obs, source_info=source_info, policy=self.policy,
                 reference_time=result.retrieved_at)
             self.store.add_assessment(assessment)
             decisions[assessment.decision.value] = decisions.get(assessment.decision.value, 0) + 1
 
         return SeriesRunResult(
             series_id=spec.series_id, symbol=result.symbol, status="success",
+            provider_id=result.provider_id,
+            fallback_used=result.provider_id != spec.preferred_source,
+            fallback_errors=tuple(fallback_errors),
             http_status=result.status_code, records_seen=outcome.records_seen,
             observations_added=added, revisions=len(outcome.new_revisions),
             source_changes=len(outcome.source_changes),
@@ -159,6 +188,10 @@ class MarketBackfillEngine:
         """全enabled系列＋cross系列の派生を計算しbankへ追加（冪等）。戻り値=新規追加数。"""
         added = 0
         latest_assessment = self._latest_assessment_map()
+        # derivedはproviderの値ではない——内部計算としてのsource申告（trustは依存伝播が決める）
+        derived_info = SourceInfo(
+            source_id="derived_calculation", tier=SourceTier(2),
+            investment_value="HIGH", health_state="verified", usage_status="public_feed")
 
         def qa_and_add(derived: Tuple[Observation, ...]) -> int:
             count = 0
@@ -168,7 +201,7 @@ class MarketBackfillEngine:
                 count += self.store.add_observations([obs])
                 inputs = [latest_assessment[i] for i in obs.inputs if i in latest_assessment]
                 assessment = assess_observation(
-                    obs, source_info=self._source_info, policy=self.policy,
+                    obs, source_info=derived_info, policy=self.policy,
                     reference_time=obs.as_of, input_assessments=inputs)
                 self.store.add_assessment(assessment)
                 latest_assessment[obs.observation_id] = assessment
@@ -225,7 +258,7 @@ class MarketBackfillEngine:
             run_id=new_id("mbf", started),
             started_at=started,
             completed_at=datetime.now(timezone.utc),
-            provider_id=self.provider.provider_id,
+            provider_id="+".join(sorted(self.providers)),
             catalog_version=self.catalog.catalog_version,
             ingest_version=INGEST_VERSION,
             trust_policy=f"{self.policy.name}:{self.policy.version}",

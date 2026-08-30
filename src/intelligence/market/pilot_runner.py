@@ -34,7 +34,7 @@ from ..evidence_qa.policy import DAILY_MARKET_V1, HISTORICAL_V1
 from ..ingestion.transport import UrllibTransport
 from .backfill import MarketBackfillEngine, default_range, provider_source_info
 from .model import Observation
-from .providers import StooqDailyHistoryProvider
+from .providers import StooqDailyHistoryProvider, YfinanceDailyHistoryProvider
 from .quality_report import build_quality_report
 from .series_catalog import load_catalog
 from .store import MarketBankStore
@@ -94,8 +94,11 @@ def main(argv=None) -> int:
     bank_root = market_bank_root(root)
     catalog = load_catalog(Path(args.catalog))
     store = MarketBankStore(bank_root)
-    provider = StooqDailyHistoryProvider(UrllibTransport())
-    engine = MarketBackfillEngine(store, catalog, provider, HISTORICAL_V1,
+    providers = {
+        "yfinance": YfinanceDailyHistoryProvider(),  # legacy一次経路（本番実績）
+        "stooq": StooqDailyHistoryProvider(UrllibTransport()),
+    }
+    engine = MarketBackfillEngine(store, catalog, providers, HISTORICAL_V1,
                                   sleeper=time.sleep)
     start, end = default_range(days=args.days)
     print(f"P2-D pilot: {len(catalog.enabled_series())} series, range {start}..{end}, "
@@ -105,6 +108,8 @@ def main(argv=None) -> int:
     for r in run.results:
         print("::P2D_SERIES::" + json.dumps({
             "series_id": r.series_id, "symbol": r.symbol, "status": r.status,
+            "provider": r.provider_id, "fallback": r.fallback_used,
+            "fallback_errors": list(r.fallback_errors),
             "http": r.http_status, "error": r.error_kind,
             "error_detail": r.error_detail, "records": r.records_seen,
             "added": r.observations_added, "revisions": r.revisions,
@@ -153,7 +158,7 @@ def main(argv=None) -> int:
         latest_row = store.index.latest_trading_session(trace_id)
         obs: Observation = store.normalized.get_observation(latest_row["observation_id"])
         daily = assess_observation(
-            obs, source_info=provider_source_info(catalog, provider.provider_id),
+            obs, source_info=provider_source_info(catalog, obs.source_id),
             policy=DAILY_MARKET_V1, reference_time=datetime.now(timezone.utc))
         store.add_assessment(daily)
         print("::P2D_DAILY_QA::" + json.dumps({

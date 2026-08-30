@@ -104,3 +104,63 @@ class TestDefaultRange:
         start, end = default_range(days=400, today=date(2026, 8, 30))
         assert (end - start).days == 400
         assert start == date(2025, 7, 26)
+
+
+class TestProviderFallback:
+    """PART C: provider fallback——発動は必ず記録される（silent switch禁止）。"""
+
+    def _providers(self, yf_rows=None, yf_error=False):
+        from src.intelligence.market.providers import YfinanceDailyHistoryProvider
+
+        def history(symbol, start, end):
+            if yf_error:
+                raise RuntimeError("yahoo down")
+            return yf_rows or []
+
+        return {
+            "yfinance": YfinanceDailyHistoryProvider(history_fn=history),
+            "stooq": stub_provider({"s=^nkx": (200, NIKKEI_CSV)}),
+        }
+
+    NIKKEI = "index:nikkei225.close.closing.tokyo"
+
+    def test_preferred_success_never_calls_fallback(self, tmp_path):
+        engine = MarketBackfillEngine(
+            MarketBankStore(tmp_path / "m"), catalog(),
+            self._providers(yf_rows=[("2026-08-28", 39310.25, None)]), HISTORICAL_V1)
+        run = engine.run(start=START, end=END, now=RETRIEVED, series_ids=(self.NIKKEI,),
+                         with_derivations=False)
+        r = run.results[0]
+        assert (r.status, r.provider_id, r.fallback_used) == ("success", "yfinance", False)
+        assert r.fallback_errors == ()
+
+    def test_fallback_engages_and_is_recorded(self, tmp_path):
+        engine = MarketBackfillEngine(
+            MarketBankStore(tmp_path / "m"), catalog(),
+            self._providers(yf_error=True), HISTORICAL_V1)
+        run = engine.run(start=START, end=END, now=RETRIEVED, series_ids=(self.NIKKEI,),
+                         with_derivations=False)
+        r = run.results[0]
+        assert (r.status, r.provider_id) == ("success", "stooq")
+        assert r.fallback_used is True  # 黙って切り替わらない——runへ明記
+        assert r.fallback_errors == ("yfinance:connection",)
+        # per-Observation provenance: 実際に取得したproviderが刻まれる
+        obs = list(engine.store.normalized.iter_observations())
+        assert {o.source_id for o in obs} == {"stooq"}
+        # 失敗した試行もFetchAttemptとして残る（2 attempts）
+        assert len(list(engine.store.raw.iter_attempts())) == 2
+
+    def test_all_fail_reports_chain(self, tmp_path):
+        providers = {
+            "yfinance": self._providers(yf_error=True)["yfinance"],
+            "stooq": stub_provider({}),  # dnsエラー
+        }
+        engine = MarketBackfillEngine(
+            MarketBankStore(tmp_path / "m"), catalog(), providers, HISTORICAL_V1)
+        run = engine.run(start=START, end=END, now=RETRIEVED, series_ids=(self.NIKKEI,),
+                         with_derivations=False)
+        r = run.results[0]
+        assert r.status == "failed"
+        # chain全試行が記録される（最後の失敗はerror_kind/error_detailにも出る）
+        assert r.fallback_errors == ("yfinance:connection", "stooq:dns")
+        assert r.error_kind == "dns"

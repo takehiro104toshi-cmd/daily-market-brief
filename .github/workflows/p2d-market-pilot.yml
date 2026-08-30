@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install minimal deps
-        run: pip install pyyaml
+        run: pip install pyyaml yfinance
       - name: Run market data bank live pilot (1 request per series, no secrets)
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data

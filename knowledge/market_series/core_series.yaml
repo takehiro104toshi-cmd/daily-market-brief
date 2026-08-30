@@ -38,6 +38,17 @@ updated: "2026-08-30"
 #   SECONDARY            … 報道等の二次値
 # ---------------------------------------------------------------------------
 providers:
+  yfinance:
+    source_type: MARKET_DATA_PROVIDER
+    tier: 2
+    endpoint_template: ""            # ライブラリ経由（yfinance）。生HTTPは扱わない
+    response_format: library
+    provider_normalized: true        # ライブラリ前処理済み（float供給。生CSVではない）
+    notes: >-
+      Yahoo Financeマーケットデータ（yfinance経由）。legacyの一次経路そのもの
+      （src/collectors/market_data.py はyfinance一次・Stooq quoteフォールバックで
+      本番Actionsから毎日実績）。ティッカーもlegacy config.yaml実績値。
+      floatで供給される事実はfetchごとにprovider_float_transitとして申告される。
   stooq:
     source_type: MARKET_DATA_PROVIDER
     tier: 2
@@ -48,6 +59,9 @@ providers:
       無料の市場データプロバイダ。取引所公式値ではない（PRIMARY_OFFICIALの
       日次公表値取込はSOURCE GAP G9系として将来トラック）。
       legacy実績: config.yaml stooq_symbols / src/collectors/market_data.py（quote endpoint）。
+      **注意（P2-D live pilot実測）**: 日足historyエンドポイント（q/d/l/）はIP単位の
+      ダウンロード制限があり、共有IP（GitHub Actionsランナー等）からはHTTP 200で
+      HTML制限ページが返る。historyの一次経路にはyfinanceを使う。
 
 defaults:
   frequency: daily
@@ -70,7 +84,9 @@ series:
     close_time_local: "15:30"     # 2024-11-05以降の東証現物クローズ
     as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "^nkx" }
+    provider_symbols: { stooq: "^nkx", yfinance: "^N225" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "指数現物終値。ETF(1321等)・日経225先物とは別系列"
@@ -89,9 +105,13 @@ series:
     as_of_policy: exchange_close
     calendar: weekdays
     provider_symbols: { stooq: "^tpx" }
+    probe: true                   # Stooq historyエンドポイントは共有IPで制限（live実測）
     enabled: true
     role: CORE
-    identity_notes: "指数現物終値（legacy configに^tpx実績あり）"
+    identity_notes: >-
+      指数現物終値（Stooq ^tpx。legacy configはyfinance側で1306.T ETFを「参考」と
+      していたが、**ETFを指数seriesへ流用しない**——identity安全のため指数はStooqのみ。
+      取得不能ならSOURCE GAPとして正直に欠測とする）。
 
   - series_id: "index:growth250.close.closing.tokyo"
     display_name: "東証グロース市場250指数"
@@ -127,7 +147,9 @@ series:
     close_time_local: "16:00"
     as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "^dji" }
+    provider_symbols: { stooq: "^dji", yfinance: "^DJI" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "指数現物終値。DIA ETF・YM先物とは別系列"
@@ -145,7 +167,9 @@ series:
     close_time_local: "16:00"
     as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "^spx" }
+    provider_symbols: { stooq: "^spx", yfinance: "^GSPC" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "指数現物終値。SPY ETF・ES先物とは別系列"
@@ -163,7 +187,9 @@ series:
     close_time_local: "16:00"
     as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "^ndq" }
+    provider_symbols: { stooq: "^ndq", yfinance: "^IXIC" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "総合指数（Composite）。Nasdaq 100（^ndx）とは別系列——混同禁止"
@@ -199,8 +225,9 @@ series:
     close_time_local: "16:00"
     as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "^sox" }
-    probe: true                   # legacy実績なし（live pilotで判明。失敗=SOURCE GAP）
+    provider_symbols: { stooq: "^sox", yfinance: "^SOX" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "指数現物終値。SOXX/SMH ETFとは別系列"
@@ -219,7 +246,9 @@ series:
     close_time_local: "16:15"     # Cboe指数配信クローズ
     as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "^vix" }
+    provider_symbols: { stooq: "^vix", yfinance: "^VIX" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "指数値（年率IVポイント）。VIX先物・VXX等ETNとは別系列"
@@ -238,7 +267,9 @@ series:
     close_time_local: ""
     as_of_policy: day_end_utc
     calendar: weekdays
-    provider_symbols: { stooq: "usdjpy" }
+    provider_symbols: { stooq: "usdjpy", yfinance: "JPY=X" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: >-
@@ -258,7 +289,9 @@ series:
     close_time_local: ""
     as_of_policy: day_end_utc
     calendar: weekdays
-    provider_symbols: { stooq: "eurusd" }
+    provider_symbols: { stooq: "eurusd", yfinance: "EURUSD=X" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "spot連続取引のprovider日足close（1EURあたりUSD）。ECB参照レートとは別系列"
@@ -319,10 +352,14 @@ series:
     close_time_local: ""
     as_of_policy: day_end_utc
     calendar: weekdays
-    provider_symbols: { stooq: "10usy.b" }
+    provider_symbols: { stooq: "10usy.b", yfinance: "^TNX" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
-    identity_notes: "流通市場ベンチマーク利回り（legacy実績あり）。公式統計・入札結果とは別系列"
+    identity_notes: >-
+      流通市場ベンチマーク利回り（legacy実績あり。yfinance ^TNX=CBOE 10-Year
+      Treasury Note Yield Index・pct表示）。財務省公式統計・入札結果とは別系列。
 
   - series_id: "rates:UST30Y.yield.closing.us"
     display_name: "米30年国債利回り"
@@ -356,7 +393,9 @@ series:
     close_time_local: ""
     as_of_policy: day_end_utc
     calendar: weekdays
-    provider_symbols: { stooq: "cl.f" }
+    provider_symbols: { stooq: "cl.f", yfinance: "CL=F" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: >-
@@ -394,7 +433,9 @@ series:
     close_time_local: ""
     as_of_policy: day_end_utc
     calendar: weekdays
-    provider_symbols: { stooq: "gc.f" }
+    provider_symbols: { stooq: "gc.f", yfinance: "GC=F" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "COMEX GC期近の継続足。金現物スポット（XAUUSD）とは別系列"
@@ -413,8 +454,9 @@ series:
     close_time_local: ""
     as_of_policy: day_end_utc
     calendar: all_days            # 24/7取引（週末日付は欠測ではない）
-    provider_symbols: { stooq: "btcusd" }
-    probe: true
+    provider_symbols: { stooq: "btcusd", yfinance: "BTC-USD" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
     enabled: true
     role: CORE
     identity_notes: "provider集約のBTC/USD日足close。特定取引所の公式終値ではない"

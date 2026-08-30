@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import io
+import time as _time
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from typing import Protocol, Tuple, runtime_checkable
@@ -23,6 +24,7 @@ from ..ingestion.transport import DEFAULT_TIMEOUT, HttpTransport, redact_url
 from .series_catalog import SeriesSpec
 
 STOOQ_PROVIDER_ID = "stooq"
+YFINANCE_PROVIDER_ID = "yfinance"
 
 #: 日足history CSVエンドポイント（期間指定で過剰収集を避ける。bulk全履歴は取らない）
 STOOQ_DAILY_URL = "https://stooq.com/q/d/l/?s={symbol}&i=d&d1={d1}&d2={d2}"
@@ -148,6 +150,96 @@ def parse_stooq_daily_csv(body: bytes) -> Tuple[Tuple[ProviderRecord, ...], Tupl
             line_no=line_no,
         ))
     return tuple(records), tuple(issues)
+
+
+class YfinanceDailyHistoryProvider:
+    """Yahoo Finance日足history（yfinance経由・MARKET_DATA_PROVIDER）。
+
+    LEGACY REUSE: legacyの一次経路そのもの（src/collectors/market_data.py は
+    yfinance一次・Stooq quoteフォールバック構成で、本番Actionsから毎日実績がある）。
+    Yahooティッカーもlegacy config.yaml（^N225/^DJI/^GSPC/^IXIC/^VIX/^SOX/
+    JPY=X/EURUSD=X/^TNX/CL=F/GC=F/BTC-USD）の実績値を使う。
+
+    正直な申告（生HTTPを捏造しない）:
+    - **provider_normalized=True** … yfinanceライブラリが前処理した応答であり
+      生HTTP CSVではない。blobは本adapterが決定論整形したCSVスナップショット。
+    - **float経由の事実** … yfinanceはfloatを返す。トークンはrepr(float)
+      （最短round-trip表現）で、Decimalはそこから生成する——providerがfloatで
+      供給した事実はparse_issues("provider_float_transit")として全fetchに記録する。
+    - adjustment=unadjustedに合わせ auto_adjust=False の Close 列を使う。
+    """
+
+    def __init__(self, history_fn=None) -> None:
+        # history_fn(symbol, start, end) -> Sequence[(date_iso, close_float, volume)]
+        # テストは決定論スタブを注入。既定実装のみyfinanceへ依存する。
+        self._history_fn = history_fn or _yfinance_history
+
+    @property
+    def provider_id(self) -> str:
+        return YFINANCE_PROVIDER_ID
+
+    def fetch_daily_history(
+        self, spec: SeriesSpec, *, start: date, end: date
+    ) -> ProviderFetchResult:
+        symbol = spec.symbol_for(self.provider_id)
+        now = datetime.now(timezone.utc)
+        if not symbol:
+            return ProviderFetchResult(
+                provider_id=self.provider_id, series_id=spec.series_id, symbol="",
+                url="", retrieved_at=now, provider_normalized=True,
+                error_kind="no_symbol", error_detail="catalogに本providerのsymbolなし",
+            )
+        url = f"https://finance.yahoo.com/quote/{symbol}"  # 参照locator（legacy踏襲）
+        started = _time.monotonic()
+        try:
+            rows = self._history_fn(symbol, start, end)
+        except Exception as exc:  # noqa: BLE001 ライブラリ例外を種類へ写像
+            return ProviderFetchResult(
+                provider_id=self.provider_id, series_id=spec.series_id, symbol=symbol,
+                url=url, retrieved_at=now, provider_normalized=True,
+                elapsed_ms=int((_time.monotonic() - started) * 1000),
+                error_kind="connection",
+                error_detail=f"{type(exc).__name__}: {str(exc)[:120]}")
+        elapsed = int((_time.monotonic() - started) * 1000)
+        if not rows:
+            return ProviderFetchResult(
+                provider_id=self.provider_id, series_id=spec.series_id, symbol=symbol,
+                url=url, retrieved_at=now, elapsed_ms=elapsed, provider_normalized=True,
+                error_kind="no_data", error_detail="empty history")
+        records = []
+        lines = ["Date,Close,Volume"]
+        for line_no, (day_iso, close, volume) in enumerate(sorted(rows), start=2):
+            token = "" if close is None else repr(float(close))
+            vol_token = "" if volume in (None, "") else str(int(volume))
+            records.append(ProviderRecord(
+                trading_date=day_iso, close=token, volume=vol_token, line_no=line_no))
+            lines.append(f"{day_iso},{token},{vol_token}")
+        body = ("\n".join(lines) + "\n").encode("utf-8")  # provider-normalized snapshot
+        return ProviderFetchResult(
+            provider_id=self.provider_id, series_id=spec.series_id, symbol=symbol,
+            url=url, status_code=200, retrieved_at=now, elapsed_ms=elapsed,
+            body=body, records=tuple(records),
+            parse_issues=("provider_float_transit",),  # floatで供給された事実の申告
+            provider_normalized=True)
+
+
+def _yfinance_history(symbol: str, start: date, end: date):
+    """既定実装（実ネットワーク。テストはhistory_fn注入でここへ来ない）。"""
+    import yfinance as yf
+
+    frame = yf.Ticker(symbol).history(
+        start=start.isoformat(), end=end.isoformat(),
+        interval="1d", auto_adjust=False, actions=False)
+    rows = []
+    for ts, row in frame.iterrows():
+        close = row.get("Close")
+        volume = row.get("Volume")
+        rows.append((
+            ts.date().isoformat(),
+            None if close != close else float(close),      # NaN→None（欠測のまま）
+            None if volume != volume else float(volume),
+        ))
+    return rows
 
 
 class StooqDailyHistoryProvider:
