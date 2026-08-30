@@ -44,7 +44,26 @@ class TestParseStooqCsv:
     def test_no_data_and_empty_responses(self):
         assert parse_stooq_daily_csv(b"No data")[1] == ("no_data_response",)
         assert parse_stooq_daily_csv(b"")[1] == ("empty_body",)
-        assert parse_stooq_daily_csv(b"foo,bar\n1,2\n")[1] == ("missing_date_column",)
+        issues = parse_stooq_daily_csv(b"foo,bar\n1,2\n")[1]
+        assert issues[0] == "missing_date_column"
+        assert issues[1].startswith("body_head=foo,bar")  # 応答先頭の診断snippet
+
+    def test_html_response_diagnosed(self):
+        issues = parse_stooq_daily_csv(b"<html><body>limit exceeded</body></html>")[1]
+        assert issues[0] == "missing_date_column"
+        assert "html" in issues[1]
+
+    def test_stooq_ua_reuses_legacy_proven_value(self):
+        # LEGACY REUSE: 本番実績のあるUA（src/utils.py DEFAULT_HEADERS）と一致
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+        try:
+            from utils import DEFAULT_HEADERS
+        finally:
+            sys.path.pop(0)
+        from src.intelligence.market.providers import STOOQ_USER_AGENT
+        assert STOOQ_USER_AGENT == DEFAULT_HEADERS["User-Agent"]
 
 
 class TestStooqProvider:

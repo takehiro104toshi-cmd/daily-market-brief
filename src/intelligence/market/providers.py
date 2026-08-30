@@ -27,6 +27,14 @@ STOOQ_PROVIDER_ID = "stooq"
 #: 日足history CSVエンドポイント（期間指定で過剰収集を避ける。bulk全履歴は取らない）
 STOOQ_DAILY_URL = "https://stooq.com/q/d/l/?s={symbol}&i=d&d1={d1}&d2={d2}"
 
+#: LEGACY REUSE: legacy src/utils.py DEFAULT_HEADERS と同一のUA。
+#: 本番workflowでStooq quote endpointに対し毎日実績のある値（vNext既定UAだと
+#: StooqはHTTP 200でHTMLページを返すことがある——P2-D live pilot初回実測）。
+STOOQ_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36 market-brief-bot/1.0"
+)
+
 #: parse時に許容するCSVヘッダ名（Stooq実応答: Date,Open,High,Low,Close[,Volume]）
 _DATE_KEYS = ("date",)
 _FIELD_KEYS = ("open", "high", "low", "close", "volume")
@@ -107,7 +115,10 @@ def parse_stooq_daily_csv(body: bytes) -> Tuple[Tuple[ProviderRecord, ...], Tupl
         return (), ("empty_body",)
     columns = {name.strip().lower(): idx for idx, name in enumerate(header)}
     if not any(k in columns for k in _DATE_KEYS):
-        return (), ("missing_date_column",)
+        # 診断用に応答先頭の安全なsnippetを添える（HTMLページ・制限ページ等の切り分け。
+        # 公開市場データの応答先頭のみ・制御文字除去済み）
+        snippet = "".join(c for c in stripped[:80] if c.isprintable())
+        return (), ("missing_date_column", f"body_head={snippet}")
 
     records = []
     for line_no, row in enumerate(reader, start=2):
@@ -171,7 +182,8 @@ class StooqDailyHistoryProvider:
             source_id=self.provider_id,
             endpoint_id=f"{self.provider_id}:{symbol}",
             url=url,
-            headers=(("Accept", "text/csv, text/plain;q=0.9, */*;q=0.5"),),
+            headers=(("User-Agent", STOOQ_USER_AGENT),
+                     ("Accept", "text/csv, text/plain;q=0.9, */*;q=0.5")),
             requested_at=now,
         )
         response = self._transport.send(request, timeout=self._timeout)

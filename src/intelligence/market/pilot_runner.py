@@ -105,7 +105,8 @@ def main(argv=None) -> int:
     for r in run.results:
         print("::P2D_SERIES::" + json.dumps({
             "series_id": r.series_id, "symbol": r.symbol, "status": r.status,
-            "http": r.http_status, "error": r.error_kind, "records": r.records_seen,
+            "http": r.http_status, "error": r.error_kind,
+            "error_detail": r.error_detail, "records": r.records_seen,
             "added": r.observations_added, "revisions": r.revisions,
             "issues": r.issue_count, "issue_sample": list(r.issue_sample),
             "qa": list(r.qa_decisions), "probe": r.probe,

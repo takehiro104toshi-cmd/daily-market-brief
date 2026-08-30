@@ -40,6 +40,7 @@ class SeriesRunResult:
     status: str = ""  # success / gap / failed
     http_status: int = 0
     error_kind: str = ""
+    error_detail: str = ""
     records_seen: int = 0
     observations_added: int = 0
     revisions: int = 0
@@ -119,6 +120,7 @@ class MarketBackfillEngine:
             return SeriesRunResult(
                 series_id=spec.series_id, symbol=result.symbol, status=status,
                 http_status=result.status_code, error_kind=result.error_kind,
+                error_detail=result.error_detail,
                 fetch_attempt_id=attempt_id, raw_item_id=raw_item_id or "",
                 probe=spec.probe,
             )
