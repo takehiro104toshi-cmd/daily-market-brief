@@ -111,6 +111,8 @@ def _decode_value(value: Any, hint: Any) -> Any:
 
 def register_domain_types() -> None:
     """全ドメイン型を登録する（import副作用を避けるため明示呼び出し）。"""
+    from ..databank import article_store as dba
+    from ..databank import identity_decision as dbi
     from ..databank import market_model as dbm
     from ..databank import news_model as dbn
     from ..evidence import model as ev
@@ -142,6 +144,8 @@ def register_domain_types() -> None:
         dbn.NewsScore,
         dbn.LegacyAnnotation,
         dbm.MarketSeries,
+        dba.ArticleIdentityEvent,
+        dbi.IdentityDecision,
         mk.Observation,
         ev.FactStatement,
         ev.AnalysisStatement,

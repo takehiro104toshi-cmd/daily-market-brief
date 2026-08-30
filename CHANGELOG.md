@@ -4,6 +4,41 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.19 (2026-08-30) — Phase 2-B: Article Identity / Dedup / Revision
+
+Article Identity Layer。最上位原則 **FALSE MERGE IS WORSE THAN MISSED MERGE**
+（高precision・保守的threshold・曖昧なら別Article）。LLM embedding不使用・
+NewsEvent clustering未着手・full backfill未実施（禁止遵守）。
+
+### 追加
+
+- `databank/identity_signals.py`: 文字3-gram Jaccard＋SequenceMatcherの**min合成**
+  類似度（ja/en両対応・tokenizer非依存）・title_key・時刻近接・**数字トークンガード**
+  （実tank分析: 高類似別記事の上位=ECB 2027/2028・日付連載・通番が全て数字違い）。
+- `databank/identity_decision.py`: EXACT_MATCH/AUTO_MERGE/REVISION/SYNDICATED/
+  CANDIDATE（merge禁止）/DISTINCT＋matched/failed signals・confidence・
+  algorithm_version（単一score禁止）。
+- `databank/identity_resolver.py`: 4段階判定。安全規則: GUIDはsource-local・
+  same URL+changed content=REVISION・title類似単独merge禁止・**summary（内容証拠）
+  なしではfingerprint一致でもmergeしない**・数字集合不一致でAUTO_MERGE禁止。
+- `databank/article_store.py`: event-sourced Article store（CREATE/ADD_DOCUMENT/
+  MARK_REVISION/MARK_SYNDICATED/SET_PRIMARY/**MANUAL_SPLIT/MANUAL_MERGE**。
+  append-only・replay導出・manual優先で誤merge修正可能・履歴不滅）。
+- `databank/identity_runtime.py`: SourceDocument→Article→NewsItemのruntime接続・
+  primary選定（非転載→先行公開→tier。「Tier高=原文」と仮定しない）・
+  NewsDocumentLink role付与。
+- `databank/identity_report.py`: metrics＋merge監査レポート（why merged明示）。
+- `evidence_qa/policy.py`: **HISTORICAL v1.0.0**追加（古さ自体で制限しない・
+  他Gate維持。HISTORICAL ACCEPT≠DAILY ACCEPTのcontext-dependent trust実証）。
+- validation拡張: revision cycle・重複member・primary∈members検査。
+- calibration: labeled fixture 29ペア（実tankハザード＋合成）＋実tank title-only
+  ハザード40ペア＋実60記事runtime。**false merge 0・recall 12/12**。
+  校正での設計修正2件（title-only fingerprint exact廃止・threshold 0.85）。
+- tests: +38件（resolver/signals 12・calibration 6・store 8・runtime 7・
+  historical 5、計821 passed）。
+- `docs/databank/`: ARTICLE_IDENTITY_SPEC / DEDUP_STRATEGY /
+  REVISION_SYNDICATION_POLICY / IDENTITY_CALIBRATION_REPORT / HISTORICAL_TRUST_POLICY。
+
 ## v4.18 (2026-08-30) — Phase 2-A: End-to-End Pilot + Data Bank Domain Schema
 
 Phase 1完了承認を受けたPhase 2初段。(1) Phase 1全層の実データ一本通し検証、

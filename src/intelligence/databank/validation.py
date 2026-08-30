@@ -126,8 +126,27 @@ def validate_data_bank(
             issues.append(ValidationIssue(code="qa_result_missing",
                                           record_id=o.observation_id))
 
+    # documents: revision cycle検出（P2-B。chainを辿りループを検知）
+    doc_by_id = {d.source_document_id: d for d in documents}
+    for d in documents:
+        seen = {d.source_document_id}
+        cursor = d.revision_of
+        while cursor:
+            if cursor in seen:
+                issues.append(ValidationIssue(
+                    code="broken_revision_relation", record_id=d.source_document_id,
+                    detail="revision cycle"))
+                break
+            seen.add(cursor)
+            nxt = doc_by_id.get(cursor)
+            cursor = nxt.revision_of if nxt else None
+
     # news layer: 参照整合
+    articles_by_id = {a.article_id: a for a in article_identities}
     for a in article_identities:
+        if len(a.member_document_ids) != len(set(a.member_document_ids)):
+            issues.append(ValidationIssue(code="duplicate_id", record_id=a.article_id,
+                                          detail="duplicate member document"))
         for did in a.member_document_ids:
             if documents and did not in doc_ids:
                 issues.append(ValidationIssue(code="orphan_reference", record_id=a.article_id,
@@ -139,6 +158,12 @@ def validate_data_bank(
         if documents and n.primary_document_id not in doc_ids:
             issues.append(ValidationIssue(code="orphan_reference", record_id=n.news_item_id,
                                           detail=f"primary document {n.primary_document_id}"))
+        # P2-B: primaryは所属articleのmemberであること
+        owner = articles_by_id.get(n.article_id)
+        if owner is not None and n.primary_document_id not in owner.member_document_ids:
+            issues.append(ValidationIssue(
+                code="orphan_reference", record_id=n.news_item_id,
+                detail=f"primary {n.primary_document_id} not in article members"))
     for link in document_links:
         if news_items and link.news_item_id not in news_ids:
             issues.append(ValidationIssue(code="orphan_reference",

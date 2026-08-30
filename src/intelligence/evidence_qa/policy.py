@@ -81,8 +81,21 @@ DAILY_MARKET_V1 = TrustPolicy(
     superseded_status=DimensionStatus.LIMIT,  # 現在値用途では旧版を限定
 )
 
+#: 歴史データpolicy v1（P2-B追加承認）: 古い記事を「今日の材料」ではなく歴史データとして
+#: 利用する文脈。**古さそのものを理由にLIMITED_USEへ落とさない**（fresh扱いの上限を実質無効化）。
+#: provenance / integrity / normalization / conflict / retraction等のGateは全て維持される
+#: （freshness以外のパラメータはGENERICと同一）。HISTORICAL ACCEPT ≠ DAILY_MARKET ACCEPT。
+HISTORICAL_V1 = TrustPolicy(
+    name="HISTORICAL",
+    version="1.0.0",
+    fresh_hours=24 * 365 * 100,  # 古さでWARN/LIMITを発生させない
+    stale_hours=24 * 365 * 100,
+    published_unknown_status=DimensionStatus.WARN,
+    superseded_status=DimensionStatus.WARN,  # 旧版も歴史として利用可（表示は警告）
+)
+
 _REGISTRY: Dict[Tuple[str, str], TrustPolicy] = {
-    (p.name, p.version): p for p in (GENERIC_V1, DAILY_MARKET_V1)
+    (p.name, p.version): p for p in (GENERIC_V1, DAILY_MARKET_V1, HISTORICAL_V1)
 }
 
 
