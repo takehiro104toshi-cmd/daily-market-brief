@@ -135,7 +135,7 @@ class SqliteNewsIndex:
         if query.company:
             cls_filter("company", query.company, "c2")
         if query.ticker:
-            cls_filter("company", query.ticker, "c3")  # ticker値はcompany次元に格納可
+            cls_filter("ticker", query.ticker, "c3")  # P2-E: ticker専用次元へ（entity_matcher出力）
         if query.theme:
             cls_filter("theme", query.theme, "c4")
         if query.event_type:
@@ -165,6 +165,39 @@ class SqliteNewsIndex:
         sql.append(f"LIMIT {int(query.limit)}")
         rows = self._conn.execute(" ".join(sql), params).fetchall()
         return [self._items[r[0]] for r in rows if r[0] in self._items]
+
+    # ------------------------------------------- 時系列集計foundation（Phase 2-E追加）
+    # 本格Trend EngineはPhase 6——ここは件数取得のquery契約のみ（傾向の主張はしない）。
+
+    def count_by_dimension_over_time(
+        self, dimension: str, *, granularity: str = "day",
+        date_from: str = "", date_to: str = "",
+    ) -> List[tuple]:
+        """(期間, 分類値, 件数) の列。granularity: day / week / month。"""
+        fmt = {"day": "%Y-%m-%d", "week": "%Y-W%W", "month": "%Y-%m"}.get(granularity)
+        if fmt is None:
+            raise ValueError(f"unknown granularity: {granularity}")
+        where = ["c.dimension = ?", "n.published_at IS NOT NULL"]
+        params: List[str] = [dimension]
+        if date_from:
+            where.append("n.published_at >= ?")
+            params.append(date_from)
+        if date_to:
+            where.append("n.published_at <= ?")
+            params.append(date_to)
+        sql = (
+            f"SELECT strftime('{fmt}', n.published_at) AS period, c.value, "
+            "COUNT(DISTINCT n.news_item_id) AS n "
+            "FROM classifications c JOIN news_items n ON n.news_item_id = c.news_item_id "
+            f"WHERE {' AND '.join(where)} GROUP BY period, c.value ORDER BY period, c.value")
+        return list(self._conn.execute(sql, params))
+
+    def count_values(self, dimension: str) -> Dict[str, int]:
+        """分類値ごとの記事数（entity mention数・event type数等の基礎集計）。"""
+        rows = self._conn.execute(
+            "SELECT value, COUNT(DISTINCT news_item_id) FROM classifications "
+            "WHERE dimension = ? GROUP BY value", (dimension,)).fetchall()
+        return {value: count for value, count in rows}
 
     def close(self) -> None:
         self._conn.close()

@@ -116,6 +116,7 @@ def register_domain_types() -> None:
     from ..databank import identity_decision as dbi
     from ..databank import market_model as dbm
     from ..databank import news_model as dbn
+    from ..enrichment import model as enr
     from ..evidence import model as ev
     from ..evidence_qa import model as qa
     from ..ingestion import model as ing
@@ -150,6 +151,9 @@ def register_domain_types() -> None:
         dbi.IdentityDecision,
         dbb.BackfillRun,
         dbb.RejectRecord,
+        enr.EnrichmentEvent,
+        enr.ReviewQueueItem,
+        enr.EnrichmentRun,
         mk.Observation,
         mkb.SeriesRunResult,
         mkb.MarketBackfillRun,

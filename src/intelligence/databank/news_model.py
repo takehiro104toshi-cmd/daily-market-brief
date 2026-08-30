@@ -51,6 +51,10 @@ class EntityKind(str, Enum):
     COMMODITY = "commodity"
     CURRENCY = "currency"
     CENTRAL_BANK = "central_bank"
+    # --- Phase 2-E追加（0.x非破壊） ---
+    INDEX = "index"
+    GOVERNMENT = "government"
+    PERSON = "person"
 
 
 class ClassificationDimension(str, Enum):
@@ -61,6 +65,14 @@ class ClassificationDimension(str, Enum):
     THEME = "theme"
     EVENT_TYPE = "event_type"
     TIME_HORIZON = "time_horizon"
+    # --- Phase 2-E追加（0.x非破壊）: entity mention系の次元 ---
+    TICKER = "ticker"
+    INDEX = "index"
+    CENTRAL_BANK = "central_bank"
+    GOVERNMENT = "government"
+    PERSON = "person"
+    COMMODITY = "commodity"
+    CURRENCY = "currency"
 
 
 class ScoreType(str, Enum):
@@ -198,6 +210,14 @@ class NewsClassification:
     classifier_name: str  # 例: "source_category_field" / "rule:CR_XXX" / モデル名
     classifier_version: str
     created_at: datetime
+    # --- Phase 2-E追加（0.x非破壊）。EVERY ENRICHMENT MUST HAVE PROVENANCE ---
+    confidence: Optional[Decimal] = None  # 意味はconfidence_typeに従う（雑に統一しない）
+    confidence_type: str = ""  # "deterministic_exact" / "rule_multi_signal" / "llm_stated" 等
+    role: str = ""  # "" / "primary" / "secondary" / "mention"（primary強制はしない）
+    evidence_field: str = ""  # マッチ根拠のフィールド（"headline" / "summary"）
+    evidence_text: str = ""   # マッチ根拠の抜粋（全文コピーはしない。説明可能性のため）
+    taxonomy_version: str = ""  # 使用したtaxonomy/entity catalogのversion
+    basis_document_id: str = ""  # 分類時のprimary document（revision連鎖の追跡）
     schema_version: str = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -208,6 +228,15 @@ class NewsClassification:
         if not self.classifier_name or not self.classifier_version:
             raise ValueError("classifier name/version are required（provenance追跡）")
         ensure_aware(self.created_at, "NewsClassification.created_at")
+        if self.confidence is not None:
+            if not isinstance(self.confidence, Decimal):
+                raise TypeError("confidence must be Decimal（float禁止）")
+            if not (Decimal("0") <= self.confidence <= Decimal("1")):
+                raise ValueError(f"confidence out of range: {self.confidence}")
+            if not self.confidence_type:
+                raise ValueError("confidenceを持つ場合confidence_type必須（意味の混同禁止）")
+        if self.role not in ("", "primary", "secondary", "mention"):
+            raise ValueError(f"unknown role: {self.role}")
 
     @staticmethod
     def make_id(news_item_id: str, dimension: str, value: str, classifier: str) -> str:
