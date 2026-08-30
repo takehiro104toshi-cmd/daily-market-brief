@@ -129,3 +129,54 @@ NO_DATA・0行・NT倍率0行を正直に報告し、G10は**PARTIALLY_RESOLVED*
 - run #9でもcredential未投入のためTOPIXのSTEP 2-8は実行条件未達（**追加の
   network retryは行っていない**——MINI TASK B遵守）。G10は
   PARTIALLY_RESOLVED（`topix_credential_missing`）のまま変化なし。
+
+## 6. P2-G.1 credentialed run（JQUANTS_API_KEY投入後・run #10〜#12実測）
+
+### 6.1 認証方式の判定結果: **確認できず（NOT CONFIRMED）**
+
+ユーザーが `JQUANTS_API_KEY` としてrepository secretsへ投入した値について、
+**5つの搬送方式をすべて実APIで試した結果、全て HTTP 403 Forbidden**（run #10）:
+
+| 試した搬送方式 | 実測 |
+|---|---|
+| refreshtokenクエリ（従来仕様の交換） | 403 `{"message":"Forbidden"}` |
+| refreshtoken body渡し | 403 |
+| `Authorization: Bearer <値>`（idToken相当） | 403 |
+| `x-api-key: <値>` ヘッダ | 403 |
+| `Authorization: <値>`（生値） | 403 |
+| 2段階チェーン（交換→Bearer→data） | auth 403・idToken取得できず |
+
+公式ドキュメント側も機械確認できず: `openapi.json`・API root は **403**、
+gitbook 2ページは 200 だが **JS描画のシェル**（9,219B）で本文を抽出できない。
+
+→ **「JQUANTS_API_KEY が現行の正式な認証方式である」ことは確認できていない**。
+したがって旧方式（mail/password → refreshToken → idToken）を「正式仕様」として
+推測適用することもしていない。実装は**実APIで成功した方式のみ**を
+`mechanism_validated` へ記録する形のまま（現時点では空）。
+
+### 6.2 pilot実測（run #12・STEP 1-8）
+
+| STEP | 実測 |
+|---|---|
+| 1 credential presence | `present: true` / `auth_method: api_key` / 由来 `JQUANTS_API_KEY` |
+| 2 authenticated probe | **auth_error**・http 403・`api_key_mechanism_not_accepted: api_key_as_refresh_token:http_403,api_key_as_bearer:http_403`（上限2回で停止・総当たりなし） |
+| 3 historical | raw 0行・25DMA不可 |
+| 4 freshness | `NO_DATA`（morning_usable=false） |
+| 5 access要件 | PLAN_CAPABILITY=UNVERIFIED・必要tierは断定しない・proxy fallbackなし |
+| 6 QA / canonical | TOPIX観測0のため判定なし |
+| 7 NT倍率 | 0行（入力欠落日は生成しない） |
+| 8 G10 | **BLOCKED**（reason: `auth_failure` / `error:auth_error`） |
+
+API Key値は error_detail・URL・raw payload・FetchAttempt・ログのいずれにも
+出力していない（構造化コードとHTTPステータスのみ）。
+
+### 6.3 次に必要なユーザー操作（いずれか）
+
+1. **`JQUANTS_MAIL` ＋ `JQUANTS_PASSWORD`** をrepository secretsへ設定
+   （adapterは実装済み・投入されれば次runで自動判定）
+2. または**有効な `JQUANTS_REFRESH_TOKEN`**（J-Quantsのリフレッシュトークンは
+   有効期限が短いため、期限切れの可能性がある）
+3. または `JQUANTS_ID_TOKEN`（短命・検証用途）
+
+投入値が正しい種類・有効期限内であれば、次のpilot runでSTEP 2-8が自動実行され、
+G10はA〜Dのいずれかへ機械遷移する。

@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.27 (2026-08-30) — Phase 2-G.1: API Key認証方式の実測判定とTOPIX authenticated pilot
+
+### 追加
+
+- `p2g1_auth_probe.py`【新規】: 投入credentialがどの搬送方式で通るかを実APIで
+  判定するプローブ（秘密値・token値は一切出力しない）。
+- `METHOD_API_KEY`: `JQUANTS_API_KEY` を型宣言のないcredentialとして受理し、
+  搬送方式を**上限2回**で判定（refreshToken交換 → Bearer直挿し）。成功した
+  方式のみ `mechanism_validated` に記録（未成功は空のまま断定しない）。
+- テスト9件追加（計1,184 passed）。
+
+### 修正
+
+- `_default_http`が非2xxをHTTPErrorとして送出しており、403がnegotiationを
+  素通りして生の例外文字列になっていた（run #11実測）。ステータスとして返す
+  よう修正し、構造化診断
+  （`api_key_mechanism_not_accepted:<方式>:http_<code>`）が出るようにした。
+
+### 実測（run #10〜#12）
+
+- **投入されたJQUANTS_API_KEYは5搬送方式すべてで HTTP 403**（refreshtoken
+  クエリ/body・Bearer・x-api-key・Authorization生値）。公式docsはJS描画・
+  OpenAPIは403のため仕様本文も機械取得できず → **API Keyが現行の正式な
+  認証方式であることは確認できていない**（旧方式の推測適用もしない）。
+- TOPIX STEP 1-8: auth_error → 履歴0・NO_DATA・NT倍率0 →
+  **G10 = BLOCKED（auth_failure）**。API Key値は一切出力していない。
+- Treasury dedup継続確認: FetchAttempt 1件・両par系列が同一RawItem/Attempt共有・
+  spread 274行・persistence 20,689観測一致・backup verify 0/0/0。
+
 ## v4.26 (2026-08-30) — Phase 2-G.1 レビュー反映: Treasury dedup / PLAN_CAPABILITY訂正
 
 監督者レビュー（P2G1_TOPIX_CLOSEOUT_ACCEPTED）の指摘反映。TOPIXのcredential
