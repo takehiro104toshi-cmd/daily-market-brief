@@ -16,11 +16,17 @@ from typing import Dict, List
 
 from ..core.types import SCHEMA_VERSION
 
-#: Phase 3 blocker（docs/sources/SOURCE_GAPS.md G10/G11と対応）
+#: Phase 3 blocker（docs/sources/SOURCE_GAPS.md G10/G11と対応）。
+#: (gap対象series, P2-Gで解決を担うseries, gap ID, 制約note)
+#: 解決状況はカタログ（probe=false＝live実証済み）とローカルデータの実在から
+#: 機械導出する——「コードを書いた」だけではRESOLVEDにならない。
 CRITICAL_MARKET_GAPS = (
-    ("index:topix.close.closing.tokyo", "G10", "TOPIX指数の供給元未確保（ETF代用禁止）"),
-    ("rates:JGB10Y.yield.closing.tokyo", "G11", "JGB10Y供給元未確保（別期間/商品の代用禁止）"),
-    ("rates:UST2Y.yield.closing.us", "G11", "UST2Y供給元未確保（別概念yieldの代用禁止）"),
+    ("index:topix.close.closing.tokyo", "index:topix.close.closing.tokyo",
+     "G10", "TOPIX指数（ETF代用禁止。P2-G: J-Quants公式系API経路——credential要）"),
+    ("rates:JGB10Y.yield.closing.tokyo", "rates:JGB10Y.yield.closing.tokyo",
+     "G11", "JGB10Y（別期間/商品の代用禁止。P2-G: 財務省国債金利情報経路）"),
+    ("rates:UST2Y.yield.closing.us", "rates:UST2Y_par.yield.closing.us",
+     "G11", "UST2Y（別概念yieldの代用禁止。P2-G: Treasury official par yield別series）"),
 )
 
 HEALTHY, DEGRADED, BLOCKED = "HEALTHY", "DEGRADED", "BLOCKED"
@@ -136,10 +142,48 @@ def build_health_report(data_root: Path) -> Dict:
         reasons.append("no_backup_manifest")
 
     # ---- Critical source gaps（必ず表示・Phase 3判定） ----
-    gaps = [{"series_id": s, "gap": g, "note": n} for s, g, n in CRITICAL_MARKET_GAPS]
+    # 状態導出: カタログのprobe=false（live実証済み）＝source_validated、
+    # ローカルmarket bankに解決seriesのraw実データ（25DMA可能な25行以上）＝データ実在。
+    try:
+        from ..market.series_catalog import load_catalog
+        catalog = load_catalog()
+    except Exception:  # noqa: BLE001 カタログ不在でもhealthは落とさない（gapは未解決扱い）
+        catalog = None
+    market_db = market_root / "index" / "market.sqlite3"
+
+    def _series_rows(series_id: str) -> int:
+        if not market_db.exists():
+            return 0
+        conn = sqlite3.connect(str(market_db))
+        try:
+            return conn.execute(
+                "SELECT COUNT(*) FROM observations WHERE series_id = ? AND kind = 'raw'",
+                (series_id,)).fetchone()[0]
+        except sqlite3.OperationalError:
+            return 0
+        finally:
+            conn.close()
+
+    gaps = []
+    unresolved = 0
+    for gap_series, resolving_series, gap_id, note in CRITICAL_MARKET_GAPS:
+        spec = catalog.get(resolving_series) if catalog is not None else None
+        source_validated = bool(spec is not None and spec.enabled and not spec.probe)
+        local_rows = _series_rows(resolving_series)
+        if source_validated and local_rows >= 25:
+            status = "resolved"
+        elif source_validated:
+            status = "source_validated_data_not_local"
+        else:
+            status = "unresolved"
+            unresolved += 1
+        gaps.append({"series_id": gap_series, "resolving_series": resolving_series,
+                     "gap": gap_id, "status": status, "local_raw_rows": local_rows,
+                     "note": note})
     components["phase3_readiness"] = {
-        "state": BLOCKED,
-        "reason_codes": ["critical_market_source_gaps_unresolved"],
+        "state": BLOCKED if unresolved else DEGRADED,
+        "reason_codes": (["critical_market_source_gaps_unresolved"] if unresolved
+                         else ["gap_closure_validated_awaiting_supervisor_promotion"]),
         "critical_source_gaps": gaps,
     }
 

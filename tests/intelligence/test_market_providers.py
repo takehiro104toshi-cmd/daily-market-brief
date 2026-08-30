@@ -89,8 +89,8 @@ class TestStooqProvider:
         assert result.status_code == 404
 
     def test_no_data_classified_for_gap_handling(self):
-        spec = spec_for("rates:JGB10Y.yield.closing.tokyo")  # probe系列
-        provider = stub_provider({"s=10jpy.b": (200, b"No data")})
+        spec = spec_for("rates:UST30Y.yield.closing.us")  # stooq symbolを持つ系列
+        provider = stub_provider({"s=30usy.b": (200, b"No data")})
         result = provider.fetch_daily_history(spec, start=date(2026, 8, 1), end=date(2026, 8, 29))
         assert result.error_kind == "no_data"
 

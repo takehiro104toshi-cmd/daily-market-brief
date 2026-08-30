@@ -94,9 +94,17 @@ def main(argv=None) -> int:
     bank_root = market_bank_root(root)
     catalog = load_catalog(Path(args.catalog))
     store = MarketBankStore(bank_root)
+    from .jquants_topix import JQuantsTopixProvider
+    from .mof_jgb import MofJgbYieldProvider
+    from .treasury_curve import TreasuryParYieldProvider
+
     providers = {
         "yfinance": YfinanceDailyHistoryProvider(),  # legacy一次経路（本番実績）
         "stooq": StooqDailyHistoryProvider(UrllibTransport()),
+        # P2-G: PRIMARY_OFFICIAL経路（critical source gap closure）
+        "treasury_gov": TreasuryParYieldProvider(UrllibTransport()),
+        "mof_japan": MofJgbYieldProvider(UrllibTransport()),
+        "jquants": JQuantsTopixProvider(),  # credentialは環境変数runtime injectionのみ
     }
     engine = MarketBackfillEngine(store, catalog, providers, HISTORICAL_V1,
                                   sleeper=time.sleep)
@@ -210,6 +218,49 @@ def main(argv=None) -> int:
         "old_missing_supporting_evidence_ref": old_missing_ref,
         "new_missing_supporting_evidence_ref": new_missing_ref,
         "old_assessments_preserved": True,
+    }, ensure_ascii=False))
+
+    # P2-G: CRITICAL MARKET SOURCE GAP CLOSURE検証（official経路の実測サマリ）
+    p2g_targets = {
+        "index:topix.close.closing.tokyo": "G10",
+        "rates:JGB10Y.yield.closing.tokyo": "G11",
+        "rates:UST2Y_par.yield.closing.us": "G11",
+        "rates:UST10Y_par.yield.closing.us": "G11_optional_parallel",
+    }
+    by_series = {r.series_id: r for r in run.results}
+    gap_rows = []
+    for sid, gap_id in p2g_targets.items():
+        r = by_series.get(sid)
+        rows = store.index.query(series_id=sid, kind="raw", limit=100000)
+        gap_rows.append({
+            "series_id": sid, "gap": gap_id,
+            "status": r.status if r else "not_in_catalog_run",
+            "provider": r.provider_id if r else "",
+            "error": r.error_kind if r else "",
+            "error_detail": (r.error_detail[:120] if r else ""),
+            "records_added": r.observations_added if r else 0,
+            "raw_rows": len(rows),
+            "first": rows[0]["trading_date"] if rows else "",
+            "last": rows[-1]["trading_date"] if rows else "",
+            "qa": list(r.qa_decisions) if r else [],
+            "issue_sample": list(r.issue_sample) if r else [],
+            "latest": _row_dict(store.index.latest_trading_session(sid)),
+            "dma25_capable": len(rows) >= 25,
+        })
+    spread_rows = store.index.query(
+        series_id="rates:UST10Y_par_UST2Y_par.spread.derived_metric",
+        kind="derived", limit=100000)
+    nt_rows = store.index.query(
+        series_id="index:nikkei225_topix.nt_ratio.derived_metric",
+        kind="derived", limit=100000)
+    print("::P2G_GAPS::" + json.dumps({
+        "series": gap_rows,
+        "spread_official_rows": len(spread_rows),
+        "spread_latest": _row_dict(store.index.latest_trading_session(
+            "rates:UST10Y_par_UST2Y_par.spread.derived_metric", kind="derived")),
+        "nt_ratio_rows": len(nt_rows),
+        "nt_ratio_latest": _row_dict(store.index.latest_trading_session(
+            "index:nikkei225_topix.nt_ratio.derived_metric", kind="derived")),
     }, ensure_ascii=False))
 
     # PART A gate: 別プロセス（restart相当）でcanonical読み戻し＋index全再構築＋latest一致

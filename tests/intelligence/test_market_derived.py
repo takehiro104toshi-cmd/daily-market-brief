@@ -97,7 +97,7 @@ class TestCrossSeriesDerivations:
         assert len(spread) == 5
         assert spread[0].value == Decimal("0.653000")
         assert spread[0].unit == "pct_point"
-        assert spread[0].series_id == "rates:UST10Y_UST2Y.spread.derived_metric"
+        assert spread[0].series_id == "rates:UST10Y_par_UST2Y_par.spread.derived_metric"
         assert len(spread[0].inputs) == 2
 
     def test_nt_ratio_and_date_alignment(self):

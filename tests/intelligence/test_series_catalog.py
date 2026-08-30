@@ -12,7 +12,7 @@ from .market_fixtures import catalog
 class TestCatalogLoad:
     def test_core_series_present_and_valid(self):
         c = catalog()
-        assert c.catalog_version == "1.0.0"
+        assert c.catalog_version == "1.1.0"
         enabled = {s.series_id for s in c.enabled_series()}
         # 監督者指定CORE集合（取得可能分）が全て定義されている
         for required in (
@@ -26,7 +26,8 @@ class TestCatalogLoad:
             "fx:USDJPY.rate.closing.global",
             "fx:EURUSD.rate.closing.global",
             "rates:JGB10Y.yield.closing.tokyo",
-            "rates:UST2Y.yield.closing.us",
+            "rates:UST2Y_par.yield.closing.us",   # P2-G: official par系列がCORE
+            "rates:UST10Y_par.yield.closing.us",
             "rates:UST10Y.yield.closing.us",
             "futures:wti_cont.close.closing.us",
             "futures:gold_cont.close.closing.us",

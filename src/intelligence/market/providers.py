@@ -72,6 +72,7 @@ class ProviderFetchResult:
     error_kind: str = ""   # "" / http_error / no_data / parse_error / transport系
     error_detail: str = ""
     provider_normalized: bool = False  # True=ライブラリ前処理済み応答（生HTTPではない）
+    media_type: str = "text/csv"  # raw保存時のmedia type（JSON API providerが上書き）
 
     @property
     def ok(self) -> bool:

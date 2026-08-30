@@ -43,7 +43,7 @@ class TestBackfillRun:
         assert run.series_requested == run.series_success + run.series_gap + run.series_failed
         assert run.observations_added == 10  # 5+5
         assert run.trust_policy == "HISTORICAL:1.0.0"
-        assert run.catalog_version == "1.0.0"
+        assert run.catalog_version == "1.1.0"
         by_id = {r.series_id: r for r in run.results}
         assert by_id["rates:JGB10Y.yield.closing.tokyo"].status == "gap"
         assert by_id["index:dji.close.closing.us"].status == "failed"
@@ -63,7 +63,9 @@ class TestBackfillRun:
         engine = _engine(tmp_path)
         engine.run(start=START, end=END, now=RETRIEVED, series_ids=SERIES)
         attempts = list(engine.store.raw.iter_attempts())
-        assert len(attempts) == 4  # 失敗・GAPの試行も必ず記録（P1-C原則）
+        # 失敗・GAPの試行も必ず記録（P1-C原則）。JGB10Yはカタログ1.1.0でstooq経路が
+        # 外れた（mof_japan専用）ため、stooqのみのstubではno_provider GAP＝fetch自体なし
+        assert len(attempts) == 3
         raw_items = list(engine.store.raw.iter_raw_items())
         assert len(raw_items) == 2  # 成功応答のみRawItem化（生CSV保存）
 

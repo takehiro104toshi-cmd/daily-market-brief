@@ -23,13 +23,21 @@
 #   legacy実績のないprovider symbol（取得失敗はSOURCE GAPとして扱いエラーにしない）。
 
 id: market_series_core
-version: "1.0.0"
+version: "1.1.0"
 description: >-
   Market Data BankのCORE系列カタログ（series identity＋取得運用フィールド。
-  Phase 2-D PART B）。series_idはmake_series_id規約から決定論導出される。
-source: "監督者指示（P2-D directive）＋legacy config.yaml stooq_symbols実績"
+  Phase 2-D PART B / Phase 2-G official source gap closure）。
+  series_idはmake_series_id規約から決定論導出される。
+source: "監督者指示（P2-D/P2-G directive）＋legacy config.yaml stooq_symbols実績"
 status: active
 updated: "2026-08-30"
+changelog: >-
+  1.1.0（P2-G）: PRIMARY_OFFICIAL providers追加（treasury_gov / mof_japan /
+  jquants）。UST2Y/UST10Yのofficial par yield系列を新設（既存^TNX系列とは
+  概念が異なるため別series——NO SILENT MIXING）。JGB10Yを財務省国債金利情報へ、
+  TOPIXをJ-Quants（JPX公式系API）へ接続。データ実績ゼロの旧UST2Y（市場実勢・
+  Stooq経路）はidentity定義のみへ（enabled:false）。cross spreadはofficial par
+  同士の組へ再定義（^TNX×official parの概念混合spreadは生成しない）。
 
 # ---------------------------------------------------------------------------
 # データ供給元の種別（PART C: 一次公表元とデータプロバイダを混同しない）
@@ -62,6 +70,40 @@ providers:
       **注意（P2-D live pilot実測）**: 日足historyエンドポイント（q/d/l/）はIP単位の
       ダウンロード制限があり、共有IP（GitHub Actionsランナー等）からはHTTP 200で
       HTML制限ページが返る。historyの一次経路にはyfinanceを使う。
+  treasury_gov:
+    source_type: PRIMARY_OFFICIAL
+    tier: 1
+    endpoint_template: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{year}/all?type=daily_treasury_yield_curve&field_tdr_date_value={year}&page&_format=csv"
+    response_format: csv
+    provider_normalized: false
+    notes: >-
+      米財務省 Daily Treasury Par Yield Curve Rates（公式公表値）。symbolは
+      CSVの年限列名（"2 Yr"等）。par yield＝流通市場bid quotes（15:30 ET頃・
+      NY連銀取得）から財務省が補間したconstant maturity。市場実勢利回りindex
+      （^TNX等）・入札結果とは別概念。Tier1はsource種別であり
+      「データが絶対に正しい」の保証ではない（既存原則維持）。
+  mof_japan:
+    source_type: PRIMARY_OFFICIAL
+    tier: 1
+    endpoint_template: "https://www.mof.go.jp/jgbs/reference/interest_rate/data/jgbcm_all.csv"
+    response_format: csv
+    provider_normalized: false
+    notes: >-
+      財務省 国債金利情報（公式公表値・Shift_JIS・和暦日付）。symbolはCSVの
+      年限列名（"10年"等）。固定利付国債の流通市場価格ベースのconstant
+      maturity・15時クローズ時点。入札平均利回り・特定銘柄利回りとは別概念。
+  jquants:
+    source_type: PRIMARY_OFFICIAL
+    tier: 1
+    endpoint_template: "https://api.jquants.com/v1/indices/topix"
+    response_format: json
+    provider_normalized: false
+    notes: >-
+      J-Quants（JPX子会社 JPX Market Innovation & Research 運営の公式データAPI）。
+      /indices/topixはTOPIX指数値そのもの（ETF・先物ではない）。認証は
+      環境変数からのruntime injectionのみ（JQUANTS_MAIL/JQUANTS_PASSWORD等）
+      ——secretをGit/config/カタログへ保存しない。Freeプランは12週遅延・
+      約2年分（当日値にはLight以上が必要——TOPIX_SOURCE_DECISION.md参照）。
 
 defaults:
   frequency: daily
@@ -104,14 +146,17 @@ series:
     close_time_local: "15:30"
     as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "^tpx" }
-    probe: true                   # Stooq historyエンドポイントは共有IPで制限（live実測）
+    provider_symbols: { jquants: "topix", stooq: "^tpx" }
+    preferred_source: jquants
+    fallback_sources: []          # official経路のみ（stooq symbolは記録として残すがchainに入れない）
+    probe: true                   # J-Quants credential未投入のためlive未実証（実証後にfalse化）
     enabled: true
     role: CORE
     identity_notes: >-
-      指数現物終値（Stooq ^tpx。legacy configはyfinance側で1306.T ETFを「参考」と
-      していたが、**ETFを指数seriesへ流用しない**——identity安全のため指数はStooqのみ。
-      取得不能ならSOURCE GAPとして正直に欠測とする）。
+      TOPIX指数現物終値（P2-G: J-Quants=JPX公式系APIの/indices/topix値。
+      **TOPIX ≠ 1306.T等ETF ≠ TOPIX先物**——ETF/先物を指数seriesへ流用しない）。
+      credentialは環境変数runtime injectionのみ。未設定・取得不能なら
+      SOURCE GAPとして正直に欠測とする（代用で埋めない）。
 
   - series_id: "index:growth250.close.closing.tokyo"
     display_name: "東証グロース市場250指数"
@@ -298,7 +343,7 @@ series:
 
   # ----- 金利 -----
   - series_id: "rates:JGB10Y.yield.closing.tokyo"
-    display_name: "日本10年国債利回り"
+    display_name: "日本10年国債利回り（財務省 国債金利情報）"
     asset_class: rates
     instrument_id: "rates:JGB10Y"
     metric: yield
@@ -307,19 +352,25 @@ series:
     unit: pct
     currency: ""
     timezone: "Asia/Tokyo"
-    close_time_local: ""
-    as_of_policy: day_end_utc
+    close_time_local: "15:00"     # 財務省の説明: 市場クローズ（15時）時点
+    as_of_policy: exchange_close
     calendar: weekdays
-    provider_symbols: { stooq: "10jpy.b" }
-    probe: true
+    provider_symbols: { mof_japan: "10年" }
+    preferred_source: mof_japan
+    fallback_sources: []
+    probe: true                   # P2-G新経路——live実証後にfalse化
     enabled: true
     role: CORE
     identity_notes: >-
-      流通市場ベンチマーク利回り（provider供給値・単位pct: 1.05%→1.05）。
-      財務省公表金利・入札結果・BOJ公表値とは別系列。
+      財務省「国債金利情報」の10年（P2-G: 固定利付国債の流通市場価格ベースの
+      constant maturity・15時クローズ。単位pct: 1.05%→1.05）。
+      **入札平均利回り・特定銘柄利回り・クーポンとは別物**（auction結果ページを
+      日次系列として使わない）。旧Stooq経路（流通市場ベンチマーク・データ実績ゼロ）
+      は概念が異なるため本seriesから除外——観測ゼロのままの再定義であり
+      既存データの再解釈は発生していない。
 
   - series_id: "rates:UST2Y.yield.closing.us"
-    display_name: "米2年国債利回り"
+    display_name: "米2年国債利回り（市場実勢・identity定義のみ）"
     asset_class: rates
     instrument_id: "rates:UST2Y"
     metric: yield
@@ -333,11 +384,63 @@ series:
     calendar: weekdays
     provider_symbols: { stooq: "2usy.b" }
     probe: true
+    enabled: false                # P2-G: 経路無し（Stooq共有IP制限）・観測ゼロのままidentity定義のみ維持
+    role: EXTENDED
+    identity_notes: >-
+      流通市場ベンチマーク利回り（unit pct: 4.25%→4.25。ratio 0.0425とは混在させない）。
+      財務省par yield（公式統計）・入札結果とは別系列。P2-Gで2年金利の実データは
+      rates:UST2Y_par（Treasury official par yield・別概念の別series）が担う——
+      本seriesへofficial値を**混入しない**（NO SILENT MIXING）。
+
+  - series_id: "rates:UST2Y_par.yield.closing.us"
+    display_name: "米2年国債par yield（財務省Daily Treasury Par Yield Curve）"
+    asset_class: rates
+    instrument_id: "rates:UST2Y_par"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "15:30"     # NY連銀取得のindicative bid quotes（約15:30 ET）基準
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { treasury_gov: "2 Yr" }
+    preferred_source: treasury_gov
+    fallback_sources: []
+    probe: true                   # P2-G新経路——live実証後にfalse化
     enabled: true
     role: CORE
     identity_notes: >-
-      流通市場ベンチマーク利回り（unit pct: 4.25%→4.25。ratio 0.0425とは混在させない）。
-      財務省Constant Maturity（公式統計）・入札結果とは別系列。
+      米財務省Daily Treasury Par Yield Curve Ratesの「2 Yr」列（P2-G）。
+      **official par yield ≠ 市場実勢利回りindex（^TNX型・rates:UST2Y） ≠
+      入札yield ≠ 2年note価格 ≠ 2Y ETF ≠ futures implied**——代用しない。
+      単位pct（4.25%→4.25）。
+
+  - series_id: "rates:UST10Y_par.yield.closing.us"
+    display_name: "米10年国債par yield（財務省Daily Treasury Par Yield Curve）"
+    asset_class: rates
+    instrument_id: "rates:UST10Y_par"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "15:30"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { treasury_gov: "10 Yr" }
+    preferred_source: treasury_gov
+    fallback_sources: []
+    probe: true                   # P2-G新経路——live実証後にfalse化
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      米財務省Daily Treasury Par Yield Curve Ratesの「10 Yr」列（P2-G optional
+      parallel series）。既存 rates:UST10Y（yfinance ^TNX・市場実勢系）とは
+      **別概念の別series**として併存——既存seriesの削除・上書きはしない。
+      spreadはofficial par同士（10Y_par−2Y_par）で計算する（概念整合）。
 
   - series_id: "rates:UST10Y.yield.closing.us"
     display_name: "米10年国債利回り"
@@ -474,11 +577,14 @@ derivations:
     - { metric: ma25,       calculation: "ma25:1.0.0",       unit: same_as_base }
     - { metric: dist_25dma, calculation: "dist_25dma:1.0.0", unit: pct }
   cross_series:
-    - series_id: "rates:UST10Y_UST2Y.spread.derived_metric"
-      display_name: "米10年-2年金利差"
+    # P2-G: spreadはofficial par同士で計算する（概念整合）。^TNX（市場実勢index）×
+    # official parの混合spreadは生成しない。旧定義（UST10Y×UST2Y・実データゼロで
+    # 一度も生成されず）はこの概念整合形へ置換。
+    - series_id: "rates:UST10Y_par_UST2Y_par.spread.derived_metric"
+      display_name: "米10年-2年金利差（official par yield）"
       inputs:
-        - "rates:UST10Y.yield.closing.us"
-        - "rates:UST2Y.yield.closing.us"
+        - "rates:UST10Y_par.yield.closing.us"
+        - "rates:UST2Y_par.yield.closing.us"
       calculation: "yield_spread:1.0.0"
       unit: pct_point
     - series_id: "index:nikkei225_topix.nt_ratio.derived_metric"
