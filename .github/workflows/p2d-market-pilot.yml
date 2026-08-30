@@ -35,11 +35,19 @@ jobs:
       - name: P2-G.1 J-Quants auth contract probe (research only)
         continue-on-error: true
         run: python -m src.intelligence.market.p2g_probe jquants
+      # P2-G.1: 投入されたcredentialで**どの認証方式が実際に通るか**を実測。
+      # 秘密値・token値は一切出力しない（候補名・ステータス・件数のみ）。
+      - name: P2-G.1 J-Quants credential auth method probe
+        continue-on-error: true
+        env:
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.market.p2g1_auth_probe
       # credentialはrepository secretsからのruntime injectionのみ
       # （未設定なら空文字＝TOPIX_CREDENTIAL_MISSINGとして正常停止する）
       - name: Run market data bank live pilot (1 request per series)
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
           JQUANTS_ID_TOKEN: ${{ secrets.JQUANTS_ID_TOKEN }}
           JQUANTS_REFRESH_TOKEN: ${{ secrets.JQUANTS_REFRESH_TOKEN }}
           JQUANTS_MAIL: ${{ secrets.JQUANTS_MAIL }}
