@@ -104,6 +104,24 @@ UST10Y_parが同じ2025ファイルを再取得して読み取りタイムアウ
 | 透明性 | 再利用の事実を `reused_run_cache_years:<年>` としてparse_issuesへ申告 |
 | 影響 | official par spread（10Y_par−2Y_par）は従来どおり生成（テスト固定） |
 
+### live実測（run #9・conclusion=success）
+
+```
+::P2G1_TREASURY_DEDUP::
+  UST2Y_par   success 274行  raw_item=raw_fc99b052…  attempt=fetch_01M19C4AD…
+  UST10Y_par  success 274行  raw_item=raw_fc99b052…  attempt=fetch_01M19C4AD…（同一）
+  treasury_fetch_attempts_recorded: 1   （run #8は系列ごとに2件）
+  shared_raw_item: true / shared_fetch_attempt: true
+```
+
+- **run #8でtimeout failedだった `rates:UST10Y_par` が success 274行へ回復**し、
+  official par spreadも **274行**（latest 2026-08-28 = 0.390000 pct_point）に戻った。
+- Observationは系列ごとに独立（observation_id・series_id・値4.34/4.73・
+  unit pct）——同一payload由来でもidentityは統合していない。
+- run #9全体: requested 16 = success 15 + gap 1（TOPIX credential）+ **failed 0**、
+  raw 4,245全件MARKET_OBSERVATION ACCEPT、別プロセスpersistence 20,689観測・
+  index再構築一致・latest 15/15、backup verify 0/0/0。
+
 ## 6. Phase 3 readiness gate判定
 
 - UST2Y: live＋historical **PASS** / JGB10Y: live＋historical **PASS** /

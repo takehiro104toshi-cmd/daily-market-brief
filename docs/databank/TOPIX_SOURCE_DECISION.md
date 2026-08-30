@@ -124,4 +124,8 @@ NO_DATA・0行・NT倍率0行を正直に報告し、G10は**PARTIALLY_RESOLVED*
 - `auth_method`（解決できた方式）と `auth_method_validated`（**実APIのdata
   endpointが200を返した方式**）を分けて記録・報告する。後者が空の間は、
   どの方式も「現行APIで有効」と断定しない。
-- run #8時点: `auth_method: missing` / `auth_method_validated: ""`。
+- run #8 / run #9時点: `auth_method: missing` / `auth_method_validated: ""`
+  ——どの方式もまだ「現行APIで有効」と実証できていない。
+- run #9でもcredential未投入のためTOPIXのSTEP 2-8は実行条件未達（**追加の
+  network retryは行っていない**——MINI TASK B遵守）。G10は
+  PARTIALLY_RESOLVED（`topix_credential_missing`）のまま変化なし。

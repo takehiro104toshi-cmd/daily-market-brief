@@ -18,6 +18,10 @@
   **同一RawItem・同一FetchAttempt**を共有する（起きていない取得を記録しない）。
   series identityは非マージ（UST2Y_par ≠ UST10Y_par。observation_id・列・値・
   単位は独立）。payload単位で**1回だけ**再試行（run #8のtimeout対処）。
+  **live実測（run #9）**: treasury FetchAttempt記録 2→**1**・両系列が同一
+  RawItem/FetchAttemptを共有・run #8でfailedだったUST10Y_parが**success 274行**
+  へ回復・official spread 274行復帰。requested 16 = success 15 + gap 1 +
+  **failed 0**。
 - G10結果状態に **C: access_level_insufficient** / **D: auth_failure** を追加
   （fetch失敗理由をreason codeへ写像）。
 - `auth_method_validated`: **実APIのdata endpointが200を返した方式のみ**を
