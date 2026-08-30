@@ -4,6 +4,49 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.22 (2026-08-30) — Phase 2-E: News Classification / Metadata Enrichment
+
+原則: CLASSIFICATION IS NOT FACT / EVERY ENRICHMENT MUST HAVE PROVENANCE /
+FALSE ENTITY LINK IS WORSE THAN MISSED ENTITY LINK。
+**full 3,001 NewsItemへのenrichment backfill完了**: 分類3,592件（entity 2,192・
+rule 1,400）・validation 0 issues・冪等再実行0追加・review queue 63件保存・
+校正fixture全次元precision/recall 1.000・実corpusクエリsmoke成功。
+Fact抽出・市場影響・重要度スコアは未生成（DO NOT遵守）。P2-F未着手。
+
+### 追加
+
+- `knowledge/entities/core_entities.yaml`【新規】: Entity Catalog v1.0.0
+  （80 entities。alias安全3段階: safe／context必須（Apple/Meta/Amazon/Fed等）／
+  ticker明示記法限定——AI/IT/US/CAT等の裸大文字語の誤link構造排除。
+  case-sensitive marker（=Fed等）で動詞fed・果物apple誤爆を実測校正）。
+- `knowledge/enrichment/theme_taxonomy.yaml`【新規】: 30テーマ（既存
+  theme_relations/themes.yaml監査＋監督者指定17テーマ）。slug・parent/related
+  階層foundation・strong/weak多信号規則（weak単独タグ禁止）・exclude・
+  tank slug対応（legacy比較専用）。
+- `knowledge/enrichment/event_types.yaml`【新規】: 16イベント種別＋高precision
+  フレーズ規則（OTHER自動判定なし）＋time horizon高確信規則。
+- `src/intelligence/enrichment/`【新規14ファイル】: L0-L4層分離engine・
+  決定論matcher群（evidence span保持）・provider中立LLM層（optional・
+  スキーマ検証・未知label→review queue・不正reject・audit）・USER override
+  （優先・履歴保持）・append-only store（effective view導出）・
+  backfill（corpus fingerprint・段階実行・冪等）・validation 10種・品質レポート。
+- NewsClassification拡張（0.x非破壊: confidence/confidence_type/role/
+  evidence_field/evidence_text/taxonomy_version/basis_document_id）・
+  ClassificationDimension/EntityKind拡張・SqliteNewsIndexへ時系列集計foundation
+  （count_by_dimension_over_time / count_values——件数取得まで）。
+- tests: +88件（matcher安全則30・engine/LLM/store/override 25・validation/
+  backfill/quality 25ほか・校正fixture 30件。**1,019 passed**）。
+- docs/databank: NEWS_ENRICHMENT_ARCHITECTURE / ENTITY_CATALOG_SPEC /
+  THEME_TAXONOMY_SPEC / EVENT_TYPE_TAXONOMY / CLASSIFICATION_PROVENANCE_SPEC /
+  NEWS_ENRICHMENT_BACKFILL_REPORT / NEWS_ENRICHMENT_QUALITY。
+
+### 改善
+
+- 実corpus初回実行で発見した冪等バグ（run跨ぎのcreated_at差によるID衝突）を
+  semantic equality原則に沿って修正（クリーン再実行でfailed 0を確認）。
+- 校正初回測定のevent誤爆2件（"surges"単独・"new chip"）を規則側で修正し
+  fixture precision 1.000へ。
+
 ## v4.21 (2026-08-30) — Phase 2-D: Market Data Bank
 
 原則: A NUMBER WITHOUT IDENTITY AND CONTEXT IS NOT MARKET DATA。
