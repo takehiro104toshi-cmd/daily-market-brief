@@ -1,0 +1,457 @@
+# =============================================================================
+# MarketSeries正式カタログ（Phase 2-D PART B / versioned config）
+# =============================================================================
+# 原則: A NUMBER WITHOUT IDENTITY AND CONTEXT IS NOT MARKET DATA
+#
+# - series_id は src/intelligence/databank/market_model.make_series_id の規約
+#   （instrument_id.metric.observation_type[.session]）から決定論的に導出される。
+#   loaderが照合し、不一致はカタログエラー（雑な同一視の混入を防ぐ）。
+# - 指数現物・ETF・先物は**別instrument**（例: 日経平均指数 ≠ 1321 ETF ≠ 日経先物）。
+#   先物継続足は instrument_id を futures:*_cont として明示する。
+# - USDJPYの「終値」は複数存在する（spot連続取引のprovider日足 / 東京仲値fixing /
+#   東京17時・NY17時クローズ）——本カタログはprovider日足closeを global セッションの
+#   別系列として定義し、fixing等を追加する場合は**新series**として追加する。
+# - 金利は「4.25% → 値4.25・unit pct」で固定（ratio 0.0425と混在させない）。
+# - as_of_policy:
+#     exchange_close … trading_date + close_time_local（timezone）→ UTC変換した確定時刻
+#     day_end_utc    … 取引所単一クローズが定義できない系列（FX/先物継続/金利/暗号資産）。
+#                      as_of = trading_date 23:59:59Z（「当日中のどこか」の明示的規約。
+#                      個別値ごとの時刻捏造をしないための固定規約）
+# - calendar は欠測サニティ検知（週末日付の検出等）のみに使う。**補完には使わない**
+#   （休日・障害・未公表はMISSINGのまま。0・前日値・補間で埋めない）。
+# - enabled: false は「identityのみ定義（収集しない）」。probe: true は
+#   legacy実績のないprovider symbol（取得失敗はSOURCE GAPとして扱いエラーにしない）。
+
+id: market_series_core
+version: "1.0.0"
+description: >-
+  Market Data BankのCORE系列カタログ（series identity＋取得運用フィールド。
+  Phase 2-D PART B）。series_idはmake_series_id規約から決定論導出される。
+source: "監督者指示（P2-D directive）＋legacy config.yaml stooq_symbols実績"
+status: active
+updated: "2026-08-30"
+
+# ---------------------------------------------------------------------------
+# データ供給元の種別（PART C: 一次公表元とデータプロバイダを混同しない）
+#   PRIMARY_OFFICIAL     … 取引所・中央銀行・統計局の公式公表値
+#   MARKET_DATA_PROVIDER … 市場データ集約プロバイダ（本フェーズの取得元）
+#   SECONDARY            … 報道等の二次値
+# ---------------------------------------------------------------------------
+providers:
+  stooq:
+    source_type: MARKET_DATA_PROVIDER
+    tier: 2
+    endpoint_template: "https://stooq.com/q/d/l/?s={symbol}&i=d&d1={d1}&d2={d2}"
+    response_format: csv          # Date,Open,High,Low,Close(,Volume)
+    provider_normalized: false    # HTTP応答CSVをそのままraw保存できる（生値・非加工）
+    notes: >-
+      無料の市場データプロバイダ。取引所公式値ではない（PRIMARY_OFFICIALの
+      日次公表値取込はSOURCE GAP G9系として将来トラック）。
+      legacy実績: config.yaml stooq_symbols / src/collectors/market_data.py（quote endpoint）。
+
+defaults:
+  frequency: daily
+  adjustment: unadjusted
+  preferred_source: stooq
+  fallback_sources: []   # fallback発動時はsource-changed記録必須（silent switch禁止）
+
+series:
+  # ----- 株価指数（日本） -----
+  - series_id: "index:nikkei225.close.closing.tokyo"
+    display_name: "日経平均株価"
+    asset_class: equity_index
+    instrument_id: "index:nikkei225"
+    metric: close
+    observation_type: closing
+    session: tokyo
+    unit: index
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: "15:30"     # 2024-11-05以降の東証現物クローズ
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^nkx" }
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。ETF(1321等)・日経225先物とは別系列"
+
+  - series_id: "index:topix.close.closing.tokyo"
+    display_name: "TOPIX"
+    asset_class: equity_index
+    instrument_id: "index:topix"
+    metric: close
+    observation_type: closing
+    session: tokyo
+    unit: index
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: "15:30"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^tpx" }
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値（legacy configに^tpx実績あり）"
+
+  - series_id: "index:growth250.close.closing.tokyo"
+    display_name: "東証グロース市場250指数"
+    asset_class: equity_index
+    instrument_id: "index:growth250"
+    metric: close
+    observation_type: closing
+    session: tokyo
+    unit: index
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: "15:30"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: {}          # Stooqにsymbol確認できず（SOURCE GAP: 下記notes）
+    enabled: false
+    role: CORE
+    identity_notes: >-
+      収集不可（provider symbol未確認）。identityのみ定義し、JPX公式等の
+      PRIMARY_OFFICIAL経路をSOURCE GAPとして別トラックで検討する。
+
+  # ----- 株価指数（米国） -----
+  - series_id: "index:dji.close.closing.us"
+    display_name: "NYダウ（Dow Jones Industrial Average）"
+    asset_class: equity_index
+    instrument_id: "index:dji"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^dji" }
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。DIA ETF・YM先物とは別系列"
+
+  - series_id: "index:spx.close.closing.us"
+    display_name: "S&P 500"
+    asset_class: equity_index
+    instrument_id: "index:spx"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^spx" }
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。SPY ETF・ES先物とは別系列"
+
+  - series_id: "index:nasdaq_composite.close.closing.us"
+    display_name: "ナスダック総合指数"
+    asset_class: equity_index
+    instrument_id: "index:nasdaq_composite"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^ndq" }
+    enabled: true
+    role: CORE
+    identity_notes: "総合指数（Composite）。Nasdaq 100（^ndx）とは別系列——混同禁止"
+
+  - series_id: "index:nasdaq100.close.closing.us"
+    display_name: "Nasdaq 100"
+    asset_class: equity_index
+    instrument_id: "index:nasdaq100"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^ndx" }
+    enabled: false                # 任意系列: 過剰収集を避けP2-Dでは識別のみ定義
+    role: EXTENDED
+    identity_notes: "Nasdaq総合とは別系列。QQQ ETF・NQ先物とも別"
+
+  - series_id: "index:sox.close.closing.us"
+    display_name: "フィラデルフィア半導体指数（SOX）"
+    asset_class: equity_index
+    instrument_id: "index:sox"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^sox" }
+    probe: true                   # legacy実績なし（live pilotで判明。失敗=SOURCE GAP）
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。SOXX/SMH ETFとは別系列"
+
+  # ----- ボラティリティ -----
+  - series_id: "index:vix.close.closing.us"
+    display_name: "VIX（CBOE Volatility Index）"
+    asset_class: volatility
+    instrument_id: "index:vix"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:15"     # Cboe指数配信クローズ
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^vix" }
+    enabled: true
+    role: CORE
+    identity_notes: "指数値（年率IVポイント）。VIX先物・VXX等ETNとは別系列"
+
+  # ----- 為替 -----
+  - series_id: "fx:USDJPY.rate.closing.global"
+    display_name: "ドル円（USD/JPY）"
+    asset_class: fx
+    instrument_id: "fx:USDJPY"
+    metric: rate
+    observation_type: closing
+    session: global
+    unit: jpy_per_usd
+    currency: "JPY"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "usdjpy" }
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      spot連続取引のprovider日足close（1USDあたりJPY）。東京仲値（official_fixing）・
+      東京17時/NY17時クローズの公表値とは**別系列**——必要になれば別series_idで追加する。
+
+  - series_id: "fx:EURUSD.rate.closing.global"
+    display_name: "ユーロドル（EUR/USD）"
+    asset_class: fx
+    instrument_id: "fx:EURUSD"
+    metric: rate
+    observation_type: closing
+    session: global
+    unit: usd_per_eur
+    currency: "USD"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "eurusd" }
+    enabled: true
+    role: CORE
+    identity_notes: "spot連続取引のprovider日足close（1EURあたりUSD）。ECB参照レートとは別系列"
+
+  # ----- 金利 -----
+  - series_id: "rates:JGB10Y.yield.closing.tokyo"
+    display_name: "日本10年国債利回り"
+    asset_class: rates
+    instrument_id: "rates:JGB10Y"
+    metric: yield
+    observation_type: closing
+    session: tokyo
+    unit: pct
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "10jpy.b" }
+    probe: true
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      流通市場ベンチマーク利回り（provider供給値・単位pct: 1.05%→1.05）。
+      財務省公表金利・入札結果・BOJ公表値とは別系列。
+
+  - series_id: "rates:UST2Y.yield.closing.us"
+    display_name: "米2年国債利回り"
+    asset_class: rates
+    instrument_id: "rates:UST2Y"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "2usy.b" }
+    probe: true
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      流通市場ベンチマーク利回り（unit pct: 4.25%→4.25。ratio 0.0425とは混在させない）。
+      財務省Constant Maturity（公式統計）・入札結果とは別系列。
+
+  - series_id: "rates:UST10Y.yield.closing.us"
+    display_name: "米10年国債利回り"
+    asset_class: rates
+    instrument_id: "rates:UST10Y"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "10usy.b" }
+    enabled: true
+    role: CORE
+    identity_notes: "流通市場ベンチマーク利回り（legacy実績あり）。公式統計・入札結果とは別系列"
+
+  - series_id: "rates:UST30Y.yield.closing.us"
+    display_name: "米30年国債利回り"
+    asset_class: rates
+    instrument_id: "rates:UST30Y"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "30usy.b" }
+    enabled: false                # 任意系列: P2-Dでは識別のみ定義
+    role: EXTENDED
+    identity_notes: "流通市場ベンチマーク利回り"
+
+  # ----- コモディティ（先物継続足＝現物スポットと別instrument） -----
+  - series_id: "futures:wti_cont.close.closing.us"
+    display_name: "WTI原油先物（期近継続）"
+    asset_class: commodity
+    instrument_id: "futures:wti_cont"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: usd_per_barrel
+    currency: "USD"
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "cl.f" }
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      NYMEX CL期近の継続足（provider日足bar）。取引所公式settlement・現物スポット価格
+      とは別系列。限月乗換はprovider仕様に従う（継続足であることをidentityに固定）。
+
+  - series_id: "futures:brent_cont.close.closing.us"
+    display_name: "ブレント原油先物（期近継続）"
+    asset_class: commodity
+    instrument_id: "futures:brent_cont"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: usd_per_barrel
+    currency: "USD"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "cb.f" }
+    enabled: false                # 任意系列: P2-Dでは識別のみ定義
+    role: EXTENDED
+    identity_notes: "ICE Brent期近継続足"
+
+  - series_id: "futures:gold_cont.close.closing.us"
+    display_name: "金先物（期近継続）"
+    asset_class: commodity
+    instrument_id: "futures:gold_cont"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: usd_per_ozt
+    currency: "USD"
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "gc.f" }
+    enabled: true
+    role: CORE
+    identity_notes: "COMEX GC期近の継続足。金現物スポット（XAUUSD）とは別系列"
+
+  # ----- 暗号資産 -----
+  - series_id: "crypto:BTCUSD.close.closing.global"
+    display_name: "ビットコイン（BTC/USD）"
+    asset_class: crypto
+    instrument_id: "crypto:BTCUSD"
+    metric: close
+    observation_type: closing
+    session: global
+    unit: usd
+    currency: "USD"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: all_days            # 24/7取引（週末日付は欠測ではない）
+    provider_symbols: { stooq: "btcusd" }
+    probe: true
+    enabled: true
+    role: CORE
+    identity_notes: "provider集約のBTC/USD日足close。特定取引所の公式終値ではない"
+
+# ---------------------------------------------------------------------------
+# 派生系列の基盤（PART F: foundation only——TAライブラリ化はしない）
+# per_series: 各base seriesへ適用する汎用派生。series_idはbaseから決定論導出
+#   （instrument・session維持・metric置換・observation_type=derived_metric）。
+# cross_series: 複数seriesを入力とする派生（入力series_idを明示）。
+# ---------------------------------------------------------------------------
+derivations:
+  per_series:
+    - { metric: return_1d,  calculation: "return_1d:1.0.0",  unit: pct }
+    - { metric: return_5d,  calculation: "return_5d:1.0.0",  unit: pct }
+    - { metric: ma25,       calculation: "ma25:1.0.0",       unit: same_as_base }
+    - { metric: dist_25dma, calculation: "dist_25dma:1.0.0", unit: pct }
+  cross_series:
+    - series_id: "rates:UST10Y_UST2Y.spread.derived_metric"
+      display_name: "米10年-2年金利差"
+      inputs:
+        - "rates:UST10Y.yield.closing.us"
+        - "rates:UST2Y.yield.closing.us"
+      calculation: "yield_spread:1.0.0"
+      unit: pct_point
+    - series_id: "index:nikkei225_topix.nt_ratio.derived_metric"
+      display_name: "NT倍率"
+      inputs:
+        - "index:nikkei225.close.closing.tokyo"
+        - "index:topix.close.closing.tokyo"
+      calculation: "nt_ratio:1.0.0"
+      unit: x
+
+# ---------------------------------------------------------------------------
+# 市場内部指標（market internals）: P2-Dではschema/catalog準備のみ（収集しない）。
+# 騰落銘柄数・新高値新安値等はPRIMARY_OFFICIAL経路の確保が前提（SOURCE GAP扱い）。
+# ---------------------------------------------------------------------------
+internals_placeholder:
+  - instrument_id: "internals:tse_prime_advance_decline"
+    metric: advancers
+    status: "not_collected（供給元未確保。identityの予約のみ）"

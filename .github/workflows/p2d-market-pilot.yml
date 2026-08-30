@@ -1,0 +1,37 @@
+# P2-D Market Data Bank live pilot（Phase 2-D / 監督者必須Gate）
+#
+# CORE系列（約15）を実ネットワークで取得し、取込→QA→canonical→index→派生→
+# 別プロセス永続化検証→backup manifestまでを一本で実証する。
+# feature branch限定・triggerファイル更新時のみ・1系列=1リクエスト（bulk禁止）・
+# Secrets不使用。Legacy本番workflow・GitHub Pagesへは影響しない。
+name: p2d-market-pilot
+
+on:
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p2d_market_trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2d-market-pilot
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal deps
+        run: pip install pyyaml
+      - name: Run market data bank live pilot (1 request per series, no secrets)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.market.pilot_runner

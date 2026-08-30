@@ -731,3 +731,10 @@ private_insight_intake:
   preserve_draft_on_failure: true
   clear_after_success: true
   show_optional_fields: false
+
+# ===== Phase 2-D vNext（Investment Intelligence OS）データ永続化 =====
+# canonicalデータの設置場所。開発コンテナはephemeralのため、恒久運用では
+# 環境変数 INTELLIGENCE_DATA_ROOT（最優先）または本キーで永続ディスクを指す。
+# GitリポジトリをData Bankとして使わない（data/vnext/は.gitignore済み）。
+vnext:
+  data_root: "data/vnext"

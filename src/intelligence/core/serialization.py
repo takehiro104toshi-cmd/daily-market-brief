@@ -119,6 +119,7 @@ def register_domain_types() -> None:
     from ..evidence import model as ev
     from ..evidence_qa import model as qa
     from ..ingestion import model as ing
+    from ..market import backfill as mkb
     from ..market import model as mk
     from ..normalization import model as norm
     from ..sources import model as src
@@ -150,6 +151,8 @@ def register_domain_types() -> None:
         dbb.BackfillRun,
         dbb.RejectRecord,
         mk.Observation,
+        mkb.SeriesRunResult,
+        mkb.MarketBackfillRun,
         ev.FactStatement,
         ev.AnalysisStatement,
         ev.ForecastStatement,

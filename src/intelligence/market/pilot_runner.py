@@ -1,0 +1,214 @@
+"""P2-D Market Data Bank live pilot（GitHub Actions用）。
+
+実ネットワークでCORE系列（約1年の日足）を取得し、以下を1本で実証する:
+fetch→raw保存→正規化（Decimal/セッションモデル）→Evidence QA→canonical→
+SQLite index→派生→クエリ→**別プロセスでの永続化検証**→backup manifest。
+
+出力markers（logから機械抽出する）:
+  ::P2D_SERIES::{...}       系列別の取得・取込結果
+  ::P2D_RUN::{...}          run manifestサマリ
+  ::P2D_QUALITY::{...}      品質レポート（PART J）
+  ::P2D_QUERY::{...}        クエリsmoke＋latest semantics実測
+  ::P2D_TRACE_BEGIN/END::   1系列のend-to-end trace（人間可読）
+  ::P2D_DAILY_QA::{...}     DAILY_MARKET policyでの最新値再評価（文脈分離の実証）
+  ::P2D_PERSISTENCE::{...}  別プロセス再オープン検証（PART A gate）
+  ::P2D_BACKUP::{...}       backup manifest生成・照合
+
+Secret不使用（StooqはpublicのCSVエンドポイント）。bulk禁止: 1系列=1リクエスト。
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+from ..core import serialization
+from ..core.backup import verify_against_manifest, write_backup_manifest
+from ..core.paths import data_root, market_bank_root
+from ..evidence_qa.assess import assess_observation
+from ..evidence_qa.policy import DAILY_MARKET_V1, HISTORICAL_V1
+from ..ingestion.transport import UrllibTransport
+from .backfill import MarketBackfillEngine, default_range, provider_source_info
+from .model import Observation
+from .providers import StooqDailyHistoryProvider
+from .quality_report import build_quality_report
+from .series_catalog import load_catalog
+from .store import MarketBankStore
+
+TRACE_SERIES = "index:nikkei225.close.closing.tokyo"
+
+
+def _row_dict(row) -> dict:
+    return None if row is None else {k: row[k] for k in row.keys()}
+
+
+def render_trace(store: MarketBankStore, series_id: str) -> str:
+    """1系列のend-to-end trace（fetch→raw→observation→QA→index→latest）。"""
+    lines = [f"series: {series_id}"]
+    attempts = [a for a in store.raw.iter_attempts()]
+    for a in attempts:
+        lines.append(
+            f"  fetch_attempt {a.attempt_id} status={a.status_code} "
+            f"url={a.url} body={a.body_size}B hash={a.content_hash[:16]}…")
+    latest = store.index.latest_trading_session(series_id)
+    if latest is None:
+        lines.append("  (no data)")
+        return "\n".join(lines)
+    obs = store.normalized.get_observation(latest["observation_id"])
+    raw_items = {i.raw_item_id: i for i in store.raw.iter_raw_items()}
+    lines.append(
+        f"  latest observation {obs.observation_id}: trading_date={obs.trading_date} "
+        f"value={obs.value} unit={obs.unit} as_of={obs.as_of.isoformat()} "
+        f"source={obs.source_id} kind={obs.kind.value}")
+    assessment = None
+    for a in store.qa.iter_assessments():
+        if a.record_id == obs.observation_id:
+            assessment = a
+    if assessment is not None:
+        lines.append(
+            f"  qa {assessment.assessment_id}: decision={assessment.decision.value} "
+            f"policy={assessment.policy_name}:{assessment.policy_version} "
+            f"issues={[i.reason_code for i in assessment.issues]}")
+    for item in raw_items.values():
+        if item.source_id == obs.source_id:
+            lines.append(
+                f"  raw csv {item.raw_item_id}: {item.size_bytes}B "
+                f"sha256={item.content_hash[:16]}… storage={item.storage_ref}")
+            break
+    lines.append(f"  index row: {json.dumps(_row_dict(latest), ensure_ascii=False)}")
+    return "\n".join(lines)
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="P2-D market data bank live pilot")
+    parser.add_argument("--days", type=int, default=400)
+    parser.add_argument("--catalog", default="knowledge/market_series/core_series.yaml")
+    args = parser.parse_args(argv)
+
+    serialization.register_domain_types()
+    root = data_root()
+    bank_root = market_bank_root(root)
+    catalog = load_catalog(Path(args.catalog))
+    store = MarketBankStore(bank_root)
+    provider = StooqDailyHistoryProvider(UrllibTransport())
+    engine = MarketBackfillEngine(store, catalog, provider, HISTORICAL_V1,
+                                  sleeper=time.sleep)
+    start, end = default_range(days=args.days)
+    print(f"P2-D pilot: {len(catalog.enabled_series())} series, range {start}..{end}, "
+          f"data_root={root}, at {datetime.now(timezone.utc).isoformat()}")
+
+    run = engine.run(start=start, end=end)
+    for r in run.results:
+        print("::P2D_SERIES::" + json.dumps({
+            "series_id": r.series_id, "symbol": r.symbol, "status": r.status,
+            "http": r.http_status, "error": r.error_kind, "records": r.records_seen,
+            "added": r.observations_added, "revisions": r.revisions,
+            "issues": r.issue_count, "issue_sample": list(r.issue_sample),
+            "qa": list(r.qa_decisions), "probe": r.probe,
+        }, ensure_ascii=False))
+    print("::P2D_RUN::" + json.dumps({
+        "run_id": run.run_id, "provider": run.provider_id,
+        "catalog": run.catalog_version, "ingest": run.ingest_version,
+        "policy": run.trust_policy, "range": [run.range_start, run.range_end],
+        "requested": run.series_requested, "success": run.series_success,
+        "gap": run.series_gap, "failed": run.series_failed,
+        "observations_added": run.observations_added, "derived_added": run.derived_added,
+    }, ensure_ascii=False))
+
+    print("::P2D_QUALITY::" + json.dumps(build_quality_report(store, catalog),
+                                         ensure_ascii=False))
+
+    # クエリsmoke＋latest semanticsの実測
+    succeeded = [r.series_id for r in run.results if r.status == "success"]
+    query_result = {"latest_semantics": {}, "range_query": {}, "decision_query": {}}
+    for series_id in succeeded[:3]:
+        query_result["latest_semantics"][series_id] = {
+            "latest_trading_session": _row_dict(store.index.latest_trading_session(series_id)),
+            "latest_as_of": _row_dict(store.index.latest_as_of(series_id)),
+        }
+    if succeeded:
+        sid = succeeded[0]
+        rows = store.index.query(series_id=sid, date_from=run.range_start,
+                                 date_to=run.range_end, kind="raw")
+        query_result["range_query"] = {"series": sid, "rows": len(rows)}
+        accepted = store.index.query(series_id=sid, decision="accept_with_warnings")
+        query_result["decision_query"] = {
+            "series": sid, "accept_with_warnings": len(accepted)}
+        derived = store.index.query(series_id=None, kind="derived", limit=100000)
+        query_result["derived_rows"] = len(derived)
+    print("::P2D_QUERY::" + json.dumps(query_result, ensure_ascii=False))
+
+    trace_id = TRACE_SERIES if TRACE_SERIES in succeeded else (succeeded[0] if succeeded else "")
+    if trace_id:
+        print("::P2D_TRACE_BEGIN::")
+        print(render_trace(store, trace_id))
+        print("::P2D_TRACE_END::")
+
+        # DAILY_MARKET policyでの最新値評価（HISTORICALとの文脈分離の実証・追記保存）
+        latest_row = store.index.latest_trading_session(trace_id)
+        obs: Observation = store.normalized.get_observation(latest_row["observation_id"])
+        daily = assess_observation(
+            obs, source_info=provider_source_info(catalog, provider.provider_id),
+            policy=DAILY_MARKET_V1, reference_time=datetime.now(timezone.utc))
+        store.add_assessment(daily)
+        print("::P2D_DAILY_QA::" + json.dumps({
+            "observation_id": obs.observation_id, "trading_date": obs.trading_date,
+            "historical_decision": "accept_with_warnings",
+            "daily_market_decision": daily.decision.value,
+            "daily_market_issues": [i.reason_code for i in daily.issues],
+        }, ensure_ascii=False))
+
+    # PART A gate: 別プロセス（restart相当）でcanonical読み戻し＋index全再構築＋latest一致
+    parent_latest = {
+        sid: _row_dict(store.index.latest_trading_session(sid)) for sid in succeeded}
+    store.close()
+    cmd = [sys.executable, "-m", "src.intelligence.market.persistence_check",
+           "--data-root", str(root)]
+    for sid in succeeded:
+        cmd += ["--series", sid]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if proc.returncode != 0:
+        print("::P2D_PERSISTENCE::" + json.dumps(
+            {"ok": False, "error": proc.stderr[-400:]}))
+        return 1
+    child = json.loads(proc.stdout.strip().splitlines()[-1])
+    mismatches = []
+    for sid in succeeded:
+        parent = parent_latest[sid]
+        got = child["latest"].get(sid)
+        if got is None or parent is None or (
+                got["observation_id"] != parent["observation_id"]
+                or got["value"] != parent["value"]
+                or got["trading_date"] != parent["trading_date"]):
+            mismatches.append(sid)
+    print("::P2D_PERSISTENCE::" + json.dumps({
+        "ok": not mismatches and child["canonical_observations"] > 0,
+        "fresh_process": True,
+        "canonical_observations": child["canonical_observations"],
+        "canonical_assessments": child["canonical_assessments"],
+        "index_rebuilt_observations": child["index_rebuilt_observations"],
+        "recovered_lines": child["recovered_lines"],
+        "latest_match": {"checked": len(succeeded), "mismatch": mismatches},
+    }, ensure_ascii=False))
+
+    # backup基盤: manifest生成→自己照合（missing/changedゼロ）
+    manifest_path = write_backup_manifest(root)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    missing, changed, extra = verify_against_manifest(root, manifest)
+    print("::P2D_BACKUP::" + json.dumps({
+        "manifest": manifest_path.name, "files": manifest["file_count"],
+        "total_bytes": manifest["total_bytes"], "schema": manifest["schema_version"],
+        "verify_missing": len(missing), "verify_changed": len(changed),
+        "verify_extra": len(extra),
+    }, ensure_ascii=False))
+
+    print("done")
+    return 0 if (not mismatches and run.series_success > 0) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

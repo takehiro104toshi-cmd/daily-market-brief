@@ -47,6 +47,11 @@ class Observation:
     # Phase 2-A追加（0.x非破壊）: 市場系列への紐付け（databank/market_model.MarketSeries）。
     # 同じUSDJPYでもspot/Tokyo close/NY closeを別seriesとして区別するためのキー
     series_id: str = ""
+    # Phase 2-D追加（0.x非破壊）: 取引セッション日（"YYYY-MM-DD"）。
+    # as_of（値が指す時点＝取引所クローズ等のUTC時刻）と**分離**する——
+    # 日本の朝に見る米国市場の値は「前営業日のtrading_date」であり、
+    # as_ofのUTC日付・閲覧日と混同しない（SESSION / TRADING_DATE model）。
+    trading_date: str = ""
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None  # 改定で失効した場合等
     revision_of: Optional[str] = None  # 改定元observation_id（過去値は消さない）
