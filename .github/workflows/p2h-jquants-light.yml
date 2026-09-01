@@ -1,0 +1,42 @@
+# P2-H J-Quants Light Core Ingestion（Phase 2-H / 監督者必須Gate）
+#
+# 目的1（entitlement probe）: 現在のLight契約で**実際に**取得できるdatasetと、
+#   V2の**実際の項目名**を実APIで確認する（推測でmappingしないための証拠収集）。
+# 目的2（live pilot）: REQUIRED datasetをfetch→raw→normalize→QA→canonical→
+#   SQLite→queryまで小規模sampleで実証する。
+#
+# feature branch限定・triggerファイル更新時のみ。Secretsは JQUANTS_API_KEY のみ
+# runtime injection（値はログ・URL・raw payload・FetchAttemptへ出力しない）。
+# 既存のp2d-market-pilot（TOPIX V2 live path）へは影響しない。
+name: p2h-jquants-light
+
+on:
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p2h_jquants_trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2h-jquants-light
+  cancel-in-progress: false
+
+jobs:
+  light:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal deps
+        run: pip install pyyaml
+      - name: P2-H Light entitlement / schema probe
+        continue-on-error: true
+        env:
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.market.p2h_light_probe
