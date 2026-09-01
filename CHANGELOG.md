@@ -4,6 +4,62 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.34 (2026-09-01) — Phase 3-C: Evidence-Grounded Compass Generator
+
+Fact Layer（3-A）＋ Context Engine（3-B）で確認された情報**だけ**を根拠に、
+Morning Compassとして利用可能なgrounded narrativeを生成する層。
+**LLM MAY WRITE. LLM MAY NOT INVENT.** 生成物は全てvalidator／quality gateを通り、
+合否を決めるのはgeneratorではなくvalidatorである。実データpilotは決定論的generatorのみ
+（LLM provider未接続・secret未注入・新しいAPI keyを要求しない）。
+
+### 追加
+
+- `src/intelligence/compass/`【新規】（1機能=1ファイル・既存コード不変）:
+  - `model.py`: ClaimType（FACTUAL / RELATIONAL / INTERPRETIVE / OUTLOOK / RISK）と
+    ClaimRole（HEADLINE / WHAT_HAPPENED / WHY / OUTLOOK / RISK / COVERAGE）を分離し、
+    claim毎に fact_id / context_id の引用を必須化。推奨語彙（buy/sell/target）は存在しない。
+  - `evidence_package.py`: Morning Snapshot → generatorに渡してよい根拠集合。
+    look-ahead FAIL-CLOSED・evidence budget（tier別上限）・missingness保持・
+    Factを複製しない。`prompt_payload()` はwhitelistフィールドのみ（note/excerpt/locator不可）。
+  - `outlook.py`: Compass DNA（JP_DIR_001 / JP_US_001 / JP_FX_001 / JP_INT_003 /
+    JP_DIR_004）による決定論的含意分類・方向・確度ladder・無効化条件・反対材料常設。
+  - `narrative_plan.py`: lead / support / counter / coverage / prohibited を IDと統制語彙だけで決定。
+    反対材料0・leadが古い・根拠無しはabstain（捏造しない）。
+  - `generator.py`: DeterministicNarrativeGenerator（既定）／ LLMNarrativeGenerator
+    （既存 `LLMProvider` 境界・出力はuntrusted・provider未設定ならフォールバック）／
+    FakeNarrativeGenerator（adversarial用）。
+  - `grounding.py` / `numeric_validation.py` / `direction_validation.py` /
+    `temporal_validation.py` / `missingness_validation.py` / `language_rules.py`:
+    引用チェーン・数値・方向・時制／look-ahead・欠落次元・因果断定／助言／数値目標／
+    prompt injection marker の各validator。
+  - `quality_gate.py` / `one_liner.py` / `pipeline.py`: 全validator適用 → verdict
+    （VALID / VALID_WITH_WARNINGS / REJECTED / ABSTAINED）→ repair → 2〜4文one-liner →
+    content-addressed CompassDraft。
+  - `store.py`: canonical JSONL append-only ＋ 再構築可能SQLite（idempotent by draft_id）。
+  - `historical_eval.py`: 過去Compass（`output/history/<date>/pre_market.html`・読み取りのみ）
+    との水準／方向の**観測**比較（rule最適化はしない）。
+  - `adversarial.py` / `pilot.py`: 13 adversarial case と実データpilot
+    （`::P3C_*::` closeout marker・secret値は出力しない）。
+- `config.yaml`: `compass_generator` セクション（budget / tolerance / max_rejected_ratio /
+  min_counter_contexts / one_liner_sentences / near_event_days / llm上限 / horizon）。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3-B pilotの後に Phase 3-C pilot step を追加
+  （決定論的generator・secret注入なし・履歴HTMLは読み取りのみ）。
+  live実測（run #19）: 5営業日全て VALID、rejected 0、look-ahead除外 0、
+  adversarial 13/13、store idempotent／再構築一致、llm_calls 0、credential出力 0。
+- `docs/databank/COMPASS_GENERATOR_SPEC.md`【新規】（仕様＋live evidence）。
+- オフラインテスト80件追加（`tests/intelligence/test_compass_generator.py`【新規】:
+  config / evidence package / outlook / plan / claim model / generator / validators /
+  gate / one-liner / golden / adversarial / LLM boundary / persistence / historical /
+  security / end-to-end）。
+
+### 改善
+
+- なし（既存モジュールは変更していない）。
+
+### 修正
+
+- なし。
+
 ## v4.33 (2026-09-01) — Phase 3-B: Compass Context Engine
 
 Phase 3-AのFactを、Morning Compassが使える**structured investment context**へ
