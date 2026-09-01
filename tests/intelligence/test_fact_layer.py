@@ -616,6 +616,8 @@ class TestPilotEndToEndOffline:
         snapshot = json.loads(out.split("::P3A_SNAPSHOT::")[1].splitlines()[0])
         assert snapshot["look_ahead_total_leaks"] == 0
         assert all(s["no_future_dates"] for s in snapshot["sessions"])
+        # 複数sessionでFactが利用可能（単一session時点だけの生成になっていない）
+        assert sum(1 for s in snapshot["sessions"] if s["facts_available"] > 0) >= 2
 
         replay = json.loads(out.split("::P3A_REPLAY::")[1].splitlines()[0])
         assert replay["nt_ratio"] is not None
@@ -771,3 +773,65 @@ class TestNewsFactBoundary:
 
         assert build_document_facts([self._doc(title="")], now=NOW) == []
         assert build_document_facts([self._doc(published_at=None)], now=NOW) == []
+
+
+# ============================================================ session-wise history
+
+class TestSessionWiseFactGeneration:
+    """各セッション時点のFactを生成する（snapshot再現とlook-ahead検証の素材）。"""
+
+    def test_history_facts_cover_multiple_sessions(self):
+        from src.intelligence.facts.market_builder import build_history_facts
+
+        points = series_points(list(range(100, 130)))
+        facts = build_history_facts(TOPIX, points, sessions=5, now=NOW)
+        dates = sorted({f.time.primary_date for f in facts})
+        assert len(dates) == 5
+        assert dates == [p.trading_date for p in points][-5:]
+
+    def test_each_session_uses_only_data_up_to_that_session(self):
+        """あるセッションのFactが、それ以降の観測を参照していない。"""
+        from src.intelligence.facts.market_builder import build_history_facts
+
+        points = series_points(list(range(100, 130)))
+        facts = build_history_facts(TOPIX, points, sessions=5, now=NOW)
+        for fact in facts:
+            for ref in fact.evidence:
+                observed_date = ref.ref_id.rsplit("_", 1)[-1]
+                assert observed_date <= fact.time.primary_date
+
+    def test_history_facts_are_deterministic_and_deduplicated(self):
+        from src.intelligence.facts.market_builder import build_history_facts
+
+        points = series_points(list(range(100, 130)))
+        first = build_history_facts(TOPIX, points, sessions=5, now=NOW)
+        second = build_history_facts(TOPIX, points, sessions=5,
+                                     now=NOW + timedelta(days=1))
+        assert [f.fact_id for f in first] == [f.fact_id for f in second]
+        assert len({f.fact_id for f in first}) == len(first)
+
+    def test_cross_series_history_covers_sessions(self):
+        from src.intelligence.facts.market_builder import (
+            build_cross_series_history_facts)
+
+        days = sessions(6)
+        facts = build_cross_series_history_facts(
+            NT_RATIO, NIKKEI, TOPIX,
+            [point(d, 39000 + i, prefix="nk") for i, d in enumerate(days)],
+            [point(d, 2700 + i, prefix="tp") for i, d in enumerate(days)],
+            subject_id="index:nikkei225_topix", unit="x",
+            calculation_name=calc.NT_RATIO, sessions=3, now=NOW)
+        assert sorted({f.time.primary_date for f in facts}) == days[-3:]
+
+    def test_cross_series_history_skips_unpaired_dates(self):
+        from src.intelligence.facts.market_builder import (
+            build_cross_series_history_facts)
+
+        days = sessions(4)
+        facts = build_cross_series_history_facts(
+            NT_RATIO, NIKKEI, TOPIX,
+            [point(d, 39000, prefix="nk") for d in days],
+            [point(d, 2700, prefix="tp") for d in days[:-1]],   # 最新日が片側欠落
+            subject_id="index:nikkei225_topix", unit="x",
+            calculation_name=calc.NT_RATIO, sessions=4, now=NOW)
+        assert days[-1] not in {f.time.primary_date for f in facts}

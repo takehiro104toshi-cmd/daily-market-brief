@@ -26,8 +26,8 @@ from .conflict import assess_conflicts
 from .market_builder import (
     NT_RATIO,
     SessionPoint,
-    build_cross_series_fact,
-    build_series_facts,
+    build_cross_series_history_facts,
+    build_history_facts,
 )
 from .store import FactStore
 
@@ -81,26 +81,29 @@ def load_points(index, qa: Dict[str, str], series_id: str,
 
 
 def build_all_market_facts(points_by_series: Dict[str, List[SessionPoint]],
-                           *, now: datetime) -> List:
+                           *, now: datetime, sessions: int = 5) -> List:
+    """直近 `sessions` 本の**各セッション時点**のFactを生成する。
+
+    各セッションはそのセッションまでの観測だけを入力にするため、
+    生成物はそのままlook-ahead-freeなsnapshot素材になる。
+    """
     facts: List = []
     for series_id, display_name, _unit in PILOT_SERIES:
         points = points_by_series.get(series_id, [])
         if points:
-            facts.extend(build_series_facts(series_id, points,
-                                            display_name=display_name, now=now))
-    nt = build_cross_series_fact(
+            facts.extend(build_history_facts(
+                series_id, points, sessions=sessions,
+                display_name=display_name, now=now))
+    facts.extend(build_cross_series_history_facts(
         NT_RATIO, NIKKEI, TOPIX, points_by_series.get(NIKKEI, []),
         points_by_series.get(TOPIX, []), subject_id="index:nikkei225_topix",
-        unit="x", calculation_name=calc.NT_RATIO, display_name="NT倍率", now=now)
-    if nt:
-        facts.append(nt)
-    spread = build_cross_series_fact(
+        unit="x", calculation_name=calc.NT_RATIO, sessions=sessions,
+        display_name="NT倍率", now=now))
+    facts.extend(build_cross_series_history_facts(
         "yield_spread", UST10Y, UST2Y, points_by_series.get(UST10Y, []),
         points_by_series.get(UST2Y, []), subject_id="rates:UST10Y_par_UST2Y_par",
-        unit="pct_point", calculation_name=calc.YIELD_SPREAD,
-        display_name="米10年-2年スプレッド", now=now)
-    if spread:
-        facts.append(spread)
+        unit="pct_point", calculation_name=calc.YIELD_SPREAD, sessions=sessions,
+        display_name="米10年-2年スプレッド", now=now))
     return facts
 
 
@@ -130,7 +133,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         {"series_coverage": coverage,
          "qa_assessments_indexed": len(qa)}, ensure_ascii=False))
 
-    facts = build_all_market_facts(points_by_series, now=now)
+    facts = build_all_market_facts(points_by_series, now=now,
+                                   sessions=args.sessions)
     facts = assess_conflicts(facts)
 
     store = FactStore(root)
@@ -197,7 +201,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         ensure_ascii=False))
 
     # ---- STEP 18: query foundation
-    sample = facts[0] if facts else None
+    # queryのサンプルは**derived fact**を選ぶ（入力IDの追跡を実証するため）
+    sample = next((f for f in facts if f.is_derived and f.input_ids),
+                  facts[0] if facts else None)
     print("::P3A_QUERY::" + json.dumps({
         "latest_topix_close": bool(store.latest_fact(TOPIX, "index_close")),
         "facts_for_series_topix": len(store.facts_for_series(TOPIX)),

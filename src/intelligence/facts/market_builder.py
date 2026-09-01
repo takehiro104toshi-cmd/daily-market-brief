@@ -298,3 +298,69 @@ def build_cross_series_fact(
             parameters={"left_series": left_series, "right_series": right_series,
                         "trading_date": left.trading_date}),
         created_at=created_at, session_count=1)
+
+
+def build_history_facts(
+    series_id: str,
+    points: Sequence[SessionPoint],
+    *,
+    sessions: int,
+    display_name: str = "",
+    now: Optional[datetime] = None,
+    ma_window: int = 25,
+) -> List[Fact]:
+    """直近 `sessions` 本の**各セッション時点**のFactを生成する（STEP 19/22）。
+
+    各セッションについて「そのセッションまでの観測だけ」を入力にしてFactを作る。
+    未来の観測を一切見ないため、生成物はそのままlook-ahead-freeなsnapshot素材になる。
+
+    `fact_id` は決定論的なので、期間が重なる再実行でも重複は生じない（冪等）。
+    """
+    usable = [p for p in points if p.usable]
+    if not usable:
+        return []
+    out: List[Fact] = []
+    seen: set = set()
+    start_index = max(0, len(usable) - sessions)
+    for end_index in range(start_index, len(usable)):
+        window = usable[: end_index + 1]
+        for fact in build_series_facts(series_id, window, display_name=display_name,
+                                       now=now, ma_window=ma_window):
+            if fact.fact_id not in seen:
+                seen.add(fact.fact_id)
+                out.append(fact)
+    return out
+
+
+def build_cross_series_history_facts(
+    fact_type: str,
+    left_series: str,
+    right_series: str,
+    left_points: Sequence[SessionPoint],
+    right_points: Sequence[SessionPoint],
+    *,
+    subject_id: str,
+    unit: str,
+    calculation_name: Tuple[str, str],
+    sessions: int,
+    display_name: str = "",
+    now: Optional[datetime] = None,
+) -> List[Fact]:
+    """cross fact（NT倍率・スプレッド）を直近 `sessions` 本ぶん生成する。"""
+    right_by_date = {p.trading_date: p for p in right_points if p.usable}
+    paired_dates = [p.trading_date for p in left_points
+                    if p.usable and p.trading_date in right_by_date]
+    out: List[Fact] = []
+    seen: set = set()
+    for trading_date in paired_dates[-sessions:]:
+        left_slice = [p for p in left_points if p.trading_date <= trading_date]
+        right_slice = [p for p in right_points if p.trading_date <= trading_date]
+        fact = build_cross_series_fact(
+            fact_type, left_series, right_series, left_slice, right_slice,
+            subject_id=subject_id, unit=unit, calculation_name=calculation_name,
+            display_name=display_name, now=now)
+        if fact and fact.fact_id not in seen:
+            seen.add(fact.fact_id)
+            out.append(fact)
+    return out
+
