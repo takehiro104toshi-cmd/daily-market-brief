@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.29 (2026-09-01) — Phase 2-G.2 closeout: TOPIX V2 live取得実証（G10 RESOLVED）
+
+### 改善
+
+- カタログ1.2.1: TOPIXを `probe: false` へ（live実証済み）。これにより
+  data bank healthのcritical gap判定が実データ由来で RESOLVED を導出する。
+
+### 実測（live pilot run #15・Light plan投入後）
+
+- **V2 authenticated fetch: HTTP 200**。`auth_method_validated: api_key_header`
+  が**初めて非空**になった（data endpointの200をもってのみ「検証済み」と宣言する
+  規律の帰結）。API Keyはヘッダのみで送信し、URL・raw payload・FetchAttempt・
+  ログ・例外のいずれにも秘密は出ていない。
+- 応答schema実測: top keys `["data"]` / row fields `["C","Date","H","L","O"]`
+  ——事前に一次情報で確認したV2仕様と**完全一致**（推測変換なし）。
+- TOPIX identity: `index:topix.close.closing.tokyo`。ETF（1306.T）・先物・
+  近似指数の代用なし。
+- historical **268営業日**（2025-07-28〜2026-09-01）・25DMA可能・unit `index`。
+- latest trading date **2026-09-01**・close `4181.86`・
+  as_of `2026-09-01T06:30:00+00:00`（15:30 JST）。
+- freshness **CURRENT_USABLE**（`gap_sessions: 0` / `lag_days: 0`。基準系列
+  日経平均の最新2026-08-31に対しTOPIXは同一以上のセッション）。Morning Compass
+  当日入力として**利用可**。
+- QA: **`MARKET_OBSERVATION:accept` 268件**（issue 0）。
+- 永続化: canonical 22,289観測＝別プロセスでのindex再構築22,289・
+  `recovered_lines: 0`・latest一致16/16・backup verify 0/0/0。
+- NT倍率 **266行**（latest 2026-08-31 = `15.954596 x`・input 2件の
+  observation_id＋`calculation_method: nt_ratio:1.0.0`）。TOPIXが2026-09-01まで
+  あるのに対し基準の日経平均が2026-08-31までのため、片側欠落の2026-09-01は
+  **生成していない**（同一trading_dateのみ・捏造しない）。
+- 併走系列も成功: JGB10Y 267行（〜2026-08-31・2.943 pct）／UST2Y_par 275行
+  （4.34 pct）／UST10Y_par 275行（4.75 pct）／official spread 275行
+  （0.41 pct_point）。Treasury dedupはFetchAttempt 1件・RawItem共有を維持。
+- **G10 = RESOLVED**（`live_authenticated_fetch` / `history_ge_25dma` /
+  `current_session_available` / `matches_reference_tokyo_session`）。
+
 ## v4.28 (2026-08-30) — Phase 2-G.2: J-Quants V1→V2 migration（TOPIX経路）
 
 ### 追加

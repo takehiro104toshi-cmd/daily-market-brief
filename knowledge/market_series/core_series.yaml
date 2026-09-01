@@ -23,7 +23,7 @@
 #   legacy実績のないprovider symbol（取得失敗はSOURCE GAPとして扱いエラーにしない）。
 
 id: market_series_core
-version: "1.2.0"
+version: "1.2.1"
 description: >-
   Market Data BankのCORE系列カタログ（series identity＋取得運用フィールド。
   Phase 2-D PART B / Phase 2-G official source gap closure）。
@@ -32,6 +32,8 @@ source: "監督者指示（P2-D/P2-G directive）＋legacy config.yaml stooq_sym
 status: active
 updated: "2026-08-30"
 changelog: >-
+  1.2.1（P2-G.2 closeout）: TOPIXをprobe:falseへ（Light plan投入後のrun #15で
+  V2 live取得を実証——HTTP 200・268行・最新2026-09-01・CURRENT_USABLE）。
   1.2.0（P2-G.2）: J-Quants V1（2026-06-01終了）からV2へ移行。TOPIXの
   endpoint_templateをV2の専用パス /v2/indices/bars/daily/topix へ、認証を
   API Key方式（env JQUANTS_API_KEY のruntime injection）へ更新。series identity
@@ -163,7 +165,8 @@ series:
     provider_symbols: { jquants: "topix", stooq: "^tpx" }
     preferred_source: jquants
     fallback_sources: []          # official経路のみ（stooq symbolは記録として残すがchainに入れない）
-    probe: true                   # J-Quants credential未投入のためlive未実証（実証後にfalse化）
+    probe: false                  # P2-G.2 live実証済み（run #15: V2 API Key認証HTTP 200・
+                                  # 268行 2025-07-28〜2026-09-01・CURRENT_USABLE）
     enabled: true
     role: CORE
     identity_notes: >-

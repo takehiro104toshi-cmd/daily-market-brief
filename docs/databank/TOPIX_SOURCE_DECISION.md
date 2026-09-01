@@ -294,3 +294,39 @@ run #13の実測がこれを裏づける:
 
 **やらないこと**: 1306.T等ETF・TOPIX先物・近似指数での代用
 （NO PROXY SUBSTITUTION）。プラン制約をコードで迂回することもしない。
+
+### 7.6 V2 live closeout（Light plan投入後・run #15・2026-09-01T09:17-09:21Z）
+
+**G10 = RESOLVED**。監督者指定の全条件をlive実測でPASS。
+
+| STEP | 実測 |
+|---|---|
+| 1 credential | `present: true` / `auth_method: api_key_header` / `api_version: v2` / 由来 `JQUANTS_API_KEY` |
+| 2 V2 authenticated fetch | **HTTP 200**・`records_seen: 268`・`pages: 1`・**`auth_method_validated: api_key_header`**（初めて非空——data endpointの200で確定） |
+| 2' 応答schema実測 | top keys `["data"]`／row fields `["C","Date","H","L","O"]` ——事前に確認したV2公式仕様（`{"data": [...]}`＋短縮名）と**完全一致** |
+| 3 historical | **268営業日**・`2025-07-28` 〜 `2026-09-01`・25DMA可能・unit `index` |
+| 4 latest trading date | **2026-09-01**・close `4181.86`・as_of `2026-09-01T06:30:00+00:00`（＝15:30 JST） |
+| 5 freshness | **CURRENT_USABLE**（`gap_sessions: 0`・`lag_days: 0`・基準系列 日経平均の最新 `2026-08-31` に対しTOPIXは同一以上のセッション。`matches_reference_tokyo_session`） |
+| 6 Morning Compass usability | **可**（`morning_usable: true`・`required_access_level: 現行取得内容で要件充足（実測ベース）`） |
+| 7 QA | **`MARKET_OBSERVATION:accept` 268件**（issue 0）。旧HISTORICAL評価も append-only で保持 |
+| 8 canonical / SQLite | 永続化検証 PASS（canonical 22,289観測＝別プロセスindex再構築22,289・`recovered_lines: 0`・latest一致16/16・mismatch 0） |
+| 9 NT倍率 | **266行**・latest `2026-08-31` = `15.954596 x`・inputs 2件（Nikkei/TOPIXのobservation_id）・`calculation_method: nt_ratio:1.0.0` |
+| 10 G10 | **RESOLVED**（`live_authenticated_fetch` / `history_ge_25dma` / `current_session_available` / `matches_reference_tokyo_session`） |
+
+**NT倍率の最新日が 2026-08-31 である理由**（隠さず記録する）: TOPIXは
+`2026-09-01` まで取得できているが、基準の日経平均（yfinance経路）は同時点で
+`2026-08-31` までしか無い。NT倍率は**同一trading_dateの現物指数close同士**
+でのみ生成するため、片側欠落の `2026-09-01` は生成していない（捏造しない）。
+
+**PLAN_CAPABILITYの最終状態**:
+
+- entitlement次元: **VERIFIED**（Light以上でTOPIX四本値が提供される——
+  公式ドキュメント・plan変更前の403 entitlement応答・plan変更後の200 の3系統で一致）。
+- 遅延・履歴範囲: 本runで**実測により確定**——Light planで
+  当日（2026-09-01）終値まで取得でき、履歴は少なくとも `2025-07-28` 以降を
+  取得できた（400日レンジ要求に対する実取得。プラン上限の全範囲は本runでは
+  要求していない）。
+
+**provenance**: provider `jquants` / `api_version: v2`。永続化locatorは
+`https://api.jquants.com/v2/indices/bars/daily/topix?from=…&to=…`
+（API Keyはヘッダのみのため**URLに秘密が残らない**）。

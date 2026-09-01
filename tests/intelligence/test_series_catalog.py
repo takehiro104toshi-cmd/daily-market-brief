@@ -12,7 +12,7 @@ from .market_fixtures import catalog
 class TestCatalogLoad:
     def test_core_series_present_and_valid(self):
         c = catalog()
-        assert c.catalog_version == "1.2.0"
+        assert c.catalog_version == "1.2.1"
         enabled = {s.series_id for s in c.enabled_series()}
         # 監督者指定CORE集合（取得可能分）が全て定義されている
         for required in (

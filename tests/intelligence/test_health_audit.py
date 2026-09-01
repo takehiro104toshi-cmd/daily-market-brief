@@ -11,7 +11,12 @@ from src.intelligence.databank.article_store import (
     JsonlArticleStore,
 )
 from src.intelligence.databank.backfill import JsonlNewsBankStore
-from src.intelligence.databank.health import BLOCKED, build_health_report
+from src.intelligence.databank.health import (
+    BLOCKED,
+    DEGRADED,
+    SOURCE_VALIDATED_NOT_LOCAL,
+    build_health_report,
+)
 from src.intelligence.databank.news_model import NewsItem
 from src.intelligence.databank.phase2_audit import build_phase2_reconciliation
 from src.intelligence.databank.sqlite_index import SqliteNewsIndex
@@ -112,13 +117,20 @@ class TestHealthReport:
         assert report["components"]["news_bank"]["qa_coverage_pct"] == 100.0
         # market bankなし→DEGRADED理由コード（単一scoreではなくreason優先）
         assert "market_bank_not_local" in report["reason_codes"]
-        # CRITICAL SOURCE GAPSは必ず表示・Phase 3はBLOCKED
+        # CRITICAL SOURCE GAPSは**状態に関わらず必ず表示**する
         p3 = report["components"]["phase3_readiness"]
-        assert p3["state"] == BLOCKED
         gaps = {g["series_id"] for g in p3["critical_source_gaps"]}
         assert gaps == {"index:topix.close.closing.tokyo",
                         "rates:JGB10Y.yield.closing.tokyo",
                         "rates:UST2Y.yield.closing.us"}
+        # P2-G.2 closeout後: 3ギャップともカタログ上live実証済み（probe:false）だが、
+        # このfixtureにはmarket bankが無い。「供給元は実証済み・ローカルには無い」を
+        # BLOCKEDと混同せず区別する（ローカル欠如を供給元ギャップとして偽らない）。
+        assert all(g["status"] == SOURCE_VALIDATED_NOT_LOCAL
+                   for g in p3["critical_source_gaps"])
+        assert p3["state"] == DEGRADED
+        assert p3["reason_codes"] == [
+            "gap_closure_validated_awaiting_supervisor_promotion"]
 
     def test_mismatch_becomes_blocked(self, tmp_path):
         bank = _build_bank(tmp_path)
