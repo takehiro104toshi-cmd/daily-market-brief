@@ -1,4 +1,16 @@
-"""J-Quants認証方式の実測プローブ（P2-G.1 / credential投入後）。
+"""P2-G.1 認証方式判定プローブ（**HISTORICAL PROBE — production pathではない**）。
+
+run #10〜#12 の調査で使用。V1エンドポイントに対する搬送方式の総当たり判定で、
+**V1 EOLにより現行仕様ではない**（当時の403の記録はdocsに保全済み）。
+
+隔離規律（tests/intelligence/test_legacy_isolation.py で固定）:
+- production配線モジュール（pilot_runner / backfill / store 等）から参照しない
+- workflowの実行ステップに入れない
+- 当時の実測evidenceはdocs/へappend-onlyで保全してあるため、本ファイルは
+  **再現・参照用**として残す（削除しない）
+
+--- 以下、当時の実装ノート ---
+J-Quants認証方式の実測プローブ（P2-G.1 / credential投入後）。
 
 目的: **JQUANTS_API_KEY が現行の正式な認証方式か**を、公式ドキュメントと
 実API応答から確定する。旧方式（mail/password → refreshToken → idToken）を

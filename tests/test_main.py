@@ -1,4 +1,5 @@
 """main.py の --date オプションと latest_market_brief.md 生成をネットワークなしで検証する。"""
+from pathlib import Path
 from unittest.mock import patch
 
 import yaml
@@ -28,6 +29,15 @@ def _write_minimal_config(tmp_path) -> str:
         "investing_sources": [],
         "boj_sources": [],
         "mof_sources": [],
+        # v2.9 Source Expansion Engine で追加された収集モジュール。
+        # ここを空にしないと config.get(...) が None を返し、collector側の
+        # 既定URL（実サイト）へフォールバックして**テストが実ネットワークへ出る**。
+        "fed_sources": [],
+        "sec_sources": [],
+        "us_gov_stats_sources": [],
+        "ecb_sources": [],
+        "crypto_news_sources": [],
+        "yahoo_finance_us_sources": [],
         "edinet": {"documents_url": "http://127.0.0.1:1/documents.json"},
         "fred": {
             "csv_url_template": "http://127.0.0.1:1/fredgraph.csv?id={series_id}",
@@ -36,6 +46,12 @@ def _write_minimal_config(tmp_path) -> str:
         "themes": [],
         "sectors": {},
         "output": {"dir": str(tmp_path), "timezone": "Asia/Tokyo", "headlines_per_source": 8},
+        # 実行時生成データの書き込み先をtmpへ隔離する（既定はリポジトリ配下の
+        # data/... なので、指定しないとテストが**追跡対象の実データを書き換える**）。
+        "investment_journal": {"dir": str(tmp_path / "investment_journal")},
+        "theme_learning": {"dir": str(tmp_path / "theme_learning")},
+        "translation": {"cache_dir": str(tmp_path / "translation_cache")},
+        "rashinban": {"dir": str(tmp_path / "rashinban")},
     }
     config_path = tmp_path / "config.yaml"
     config_path.write_text(yaml.safe_dump(config, allow_unicode=True), encoding="utf-8")
@@ -145,3 +161,58 @@ def test_generate_report_continues_even_if_notification_send_raises(tmp_path, mo
         out_path = main_module.generate_report(config_path=config_path, date_str="2026-07-01")
 
     assert out_path.exists()
+
+
+# --- テスト隔離のリグレッションガード（PROJECT-WIDE RETROACTIVE AUDIT） -------
+#
+# 背景: main.py は各collectorへ `config.get("<name>_sources")` を渡す。キーが
+# 無いと None になり、collector側の**既定URL（実サイト）**へフォールバックする。
+# テスト用configがcollector追加に追随していないと、オフライン前提のテストが
+# 静かに実ネットワークへ出る（v2.9で追加された fed/sec/us_gov_stats/ecb/
+# crypto_news/yahoo_finance_us で実際に発生していた）。
+# 同様に、実行時生成データの出力先を指定しないとリポジトリ配下の data/... を
+# 書き換えてしまう（data/investment_journal/journal.json で実際に発生していた）。
+
+def _minimal_config_dict(tmp_path) -> dict:
+    return yaml.safe_load(open(_write_minimal_config(tmp_path), encoding="utf-8"))
+
+
+def test_minimal_config_neutralizes_every_collector_source_key(tmp_path):
+    """main.pyが参照する `*_sources` キーを、テスト用configが漏れなく空にしている。
+
+    collectorが追加されたのにテスト用configが追随していない場合にここで落ちる
+    （＝実ネットワークへ出る前に検知する）。
+    """
+    import re
+
+    main_source = Path(main_module.__file__).read_text(encoding="utf-8")
+    referenced = set(re.findall(r'config\.get\("(\w+_sources)"\)', main_source))
+    assert referenced, "main.py から *_sources キーを検出できなかった（検査自体の劣化）"
+
+    config = _minimal_config_dict(tmp_path)
+    missing = sorted(k for k in referenced if k not in config)
+    assert not missing, (
+        "テスト用configに未設定のcollectorキーがある（既定の実URLへフォールバックし"
+        f"実ネットワークへ出る）: {missing}"
+    )
+    assert all(config[k] == [] for k in referenced)
+
+
+def test_generate_report_does_not_write_into_repository_data_dir(tmp_path):
+    """レポート生成がリポジトリ追跡下の data/ を書き換えない（テスト副作用の防止）。"""
+    repo_root = Path(main_module.__file__).resolve().parent
+    watched = [
+        repo_root / "data" / "investment_journal" / "journal.json",
+        repo_root / "data" / "theme_learning",
+        repo_root / "data" / "translation_cache",
+    ]
+    before = {p: (p.read_bytes() if p.is_file() else None) for p in watched}
+    existed = {p: p.exists() for p in watched}
+
+    config_path = _write_minimal_config(tmp_path)
+    main_module.generate_report(config_path=config_path, date_str="2026-07-01")
+
+    for path in watched:
+        assert path.exists() == existed[path], f"{path} の存在状態が変化した"
+        if before[path] is not None:
+            assert path.read_bytes() == before[path], f"{path} がテストで書き換えられた"

@@ -1,5 +1,13 @@
 # PHASE2_ACCEPTANCE_REPORT — Phase 2受入報告（P2-A〜P2-F / 2026-08-30）
 
+> **現況注記（2026-09-01・P2-G.2 closeout後に追記）**
+> 本レポートは **Phase 2-F受理時点（2026-08-30）のHISTORICAL RECORD**。
+> 下表「未充足事項」#1 に挙げた **TOPIX / JGB10Y / UST2Y（G10/G11）は
+> その後すべてRESOLVED**（P2-G / P2-G.1 / P2-G.2、live pilot run #7・#15）。
+> 現在のgap状態は `docs/sources/SOURCE_GAPS.md` と
+> `docs/databank/CRITICAL_MARKET_SOURCE_GAP_CLOSURE.md` §6 が正。
+> 本文は当時の判断根拠として上書きせず保全する。
+
 Phase 2の目標: **説明可能・訂正可能・再構築可能（EXPLAINABLE / CORRECTABLE /
 REBUILDABLE）なNews＋Market Data Bank**。分析（Phase 3以降）はまだ作らない。
 

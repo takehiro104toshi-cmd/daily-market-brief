@@ -4,7 +4,10 @@
 
 ## 1. カタログの所在と形式
 
-- 正: `knowledge/market_series/core_series.yaml`（versioned config・v1.0.0）。
+- 正: `knowledge/market_series/core_series.yaml`（versioned config）。
+  **現行版数はYAML内の `version` フィールドが正**（本specに版数を焼き込まない
+  ——docsとカタログが乖離する原因になるため）。版ごとの変更内容はYAML冒頭の
+  `changelog` に記録する。
   巨大なPython hardcode一覧は作らない（P2-A決定の実装）。
 - loader/validator: `src/intelligence/market/series_catalog.py`（読み取り専用・
   検証失敗はValueErrorで黙って通さない）。

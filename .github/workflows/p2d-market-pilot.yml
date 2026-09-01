@@ -1,9 +1,13 @@
 # P2-D Market Data Bank live pilot（Phase 2-D / 監督者必須Gate）
 #
-# CORE系列（約15）を実ネットワークで取得し、取込→QA→canonical→index→派生→
-# 別プロセス永続化検証→backup manifestまでを一本で実証する。
-# feature branch限定・triggerファイル更新時のみ・1系列=1リクエスト（bulk禁止）・
-# Secrets不使用。Legacy本番workflow・GitHub Pagesへは影響しない。
+# CORE系列（カタログのenabled系列）を実ネットワークで取得し、取込→QA→canonical→
+# index→派生→別プロセス永続化検証→backup manifestまでを一本で実証する。
+# feature branch限定・triggerファイル更新時のみ・1系列=1リクエスト（bulk禁止）。
+# Legacy本番workflow・GitHub Pagesへは影響しない。
+#
+# Secretsは **JQUANTS_API_KEY のみ** をruntime injectionする（P2-G.2以降。
+# TOPIXのJ-Quants V2認証に必要な最小限。値はログ・URL・raw payload・
+# FetchAttemptのいずれにも出力しない。未設定なら空文字＝正常停止）。
 name: p2d-market-pilot
 
 on:

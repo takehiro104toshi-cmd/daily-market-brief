@@ -1,4 +1,16 @@
-"""P2-G公式ソース実測プローブ（研究用・GitHub Actionsで実行）。
+"""P2-G 公式ソース実測プローブ（**HISTORICAL PROBE — production pathではない**）。
+
+run #6〜#8 の調査で使用。現在はworkflow・production pathのいずれからも
+呼ばれない。**J-Quants部分はV1（2026-06-01終了）を叩くため現行仕様ではない**。
+
+隔離規律（tests/intelligence/test_legacy_isolation.py で固定）:
+- production配線モジュール（pilot_runner / backfill / store 等）から参照しない
+- workflowの実行ステップに入れない
+- 当時の実測evidenceはdocs/へappend-onlyで保全してあるため、本ファイルは
+  **再現・参照用**として残す（削除しない）
+
+--- 以下、当時の実装ノート ---
+P2-G公式ソース実測プローブ（研究用・GitHub Actionsで実行）。
 
 CRITICAL MARKET SOURCE GAP CLOSURE（TOPIX / JGB10Y / UST2Y）のsource調査:
 - U.S. Treasury Daily Treasury Par Yield Curve Rates（CSVエンドポイント変種）

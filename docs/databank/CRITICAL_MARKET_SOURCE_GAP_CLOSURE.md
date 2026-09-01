@@ -1,5 +1,13 @@
 # CRITICAL_MARKET_SOURCE_GAP_CLOSURE — Phase 2-G報告（2026-08-30）
 
+> **現況（2026-09-01・P2-G.2 closeout時点）**
+> **G10 = RESOLVED / G11 = RESOLVED — CRITICAL MARKET SOURCE GAPSは全て解消**。
+> 本文§1〜§5.xは **Phase 2-G（2026-08-30）時点のHISTORICAL RECORD** であり、
+> そこに書かれた `PARTIALLY_RESOLVED` / `topix_credential_missing` /
+> `BLOCKED` は**当時の状態**。現在の状態は下の **§6 P2-G.2 closeout** と
+> `TOPIX_SOURCE_DECISION.md` §7 が正。
+> 歴史は上書きせずappend-onlyで保全する（当時の判断根拠を消さないため）。
+
 対象は監督者指定の3系列のみ: **TOPIX / JGB10Y / UST2Y**。
 最上位原則: **NO PROXY SUBSTITUTION**（TOPIX→ETF・JGB10Y→別年限/入札・
 UST2Y→別概念yield/ETF/futures impliedの代用禁止——全て遵守）。
@@ -128,3 +136,24 @@ UST10Y_parが同じ2025ファイルを再取得して読み取りタイムアウ
   TOPIX: **PENDING**（credential）
 - → 総合 **PHASE2G_PARTIAL**（3系列全解決ではないため正直にPARTIALで停止。
   TOPIX live成功後にPHASE2G_CRITICAL_MARKET_GAPS_CLOSEDへ昇格可能）
+
+## 6. P2-G.2 closeout（2026-09-01・SUPERSEDES §5 / §5.1）
+
+J-Quants **V1は2026-06-01に終了**しており、Phase 2-G当時に叩いていた
+`/v1/...` は現行仕様ではなかった。V2（API Keyヘッダ認証・
+`/v2/indices/bars/daily/topix`）へ移行し、Light plan投入後の
+**live pilot run #15（2026-09-01）**でTOPIX取得を実証した。
+
+| gap | 状態 | 証拠 |
+|---|---|---|
+| **G10 TOPIX** | **RESOLVED**（§5の PARTIALLY_RESOLVED を置き換え） | run #15: HTTP 200・`auth_method_validated: api_key_header`・**268営業日** 2025-07-28〜2026-09-01・latest close 4181.86（as_of 15:30 JST）・freshness **CURRENT_USABLE**（gap_sessions 0）・MARKET_OBSERVATION QA accept 268件・canonical/SQLite再構築一致・NT倍率266行 |
+| **G11 UST2Y** | **RESOLVED**（変更なし） | run #15でも success 275行（〜2026-08-31・4.34 pct） |
+| **G11 JGB10Y** | **RESOLVED**（変更なし） | run #15でも success 267行（〜2026-08-31・2.943 pct） |
+
+カタログ1.2.1でTOPIXを **probe:false** 化（live実証済み）。これにより
+health の `phase3_readiness` は3ギャップすべてを機械的に解決済みとして扱う
+（ローカルにmarket bankが無い環境では `SOURCE_VALIDATED_DATA_NOT_LOCAL` /
+`DEGRADED` ——「供給元は実証済み・ローカルには無い」をBLOCKEDと混同しない）。
+
+**NO PROXY SUBSTITUTION は全期間を通じて遵守**: TOPIXはETF（1306.T）・先物・
+近似指数で代用していない。取得できなかった期間は正直に欠測とした。

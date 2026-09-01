@@ -35,12 +35,17 @@ legacyコードの変更は一切ない（adapter側で参照・複製のみ）�
   として保持（ローカル実行・自宅IPでは有効な経路）。診断の道具（snippet・
   error_detail）はコードに残し、将来の供給元障害の切り分けに使う。
 
-## 3. symbol対応表（カタログ v1.0.0）
+## 3. symbol対応表（カタログ **v1.2.1**・2026-09-01時点）
+
+> **更新履歴**: v1.0.0（P2-D）ではTOPIX/JGB10Y/UST2YがStooq probe経路のみだった。
+> P2-G以降、3系列とも**PRIMARY_OFFICIAL経路**へ切り替えて解決済み（G10/G11）。
+> 旧行はそのまま残さず現行値へ更新する（本表は「現在の対応」を示す仕様表であり、
+> 当時の実測記録は `CRITICAL_MARKET_SOURCE_GAP_CLOSURE.md` に保全してある）。
 
 | series_id | preferred | yfinance | stooq(fallback) |
 |---|---|---|---|
 | index:nikkei225.close.closing.tokyo | yfinance | ^N225 | ^nkx |
-| index:topix.close.closing.tokyo | stooq | —（1306.T ETFは**流用しない**） | ^tpx（probe） |
+| index:topix.close.closing.tokyo | **jquants**（V2 official・fallbackなし） | —（1306.T ETFは**流用しない**） | ^tpx（記録のみ・chain対象外） |
 | index:dji.close.closing.us | yfinance | ^DJI | ^dji |
 | index:spx.close.closing.us | yfinance | ^GSPC | ^spx |
 | index:nasdaq_composite.close.closing.us | yfinance | ^IXIC | ^ndq |
@@ -48,8 +53,10 @@ legacyコードの変更は一切ない（adapter側で参照・複製のみ）�
 | index:vix.close.closing.us | yfinance | ^VIX | ^vix |
 | fx:USDJPY.rate.closing.global | yfinance | JPY=X | usdjpy |
 | fx:EURUSD.rate.closing.global | yfinance | EURUSD=X | eurusd |
-| rates:JGB10Y.yield.closing.tokyo | stooq | — | 10jpy.b（probe） |
-| rates:UST2Y.yield.closing.us | stooq | — | 2usy.b（probe） |
+| rates:JGB10Y.yield.closing.tokyo | **mof_japan**（財務省国債金利情報・fallbackなし） | — | 10jpy.b（記録のみ） |
+| rates:UST2Y.yield.closing.us | —（identity定義のみ・enabled:false） | — | 2usy.b（probe） |
+| rates:UST2Y_par.yield.closing.us【P2-G新設】 | **treasury_gov**（official par yield） | — | — |
+| rates:UST10Y_par.yield.closing.us【P2-G新設】 | **treasury_gov**（official par yield） | — | — |
 | rates:UST10Y.yield.closing.us | yfinance | ^TNX | 10usy.b |
 | futures:wti_cont.close.closing.us | yfinance | CL=F | cl.f |
 | futures:gold_cont.close.closing.us | yfinance | GC=F | gc.f |

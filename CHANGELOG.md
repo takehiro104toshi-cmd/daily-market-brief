@@ -4,6 +4,80 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.30 (2026-09-01) — PROJECT-WIDE RETROACTIVE AUDIT（既存状態の棚卸しと不整合の解消）
+
+プロジェクト開始時点から現在までの全実装・全Phaseを対象に、**現在のリポジトリを
+Ground Truth**として実装／テスト／live evidence／catalog／health／workflow／
+documentation／CHANGELOG／Git historyを横断照合した。新Phase・新機能の実装は行わない。
+
+### 修正
+
+- **テストが実ネットワークへ出ていた（test isolation違反・重大）**:
+  `main.py` は各collectorへ `config.get("<name>_sources")` を渡し、キーが無いと
+  collector側の**既定URL（実サイト）**へフォールバックする。v2.9で追加された
+  `fed` / `sec` / `us_gov_stats` / `ecb` / `crypto_news` / `yahoo_finance_us` が
+  テスト用configに追随しておらず、「ネットワークなしで検証する」と明記された
+  テストが毎回実サイトへ接続していた（1回の全体実行で103接続を実測）。
+  テスト用configで全キーを空にして解消（**production semanticsは無変更**）。
+  full suiteの実行時間も約60秒→約27秒へ短縮。
+- **テストが追跡対象の実データを書き換えていた**:
+  `investment_journal.dir` 等を指定しないと既定のリポジトリ配下
+  `data/investment_journal/` へ書き込むため、`tests/test_main.py` /
+  `tests/test_v4_schedule_main.py` の実行で `journal.json` の `top_news` が
+  空配列に上書きされていた。出力先をtmpへ隔離して解消。
+- **legacy V1 providerのTypeError**: `jquants_topix.py` の `no_symbol` 分岐で
+  `**base` と `url=` が二重指定になりTypeErrorを送出していた（V2側は修正済み）。
+  GAPとして正常に返すよう最小修正。
+
+### 改善
+
+- **legacy/probeコードの隔離明示**: J-Quants **V1**（2026-06-01終了）モジュールへ
+  LEGACY/SUPERSEDEDバナーを追加。調査用プローブ3件
+  （`p2g_probe` / `p2g1_auth_probe` / `p2g2_v2_discovery`）へ
+  HISTORICAL PROBEバナーを追加。**削除はしない**（当時の実測を再現・参照するため）。
+- **workflowの記述と実態の一致**: `p2d-market-pilot.yml` のヘッダが
+  「Secrets不使用」のままだったため、`JQUANTS_API_KEY` のみをruntime injectionする
+  現状を明記。
+- **stale documentationの解消**（歴史は上書きせず注記・追記で明確化）:
+  `CRITICAL_MARKET_SOURCE_GAP_CLOSURE.md`（G10がPARTIALLY_RESOLVEDのまま）へ
+  現況バナーと §6 closeoutを追加、`PHASE2_ACCEPTANCE_REPORT.md` へ現況注記、
+  `DATA_BANK_HEALTH_SPEC.md` へ状態導出表と §5 現況を追加、
+  `MARKET_SOURCE_MAPPING.md` のsymbol対応表を現行カタログへ更新、
+  `MARKET_DATA_QUALITY.md` の「データなし3系列」をHISTORICAL RECORD化、
+  `MARKET_SERIES_CATALOG_SPEC.md` からカタログ版数の焼き込みを除去。
+
+### 追加（リグレッションガード。テストのみ・production変更なし）
+
+- `test_secret_hygiene.py`【新規】: 追跡ファイル全体を対象に、プロバイダ発行キー
+  形式のリテラルと**credentialを載せたURL**を検出（値は検出時も出力しない）。
+  V2 providerがAPI Keyをヘッダでのみ送りURL/body/error_detailへ残さないことも固定。
+- `test_legacy_isolation.py`【新規】: V1 providerとprobeモジュールが
+  production path・workflowから到達不能であること、pilot workflowが注入する
+  secretが `JQUANTS_API_KEY` **のみ**であること、docsがcatalogと矛盾しないこと、
+  V1を現行APIとして記載したdocsが無いことを固定。
+- `test_derived_provenance_audit.py`【新規】: run #15の実測形（TOPIXだけ1営業日
+  新しい）でNT倍率を**forward-fillしない**ことを両方向で固定。provenance
+  （入力2件のobservation_id＋calculation_method）・Decimal・ゼロ除算・欠測も固定。
+- `test_jquants_v2.py`: G10のacceptance criteriaを機械検証（25DMA閾値・
+  遅延データはRESOLVEDにしない・履歴不足はRESOLVEDにしない・
+  live source validationとlocal data availabilityの区別）。
+- `test_main.py`: collectorキーの網羅性と、レポート生成がリポジトリ配下
+  `data/` を書き換えないことを固定。
+
+### 監査結果（修正不要と確認した領域）
+
+- Git history: revert・hotfix・意図しない巻き戻しなし（480 commits・linear）。
+- secret混入: 追跡ファイル・Git history・workflowいずれにも実値なし。
+  workflowはsecretをechoしていない。
+- catalog↔implementation: provider集合・preferred_source・api_version・
+  probe/enabledが一致。
+- health/gap/gate: G10/G11を含む全gapが実データから機械導出され、
+  live source validationとlocal data availabilityが別次元で扱われている。
+- 派生データ: NT倍率・spreadとも同一trading_dateのみで生成し、
+  片側欠落日を補完しない。provenanceは全行で完全。
+- TODO/FIXME/XXX/HACK: `src/` `tests/` `main.py` に0件。
+- vNextコードにbare except / except-passなし（fail-openなし）。
+
 ## v4.29 (2026-09-01) — Phase 2-G.2 closeout: TOPIX V2 live取得実証（G10 RESOLVED）
 
 ### 改善

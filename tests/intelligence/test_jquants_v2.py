@@ -460,3 +460,83 @@ class TestG10Reassessment:
     def test_plan_capability_unverified_without_evidence(self):
         report = access_requirement_report(self.NO_DATA_FRESHNESS)
         assert report["plan_capability"] == PLAN_CAPABILITY_UNVERIFIED
+
+
+# ================================ acceptance criteria（P2-G.2 closeout gate）
+#
+# PROJECT-WIDE RETROACTIVE AUDIT: live pilot run #15（2026-09-01）で満たした
+# G10のacceptance criteriaを**機械検証可能な形で固定**する。
+# ドキュメントの文字列ではなく、g10_state()が実際にこの条件でのみRESOLVEDを
+# 返すことを検査する（documentationを先にPASSへ書き換える運用の防止）。
+
+class TestG10AcceptanceCriteria:
+    #: run #15 実測値（docs/databank/TOPIX_SOURCE_DECISION.md §7.6）
+    RUN15_HISTORY_ROWS = 268
+    RUN15_LATEST = "2026-09-01"
+    RUN15_REFERENCE_LATEST = "2026-08-31"
+
+    def _freshness(self, *, rows, verdict, reasons=("matches_reference_tokyo_session",)):
+        from src.intelligence.market.topix_freshness import TopixFreshness
+        return TopixFreshness(
+            verdict=verdict, history_rows=rows,
+            latest_trading_date=self.RUN15_LATEST,
+            first_trading_date="2025-07-28", lag_days=0,
+            reference_series_id=NIKKEI_SERIES_ID,
+            reference_latest_trading_date=self.RUN15_REFERENCE_LATEST,
+            gap_sessions=0, reason_codes=reasons)
+
+    def test_min_history_threshold_is_25_sessions(self):
+        from src.intelligence.market.topix_freshness import MIN_HISTORY_ROWS
+        assert MIN_HISTORY_ROWS == 25          # 25DMA要件（監督者指定）
+        assert self.RUN15_HISTORY_ROWS >= MIN_HISTORY_ROWS
+
+    def test_run15_shape_resolves_g10(self):
+        from src.intelligence.market.topix_freshness import CURRENT_USABLE
+
+        state, reasons = g10_state(
+            self._freshness(rows=self.RUN15_HISTORY_ROWS, verdict=CURRENT_USABLE),
+            credential_present=True)
+        assert state == "RESOLVED"
+        assert "live_authenticated_fetch" in reasons
+        assert "history_ge_25dma" in reasons
+        assert "current_session_available" in reasons
+
+    def test_delayed_data_does_not_resolve_even_with_long_history(self):
+        """API成功＋長い履歴でも、当日利用不可ならRESOLVEDにしない。"""
+        from src.intelligence.market.topix_freshness import DELAYED_NOT_CURRENT
+
+        state, _ = g10_state(
+            self._freshness(rows=self.RUN15_HISTORY_ROWS, verdict=DELAYED_NOT_CURRENT,
+                            reasons=("behind_reference_tokyo_session",)),
+            credential_present=True)
+        assert state == "HISTORICAL_RESOLVED_CURRENT_BLOCKED"
+
+    def test_short_history_does_not_resolve_even_when_current(self):
+        """当日データがあっても25DMA未満ならRESOLVEDにしない。"""
+        from src.intelligence.market.topix_freshness import CURRENT_USABLE
+
+        state, reasons = g10_state(
+            self._freshness(rows=24, verdict=CURRENT_USABLE), credential_present=True)
+        assert state == "PARTIALLY_RESOLVED"
+        assert "insufficient_history_for_25dma" in reasons
+
+    def test_catalog_marks_topix_live_validated(self):
+        """live実証済み＝probe:false がカタログに反映されている（closeout metadata）。"""
+        spec = CATALOG.get(TOPIX_SERIES_ID)
+        assert spec.enabled is True
+        assert spec.probe is False
+        assert spec.preferred_source == "jquants"
+        assert spec.fallback_sources == ()     # official経路のみ・proxy fallbackなし
+
+    def test_health_treats_source_validation_and_local_data_separately(self, tmp_path):
+        """live実証済みだがローカルにデータが無い状態をBLOCKEDと混同しない。"""
+        from src.intelligence.databank.health import (
+            SOURCE_VALIDATED_NOT_LOCAL,
+            build_health_report,
+        )
+
+        report = build_health_report(tmp_path)   # market bankなしの空root
+        gaps = report["components"]["phase3_readiness"]["critical_source_gaps"]
+        assert {g["gap"] for g in gaps} == {"G10", "G11"}
+        assert all(g["status"] == SOURCE_VALIDATED_NOT_LOCAL for g in gaps)
+        assert report["components"]["phase3_readiness"]["state"] != "BLOCKED"

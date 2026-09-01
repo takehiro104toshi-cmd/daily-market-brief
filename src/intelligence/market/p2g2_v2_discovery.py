@@ -1,4 +1,16 @@
-"""J-Quants **V2** 公式仕様の実測ディスカバリ（P2-G.2 STEP 1）。
+"""P2-G.2 V2仕様ディスカバリ・プローブ（**HISTORICAL PROBE — production pathではない**）。
+
+run #13 で使用し、V2 base URL・TOPIXパス・API Key搬送方式を実測特定した。
+仕様確定後は `jquants_v2.py` が正であり、本モジュールは再実行不要。
+
+隔離規律（tests/intelligence/test_legacy_isolation.py で固定）:
+- production配線モジュール（pilot_runner / backfill / store 等）から参照しない
+- workflowの実行ステップに入れない
+- 当時の実測evidenceはdocs/へappend-onlyで保全してあるため、本ファイルは
+  **再現・参照用**として残す（削除しない）
+
+--- 以下、当時の実装ノート ---
+J-Quants **V2** 公式仕様の実測ディスカバリ（P2-G.2 STEP 1）。
 
 背景（監督者訂正）: J-Quants APIはV1→V2へ移行し、**V1は2026-06-01に終了**。
 run #7〜#12で観測した403は credential不正と断定せず、

@@ -1,5 +1,18 @@
 """J-Quants TOPIX provider（Phase 2-G / P2-G.1 credentialed closeout）。
 
+**LEGACY / SUPERSEDED — 現行のproduction pathではない（2026-09-01時点）**
+
+- J-Quants **V1 APIは2026-06-01に終了**しており、本モジュールが叩く
+  `https://api.jquants.com/v1/...` と V1のtoken認証（mail/password →
+  refreshToken → idToken）は**現行仕様ではない**。
+- 現行のTOPIX取得は `jquants_v2.JQuantsV2TopixProvider`（V2・API Keyヘッダ認証・
+  `/v2/indices/bars/daily/topix`）が担う。catalog・pilot_runner・workflowの
+  いずれからも本モジュールのproviderは呼ばれない（テストで固定）。
+- 本モジュールは**当時の実測記録を再現・参照するためのhistorical reference**
+  として残す。新規のproduction配線へ組み込まないこと。
+- なお `Secret` / `CredentialResolution` / `scrub` はAPI版数に依存しない
+  秘密安全の基礎部品であり、V2からも共有している（V1固有の資産ではない）。
+
 series identity:
 - J-Quants（JPX子会社 JPX Market Innovation & Research 運営の公式データAPI）の
   指数四本値エンドポイント（/v1/indices/topix）が返す**TOPIX Price Index値そのもの**。
@@ -316,8 +329,9 @@ class JQuantsTopixProvider:
         base = dict(provider_id=self.provider_id, series_id=spec.series_id,
                     symbol=symbol, url=public_url, retrieved_at=now)
         if not symbol:
+            # baseのurlを空へ差し替える（**base と url= の二重指定はTypeError）
             return ProviderFetchResult(
-                **base, url="", error_kind="no_symbol",
+                **{**base, "url": ""}, error_kind="no_symbol",
                 error_detail="catalogに本providerのsymbolなし")
 
         # ---- STEP 1: credential presence check（未設定ならネットワークを叩かない）

@@ -36,7 +36,14 @@
   未来as_of）**検出0**。
 - 派生13,080件もQA済み（依存伝播: 入力assessmentのGate結果を透過）。
 
-## 3. データなし3系列（正直なGAP——捏造・代替流用をしない）
+## 3. データなし3系列（Phase 2-D時点のHISTORICAL RECORD）
+
+> **現況（2026-09-01）: 本節の3系列はすべて解決済み**。
+> TOPIX=J-Quants V2（G10 RESOLVED・run #15）、JGB10Y=財務省国債金利情報、
+> UST2Y=Treasury official par yield（`rates:UST2Y_par`）で取得できている
+> （G11 RESOLVED・run #7/#15）。cross派生（official spread・NT倍率）も出力済み。
+> 以下はP2-D当時の記録であり、当時の判断根拠として保全する。
+
 
 | series | 理由 | トラック |
 |---|---|---|

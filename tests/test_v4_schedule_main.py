@@ -26,12 +26,21 @@ def _config(tmp_path, extra_schedule=None) -> str:
         "news_sources": [], "nikkei_sources": [], "bloomberg_sources": [], "reuters_sources": [],
         "cnbc_sources": [], "wsj_sources": [], "marketwatch_sources": [], "investing_sources": [],
         "boj_sources": [], "mof_sources": [],
+        # v2.9追加分。空にしないとcollectorの既定URL（実サイト）へフォールバックし、
+        # テストが実ネットワークへ出てしまう。
+        "fed_sources": [], "sec_sources": [], "us_gov_stats_sources": [],
+        "ecb_sources": [], "crypto_news_sources": [], "yahoo_finance_us_sources": [],
         "tdnet": {"list_url_template": "http://127.0.0.1:1/{date}.html", "lookback_days": 1},
         "edinet": {"documents_url": "http://127.0.0.1:1/d.json"},
         "fred": {"csv_url_template": "http://127.0.0.1:1/{series_id}.csv", "series": []},
         "themes": [], "sectors": {},
         "output": {"dir": str(tmp_path / "output"), "timezone": "Asia/Tokyo", "headlines_per_source": 8},
         "report_schedule": sched,
+        # 実行時生成データをtmpへ隔離（既定はリポジトリ配下の data/...）
+        "investment_journal": {"dir": str(tmp_path / "investment_journal")},
+        "theme_learning": {"dir": str(tmp_path / "theme_learning")},
+        "translation": {"cache_dir": str(tmp_path / "translation_cache")},
+        "rashinban": {"dir": str(tmp_path / "rashinban")},
     }
     path = tmp_path / "config.yaml"
     path.write_text(yaml.safe_dump(config, allow_unicode=True), encoding="utf-8")
