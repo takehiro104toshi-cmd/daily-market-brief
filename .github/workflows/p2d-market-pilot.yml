@@ -59,3 +59,11 @@ jobs:
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
         run: python -m src.intelligence.context.pilot --sessions 5
+      # Phase 3-C: 直前のContext Engineが生成した**実Context**からEvidence Package・
+      # Narrative Plan・Compass Draftを生成し、validator・adversarial・過去Compass
+      # 評価を実測する。generatorは**決定論的**（LLM providerは接続しない・
+      # secretは注入しない）。履歴HTMLは読み取りのみ。
+      - name: Phase 3-C Evidence-Grounded Compass Generator real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.compass.pilot --sessions 5
