@@ -835,3 +835,86 @@ class TestSessionWiseFactGeneration:
             subject_id="index:nikkei225_topix", unit="x",
             calculation_name=calc.NT_RATIO, sessions=4, now=NOW)
         assert days[-1] not in {f.time.primary_date for f in facts}
+
+
+# ============================================================ identity discriminator
+
+class TestFactIdentityDiscriminator:
+    """同一開示日に複数metric・複数会計期間が並ぶケースのidentity（実データで発覚）。
+
+    Phase 3-B pre-flight（実データ200件）で `duplicate_fact_ids: 26` が観測され、
+    さらにstoreのrevision判定が subject×type×date だけを見ていたため、
+    **同じ開示日の別metricを互いにSUPERSEDEDにしてしまう**欠陥があった。
+    """
+
+    def _record(self, **overrides):
+        from src.intelligence.market.jquants_records import (
+            RecordProvenance, parse_financial_summary)
+
+        row = {
+            "Code": "72030", "DiscDate": "2026-08-05", "DiscNo": "A",
+            "CurPerSt": "2025-04-01", "CurPerEn": "2026-03-31", "CurPerType": "FY",
+            "Sales": "1000", "OP": "200", "NP": "150", "EPS": "10",
+        }
+        row.update(overrides)
+        return parse_financial_summary(
+            row, RecordProvenance(endpoint="/fins/summary",
+                                  retrieved_at="2026-09-01T00:00:00+00:00"))
+
+    def test_same_day_metrics_get_distinct_fact_ids(self):
+        from src.intelligence.facts.jquants_builder import build_financial_facts
+
+        facts = build_financial_facts([self._record()], now=NOW)
+        assert len(facts) == len({f.fact_id for f in facts})
+        assert len({f.identity_discriminator for f in facts}) == len(facts)
+
+    def test_same_metric_same_value_different_period_is_distinct(self):
+        """同じ開示日・同じmetric・同じ値でも、会計期間が違えば別Fact。"""
+        from src.intelligence.facts.jquants_builder import build_financial_facts
+
+        q2 = self._record(CurPerEn="2025-09-30", CurPerType="2Q")
+        fy = self._record(CurPerEn="2026-03-31", CurPerType="FY")
+        facts = build_financial_facts([q2, fy], now=NOW)
+        sales = [f for f in facts if f.note == "metric=net_sales"]
+        assert len(sales) == 2
+        assert sales[0].fact_id != sales[1].fact_id      # 衝突しない
+
+    def test_store_does_not_supersede_sibling_metrics(self, store):
+        """同じ開示日の別metricを互いにSUPERSEDEDにしない。"""
+        from src.intelligence.facts.jquants_builder import build_financial_facts
+
+        facts = build_financial_facts([self._record()], now=NOW)
+        result = store.add(facts)
+        assert result["added"] == len(facts)
+        assert result["superseded"] == 0
+        alive = [r for r in store.facts_for_subject("jp:security:72030")]
+        assert len(alive) == len(facts)
+
+    def test_restated_same_metric_and_period_supersedes(self, store):
+        """同じmetric・同じ期間の値が変わったときは正しくrevisionになる。"""
+        from src.intelligence.facts.jquants_builder import build_financial_facts
+
+        store.add(build_financial_facts([self._record()], now=NOW))
+        revised = build_financial_facts([self._record(Sales="1100")], now=NOW)
+        result = store.add(revised)
+        assert result["superseded"] >= 1
+        latest = [r for r in store.facts_for_subject("jp:security:72030")
+                  if r["identity_discriminator"].startswith("metric=net_sales")]
+        assert [r["value"] for r in latest] == ["1100"]
+
+    def test_rebuild_preserves_discriminator_scoped_supersession(self, store):
+        from src.intelligence.facts.jquants_builder import build_financial_facts
+
+        store.add(build_financial_facts([self._record()], now=NOW))
+        store.add(build_financial_facts([self._record(Sales="1100")], now=NOW))
+        store.rebuild_index()
+        alive = [r for r in store.facts_for_subject("jp:security:72030")]
+        sales = [r for r in alive
+                 if r["identity_discriminator"].startswith("metric=net_sales")]
+        assert [r["value"] for r in sales] == ["1100"]
+        assert len(alive) == 4                    # 4 metric が生き残る
+
+    def test_market_facts_keep_empty_discriminator(self):
+        """market factは従来どおり subject×type×date がidentity（後方互換）。"""
+        facts = build_series_facts(TOPIX, series_points([100, 110]), now=NOW)
+        assert all(f.identity_discriminator == "" for f in facts)

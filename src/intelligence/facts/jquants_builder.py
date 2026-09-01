@@ -138,11 +138,19 @@ def _financial_facts(record, metrics, fact_type: str, created_at: datetime,
         value = _to_decimal(token)
         if value is None:
             continue                      # 欠測はFactを作らない（0で埋めない）
+        # 同じ開示日に**複数metric・複数会計期間**が同時に来るため、
+        # metricと期間をidentityへ含める（含めないとfact_idが衝突し、
+        # storeが別metricを互いにsupersededにしてしまう）
+        discriminator = (f"metric={metric};period_start={record.period_start};"
+                         f"period_end={record.period_end};"
+                         f"period_type={record.period_type}")
         out.append(Fact(
             fact_id=make_fact_id(
                 fact_type=fact_type, subject=subject, primary_date=primary_date,
+                discriminator=discriminator,
                 value_token=f"{metric}|{value_token(value)}"),
-            fact_type=fact_type, subject=subject,
+            fact_type=fact_type, identity_discriminator=discriminator,
+            subject=subject,
             value=FactValue(value=value, unit=unit, currency="JPY"),
             time=FactTimeContext(
                 primary_date=primary_date, date_role=date_role,

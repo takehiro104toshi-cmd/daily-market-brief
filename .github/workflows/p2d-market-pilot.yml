@@ -52,3 +52,10 @@ jobs:
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
         run: python -m src.intelligence.facts.pilot --sessions 5
+      # Phase 3-B: 直前のFact Layerが生成した**実Fact**からContextを生成し、
+      # 朝のsnapshot・look-ahead検査・過去Compassとの方向整合を実測する。
+      # 履歴HTML（output/history）は**読み取りのみ**。新規fetchは行わない。
+      - name: Phase 3-B Compass Context Engine real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.context.pilot --sessions 5

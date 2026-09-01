@@ -27,7 +27,8 @@ CANONICAL_FILE = "facts.jsonl"
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS facts (
   fact_id TEXT PRIMARY KEY,
-  fact_type TEXT, subject_type TEXT, subject_id TEXT, display_name TEXT,
+  fact_type TEXT, identity_discriminator TEXT,
+  subject_type TEXT, subject_id TEXT, display_name TEXT,
   value TEXT, text_value TEXT, unit TEXT, currency TEXT,
   primary_date TEXT, date_role TEXT, as_of TEXT, known_at TEXT,
   period_start TEXT, period_end TEXT, session_count INTEGER,
@@ -36,6 +37,8 @@ CREATE TABLE IF NOT EXISTS facts (
   source_ids TEXT, qa_decision TEXT, revision_of TEXT,
   created_at TEXT, schema_version TEXT, evidence_json TEXT);
 CREATE INDEX IF NOT EXISTS ix_fact_subject ON facts(subject_id, fact_type, primary_date);
+CREATE INDEX IF NOT EXISTS ix_fact_identity
+  ON facts(subject_id, fact_type, primary_date, identity_discriminator);
 CREATE INDEX IF NOT EXISTS ix_fact_date ON facts(primary_date);
 CREATE INDEX IF NOT EXISTS ix_fact_type ON facts(fact_type);
 CREATE INDEX IF NOT EXISTS ix_fact_status ON facts(status);
@@ -53,7 +56,8 @@ CREATE INDEX IF NOT EXISTS ix_fin_input ON fact_inputs(input_id);
 """
 
 _COLUMNS = (
-    "fact_id", "fact_type", "subject_type", "subject_id", "display_name",
+    "fact_id", "fact_type", "identity_discriminator", "subject_type",
+    "subject_id", "display_name",
     "value", "text_value", "unit", "currency", "primary_date", "date_role",
     "as_of", "known_at", "period_start", "period_end", "session_count",
     "calculation_method", "calculation_inputs", "status", "conflict_state",
@@ -68,7 +72,9 @@ def fact_root(base: Optional[Path] = None) -> Path:
 
 def _row_of(data: Dict) -> Tuple:
     return (
-        data["fact_id"], data["fact_type"], data["subject_type"], data["subject_id"],
+        data["fact_id"], data["fact_type"],
+        data.get("identity_discriminator", ""),
+        data["subject_type"], data["subject_id"],
         data.get("display_name", ""), data.get("value", ""), data.get("text_value", ""),
         data.get("unit", ""), data.get("currency", ""), data["primary_date"],
         data["date_role"], data.get("as_of", ""), data.get("known_at", ""),
@@ -153,11 +159,14 @@ class FactStore:
         return {"added": added, "skipped": skipped, "superseded": superseded}
 
     def _current_for(self, fact: Fact) -> Optional[sqlite3.Row]:
+        # revisionは **discriminatorまで一致** したときだけ（同じ開示日の別metric・
+        # 別会計期間を互いにsupersededにしない）
         rows = list(self._conn.execute(
             "SELECT fact_id FROM facts WHERE subject_id=? AND fact_type=? "
-            "AND primary_date=? AND status<>? ORDER BY created_at DESC LIMIT 1",
+            "AND primary_date=? AND identity_discriminator=? AND status<>? "
+            "ORDER BY created_at DESC LIMIT 1",
             (fact.subject.subject_id, fact.fact_type, fact.time.primary_date,
-             FactStatus.SUPERSEDED.value)))
+             fact.identity_discriminator, FactStatus.SUPERSEDED.value)))
         return rows[0] if rows else None
 
     def _index_relations(self, fact: Fact) -> None:
@@ -200,7 +209,8 @@ class FactStore:
                 input_rows.append((data["fact_id"], input_id))
             if data.get("revision_of"):
                 superseded[(data["subject_id"], data["fact_type"],
-                            data["primary_date"])] = data["revision_of"]
+                            data["primary_date"],
+                            data.get("identity_discriminator", ""))] = data["revision_of"]
         if rows:
             self._conn.executemany(
                 f"INSERT OR REPLACE INTO facts ({','.join(_COLUMNS)}) "

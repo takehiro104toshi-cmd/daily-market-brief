@@ -4,6 +4,60 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.33 (2026-09-01) — Phase 3-B: Compass Context Engine
+
+Phase 3-AのFactを、Morning Compassが使える**structured investment context**へ
+変換する層。ロードマップ訂正のとおり3-Bは**Context Engineであって
+Generatorではない**——自然言語Compassの生成は行わない（3-Cの責務）。
+生成経路は**完全に決定論的でLLMを一切使わない**。
+
+### 追加
+
+- `context/model.py`【新規】: Direction（統制語彙）/ Relationship /
+  ContextItem / MarketState / CompassContextSnapshot / `make_context_id`。
+  **`Relationship`に`CAUSES`を定義しない**（因果を実装上表現できない）。
+  flat bandは**正当化できるunitだけ**（金利pct_pointの0.001＝公表最小刻み）に定義し、
+  指数・為替は厳密な符号で判定。大きさの区分（SMALL/MODERATE/LARGE）は
+  根拠が無いため**導入しない**（`MAGNITUDE_CATEGORIES_ENABLED = False`）。
+- `context/builders.py`【新規】: index_direction / index_trend_vs_ma25 /
+  relative_performance / nt_ratio_state / rate_direction / us_curve_shape /
+  fx_direction / cross_asset_cooccurrence / event_proximity。
+  既存derived Factは**参照**して再計算しない。比較は**同一session**のFact同士のみ。
+  入力が欠ければContextを作らない。**USDJPY UP = 円安 / DOWN = 円高**を明文化。
+- `context/salience.py`【新規】: 説明可能なtier（PRIMARY/SECONDARY/BACKGROUND）と
+  決定論的ranking。**LLMに重要度を決めさせない／0-100スコアを作らない**。
+  品質・鮮度による**降格のみ**（昇格しない）。判定要素は`priority_components`へ全保存。
+- `context/snapshot.py`【新規】: 朝（JST 6:00）のcontext snapshotと
+  look-ahead防止（**全支持Factが既知**でなければ利用不可＝FAIL-CLOSED）、
+  market state vector（**RISK_ON等の解釈分類を作らない**）と次元ごとの充足状況。
+- `context/store.py`【新規】: canonical JSONL append-only ＋ 再構築可能なSQLite ＋
+  query（session / type / subject / **fact_id逆引き** / high priority /
+  divergence / event）。**Factを複製せずID参照だけを持つ**。
+- `context/compass_alignment.py`【新規】: 過去Compass（`output/history/<date>/
+  pre_market.html`）の前日比サマリーの**符号**とContextの方向を突き合わせ、
+  MATCH / PARTIAL / CONFLICT / NOT_AVAILABLE を報告（履歴HTMLは読み取りのみ）。
+  比較できない次元は分母から外す。**人間の文章を再現するようruleを最適化しない**。
+- `context/pilot.py`【新規】: 実データpilot（複数session生成・朝snapshot・
+  look-ahead検査・上位Context・冪等性・SQLite再構築・query・過去Compass整合）。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3-A pilotの後に
+  Phase 3-B pilotを追加（新規fetchなし。既存のTOPIX V2経路は不変）。
+- `docs/databank/CONTEXT_ENGINE_SPEC.md`【新規】。
+- オフラインテスト68件追加（`tests/intelligence/test_context_engine.py`【新規】）。
+
+### 改善
+
+- `context/snapshot.py`: 朝のsnapshotは**当日クローズを知り得ない**ため、
+  鮮度の基準を「cutoff時点で利用できた最新session」(`reference_session`)とした。
+  前営業日クローズが暦日違いだけで降格されない。同じ次元に複数sessionがある場合は
+  並び順ではなく**最新session**を採用し、それより古いものは`STALE`として報告する。
+
+### 修正
+
+- `facts/model.py` / `facts/store.py` / `facts/jquants_builder.py`:
+  Phase 3-B pre-flightの**実データ**pilotで検出した`duplicate_fact_ids: 26`を修正。
+  Factのidentityに`identity_discriminator`を追加し、同一銘柄・同一開示日の
+  複数指標（売上高・営業利益…）が互いをSUPERSEDEしないようにした（回帰テスト6件追加）。
+
 ## v4.32 (2026-09-01) — Phase 3-A: Evidence-Grounded Fact Layer
 
 Data Bankの観測・記事evidence・J-Quants構造化データを、Morning Compassが安全に

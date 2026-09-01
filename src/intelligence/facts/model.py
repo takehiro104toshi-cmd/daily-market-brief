@@ -195,6 +195,11 @@ class Fact:
     fact_id: str
     fact_type: str
     subject: FactSubject
+    #: 同一 subject × fact_type × 日付 の中で**別のFact**を区別する識別子。
+    #: 例: 財務は同じ開示日に複数metric・複数会計期間が同時に来るため
+    #: `metric=net_sales;period_end=2026-03-31` を持たせる。
+    #: 空なら subject × type × date がそのままidentity（market factの既定）。
+    identity_discriminator: str = ""
     value: FactValue
     time: FactTimeContext
     evidence: Tuple[FactEvidenceRef, ...] = ()
@@ -222,6 +227,12 @@ class Fact:
             raise ValueError("usable Fact requires a value")
 
     @property
+    def identity_key(self) -> str:
+        """「時間をまたいで同じFact」とみなす単位（revision判定に使う）。"""
+        return "|".join((self.subject.key(), self.fact_type,
+                         self.time.primary_date, self.identity_discriminator))
+
+    @property
     def is_derived(self) -> bool:
         return self.calculation is not None
 
@@ -233,6 +244,7 @@ class Fact:
         return {
             "fact_id": self.fact_id,
             "fact_type": self.fact_type,
+            "identity_discriminator": self.identity_discriminator,
             "subject_type": self.subject.subject_type,
             "subject_id": self.subject.subject_id,
             "display_name": self.subject.display_name,
@@ -271,14 +283,17 @@ def make_fact_id(
     primary_date: str,
     value_token: str,
     calculation_method: str = "",
+    discriminator: str = "",
 ) -> str:
     """**決定論的**なfact_id（同一Ground Truth → 同一ID）。
 
     `created_at` や取得時刻は**含めない**（処理時刻でIDが変わらないようにする）。
     値を含めるため、値が変われば別IDになり `revision_of` で履歴を辿れる。
+    `discriminator` は同一 subject × type × 日付 に複数のFactが並ぶ場合の識別
+    （財務の metric / 会計期間など）。
     """
     return content_id("fact", fact_type, subject.key(), primary_date,
-                      calculation_method, value_token)
+                      calculation_method, discriminator, value_token)
 
 
 def value_token(value: Optional[Decimal], text_value: str = "") -> str:
