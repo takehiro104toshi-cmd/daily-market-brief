@@ -46,3 +46,10 @@ jobs:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
           JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
         run: python -m src.intelligence.market.p2h_light_pilot --days 365 --sample 8
+      # Phase 3-B pre-flight: 直前のpilotが永続化した**実データ**のcanonical record
+      # からJ-Quants Factを生成し、provenance/store/query/冪等性を実証する
+      # （新規の大量fetchはしない）。
+      - name: Phase 3-B pre-flight - J-Quants Fact real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.facts.jquants_pilot --limit 200
