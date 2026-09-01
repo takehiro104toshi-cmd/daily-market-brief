@@ -325,9 +325,28 @@ def main(argv: Optional[List[str]] = None) -> int:
     ok_required = all(
         r["ok"] for r in dataset_reports
         if ALL_DATASETS[r["dataset"]].classification == "REQUIRED")
+    # 集計フィールドは**意味を明示**する。`datasets_attempted` という単一counterは
+    # 「非sample系のみ」を数えており、sample系（daily_bars / fins_summary）が
+    # ::P2H_SAMPLE:: 側、TOPIXが Market Data Bank 側に分かれているため、
+    # 人間が読む「実際に検証したdataset数」と一致せず機械利用時に誤解を生む。
+    sample_families = sorted({"daily_bars", "fins_summary"}) if per_security else []
+    non_sample = [r["dataset"] for r in dataset_reports]
+    validated_families = sorted(set(non_sample) | set(sample_families) | {"topix"})
     print("::P2H_SUMMARY::" + json.dumps({
-        "datasets_attempted": len(dataset_reports),
-        "datasets_ok": sum(1 for r in dataset_reports if r["ok"]),
+        # 非sample系（1リクエストで完結するdataset）
+        "non_sample_datasets_attempted": len(dataset_reports),
+        "non_sample_datasets_ok": sum(1 for r in dataset_reports if r["ok"]),
+        "non_sample_datasets": sorted(non_sample),
+        # sample銘柄ごとに取得するdataset族（詳細は ::P2H_SAMPLE::）
+        "sample_dataset_families_attempted": len(sample_families),
+        "sample_dataset_families": sample_families,
+        "sample_securities": len(per_security),
+        # Market Data Bankが所有し、ここでは取得検証のみ行うdataset
+        "market_bank_datasets_validated": 1 if topix_result.ok else 0,
+        "market_bank_datasets": ["topix"],
+        # 実際に検証したdataset族の総数（人間の読み方と一致する数）
+        "total_dataset_families_validated": len(validated_families),
+        "validated_dataset_families": validated_families,
         "required_all_ok": ok_required,
         "topix_regression_ok": topix_result.ok,
         "calendar_validated": validation.validated,

@@ -743,3 +743,36 @@ class TestFreshnessWithOfficialCalendar:
             assert "matches_official_trading_calendar" not in f.reason_codes
         finally:
             index.close()
+
+
+# ============================================================ pre-flight: summary clarity
+
+class TestPilotSummaryFieldsAreUnambiguous:
+    """`datasets_attempted` という曖昧な単一counterを意味の明確なfieldへ改善した回帰。
+
+    sample系（daily_bars / fins_summary）は ::P2H_SAMPLE:: 側、TOPIXは
+    Market Data Bank側に分かれているため、単一counterでは人間の読み方と一致しない。
+    """
+
+    def test_summary_exposes_explicit_counters(self, tmp_path, monkeypatch, capsys):
+        from src.intelligence.market import p2h_light_pilot as pilot
+
+        monkeypatch.setenv("INTELLIGENCE_DATA_ROOT", str(tmp_path))
+        monkeypatch.setattr(pilot, "JQuantsV2Client",
+                            TestPilotEndToEndOffline()._fake_client_factory())
+        assert pilot.main(["--days", "30", "--sample", "3"]) == 0
+        summary = json.loads(
+            capsys.readouterr().out.split("::P2H_SUMMARY::")[1].splitlines()[0])
+
+        assert "datasets_attempted" not in summary      # 曖昧なfieldは廃止
+        assert summary["non_sample_datasets_attempted"] == 4
+        assert summary["non_sample_datasets"] == sorted([
+            "equities_earnings_cal", "investor_types", "listed_master",
+            "markets_calendar"])
+        assert summary["sample_dataset_families"] == ["daily_bars", "fins_summary"]
+        assert summary["sample_securities"] == 3
+        assert summary["market_bank_datasets"] == ["topix"]
+        assert summary["market_bank_datasets_validated"] == 1
+        # 人間が読む「検証したdataset数」= 非sample4 + sample族2 + TOPIX1 = 7
+        assert summary["total_dataset_families_validated"] == 7
+        assert len(summary["validated_dataset_families"]) == 7

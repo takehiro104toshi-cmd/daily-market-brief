@@ -45,3 +45,10 @@ jobs:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
           JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
         run: python -m src.intelligence.market.pilot_runner
+      # Phase 3-A: 直前のpilotが構築したMarket Data Bankの**実データ**から
+      # Factを生成し、Compass数値replay・look-ahead検査・canonical/SQLite/queryを
+      # 実測する（fixtureのみで完了判定しない）。読み取りのみでP2-G.2経路は不変。
+      - name: Phase 3-A Fact Layer real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.facts.pilot --sessions 5
