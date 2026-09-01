@@ -40,3 +40,9 @@ jobs:
         env:
           JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
         run: python -m src.intelligence.market.p2h_light_probe
+      # small live pilot（STEP 6/15）: 代表sampleのみ。全東証×5年のbackfillはしない。
+      - name: P2-H Light core live pilot (sample securities only)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.market.p2h_light_pilot --days 365 --sample 8
