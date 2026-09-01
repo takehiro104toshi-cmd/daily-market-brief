@@ -4,6 +4,75 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.32 (2026-09-01) — Phase 3-A: Evidence-Grounded Fact Layer
+
+Data Bankの観測・記事evidence・J-Quants構造化データを、Morning Compassが安全に
+使える**atomic fact**へ変換する層。**FACT ≠ INTERPRETATION ≠ OUTLOOK ≠
+RECOMMENDATION** ——ここで作るのはFACTだけで、文章生成・見通し・推奨は含まない。
+
+### 追加
+
+- `facts/model.py`【新規】: Fact / FactSubject / FactValue / FactTimeContext /
+  FactEvidenceRef / FactCalculation。**決定論的fact_id**（処理時刻を含めず、
+  値が変われば別ID→`revision_of`で履歴追跡）。usable Factはprovenanceと値が必須、
+  値は**Decimal限定**（floatは型で拒否）。
+- `facts/calculations.py`【新規】: return_pct / change_abs / moving_average /
+  distance_from_ma_pct / nt_ratio / yield_spread を `name:version` で登録。
+  入力不足はNoneを返し、**forward fill・0補完・近傍日代用をしない**。
+- `facts/market_builder.py`【新規】: **session-aware**（暦日ではなく観測セッションで
+  数える）。25本未満の移動平均・21本未満の20営業日リターンは生成しない。
+  各セッション時点のFactを作る `build_history_facts` も提供。
+- `facts/availability.py`【新規】: morning cutoff（JST 6:00）とlook-ahead防止。
+  `known_at` が無いFactは「既知だった」と**見なさない**（FAIL-CLOSED）。
+- `facts/conflict.py`【新規】: AGREE / CONFLICT / STALE / SUPERSEDED / UNKNOWN。
+  値が割れたら**両方保持**し勝手に勝者を決めない（arbitration engineは作らない）。
+- `facts/store.py`【新規】: canonical JSONL append-only ＋ **再構築可能**なSQLite ＋
+  query（latest / by date / range / entity / series / **evidence source** /
+  **derived inputs** / conflicted）。
+- `facts/jquants_builder.py`【新規】: 実績値と会社予想値を**別fact_type**で分離。
+  security master・日次価格・カレンダー・週次需給はFactへ複製しない。
+- `facts/news_builder.py`【新規】: **LLM要約をFactにしない**。文書メタデータ由来の
+  `document_published` のみを**citation-ready**（excerpt span付き）で生成。
+- `facts/pilot.py`【新規】＋ `docs/databank/FACT_LAYER_SPEC.md`【新規】。
+- オフラインテスト77件追加。
+
+### 改善
+
+- **P2-H pilot summaryの曖昧さを解消**（Phase 3 pre-flight hygiene）:
+  `datasets_attempted` を `non_sample_datasets_attempted` /
+  `sample_dataset_families_attempted` / `market_bank_datasets_validated` /
+  `total_dataset_families_validated` へ分解。**historical run #3の出力は改竄せず**、
+  current code側の意味を明確化した。
+
+### QA / provenance規律
+
+- `reject` 判定のevidenceから**production Factを作らない**。`limited_use` は
+  `LIMITED_USE` として明示し、morning snapshotから既定で除外する。
+- 全Factが Observation / RawItem / FetchAttempt まで辿れる。derived factは
+  入力observation_id / fact_id を保持する。**「LLMがそう言った」をprovenanceにしない**。
+
+### 実測（live pilot run #17・2026-09-01・実データ）
+
+- 入力: Nikkei 267 / TOPIX 268 / JGB10Y 267 / UST2Y_par 275 / UST10Y_par 275 /
+  USDJPY 285セッション、QA判定 22,325件
+- 生成 **165 facts / 14 fact types / 5 Tokyo sessions**。provenance 165/165、
+  derived with inputs 135、canonical 165 → **SQLite再構築165（一致）**
+- **Compass数値replay**: TOPIX 4181.86（2026-09-01）・25DMA 4077.95・乖離+2.548094%、
+  日経 66311.93・25DMA 65700.638・乖離+0.930420%、JGB10Y 2.943、UST2Y_par 4.34、
+  UST10Y_par 4.75、ドル円 160.122、**NT倍率 15.954596**、**米10-2年 0.410000**。
+  NT倍率とスプレッドは**Market Data Bank側の派生値と完全一致**（独立経路での再現）
+- **look-ahead防止**: 5セッションのmorning snapshotで
+  21 / 54 / 87 / 125 / 153 facts が利用可能、**leak 0件**・
+  全セッションで未来日付なし（各朝のsnapshotは前営業日までのFactのみ）
+- data quality: 重複fact_id **0** / provenance欠落 **0** / derived入力欠落 **0** /
+  conflict 0
+
+### 境界（実装していないもの）
+
+natural-language Compass generation / LLM market outlook / 投資推奨 /
+theme inference / market narrative / causal inference / Market Internals分析 /
+breadth engine / screener / company scoring / portfolio / MCP / frontend / scheduler。
+
 ## v4.31 (2026-09-01) — Phase 2-H: J-Quants Light Core Data Foundation
 
 P2-Gで実証したJ-Quants V2接続を、**TOPIX専用provider**から
