@@ -190,3 +190,95 @@ src/intelligence/context/
 ├── compass_alignment.py   過去Compassとの方向整合チェック（STEP 30）
 └── pilot.py               実データpilot（STEP 29/30）
 ```
+
+## 14. 実データ実測（p2d-market-pilot run #18 / 2026-09-01 12:20-12:26 UTC）
+
+GitHub Actions run `33507177439` / job `99853900239`（conclusion: **success**、
+duration 5分22秒、Phase 3-B step 12:25:47→12:26:12）。fixtureではなく
+Market Data Bankの実観測（各系列266〜285本）から生成したFactを入力にしている。
+
+### 生成（`::P3B_INPUT::` / `::P3B_CONTEXTS::`）
+
+| 項目 | 実測 |
+|---|---|
+| 対象session | 2026-08-26 / 08-27 / 08-28 / 08-31 / 09-01 |
+| 入力Fact | 165（event fact 0——このdata rootにJ-Quants Light storeが無いため） |
+| 生成Context | 48（session別: 12 / 13 / 8 / 13 / 2） |
+| 重複context_id | **0** |
+| provenance欠落 | **0** |
+| 冪等性（2回目の追加） | **0件追加**（`idempotent: true`） |
+| canonical → SQLite再構築 | 48 → 48（`rebuild_match: true`） |
+
+2026-08-28 のContextが少ない（8件）のは、その営業日に片方の指数のFactしか
+無かったため。**欠けた側を補完せず、相対比較・NT倍率のContextを作らなかった**
+結果であり、設計どおりの挙動。
+
+### 朝のsnapshotとlook-ahead（`::P3B_SNAPSHOT::`）
+
+| session | reference | 利用可能Context | 充足次元 | leaks |
+|---|---|---|---|---|
+| 2026-08-26 | (なし) | 0 | 0/8 | 0 |
+| 2026-08-27 | 2026-08-26 | 10 | 5/8 | 0 |
+| 2026-08-28 | 2026-08-27 | 23 | 8/8 | 0 |
+| 2026-08-31 | 2026-08-28 | 33 | 8/8 | 0 |
+| 2026-09-01 | 2026-08-31 | 44 | 7/8 | 0 |
+
+- **look-ahead leaks 合計 0 / 当日以降のsessionのContextの混入 0**
+  （hard acceptance criterion）。
+- 先頭の 2026-08-26 は**pilot窓の境界**で、それ以前のContextを生成していないため
+  snapshotが空になる。product側の欠陥ではないが、窓の先頭1営業日はsnapshotの
+  証拠にならない（改善案: Factを窓+1営業日分生成する。**未変更・提案のみ**）。
+- `usd_jpy` / `nikkei_vs_topix` / `nt_ratio` が `STALE` と報告された日がある。
+  最新sessionにその次元のContextが無く、前のsessionのものしか使えなかったことを
+  **黙って最新のように見せず**に報告できている。
+
+### 上位Contextの例（`::P3B_TOP::` / 2026-09-01の朝）
+
+```
+index_direction        日経平均株価      UP          +0.272112 pct        PRIMARY
+index_direction        TOPIX             UP          +0.231027 pct        PRIMARY
+relative_performance   日経 vs TOPIX     UNDERPERFORM -3.362312 pct_point PRIMARY (20s)
+relative_performance   日経 vs TOPIX     OUTPERFORM   +1.589942 pct_point PRIMARY (5s)
+rate_direction         米10年(par)       UP          +0.020000 pct_point  PRIMARY
+rate_direction         日本10年          UP          +0.013000 pct_point  PRIMARY
+rate_direction         米2年(par)        FLAT         0.000000 pct_point  PRIMARY
+us_curve_shape         米10年-2年        STEEPENING  +0.020000 pct_point  PRIMARY
+```
+
+いずれも `supporting_fact_ids` を持ち、`priority_components` に
+`base_tier / freshness=current_session / status / quality=accept / direction /
+supporting_facts / final_tier` が保存されている（**説明可能**）。
+自然言語の文・推奨・レジーム分類は1件も含まれない。
+
+### 過去Compassとの方向整合（`::P3B_ALIGNMENT::`）
+
+| 判定 | 件数 |
+|---|---|
+| MATCH | 3 |
+| PARTIAL | 0 |
+| CONFLICT | **2** |
+| NOT_AVAILABLE | 10（履歴レポート未作成 6 / Context未生成 4） |
+
+比較可能5次元中3一致（3/5）。**CONFLICT 2件は次のとおり**（未修正・観測として記録）:
+
+| 日 | 次元 | 履歴レポート | Context |
+|---|---|---|---|
+| 2026-08-27 | 日経平均 | -0.15% (DOWN) | UP +0.616077%（session 08-26） |
+| 2026-08-28 | 日経平均 | +0.25% (UP) | DOWN -0.196462%（session 08-27） |
+
+同じ2日の `ドル円` / `米10年金利` はMATCHしているため、**日経平均の
+「前日比」の基準セッションがレガシーレポート側とData Bank側で食い違っている**
+可能性が高い（レガシー履歴では 08-23 / 08-24 / 08-25 の日経平均が同一値
+-0.30% で並ぶ日もあり、値が1営業日据え置かれる挙動が見える）。
+
+STEP 30 の指示どおり、**この不一致に合わせてContextのruleを調整していない**。
+原因はレガシーレポート側のデータ経路にあると見られ、Phase 3-Bのscope外である。
+調査要否の判断は監督者に委ねる（**提案のみ**）。
+
+### query（`::P3B_QUERY::`）
+
+`contexts_for_session` / `high_priority_contexts` / `divergences`(6) /
+`event_contexts`(0) / `contexts_by_subject`(6) / `contexts_by_fact`(1) /
+`supporting_facts`(1) がいずれも実データ上で動作。
+`event_contexts` が0なのは、このdata rootにJ-Quants Lightのcanonicalが
+無いためで、event proximity自体はoffline testで固定している。

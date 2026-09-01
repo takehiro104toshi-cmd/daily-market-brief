@@ -39,6 +39,15 @@ Generatorではない**——自然言語Compassの生成は行わない（3-C�
   比較できない次元は分母から外す。**人間の文章を再現するようruleを最適化しない**。
 - `context/pilot.py`【新規】: 実データpilot（複数session生成・朝snapshot・
   look-ahead検査・上位Context・冪等性・SQLite再構築・query・過去Compass整合）。
+  live実測（p2d-market-pilot run #18）: 5営業日・165 Fact → 48 Context、
+  重複0 / provenance欠落0 / 冪等 / SQLite再構築一致、**look-ahead leak 0**。
+- `docs/databank/LIVE_RUN_CLOSEOUT_PROTOCOL.md`【新規】＋
+  `tests/intelligence/test_live_run_closeout.py`【新規】: live runの完了待機を
+  `trigger → bounded polling → completed detection → evidence retrieval` に固定。
+  待機上限は対象workflowの `timeout-minutes` から決め、**無期限待機を禁止**する。
+  「応答が取れない」を「未完了」と誤判定しないことを明記（今回の待機shell滞留の
+  直接原因）。closeout対象workflowが上限を宣言していることをテストで固定する
+  （本番 `daily-market-brief.yml` は対象外・未変更——CLAUDE.mdルール15）。
 - `.github/workflows/p2d-market-pilot.yml`: Phase 3-A pilotの後に
   Phase 3-B pilotを追加（新規fetchなし。既存のTOPIX V2経路は不変）。
 - `docs/databank/CONTEXT_ENGINE_SPEC.md`【新規】。
