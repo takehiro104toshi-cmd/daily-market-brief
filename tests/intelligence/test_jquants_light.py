@@ -676,3 +676,70 @@ class TestPilotEndToEndOffline:
         monkeypatch.delenv("JQUANTS_API_KEY", raising=False)
         assert pilot.main(["--days", "5", "--sample", "1"]) == 0
         assert "::P2H_PILOT_SKIP::" in capsys.readouterr().out
+
+
+# ============================================================ STEP 9: freshness via calendar
+
+class TestFreshnessWithOfficialCalendar:
+    """TOPIX freshnessを代理指標（日経）だけに依存させない（P2-G.2の残課題）。"""
+
+    def _index_with(self, tmp_path, topix_days):
+        from src.intelligence.market.ingest import as_of_for
+        from src.intelligence.market.model import Observation, ObservationKind
+        from src.intelligence.market.series_catalog import load_catalog
+        from src.intelligence.market.store import SqliteMarketIndex
+
+        catalog = load_catalog(Path("knowledge/market_series/core_series.yaml"))
+        spec = catalog.get("index:topix.close.closing.tokyo")
+        index = SqliteMarketIndex(tmp_path / "m.sqlite3")
+        index.index_observations([
+            Observation(
+                observation_id=f"obs_tp_{d}", entity_id=spec.series.instrument_id,
+                metric=spec.series.metric, value=Decimal(2700 + i), unit=spec.unit,
+                as_of=as_of_for(spec, d), kind=ObservationKind.RAW,
+                series_id=spec.series_id, trading_date=d, source_id="jquants")
+            for i, d in enumerate(topix_days)])
+        return index
+
+    def test_calendar_session_matched_is_current_usable(self, tmp_path):
+        from src.intelligence.market.topix_freshness import (
+            CALENDAR_REFERENCE, CURRENT_USABLE, evaluate_topix_freshness)
+
+        index = self._index_with(tmp_path, ["2026-08-28", "2026-08-31", "2026-09-01"])
+        try:
+            f = evaluate_topix_freshness(
+                index, now=datetime(2026, 9, 1, 23, tzinfo=timezone.utc),
+                calendar_session="2026-09-01")
+            assert f.verdict == CURRENT_USABLE
+            assert f.reference_series_id == CALENDAR_REFERENCE
+            assert "matches_official_trading_calendar" in f.reason_codes
+        finally:
+            index.close()
+
+    def test_behind_calendar_session_is_delayed(self, tmp_path):
+        from src.intelligence.market.topix_freshness import (
+            DELAYED_NOT_CURRENT, evaluate_topix_freshness)
+
+        index = self._index_with(tmp_path, ["2026-08-28", "2026-08-31"])
+        try:
+            f = evaluate_topix_freshness(
+                index, now=datetime(2026, 9, 1, 23, tzinfo=timezone.utc),
+                calendar_session="2026-09-01")
+            assert f.verdict == DELAYED_NOT_CURRENT
+            assert "behind_official_trading_calendar" in f.reason_codes
+        finally:
+            index.close()
+
+    def test_default_behaviour_unchanged_without_calendar(self, tmp_path):
+        """calendarを渡さなければ従来どおり参照系列で判定する（既定は不変）。"""
+        from src.intelligence.market.topix_freshness import (
+            REFERENCE_SERIES_ID, evaluate_topix_freshness)
+
+        index = self._index_with(tmp_path, ["2026-08-31", "2026-09-01"])
+        try:
+            f = evaluate_topix_freshness(
+                index, now=datetime(2026, 9, 1, 23, tzinfo=timezone.utc))
+            assert f.reference_series_id in ("", REFERENCE_SERIES_ID)
+            assert "matches_official_trading_calendar" not in f.reason_codes
+        finally:
+            index.close()

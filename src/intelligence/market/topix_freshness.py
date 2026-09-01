@@ -24,6 +24,8 @@ from typing import Dict, List, Optional, Tuple
 TOPIX_SERIES_ID = "index:topix.close.closing.tokyo"
 #: 同一セッション（東京現物・15:30クローズ）の基準系列
 REFERENCE_SERIES_ID = "index:nikkei225.close.closing.tokyo"
+#: 公式取引カレンダー基準で判定したときの基準名（代理指標ではないことを明示）
+CALENDAR_REFERENCE = "jquants:markets_calendar"
 
 #: 25DMA計算に必要な最低観測数（監督者要件）
 MIN_HISTORY_ROWS = 25
@@ -110,14 +112,42 @@ def evaluate_topix_freshness(
     now: datetime,
     topix_series_id: str = TOPIX_SERIES_ID,
     reference_series_id: str = REFERENCE_SERIES_ID,
+    calendar_session: Optional[str] = None,
 ) -> TopixFreshness:
-    """SQLite index上のTOPIX観測 → 鮮度評価（読み取りのみ）。"""
+    """SQLite index上のTOPIX観測 → 鮮度評価（読み取りのみ）。
+
+    `calendar_session` に**公式取引カレンダーから決定した直近の完了セッション**
+    （P2-H `tokyo_calendar.latest_completed_session`）を渡すと、参照系列（日経平均）
+    ではなくカレンダーを基準に判定する。渡さなければ**従来どおり**参照系列で
+    判定する（既定の挙動は不変——P2-G.2のlive実証結果を壊さない）。
+
+    カレンダーは実測検証済みの場合のみ渡すこと（`validate_divisions()`）。
+    未検証のカレンダーで当日利用可否を断定しない。
+    """
     topix_dates = _trading_dates(index, topix_series_id)
     if not topix_dates:
         return TopixFreshness(verdict=NO_DATA, reason_codes=("no_topix_observations",))
 
     latest = topix_dates[-1]
     lag_days = (now.date() - date.fromisoformat(latest)).days
+
+    if calendar_session:
+        # 公式カレンダー基準（代理指標に依存しない）
+        common = dict(
+            history_rows=len(topix_dates), latest_trading_date=latest,
+            first_trading_date=topix_dates[0], lag_days=lag_days,
+            reference_series_id=CALENDAR_REFERENCE,
+            reference_latest_trading_date=calendar_session, gap_sessions=-1)
+        if latest >= calendar_session:
+            return TopixFreshness(
+                verdict=CURRENT_USABLE, **common,
+                reason_codes=("matches_official_trading_calendar",
+                              f"calendar_session:{calendar_session}"))
+        return TopixFreshness(
+            verdict=DELAYED_NOT_CURRENT, **common,
+            reason_codes=("behind_official_trading_calendar",
+                          f"calendar_session:{calendar_session}"))
+
     reference_dates = _trading_dates(index, reference_series_id)
 
     if reference_dates:

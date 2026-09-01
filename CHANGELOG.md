@@ -4,6 +4,82 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.31 (2026-09-01) — Phase 2-H: J-Quants Light Core Data Foundation
+
+P2-Gで実証したJ-Quants V2接続を、**TOPIX専用provider**から
+**再利用可能なLight Core Data Foundation**へ昇格。取得可能だから実装するのではなく、
+**どのInvestment Intelligence機能で使うか説明できるdatasetだけ**を採用した
+（MINIMAL / REUSABLE / AUDITABLE / FAIL-CLOSED）。
+
+entitlement・endpoint・項目名はすべて **live実測**（probe run #1 / pilot run #3・
+2026-09-01）。公式ドキュメントからの類推でAVAILABLE扱いしたものは無い。
+
+### 追加
+
+- `jquants_v2_client.py`【新規】: 任意path＋params＋pagination＋entitlement判定の
+  汎用取得経路。credential解決・scrub・原因分類・HTTPは既存 `jquants_v2` を
+  **importして再利用**し、live実証済みのTOPIX providerには**一切触れない**。
+- `jquants_light_datasets.py`【新規】: dataset registry。REQUIRED 6 / USEFUL 1 /
+  DEFER 7。NOT_ENTITLED 6件も証拠として保持（**迂回実装しない**）。
+- `jquants_records.py`【新規】: God Objectを作らず6種へ分離——SecurityMaster /
+  DailyPrice / FinancialSummary / EarningsSchedule / TradingCalendar /
+  InvestorTypeFlow。全recordが provenance（source / provider / api_version=v2 /
+  endpoint / retrieved_at / raw参照 / normalizer version）を保持。
+- `jquants_light_store.py`【新規】: canonical JSONL（append-only・冪等）＋
+  **再構築可能**なSQLite＋query（code / 社名 / 価格履歴 / 最新価格 / 財務 /
+  最新会社予想 / 決算予定 / カレンダー範囲 / 需給期間）。
+- `tokyo_calendar.py`【新規】: latest completed Tokyo session の最小判定。
+- `p2h_light_probe.py`【新規】/ `p2h_light_pilot.py`【新規】/
+  `p2h-jquants-light.yml`【新規】: entitlement/schema discovery と small live pilot。
+- docs 2件【新規】: `JQUANTS_LIGHT_CAPABILITY_MATRIX.md` /
+  `JQUANTS_LIGHT_CORE_ARCHITECTURE.md`。
+- オフラインテスト66件追加。
+
+### 改善
+
+- **TOPIX freshnessが代理指標だけに依存しなくなった**（P2-G.2の残課題）:
+  `evaluate_topix_freshness()` に `calendar_session` を追加し、公式取引カレンダー
+  基準で判定できるようにした。**未指定なら従来どおり参照系列（日経平均）で判定**
+  ——既定の挙動は不変でP2-G.2のlive実証結果を壊さない。
+
+### 修正
+
+- `p2h_light_pilot._store_raw` が `RawItem` を誤ったモジュールから取り込んでいた
+  （live run #2 で ImportError）。`sources.model` へ修正し、`_store_raw` と
+  pilot本体をオフラインで通す回帰テストを追加。
+
+### identity規律（潰さないもの）
+
+- Company（企業） ≠ **listed security（上場銘柄）**——security recordは
+  company entityのidentityを張らない（既存Entity Catalogの責務を侵さない）。
+- **生close ≠ 調整後close**（C / AdjC を別フィールド＋AdjFactor保持。
+  total returnはsourceに無いので作らない）。
+- 実績 ≠ 会社予想 ≠ 翌期予想（Sales / FSales / NxFSales を分離）。
+- **公表日 ≠ 対象期間**（investor flowはPubDateとStDate/EnDateを分離・週次を明示）。
+- **TOPIXはMarket Data Bankが所有**し、light storeへは保存しない（二重の真実を作らない）。
+
+### 実測（live pilot run #3・2026-09-01）
+
+- listed_master **4,441銘柄** / daily_bars 代表8銘柄×**244セッション**
+  （2025-09-01〜2026-09-01・計1,952行）/ fins_summary 200件 /
+  markets_calendar 401件 / investor_types 68件（64期間・週次）
+- **TOPIX regression PASS**: HTTP 200・項目 `C/Date/H/L/O` がP2-G.2実測と一致・
+  light storeへ書き込みゼロ
+- **取引カレンダー区分を実測検証**: TOPIX観測日と21件照合し**21一致・不一致0**
+  → `HolDiv=1` のみ営業日として採用（`0` `3` は営業日扱いしない）。
+  `latest_completed_session=2026-09-01` がTOPIX最新日と一致
+- **persistence PASS**: SQLiteをcanonicalのみから再構築し全dataset件数一致
+- **data quality**: 重複record_id **0件** / raw provenance欠落 **0件**（全6 dataset）
+- **scale見積り**: 794 bytes/価格1行 → 全銘柄×5年で約 **5,418,020行 ≒ 4.3 GB**・
+  約4,441リクエスト。pilotは21リクエスト/16.9秒
+- **full-universe backfillは実施していない**（P2-Hの対象外）
+
+### 境界（実装していないもの）
+
+Phase 3 / Fact extraction / Compass Generator / Market Internals analysis /
+breadth / anomaly detector / 投資推奨 / screener / company scoring / MCP /
+frontend / scheduler / Standard・Premium限定機能の迂回実装。
+
 ## v4.30 (2026-09-01) — PROJECT-WIDE RETROACTIVE AUDIT（既存状態の棚卸しと不整合の解消）
 
 プロジェクト開始時点から現在までの全実装・全Phaseを対象に、**現在のリポジトリを
