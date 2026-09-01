@@ -54,7 +54,7 @@ def _provenance(dataset_path: str, result, raw_item_id: str, attempt_id: str) ->
 
 def _store_raw(store: JQuantsLightStore, result, attempt_id: str) -> str:
     """生応答をblob＋RawItemとして保存し、raw_item_idを返す（秘密はURLに無い）。"""
-    from ..ingestion.model import FetchAttempt, RawItem
+    from ..sources.model import RawItem
 
     body = result.raw_body
     if not body:

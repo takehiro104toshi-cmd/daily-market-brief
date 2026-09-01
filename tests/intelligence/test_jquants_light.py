@@ -517,3 +517,162 @@ class TestNoV1AndProviderNeutrality:
         rec = parse_daily_price(PRICE_ROW, PROV)
         for v2_only in ("AdjC", "Vo", "Va", "MktCap"):
             assert not hasattr(rec, v2_only)
+
+
+# ============================================================ raw provenance
+
+class TestRawProvenanceStorage:
+    """pilotの `_store_raw` を実際に通す（import誤りをオフラインで検知する）。
+
+    live run #2 で `RawItem` のimport元誤りにより落ちた欠陥のリグレッション。
+    """
+
+    def test_store_raw_creates_raw_item_and_returns_id(self, store):
+        from src.intelligence.market.jquants_v2_client import JQuantsFetchResult
+        from src.intelligence.market.p2h_light_pilot import _store_raw
+
+        body = json.dumps({"data": [MASTER_ROW]}).encode()
+        result = JQuantsFetchResult(
+            dataset="listed_master", path="/equities/master",
+            url="https://api.jquants.com/v2/equities/master",
+            status_code=200, rows=(MASTER_ROW,), bodies=(body,), pages=1,
+            retrieved_at="2026-09-01T00:00:00+00:00")
+
+        raw_item_id = _store_raw(store, result, "att_1")
+        assert raw_item_id
+        items = [i for i in store.raw.iter_raw_items() if i.source_id == "jquants"]
+        assert len(items) == 1
+        assert items[0].raw_item_id == raw_item_id
+        assert items[0].media_type == "application/json"
+        assert "/v2/" in items[0].locator
+        assert API_KEY not in items[0].locator          # locatorに秘密が無い
+        assert store.raw.read_body(items[0]) == body    # 生応答へ辿れる
+
+    def test_store_raw_is_idempotent_for_same_body(self, store):
+        from src.intelligence.market.jquants_v2_client import JQuantsFetchResult
+        from src.intelligence.market.p2h_light_pilot import _store_raw
+
+        body = json.dumps({"data": [MASTER_ROW]}).encode()
+        result = JQuantsFetchResult(
+            dataset="listed_master", path="/equities/master",
+            url="https://api.jquants.com/v2/equities/master",
+            status_code=200, bodies=(body,), pages=1,
+            retrieved_at="2026-09-01T00:00:00+00:00")
+        first = _store_raw(store, result, "att_1")
+        second = _store_raw(store, result, "att_2")
+        assert first == second
+        assert len([i for i in store.raw.iter_raw_items()
+                    if i.source_id == "jquants"]) == 1
+
+    def test_store_raw_skips_when_no_body(self, store):
+        from src.intelligence.market.jquants_v2_client import JQuantsFetchResult
+        from src.intelligence.market.p2h_light_pilot import _store_raw
+
+        result = JQuantsFetchResult(dataset="x", path="/x", url="u", status_code=200)
+        assert _store_raw(store, result, "att_1") == ""
+
+    def test_sample_selection_is_deterministic_and_diverse(self):
+        """sample選定は乱数を使わず再現可能で、業種・規模が散る。"""
+        from src.intelligence.market.p2h_light_pilot import _select_sample
+
+        rows = [dict(MASTER_ROW, Code=f"{i}0000", S33=str(3700 + i % 4),
+                     ScaleCat=f"cat{i % 3}") for i in range(1, 13)]
+        first = _select_sample(rows, 6)
+        assert first == _select_sample(rows, 6)      # 決定論
+        assert len(first) == len(set(first)) == 6
+
+
+# ============================================================ pilot end-to-end (offline)
+
+class TestPilotEndToEndOffline:
+    """pilot本体をfixture応答で通す（live runを使わずに実行時エラーを検知する）。
+
+    live run #2 のimport誤りのように、pilotでしか通らない経路の欠陥を
+    オフラインで捕まえるためのガード。
+    """
+
+    def _fake_client_factory(self):
+        from src.intelligence.market.jquants_v2_client import (
+            AVAILABLE as CLIENT_AVAILABLE,
+            JQuantsFetchResult,
+        )
+
+        master_rows = [
+            dict(MASTER_ROW, Code=f"{1000 + i}0", S33=str(3700 + i % 3),
+                 ScaleCat=f"cat{i % 2}") for i in range(6)
+        ]
+        payloads = {
+            "listed_master": master_rows,
+            "markets_calendar": CALENDAR_ROWS,
+            "equities_earnings_cal": [EARNINGS_ROW],
+            "investor_types": [FLOW_ROW],
+            "daily_bars": [dict(PRICE_ROW, Date=d)
+                           for d in ("2026-08-28", "2026-08-31", "2026-09-01")],
+            "fins_summary": [FIN_ROW],
+            "topix": [{"Date": d, "O": "1", "H": "2", "L": "0", "C": "1"}
+                      for d in ("2026-08-28", "2026-08-31", "2026-09-01")],
+        }
+
+        class FakeClient:
+            api_version = "v2"
+            provider_id = "jquants"
+
+            def __init__(self, *args, **kwargs):
+                self.request_count = 0
+
+            def credential_present(self):
+                return True
+
+            def fetch(self, dataset, path, params=None, *, required_fields=(),
+                      max_pages=50):
+                self.request_count += 1
+                code = (params or {}).get("code", "")
+                rows = payloads.get(dataset, [])
+                if dataset in ("daily_bars", "fins_summary") and code:
+                    rows = [dict(r, Code=code) for r in rows]
+                body = json.dumps({"data": rows}).encode()
+                return JQuantsFetchResult(
+                    dataset=dataset, path=path,
+                    url=f"https://api.jquants.com/v2{path}",
+                    status_code=200, rows=tuple(rows), bodies=(body,), pages=1,
+                    retrieved_at="2026-09-01T00:00:00+00:00",
+                    entitlement=CLIENT_AVAILABLE,
+                    observed_row_fields=tuple(sorted(rows[0])) if rows else ())
+
+        return FakeClient
+
+    def test_pilot_main_runs_and_emits_all_markers(self, tmp_path, monkeypatch, capsys):
+        from src.intelligence.market import p2h_light_pilot as pilot
+
+        monkeypatch.setenv("INTELLIGENCE_DATA_ROOT", str(tmp_path))
+        monkeypatch.setattr(pilot, "JQuantsV2Client", self._fake_client_factory())
+
+        assert pilot.main(["--days", "30", "--sample", "3"]) == 0
+        out = capsys.readouterr().out
+
+        for marker in ("::P2H_DATASET::", "::P2H_SAMPLE::",
+                       "::P2H_TOPIX_REGRESSION::", "::P2H_CALENDAR::",
+                       "::P2H_PERSISTENCE::", "::P2H_QUERY::", "::P2H_QUALITY::",
+                       "::P2H_SCALE::", "::P2H_CAPABILITY::", "::P2H_SUMMARY::"):
+            assert marker in out, marker
+
+        summary = json.loads(out.split("::P2H_SUMMARY::")[1].splitlines()[0])
+        assert summary["required_all_ok"] is True
+        assert summary["persistence_match"] is True
+        assert summary["topix_regression_ok"] is True
+
+        topix = json.loads(out.split("::P2H_TOPIX_REGRESSION::")[1].splitlines()[0])
+        assert topix["written_to_light_store"] is False   # 二重保管しない
+
+        quality = json.loads(out.split("::P2H_QUALITY::")[1].splitlines()[0])
+        for row in quality:
+            assert row["duplicate_record_ids"] == 0
+            assert row["rows_missing_raw_provenance"] == 0   # 全行がrawへ辿れる
+
+    def test_pilot_stops_cleanly_without_credential(self, tmp_path, monkeypatch, capsys):
+        from src.intelligence.market import p2h_light_pilot as pilot
+
+        monkeypatch.setenv("INTELLIGENCE_DATA_ROOT", str(tmp_path))
+        monkeypatch.delenv("JQUANTS_API_KEY", raising=False)
+        assert pilot.main(["--days", "5", "--sample", "1"]) == 0
+        assert "::P2H_PILOT_SKIP::" in capsys.readouterr().out
