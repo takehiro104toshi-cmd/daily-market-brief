@@ -74,6 +74,7 @@ class ProcessingResult:
     corpus_count_after: int
     milestone: Mapping[str, object] = field(default_factory=dict)
     quality: str = ""
+    research: Mapping[str, object] = field(default_factory=dict)   # Phase 3.8 hook の結果（任意）
 
     def as_dict(self) -> Dict[str, object]:
         return {"result": self.result, "file": self.file, "sha256": self.sha256,
@@ -83,4 +84,5 @@ class ProcessingResult:
                 "processing_duration_seconds": round(self.processing_duration_seconds, 3),
                 "corpus_count_before": self.corpus_count_before,
                 "corpus_count_after": self.corpus_count_after,
-                "milestone": dict(self.milestone), "quality": self.quality}
+                "milestone": dict(self.milestone), "quality": self.quality,
+                "research": dict(self.research)}

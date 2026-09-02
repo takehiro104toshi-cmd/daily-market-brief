@@ -4,6 +4,50 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.39 (2026-09-02) — Phase 3.8: Automatic Compass Corpus Analyzer
+
+Corpus へ document が追加されるたびに structured analysis → market-state alignment → pattern extraction →
+cross-document comparison → pattern evidence → coverage → benchmark を自動・決定的・versioned に実行する研究層。
+production Compass rule は学習・変更しない。pattern status は STRONG_PATTERN_CANDIDATE まで。外部 LLM なし。
+
+### 追加
+
+- `src/intelligence/corpus_research/`【新規】（1機能=1ファイル）:
+  - `categories.py` / `statements.py` / `salience.py` / `links.py` / `why_model.py` / `outlook_model.py` /
+    `risk_model.py`: controlled vocabulary、文 index、versioned salience（語数不使用）、段落内の analytical link、
+    EXPLICIT_WHY と IMPLICIT_ASSOCIATION の分離、outlook（direction / horizon NOT_STATED 許容 / target /
+    条件 / caveat）、risk（explicit / counterargument / invalidation / uncertainty / watch item）。
+  - `regime.py`: `MarketConnector`（Tokyo calendar / Context / Market Bank へ読み取り専用）。CONTEXT 優先、
+    known_at ≤ 発行 cutoff（look-ahead 拒否）、無ければ UNKNOWN（捏造なし）。
+  - `structure.py` / `comparator.py` / `patterns.py` / `lifecycle.py`: AnalyticalStructure、explainable
+    similarity（重み付き Jaccard、shared / different features）、pattern identity と partial pattern type、
+    versioned thresholds（support / regime diversity / 期間 / quality）と anti-overfitting limitation。
+  - `store.py` / `engine.py`: canonical JSONL research store、incremental（影響範囲のみ更新）/ full rebuild /
+    digest equivalence、version_key ごとの state（旧結果保持・混在なし）、idempotent。
+  - `dna_comparison.py`: `market_rules.yaml` との比較（EXPLAINED / PARTIAL / NEW / CONFLICT / NOT_COMPARABLE）と
+    conflict 記録（判断しない）。
+  - `benchmark.py` / `review_queue.py` / `acquisition.py` / `research_snapshot.py`: reconstruction benchmark
+    （予測精度ではない）、Supervisor Review Queue（auto approval なし）、coverage-guided acquisition、
+    CompassCorpusResearchSnapshot と Pattern Registry（研究 evidence、production と分離）。
+  - `intake_hook.py` / `batch_import.py` / `pilot.py`: 3.75 との event boundary（失敗隔離・bounded retry）、
+    private batch 追加、実 10 document pilot（`::P38_*::`）。
+- `config.yaml`: `compass_research` セクション、`mobile_intake.trigger_research`。
+  `docs/databank/COMPASS_CORPUS_RESEARCH_SPEC.md`【新規】。
+- オフラインテスト 29 件（`tests/intelligence/test_corpus_research.py`【新規】）。
+- 実 pilot（offline）: 10/10 structures、similarities 45、patterns 53（NEW_PATTERN_CANDIDATE 4、APPROVED 0）、
+  DNA 比較 EXPLAINED 3 / PARTIAL 49 / NEW 1 / conflict 0、review queue 17、idempotent、N+1 fixture mechanics、
+  incremental == rebuild、version isolation、failure isolation PASS。alignment は本環境に calendar / Context が
+  無いため comparable 0（テストで CONTEXT 優先と look-ahead 拒否を検証）。
+
+### 改善
+
+- `mobile_intake/processor.py`: SUCCESS 後に任意の `post_ingest` callable を呼ぶ event boundary（失敗しても
+  Corpus 結果は不変）。`result.py` に `research` field、`config.py` に `trigger_research`。
+
+### 修正
+
+- なし。
+
 ## v4.38 (2026-09-02) — Phase 3.75: Mobile / One-Tap Compass Intake
 
 iPhone の共有シート「羅針盤に追加」→ private 同期フォルダ（iCloud Drive）→ Windows の bounded processor →

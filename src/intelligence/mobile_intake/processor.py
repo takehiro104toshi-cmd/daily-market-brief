@@ -99,8 +99,10 @@ class InboxProcessor:
     def __init__(self, config: MobileIntakeConfig, local: LocalConfig, corpus_config: CorpusConfig,
                  store: CorpusStore, extractor: TextLayerExtractor, *,
                  sampler: Sampler = sample_file, sleeper: Sleeper = time.sleep,
-                 now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> None:
+                 now_fn: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+                 post_ingest: Optional[Callable[[str], Dict[str, object]]] = None) -> None:
         self.config = config
+        self.post_ingest = post_ingest          # Phase 3.8 event boundary（SUCCESS 後に呼ぶ。失敗しても ingestion は不変）
         self.local = local
         self.corpus_config = corpus_config
         self.store = store
@@ -366,6 +368,13 @@ class InboxProcessor:
                         lock.unlink()
                     except OSError:
                         pass
+                if self.post_ingest is not None and res.result == SUCCESS and res.document_id:
+                    try:
+                        research = self.post_ingest(res.document_id)
+                    except Exception as exc:  # noqa: BLE001 研究側の失敗は Corpus 結果を変えない
+                        research = {"corpus": "CORPUS_SUCCESS", "research": "RESEARCH_ANALYSIS_FAILED",
+                                    "error_type": type(exc).__name__}
+                    res = ProcessingResult(**{**res.__dict__, "research": dict(research or {})})
                 self._ledger(res, now)
                 self._forget(path.name)
                 processed.add((sha, path.name))
@@ -400,7 +409,13 @@ def build_processor(*, inbox: Optional[str] = None, data_root_dir: Optional[str]
         environ["INTELLIGENCE_DATA_ROOT"] = data_root_dir
     local = load_local_config(config, env=environ, home=Path(home) if home else None)
     store = CorpusStore(corpus_root(local.data_root))
-    return InboxProcessor(config, local, corpus_config, store, PypdfExtractor(corpus_config.extractor_version))
+    hook = None
+    if config.trigger_research:
+        from ..corpus_research.intake_hook import make_post_ingest_hook   # lazy: adapter は research を知らない
+
+        hook = make_post_ingest_hook(local.data_root)
+    return InboxProcessor(config, local, corpus_config, store, PypdfExtractor(corpus_config.extractor_version),
+                          post_ingest=hook)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
