@@ -4,6 +4,34 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.42 (2026-09-03) — Processor queue fairness / scalability fix（既知ファイル fast path・新規優先）
+
+Windows 実機で ledger 登録済み 44 件を毎回 1 秒ずつ安定サンプリングしていたため、既知ファイルが増えると
+`time_budget_seconds`（120 秒）が既知ファイルの走査だけで尽き、sort 末尾の新規ファイルが処理されない
+starvation（既知 ≥120 件で必ず発生）の修正。ledger 形式・dedup・idempotency は変更しない（既存 44 entry の移行なし）。
+
+### 改善
+
+- `mobile_intake/processor.py`: 処理順を「ledger 未登録の名前（新規）→ ledger 登録済みの名前（既知）」（各群 filename 順）に変更。
+  既知の名前は sleep 無しで hash 再確認だけを行い、`(sha256, filename)` が ledger と一致すれば skip、
+  不一致（ledger 後に bytes が変わった）なら新規と同じ安定判定・lock・submit 経路へ（skip しない）。
+  `max_files_per_run` は新規・変更ファイルの実作業にだけ適用（既知の skip 確認は上限に数えない）。`time_budget_seconds` は run 全体に適用。
+- `ProcessorReport` に `known_candidates` / `unknown_candidates` / `changed_known` / `stability_checks` / `sleep_seconds` を追加。
+  CLI summary: `candidates= new= known= results= skipped_processed= stability_checks= bounded_by= corpus=`。
+- 計測（scratch、fake clock）: 既知のみ 44 / 120 / 200 件の run で安定サンプリング 44 / 120 / 121 回（200 件は 121 秒で
+  time budget 到達）→ **0 / 0 / 0 回**（sleep 0 秒、bounded_by なし）。新規 1 件は sort 末尾でも次の run で SUCCESS。
+- `docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md`: §4 処理順・fast path、§10 に期待 summary（`new=0 … stability_checks=0`）。
+
+### 追加
+
+- `tests/intelligence/test_processor_queue_fairness.py`【新規】10 件（44 / 120 / 200 既知 + 新規 sort 末尾、sort 先頭、
+  既知のみ `--once` 反復で sampling 0・ledger / Corpus 不変、max_files=20 で 25 新規は 20 → 5、time budget は実作業でのみ消費、
+  ledger 後に変更された既知名は skip しない、unstable 新規 / placeholder 保護、duplicate / idempotency、Phase 3.8 hook exactly once）。
+
+### 修正
+
+- なし（Windows 実機 Corpus・PDF・ledger は未変更。Phase 3.9 は未着手）。
+
 ## v4.41 (2026-09-03) — Windows runtime blocker fix: pypdf 依存宣言・fail-fast・FAILED recovery
 
 Windows 実機の初回取り込みで 44/44 が `PDF_UNREADABLE,ModuleNotFoundError` になった事故

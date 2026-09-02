@@ -76,6 +76,11 @@ class ProcessorReport:
     bounded_by: str = ""
     duration_seconds: float = 0.0
     environment_error: str = ""                  # EXTRACTOR_UNAVAILABLE 等。Corpus / ledger には何も書いていない
+    known_candidates: int = 0                    # ledger に final 結果がある名前（fast path 対象）
+    unknown_candidates: int = 0                  # 新規 / 未処理の名前（先に処理する）
+    stability_checks: int = 0                    # stability sampling を行った件数（known-only run では 0）
+    sleep_seconds: float = 0.0                   # sampling で sleep した合計秒
+    changed_known: int = 0                       # 名前は既知だが bytes が変わっていた件数（skip しない）
     status_written: List[str] = field(default_factory=list)
     results: List[ProcessingResult] = field(default_factory=list)
 
@@ -94,6 +99,9 @@ class ProcessorReport:
                 "corpus_before": self.corpus_before, "corpus_after": self.corpus_after,
                 "bounded_by": self.bounded_by, "duration_seconds": round(self.duration_seconds, 3),
                 "environment_error": self.environment_error,
+                "known_candidates": self.known_candidates, "unknown_candidates": self.unknown_candidates,
+                "stability_checks": self.stability_checks, "sleep_seconds": round(self.sleep_seconds, 3),
+                "changed_known": self.changed_known,
                 "status_written": list(self.status_written), "counts": self.counts(),
                 "results": [r.as_dict() for r in self.results]}
 
@@ -183,6 +191,10 @@ class InboxProcessor:
                     out.add((str(d["sha256"]), str(d.get("file", ""))))
         return out
 
+    def known_names(self) -> Set[str]:
+        """final 結果が ledger にある file 名（fast path の候補。bytes は hash で再確認する）。"""
+        return {name for _, name in self.processed_keys()}
+
     def ledger_entries(self) -> List[Dict]:
         if not self.ledger_path.is_file():
             return []
@@ -238,12 +250,16 @@ class InboxProcessor:
         except OSError:                                  # 同期クライアントが書き込み中（Windows で PermissionError）
             return False
 
-    def _stable(self, path: Path, now: datetime) -> bool:
+    def _stable(self, path: Path, now: datetime, report: Optional[ProcessorReport] = None) -> bool:
+        if report is not None:
+            report.stability_checks += 1
         try:
             samples = [self.sampler(path)]
             for _ in range(self.config.stable_samples - 1):
                 if self.config.sample_interval_seconds > 0:
                     self.sleeper(self.config.sample_interval_seconds)
+                    if report is not None:
+                        report.sleep_seconds += self.config.sample_interval_seconds
                 samples.append(self.sampler(path))
         except OSError:
             return False
@@ -309,6 +325,13 @@ class InboxProcessor:
             report.candidates = len(candidates)
             report.placeholders = len(placeholders)
             processed = self.processed_keys()
+            known = {name for _, name in processed}
+            # queue fairness: 新規 / 未処理の名前を先に、既知の名前を後に（各群は filename 順で決定的）。
+            # 既知の名前は sleep 無しで hash 再確認 → 一致なら skip、不一致（変更）なら通常経路へ。
+            candidates = ([c for c in candidates if c.name not in known] +
+                          [c for c in candidates if c.name in known])
+            report.unknown_candidates = sum(1 for c in candidates if c.name not in known)
+            report.known_candidates = report.candidates - report.unknown_candidates
             handled = 0
             pending = 0
             for path, reason in placeholders:
@@ -316,13 +339,22 @@ class InboxProcessor:
                 report.results.append(self._result(WAITING_UNSTABLE, path, R_SYNC_PLACEHOLDER, now=now,
                                                    before=before, after=report.corpus_after, duration=0.0))
             for path in candidates:
-                if handled >= self.config.max_files_per_run:
-                    report.bounded_by = "max_files_per_run"
-                    break
                 if time.monotonic() - t0 > self.config.time_budget_seconds:
                     report.bounded_by = "time_budget_seconds"
                     break
-                if not self._stable(path, now):
+                if path.name in known:                                   # known-file fast path（sleep しない）
+                    try:
+                        if (sha256_file(path), path.name) in processed:
+                            report.skipped_processed += 1
+                            self._forget(path.name)
+                            continue
+                    except OSError:
+                        pass                                             # 読めない → 通常経路（stability 判定）へ
+                    report.changed_known += 1                            # bytes が変わった: 新規扱いで安全確認へ
+                if handled >= self.config.max_files_per_run:             # 上限は実作業（新規 / 変更）にのみ適用
+                    report.bounded_by = "max_files_per_run"
+                    continue                                             # 既知ファイルの skip 確認は続行（sleep 無し）
+                if not self._stable(path, now, report):
                     first = self._first_seen(path.name, now)
                     if now - first > timedelta(minutes=self.config.unstable_timeout_minutes):
                         res = self._result(FAILED, path, R_TIMEOUT_UNSTABLE, now=now, before=before,
@@ -457,7 +489,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     else:
         counts = report.counts()
         print(f"[compass-intake] inbox={report.inbox} sync={report.sync_available} "
-              f"candidates={report.candidates} results={counts} corpus={report.corpus_before}->{report.corpus_after}")
+              f"candidates={report.candidates} new={report.unknown_candidates} known={report.known_candidates} "
+              f"results={counts} skipped_processed={report.skipped_processed} "
+              f"stability_checks={report.stability_checks} bounded_by={report.bounded_by or '-'} "
+              f"corpus={report.corpus_before}->{report.corpus_after}")
     if report.environment_error:
         print(f"[compass-intake] ENVIRONMENT FAILURE: {report.environment_error} — nothing written to the corpus")
         return 2

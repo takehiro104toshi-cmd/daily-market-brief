@@ -81,11 +81,18 @@ Inbox の場所は `COMPASS_INBOX_DIR`、Corpus は `INTELLIGENCE_DATA_ROOT` の
 5 分ごとに `processor --once` が 1 回だけ走る（bounded: 最大 20 ファイル / 120 秒 / single-instance lock）。
 
 ```
-discover → 安定判定（size 不変 × 2 回・mtime 20 秒以上前・open 可能・placeholder でない）
+discover → 処理順の決定（ledger 未登録の名前 = 新規 を先、ledger 登録済みの名前 = 既知 を後。各群は filename 順）
+        → 既知: hash 再確認のみ（sleep 無し）→ 一致なら skip（skipped_processed）／不一致なら「変更」として新規と同じ経路へ
+        → 新規・変更: 安定判定（size 不変 × 2 回・mtime 20 秒以上前・open 可能・placeholder でない）
         → lock → IntakeRequest → CompassIntakeService.submit()（Phase 3.7 の検証・重複・解析）
         → ledger → status → unlock
 ```
 
+- **既知ファイル fast path（v4.42）**: ledger に FINAL（SUCCESS / DUPLICATE / QUARANTINED / FAILED）で載っている
+  名前は、1 秒の安定サンプリングを行わず hash 再確認だけで skip する。hash が違えば skip せず新規と同じ安全確認を通す。
+  既知 44 / 120 / 200 件だけの実行は sampling 0 回・sleep 0 秒で終わり、新規 1 件（sort 末尾でも）は次の実行で処理される。
+- `max_files_per_run`（20）は **新規・変更ファイルの実作業** にだけ効く（既知の skip 確認は上限に数えない）。
+  `time_budget_seconds`（120）は run 全体に効く。上限に達したときは summary の `bounded_by` に理由が出る。
 - 転送中は **WAITING_UNSTABLE**（QUARANTINE にしない）。30 分を超えて完了しない場合だけ FAILED(TIMEOUT_UNSTABLE)。
 - 同じ PDF を二度送っても **DUPLICATE**（「既に登録済み」）。Corpus は二重登録されない。
 - Inbox の原本は削除・移動しない（Corpus の immutable copy は Phase 3.7 が別管理）。
@@ -193,6 +200,8 @@ python -m src.intelligence.mobile_intake.setup status
 :: 6) runtime validation（自動処理系を既存ファイルで確認）
 python -m src.intelligence.mobile_intake.processor --once  ← 既存ファイルは DUPLICATE として 1 回だけ ledger に載り、以後 skip（正常）
 python -m src.intelligence.mobile_intake.processor --once  ← rerun idempotency（結果 0 件・Corpus 不変）
+    期待 summary: candidates=44 new=0 known=44 results=0 skipped_processed=44 stability_checks=0 bounded_by= corpus=44
+    （new=0 かつ stability_checks=0 が既知ファイル fast path の動作証拠。数秒で終わる）
 
 :: 7) 自動化（ユーザー権限・5 分間隔・常駐なし）
 python -m src.intelligence.mobile_intake.setup task        ← 表示された schtasks /Create ... をそのまま実行
