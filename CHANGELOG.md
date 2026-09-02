@@ -4,6 +4,64 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.36 (2026-09-02) — Phase 3.6: J-Quants Production Data Strategy
+
+J-Quants Light を pilot data source から **production-grade incremental market data source** へ
+昇格させる運用設計。新しい分析機能は追加しない。**J-Quants First** を project-wide rule として
+導入（CLAUDE.md / `docs/databank/JQUANTS_FIRST_RULE.md`）。Standard / Premium endpoint を迂回せず、
+plan upgrade を自動実施せず、canonical は append-only（rolling ≠ 削除）。
+
+### 追加
+
+- `src/intelligence/jquants_ops/`【新規】（1機能=1ファイル）:
+  - `registry.py`: capability registry（dataset / endpoint / plan / entitlement / strategy /
+    frequency class / publication semantics / historical depth / pagination / request pattern /
+    canonical store / consumers / morning role / fallback / last_live_verified_at。
+    P2-H run #1/#3・Phase 3.5 run #20 の live evidence に基づく。既知の 403 は再 probe しない）。
+  - `capability_gate.py`: J-Quants First gate（CURRENT_PLAN_SUPPORTED / CURRENT_PLAN_UNSUPPORTED /
+    ALREADY_AVAILABLE / NEEDS_NEW_ENDPOINT / PLAN_UPGRADE_CANDIDATE / DEFER）＋既存 Phase の監査。
+  - `plan_upgrade_register.py`: NOT_ENTITLED dataset の用途・必要プラン・優先度・回避策・価値
+    （markets_short_ratio のみ P2 候補。他は LIGHT_SUFFICIENT / NOT_NEEDED）。
+  - `morning_contract.py`: 朝の cutoff 時点で dataset ごとに「前営業日／公表済み週／snapshot／公表済み予定」
+    のどれであるべきかを明示。
+  - `rolling_window.py`: seed 70 / active 60 / buffer 10 / max window 25 を分離。
+    25 ちょうどの設計を validate で拒否。retention は append-only。
+  - `session_gap.py`: CURRENT / MISSING_SESSION / PARTIAL_SESSION / STALE / FUTURE_DATA / CALENDAR_UNKNOWN。
+  - `incremental.py`: gap → plan（NOOP / DAILY / REPAIR / SEED / BLOCKED）→ 欠落だけ取得（bounded retry）
+    → 冪等 append → affected rolling metrics only 再計算。
+  - `master_refresh.py`: date 指定 snapshot（週1回＋イベント時）・diff（added / removed / market /
+    S17 / S33 / ScaleCat）・KNOWN_LIMITATION_HISTORICAL_UNIVERSE。
+  - `corporate_actions.py` / `weekly_flow.py` / `financial_summary.py` / `earnings_calendar.py` /
+    `topix_strategy.py`: production contract（生終値判定・週次差分・event-driven fins・予定の revision・
+    TOPIX 差分＋Nikkei alignment）。
+  - `storage_budget.py` / `request_budget.py`: store 別の日次／月次／年次増分、scenario 別 request 数。
+  - `failure_policy.py`: AUTH_FAILURE / NOT_ENTITLED / RATE_LIMIT / TIMEOUT / HTTP_ERROR /
+    SCHEMA_CHANGE / EMPTY_RESPONSE / PARTIAL_DATA / SESSION_GAP、impact（CONTINUE / DEGRADED / ABSTAIN）、
+    bounded retry（最大2試行・auth/entitlement/schema は retry しない）。
+  - `schema_drift.py`: unknown field 追加と required field 欠落を区別。
+  - `health.py` / `readiness.py`: dataset health snapshot と READY / READY_WITH_WARNINGS / DEGRADED /
+    NOT_READY（required / internals / optional）。
+  - `fifty_two_week.py`: 52週高値安値 = IMPLEMENT_LATER（daily incremental で蓄積。5年 backfill なし）。
+  - `pilot.py`: isolated root で seed（意図的欠落）→ repair → daily → rerun → master diff →
+    weekly flow → health / readiness → morning simulation を実測（`::P36_*::`）。
+- `config.yaml`: `jquants_ops` セクション。`CLAUDE.md`: J-Quants First ルール。
+- `docs/databank/JQUANTS_FIRST_RULE.md`【新規】、`docs/databank/JQUANTS_PRODUCTION_DATA_STRATEGY.md`【新規】。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3.6 step 追加（JQUANTS_API_KEY のみ）。
+- オフラインテスト 47 件追加（`tests/intelligence/test_jquants_ops.py`【新規】）。
+- live evidence（p2d-market-pilot run #21、231.8 s）: seed 29 session / 40 request → repair
+  （MISSING_SESSION 2 → REPAIR 2 request、gap CURRENT）→ daily（STALE 1 → DAILY 1 request、6.84 s）
+  → rerun NOOP 0 request（idempotent）。master snapshot 8 本・diff 36 変更、fins date mode AVAILABLE、
+  readiness READY_WITH_WARNINGS（earnings_cal MISSING）、morning simulation 4 朝 look-ahead 0、
+  合計 45 request。詳細は `docs/databank/JQUANTS_PRODUCTION_DATA_STRATEGY.md` §11 / §14。
+
+### 改善
+
+- なし（既存モジュールは変更していない。3.5 の ingest / pipeline を再利用）。
+
+### 修正
+
+- なし。
+
 ## v4.35 (2026-09-02) — Phase 3.5: Japan Market Internals Foundation
 
 日本株市場の「指数の値」だけでなく**市場内部で何が起きているか**（騰落銘柄数・売買代金・

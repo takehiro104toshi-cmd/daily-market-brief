@@ -94,14 +94,53 @@ rolling = 金額・件数ベースで影響なし／ AdjC = 検知のみ。versi
 
 - investor_types: 毎朝 1 request（from = 最新 period_end − 14日）。新規公表週だけ追記。公表前は使わない。
 - fins_summary: 全銘柄を毎朝取らない。**event-driven**（前営業日に決算予定があった銘柄だけ code 指定、
-  上限 200）。`date` 指定の可否は run #21 で実測。実績／当期予想／翌期予想の分離維持。
+  上限 200）。`date` 指定は run #21 で実測済み（HTTP 200、14 行 → date mode AVAILABLE、§14.1）。実績／当期予想／翌期予想の分離維持。
 - equities_earnings_cal: 今日〜+90日を毎朝 1 request。known_at = 取得時刻（公表済み予定のみ）。
   日程変更は新 record（旧 record は残す。消費側は code ごとに最新 retrieved_at）。
 - topix: 既存 V2 provider 不変。毎朝 1 request（差分）。Nikkei との same-session alignment を確認。
 
 ## 11. Storage / request budget（`storage_budget.py` / `request_budget.py`）
 
-（§14 に live 実測を記載）
+run #21 の実測（isolated pilot root、daily_bars 32 session・master snapshot 8 本）を基に算出。
+
+### 11.1 実測ストレージ（pilot root）
+
+| store | 実測 |
+|---|---|
+| J-Quants Light canonical JSONL（master snapshot 8 本含む） | 141.3 MB |
+| J-Quants Light SQLite | 38.0 MB |
+| raw payload（provenance） | 51.1 MB |
+| facts canonical / SQLite | 4.64 MB / 4.19 MB |
+| contexts canonical / SQLite | 0.32 MB / 0.40 MB |
+| price rows | 142,187 行（canonical 994 B/行） |
+
+### 11.2 増分予算（1 session あたり）
+
+| store | 日次 | 月次（20 session） | 年次（244 session） |
+|---|---|---|---|
+| canonical prices | 3.49 MB | 69.8 MB | 852.0 MB |
+| light sqlite | 0.90 MB | 18.1 MB | 220.7 MB |
+| master canonical（週1 snapshot） | 0.80 MB | 16.0 MB | 195.1 MB |
+| internals sqlite | 0.47 MB | 9.4 MB | 114.9 MB |
+| facts canonical / sqlite | 0.13 / 0.14 MB | 2.6 / 2.7 MB | 31.3 / 33.5 MB |
+| contexts canonical / sqlite | 0.01 / 0.01 MB | 0.3 / 0.3 MB | 3.5 / 3.0 MB |
+| **合計** | **5.96 MB** | **119.2 MB** | **1,453.9 MB** |
+
+retention: canonical は append-only（rolling window は計算窓であり削除ではない）。SQLite は canonical
+から再構築可能。1 年運用で約 1.45 GB。**5 年 backfill はこの予算に含まれない**（実施しない）。
+
+### 11.3 request 予算（scenario 別）
+
+| scenario | 内訳 | 合計 |
+|---|---|---|
+| 通常の朝 | topix 1 / daily_bars 1 / investor_types 1 / equities_earnings_cal 1 | **4** |
+| 週次 refresh | markets_calendar 1 / listed_master 1 | 2 |
+| master refresh のみ | listed_master 1 | 1 |
+| event refresh（決算日） | fins_summary ≤ 20（code 指定） | ≤ 20 |
+| repair 日 | daily_bars 3 / listed_master 1 | 4 |
+| 初期 seed | calendar 1 / master 15 / daily_bars 70 / flow 1 / earnings 1 / topix 1 | 89 |
+
+pilot 実績: seed 40 / repair 2 / daily 1 / rerun 0 = **45 request**（全部 Light endpoint、NOT_ENTITLED probe 0）。
 
 ## 12. Failure / retry / schema drift（`failure_policy.py` / `schema_drift.py`）
 
@@ -123,4 +162,95 @@ schema: unknown field 追加（取り込み継続・registry 更新候補）と 
 
 ## 14. 実データ検証（p2d-market-pilot run #21）
 
-（live evidence をここに記録する）
+- run: https://github.com/takehiro104toshi-cmd/daily-market-brief/actions/runs/33588143976
+  （success、03:43:53Z–03:57:46Z。Phase 3.6 step 03:53:51–03:57:43 = 231.8 s）
+- 実行: `python -m src.intelligence.jquants_ops.pilot --mornings 4`、isolated root
+  `<runner temp>/intelligence_data/jquants_ops_pilot`（production root 不変）。
+- credential: `JQUANTS_API_KEY` のみ runtime injection。値は出力していない。
+
+### 14.1 Calendar / seed
+
+| 項目 | 実測 |
+|---|---|
+| calendar | 140 trading days（211 行、2026-11-01 まで） |
+| latest_completed / previous | 2026-09-01 / 2026-08-31 |
+| expected window | 2026-07-17 .. 2026-09-01（31 session） |
+| seed | 29 session、40 request、179.5 s（6.19 s/session）、失敗 0 |
+| 意図的欠落 | 2026-08-10（窓内）と 2026-09-01（最新）を seed から除外 |
+| master snapshot | 8 本（07-17, 07-24, 07-31, 08-07, 08-14, 08-21, 08-28, 09-02）＝ `?date=` 週次 |
+| その他 dataset | listed_master 4,440 / investor_types 32 / earnings_cal 1 / fins 14 行 |
+| fins `?date=2026-08-31` | HTTP 200、14 行、1 page → **date mode AVAILABLE** |
+| 初期 build | 28 session、facts 2,519、contexts 301、2.45 s |
+
+### 14.2 Repair（pass 1、as-of previous session）
+
+| 段階 | 結果 |
+|---|---|
+| gap 検出 | MISSING_SESSION: 2026-07-16, 2026-08-10（expected_rows 4,443 = median） |
+| plan | REPAIR、sessions_to_fetch 2、request 見積 2 |
+| apply | fetched 2 / 2 request / 8,887 行 / 10.13 s、各 1 attempt |
+| recompute | window 07-16..08-31（30 session）、facts added 290 / skipped 2,413、contexts added 55 / skipped 268、2.50 s |
+| gap 検出（後） | **CURRENT** 31/31 |
+
+### 14.3 Daily incremental（pass 2）→ rerun（pass 3）
+
+| 段階 | 結果 |
+|---|---|
+| gap 検出 | STALE: 2026-09-01 のみ欠落 |
+| plan | DAILY、1 request |
+| apply | 4,441 行、4.7 s、1 attempt |
+| recompute | window 07-24..09-01（26 session = 25 窓 + 1）、facts added 92 / skipped 2,243、contexts added 14 / skipped 265、2.13 s |
+| daily 合計 | **6.84 s**（1 request） |
+| rerun | plan **NOOP**、0 request、facts/contexts added 0 → **idempotent = true** |
+| 整合 | canonical 142,187 行 = SQLite 142,187 行、facts 2,901、contexts 370 |
+
+### 14.4 Master / weekly flow / event-driven
+
+- master: refresh_due 今日 = false。diff 07-17（4,442）→ 09-02（4,440）: added 16（593A0…617A0）、removed 18
+  （191A0, 21620, …）、market change 1（57040 0113→0112）、scale change 1（166A0 - → TOPIX Small 2）、
+  S17/S33 変更 0。合計 **36**。
+- weekly flow: plan CHECK from 2026-08-07 to 2026-09-02（stored latest period_end 08-21 / pub 08-27）。
+  1 request、12 行、added 0（32 → 32、冪等）。
+- fins: plan DATE_MODE（date=2026-09-01、1 request、codes_announced 0）。earnings: 09-02..12-01 1 request、
+  stored 予定 0。
+
+### 14.5 Health / readiness / failures
+
+| dataset | health |
+|---|---|
+| daily_bars | CURRENT 31/31 |
+| listed_master | CURRENT（8 snapshots、latest 09-02） |
+| markets_calendar | CURRENT（211 日、2026-11-01 まで） |
+| investor_types | CURRENT（period_end 08-21、32 section-weeks） |
+| equities_earnings_cal | MISSING（予定 0 件） |
+| topix | CURRENT 09-01（Nikkei 09-01 と aligned） |
+| fins_summary | UNKNOWN（14 records、morning role NONE） |
+
+readiness = **READY_WITH_WARNINGS**（equities_earnings_cal MISSING。required_ok / internals_ok = true）。
+failures 分類 = {OK: 45}（retry 発生 0）。
+
+### 14.6 Morning simulation（4 mornings、look-ahead 0）
+
+| morning | previous | daily_bars ≤ prev | master effective | flow weeks | readiness replay | internals | leaks |
+|---|---|---|---|---|---|---|---|
+| 2026-08-28 | 08-27 | 29 | 08-21 | 8 | READY | 5 dims AVAILABLE | 0 |
+| 2026-08-31 | 08-28 | 30 | 08-28 | 8 | READY | 5 dims AVAILABLE | 0 |
+| 2026-09-01 | 08-31 | 31 | 08-28 | 8 | READY | 5 dims AVAILABLE | 0 |
+| 2026-09-02 | 09-01 | 32 | 08-28 | 8 | READY | 5 dims AVAILABLE | 0 |
+
+各朝の normal request = 4。contract: required = topix / markets_calendar / nikkei225、internals = daily_bars /
+listed_master、optional = investor_types / equities_earnings_cal / usd_jpy / us_treasury_par / jgb10y。
+
+### 14.7 Corporate action / 52 週 / performance
+
+- corporate action: 3 session で 7 銘柄を price movement から除外（07-30: 21630, 31930, 83090 / 08-27: 99000 /
+  08-28: 76490, 80110, 92790）。
+- 52 週: stored 32 session。one-time seed に 218 request / 968,290 行 / 761 MB / 17.3 分 →
+  **IMPLEMENT_LATER**（daily incremental で 218 営業日後に自然到達）。
+- performance: seed 6.19 s/session、repair 2 request 10.13 s + recompute 2.5 s、daily 1 request 6.84 s、
+  rerun 0 request、full rebuild 2.77 s、pilot 231.4 s。**morning_operation_realistic = true**。
+
+### 14.8 Security
+
+- env 確認: JQUANTS_API_KEY present のみ。ANTHROPIC / OPENAI は不在。値は一切出力していない。
+- endpoints outside Light = 0、NOT_ENTITLED probe = 0、production root 変更 = false。
