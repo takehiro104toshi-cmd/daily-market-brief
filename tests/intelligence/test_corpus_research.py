@@ -31,7 +31,7 @@ from src.intelligence.corpus.store import CorpusStore
 from src.intelligence.corpus_research import categories as cat
 from src.intelligence.corpus_research import lifecycle as lc
 from src.intelligence.corpus_research.acquisition import recommendations
-from src.intelligence.corpus_research.batch_import import batch_import
+from src.intelligence.corpus_research.batch_import import batch_import, resolve_data_root
 from src.intelligence.corpus_research.benchmark import compute_benchmark
 from src.intelligence.corpus_research.comparator import similar_documents, similarity
 from src.intelligence.corpus_research.config import ResearchConfig, config_from_mapping, load_research_config
@@ -587,6 +587,32 @@ def test_batch_import_dedup_bounded_and_failure_isolated(tmp_path, monkeypatch):
     monkeypatch.setattr(bi, "ingest_path", explode)
     isolated = batch_import(src, lab.corpus, corpus_config=CCFG, extractor=lab.extractor, max_files=10, now=NOW)
     assert isolated.errors == 5 and isolated.processed == 5                            # 1 件の失敗が batch を止めない
+    lab.close()
+
+
+def test_batch_import_uses_processor_data_root_and_skips_placeholders(tmp_path, monkeypatch):
+    from src.intelligence.mobile_intake.local_config import write_local_config
+
+    home = tmp_path / "home"
+    write_local_config(home, inbox_dir=tmp_path / "inbox", data_root_dir=tmp_path / "private_root", provider="ICLOUD_DRIVE")
+    env = {"COMPASS_INTAKE_HOME": str(home)}
+    assert resolve_data_root("", env) == tmp_path / "private_root"                      # local config と同じ root
+    assert resolve_data_root(str(tmp_path / "override"), env) == tmp_path / "override"   # env 上書きが最優先
+    lab = Lab(tmp_path)
+    src = tmp_path / "sync"
+    (src / "sub").mkdir(parents=True)
+    lab.texts["top.pdf"] = research_pages(0)
+    make_pdf(src / "top.pdf", "top")
+    lab.texts["nested.pdf"] = research_pages(1)
+    make_pdf(src / "sub" / "nested.pdf", "nested")
+    (src / "empty.pdf").write_bytes(b"")
+    (src / "pending.pdf.icloud").write_bytes(b"x")
+    flat = batch_import(src, lab.corpus, corpus_config=CCFG, extractor=lab.extractor, max_files=10, now=NOW)
+    assert flat.scanned == 2 and flat.added == 1 and flat.failed == 0
+    assert [r["status"] for r in flat.results if r["file"] == "empty.pdf"] == ["SKIPPED_PLACEHOLDER"]
+    deep = batch_import(src, lab.corpus, corpus_config=CCFG, extractor=lab.extractor, max_files=10, now=NOW, recursive=True)
+    assert deep.scanned == 3 and deep.added == 1 and deep.duplicates == 1
+    assert (src / "top.pdf").exists() and (src / "sub" / "nested.pdf").exists()          # 原本不変
     lab.close()
 
 

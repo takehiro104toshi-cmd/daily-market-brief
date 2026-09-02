@@ -16,7 +16,10 @@ from typing import Dict, List, Optional
 
 from ..core.paths import data_root
 from ..corpus.config import load_corpus_config
-from ..corpus.store import corpus_root
+from ..corpus.identity import sha256_file
+from ..corpus.inbox import is_stable, sample_file
+from ..corpus.snapshot import build_snapshot
+from ..corpus.store import CorpusStore, corpus_root
 from .adapters import PROVIDERS, SyncFolderAdapter, default_sync_root
 from .config import MobileIntakeConfig, load_mobile_intake_config
 from .local_config import (
@@ -126,10 +129,107 @@ def init(config: MobileIntakeConfig, *, home: Path, inbox_dir: Optional[Path],
             "task_command": schtasks_create_command(config, home)}
 
 
+def inventory_report(config: MobileIntakeConfig, local: LocalConfig, *, now_ts: Optional[float] = None,
+                     max_names: int = 60) -> Dict[str, object]:
+    """実 Inbox の棚卸し（読むだけ。移動・削除・改変しない）。full path は出さない。"""
+    import time as _time
+
+    now_ts = _time.time() if now_ts is None else now_ts
+    inbox = local.inbox_dir
+    if inbox is None or not Path(inbox).is_dir():
+        return {"inbox": redact_path(inbox) if inbox else "", "exists": False}
+    adapter = SyncFolderAdapter(local.provider, Path(inbox), config.status_dir_name)
+    entries = sorted(Path(inbox).iterdir())
+    dirs = [e for e in entries if e.is_dir()]
+    files = [e for e in entries if e.is_file()]
+    candidates, placeholders = adapter.discover()
+    placeholder_names = {p.name for p, _ in placeholders}
+    non_pdf = [f for f in files if f.suffix.lower() != ".pdf" and f.name not in placeholder_names]
+    stable, unstable = [], []
+    for f in candidates:
+        try:
+            samples = [sample_file(f), sample_file(f)]
+            ok = is_stable(samples, now_ts, config.stable_seconds)
+            with f.open("rb") as handle:
+                handle.read(8)
+        except OSError:
+            ok = False
+        (stable if ok else unstable).append(f)
+    root = corpus_root(local.data_root)
+    duplicates, new_candidates = [], []
+    corpus_docs = 0
+    if (root / "index" / "corpus.sqlite3").exists():
+        store = CorpusStore(root)
+        try:
+            corpus_docs = len(store.documents())
+            for f in stable:
+                (duplicates if store.document_by_sha(sha256_file(f)) is not None else new_candidates).append(f)
+        finally:
+            store.close()
+    else:
+        new_candidates = list(stable)
+    return {"inbox": redact_path(inbox), "exists": True, "provider": local.provider,
+            "total_items": len(entries), "subfolders": len(dirs),
+            "subfolder_names": [d.name for d in dirs][:max_names], "files": len(files),
+            "pdf_candidates": len(candidates), "stable": len(stable), "unstable": len(unstable),
+            "placeholders": len(placeholders), "placeholder_kinds": sorted({r for _, r in placeholders}),
+            "non_pdf": len(non_pdf), "non_pdf_names": [f.name for f in non_pdf][:max_names],
+            "corpus_documents": corpus_docs, "hash_duplicates_of_corpus": len(duplicates),
+            "new_candidates": len(new_candidates), "new_candidate_names": [f.name for f in new_candidates][:max_names],
+            "duplicate_names": [f.name for f in duplicates][:max_names],
+            "note": "read-only inventory; nothing moved, deleted or modified"}
+
+
+def status_report(local: LocalConfig) -> Dict[str, object]:
+    """Corpus（3.7）と Research（3.8）の現在値。before / after 比較用。"""
+    from datetime import datetime, timezone
+
+    out: Dict[str, object] = {"data_root": redact_path(local.data_root)}
+    root = corpus_root(local.data_root)
+    if not (root / "index" / "corpus.sqlite3").exists():
+        out["corpus"] = {"exists": False, "documents": 0}
+    else:
+        store = CorpusStore(root)
+        try:
+            snap = build_snapshot(store, load_corpus_config(), datetime.now(timezone.utc))
+        finally:
+            store.close()
+        out["corpus"] = {"exists": True, **dict(snap.counts), "date_range": list(snap.date_range),
+                         "milestone": snap.milestones["reached"], "next_milestone": snap.milestones["next_milestone"],
+                         "documents_needed": snap.milestones["documents_needed"],
+                         "underrepresented_regimes": snap.coverage["underrepresented_regimes"],
+                         "missing_regimes": snap.coverage["missing_regimes"]}
+    try:
+        from ..corpus_research.config import load_research_config
+        from ..corpus_research.store import SNAPSHOT_FILE, ResearchStore, research_root
+
+        rroot = research_root(local.data_root)
+        snap_path = rroot / SNAPSHOT_FILE
+        if snap_path.is_file():
+            rs = json.loads(snap_path.read_text(encoding="utf-8"))
+            rconfig = load_research_config()
+            structures = ResearchStore(rroot).current_structures(rconfig.version_key)
+            regimes = {str((st.get("regime") or {}).get("regime_key", "regime:UNKNOWN")) for st in structures.values()}
+            regimes.discard("regime:UNKNOWN")
+            out["research"] = {"exists": True, "analyzed_documents": rs.get("analyzed_documents"),
+                               "patterns_total": rs.get("patterns_total"), "patterns_by_status": rs.get("patterns_by_status"),
+                               "conflicts": len(rs.get("conflicts") or []), "review_queue": rs.get("review_queue"),
+                               "dna_comparison_counts": rs.get("dna_comparison_counts"),
+                               "regime_signatures": len(regimes), "coverage": rs.get("coverage"),
+                               "limitations": rs.get("limitations"), "analyzer_versions": rs.get("analyzer_versions")}
+        else:
+            out["research"] = {"exists": False}
+    except Exception as exc:  # noqa: BLE001 research 層が無くても status は出す
+        out["research"] = {"exists": False, "error_type": type(exc).__name__}
+    return out
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Compass mobile intake setup")
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("check")
+    sub.add_parser("inventory")
+    sub.add_parser("status")
     p_init = sub.add_parser("init")
     p_init.add_argument("--inbox", default="")
     p_init.add_argument("--data-root", default="")
@@ -154,6 +254,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
     if args.command == "shortcut":
         print(build_instructions_ja(config))
+        return 0
+    if args.command == "inventory":
+        print(json.dumps(inventory_report(config, local), ensure_ascii=False, indent=1))
+        return 0
+    if args.command == "status":
+        print(json.dumps(status_report(local), ensure_ascii=False, indent=1))
         return 0
     result = readiness(config, local, repo_root=repo_root)
     print(json.dumps(result, ensure_ascii=False, indent=1))

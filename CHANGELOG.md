@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.40 (2026-09-02) — Phase 3.75/3.8 Windows 実機接続 runbook と既存 PDF 初回取り込みの整合
+
+iCloud Drive「羅針盤」フォルダ（Windows 実機）へ既存実装を接続するための最小整合。新 Phase ではない。
+machine-specific path は repository に書かない（`~/.compass_intake/local_config.json` のみ）。
+
+### 追加
+
+- `mobile_intake/setup.py`: `inventory`（実 Inbox の読み取り専用棚卸し: items / PDF / stable / unstable /
+  placeholders / non-PDF / 既存 Corpus との hash duplicate）と `status`（Corpus BEFORE/AFTER: unique / usable /
+  eligible / date range / milestone、Research: patterns by status / conflicts / review queue / regime signatures）。
+- `docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md` §10: Windows 実機 runbook（init → check → status → inventory →
+  batch_import → status → task → processor --once ×2 → check）と iPhone 保存先の注意。
+- targeted tests 2 件（inventory/status、batch import の data root 共有と placeholder skip）。
+
+### 改善
+
+- `corpus_research/batch_import.py`: data root を processor と同じ順序で解決（env → local_config.json →
+  config.yaml、`--data-root` で上書き）。既定で直下のみ（`--recursive`）、0 byte / `.icloud` placeholder は読まない。
+
+### 修正
+
+- なし。
+
 ## v4.39 (2026-09-02) — Phase 3.8: Automatic Compass Corpus Analyzer
 
 Corpus へ document が追加されるたびに structured analysis → market-state alignment → pattern extraction →

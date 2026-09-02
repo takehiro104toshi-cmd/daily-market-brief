@@ -46,6 +46,15 @@ class LocalConfig:
                 "sources": dict(self.sources)}
 
 
+def environment_with(overrides: Optional[Mapping[str, str]] = None) -> Dict[str, str]:
+    """os.environ に overrides を重ねた dict（env を読む場所を本モジュールに集約する）。"""
+    merged = dict(os.environ)
+    for k, v in dict(overrides or {}).items():
+        if v:
+            merged[str(k)] = str(v)
+    return merged
+
+
 def local_home(env: Optional[Mapping[str, str]] = None,
                dir_name: str = ".compass_intake") -> Path:
     environ = os.environ if env is None else env

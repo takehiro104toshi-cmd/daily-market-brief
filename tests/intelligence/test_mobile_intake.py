@@ -41,7 +41,7 @@ from src.intelligence.mobile_intake.local_config import (
     write_local_config,
 )
 from src.intelligence.mobile_intake.processor import LEDGER_FILE, InboxProcessor
-from src.intelligence.mobile_intake.setup import NOT_READY, PARTIAL, READY, init, readiness
+from src.intelligence.mobile_intake.setup import NOT_READY, PARTIAL, READY, init, inventory_report, readiness, status_report
 from src.intelligence.mobile_intake.status import STATUS_JSON, STATUS_TXT, corpus_count, milestone_feedback, read_status
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -530,6 +530,33 @@ def test_config_section_and_defaults():
     assert config_from_mapping({"stable_samples": 1}).stable_samples == 2
     section = (REPO_ROOT / "config.yaml").read_text(encoding="utf-8").split("mobile_intake:")[1]
     assert "C:\\" not in section and "/Users/" not in section                # 機械固有 path なし
+
+
+def test_setup_inventory_and_status_reports(tmp_path):
+    lab = Lab(tmp_path)
+    lab.seed(2)
+    lab.arrive("already_in_corpus.pdf", 0, seed="seed0.pdf")            # seed0 と同じ bytes → hash duplicate
+    lab.arrive("fresh.pdf", 9)
+    lab.arrive("copying.pdf", 8, stable=False)
+    (lab.inbox / "pending.pdf.icloud").write_bytes(b"x")
+    (lab.inbox / "memo.txt").write_text("x")
+    (lab.inbox / "sub").mkdir()
+    inv = inventory_report(lab.cfg, lab.local, now_ts=NOW.timestamp())
+    assert inv["exists"] and inv["total_items"] == 6 and inv["subfolders"] == 1 and inv["files"] == 5
+    assert inv["pdf_candidates"] == 3 and inv["stable"] == 2 and inv["unstable"] == 1 and inv["placeholders"] == 1
+    assert inv["non_pdf"] == 1 and inv["non_pdf_names"] == ["memo.txt"]
+    assert inv["corpus_documents"] == 2 and inv["hash_duplicates_of_corpus"] == 1 and inv["new_candidates"] == 1
+    assert inv["duplicate_names"] == ["already_in_corpus.pdf"] and inv["new_candidate_names"] == ["fresh.pdf"]
+    assert str(tmp_path) not in json.dumps(inv, ensure_ascii=False)     # full path なし
+    assert sorted(p.name for p in lab.inbox.iterdir()) == ["already_in_corpus.pdf", "copying.pdf", "fresh.pdf",
+                                                            "memo.txt", "pending.pdf.icloud", "sub"]   # 読むだけ
+    st = status_report(lab.local)
+    assert st["corpus"]["exists"] and st["corpus"]["documents"] == 2 and st["corpus"]["milestone"] == "NONE"
+    assert st["corpus"]["next_milestone"] == "CORPUS_10" and st["corpus"]["documents_needed"] == 8
+    assert st["research"]["exists"] is False
+    missing = status_report(LocalConfig(home=lab.home, inbox_dir=None, data_root=tmp_path / "nowhere", provider="ICLOUD_DRIVE"))
+    assert missing["corpus"] == {"exists": False, "documents": 0}
+    lab.close()
 
 
 # ============================================================ end-to-end simulated arrival（pilot）

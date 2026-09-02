@@ -148,3 +148,57 @@ iPhone / iCloud が使えなくても、PDF を Inbox フォルダに **drop す
 - cloud token・新 secret・外部 LLM・public endpoint・telemetry なし。processor は同期フォルダ（ローカル FS）だけを見る。
 - 発行時刻の由来を `publication_time_source`（DOCUMENT_TEXT / PDF_METADATA / RECEIVED_TIME /
   EXTERNAL_VERIFIED / UNKNOWN）で明示。紙面明記の 7:30 を優先し、不明なら捏造しない。`received_at` は別 field。
+
+## 10. Windows 実機接続 runbook（iCloud Drive「羅針盤」フォルダ・既存 PDF の初回取り込み）
+
+既存の Phase 3.75 / 3.8 の道具だけで行う（新しい取り込み経路は作らない）。実フォルダは
+`%USERPROFILE%\iCloudDrive\羅針盤`（iPhone と同期済み。既存 PDF は「このデバイス上に常に保持」）。
+machine-specific な絶対 path は **repository のどこにも書かず**、`~/.compass_intake/local_config.json`
+（`setup init` が生成、Git 非管理）にだけ置く。コマンドはリポジトリ直下の cmd.exe で実行
+（PowerShell では `%USERPROFILE%` を `$env:USERPROFILE` に読み替える）。
+
+```
+:: 0) 事前確認（変更しない）
+git status
+git branch --show-current
+git ls-files | findstr /i "\.pdf$"                       ← 何も出なければ tracked PDF 0
+
+:: 1) 機械ローカル設定（Inbox と private data root。repository には何も書かれない）
+python -m src.intelligence.mobile_intake.setup init --inbox "%USERPROFILE%\iCloudDrive\羅針盤" --data-root "%USERPROFILE%\CompassData" --provider ICLOUD_DRIVE
+
+:: 2) readiness / BEFORE / 棚卸し（読むだけ。移動・削除・改変なし）
+python -m src.intelligence.mobile_intake.setup check      ← inbox configured/exists/readable/writable/outside repo/corpus reachable/provider root
+python -m src.intelligence.mobile_intake.setup status     ← BEFORE: unique/usable/eligible/date_range/milestone
+python -m src.intelligence.mobile_intake.setup inventory  ← items / PDF / stable / unstable / placeholders / non-PDF / 既存 Corpus との hash duplicate
+
+:: 3) 既存 PDF の初回取り込み（bounded・hash dedup・失敗隔離・直下のみ・最後に Phase 3.8 incremental を 1 回）
+python -m src.intelligence.corpus_research.batch_import --source "%USERPROFILE%\iCloudDrive\羅針盤" --max 50
+
+:: 4) AFTER と研究状態（milestone は実測値だけを使う）
+python -m src.intelligence.mobile_intake.setup status
+
+:: 5) 自動化（ユーザー権限・5 分間隔・常駐なし）
+python -m src.intelligence.mobile_intake.setup task       ← 表示された schtasks /Create ... をそのまま実行
+python -m src.intelligence.mobile_intake.processor --once ← 手動 1 回。既存ファイルは DUPLICATE として 1 回だけ ledger に載り、以後 skip（正常）
+python -m src.intelligence.mobile_intake.processor --once ← rerun idempotency（結果 0 件・Corpus 不変）
+python -m src.intelligence.mobile_intake.setup check      ← MOBILE_INTAKE_READY
+```
+
+- `batch_import` は `~/.compass_intake/local_config.json` の data root を processor と共有する
+  （`--data-root` で上書き可）。sub folder は既定で読まない（`--recursive` で明示）。0 byte / `.icloud` placeholder は読まない。
+- 44 項目あっても CORPUS_30 到達を仮定しない。`setup status` の AFTER 値（hash duplicate・validation・quality 判定後）だけを報告する。
+- 研究解析（Phase 3.8）が失敗しても Corpus 取り込みは巻き戻らない（CORPUS_SUCCESS + RESEARCH_ANALYSIS_FAILED、bounded retry）。
+- 初回取り込み後の processor 実行で既存ファイルが DUPLICATE になるのは想定どおり（Corpus は二重登録されない）。
+- 本当の N+1（iPhone から新しい号を保存 → 5 分以内に自動取り込み）は次に新しい羅針盤を保存した時点で確認する
+  （REAL_N_PLUS_ONE_PENDING）。既存ファイルを複製して「新規」とみなさない。
+
+### 10.1 iPhone 側の保存先について
+
+iOS ショートカットの「ファイルを保存」は確認なしの場合 `iCloud Drive/Shortcuts/` 配下にしか保存できない。
+実フォルダ「羅針盤」は iCloud Drive 直下にあるため、日常操作は次のどちらか:
+
+- **A（現行フォルダのまま）**: 共有 → 「"ファイル"に保存」 → 「羅針盤」（前回の保存先が既定になるので 3 タップ前後）
+- **B（2 タップ）**: §2 のショートカットを使い、保存先を `Shortcuts/羅針盤` にして Windows 側の Inbox も
+  `%USERPROFILE%\iCloudDrive\Shortcuts\羅針盤` に変える（`setup init --inbox ...` を再実行）
+
+processor 側はどちらのフォルダでも同じ。既存 44 項目は A のフォルダにあるため、まず A で運用を成立させる。
