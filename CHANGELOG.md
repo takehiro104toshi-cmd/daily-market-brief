@@ -4,6 +4,85 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.35 (2026-09-02) — Phase 3.5: Japan Market Internals Foundation
+
+日本株市場の「指数の値」だけでなく**市場内部で何が起きているか**（騰落銘柄数・売買代金・
+業種／規模別の相対パフォーマンス・投資部門別フロー・指数の主導構造）を
+Evidence-Grounded に観測可能にする層。Compass Generator（3-C）は大規模改修せず、
+Evidence Package が internals Context を通常Contextとして受け取る最小接続に留めた。
+因果説明をしない／週次を日次として語らない／Standard・Premium限定データを迂回しない／
+全銘柄×5年backfillはしない（見積りのみ）。
+
+### 追加
+
+- `src/intelligence/internals/`【新規】（1機能=1ファイル）:
+  - `types.py` / `config.py`: 統制語彙・次元・subject id・`config.yaml: market_internals`
+    （universe / 価格変化定義 / 閾値をすべて version 付きで保持）。
+  - `universe.py`: 東証プライム普通株 universe（`tse_prime_common:1.0.0`。Mkt=0111・
+    5桁コード末尾0・業種未設定を除外）。session 以前で最新の master を使い、無ければ
+    遡及適用を `master_applied_backwards` として明示（survivorship の LIMITATION）。
+  - `price_movement.py`: **生終値 vs 前営業日生終値**。当日 AdjFactor≠1 または raw/adjusted
+    の騰落率不一致は `corporate_action` として判定しない（誤方向を数えない）。
+  - `breadth.py`: 騰落集計 ＋ **aggregation manifest**（manifest_id / input_count /
+    input_set_hash / universe_version / calculation_version / input_record_ids）。
+    数千件の入力を manifest から再構築できる。
+  - `turnover.py` / `sector.py`（S17・等ウェイト・市場平均との差・leaders/laggards）/
+    `size.py`（ScaleCat: TOPIX 100 / Mid400 / Small を source 定義のまま）/
+    `breadth_history.py`（25日騰落レシオ＝Σ値上がり/Σ値下がり×100、5 vs 20 セッション trend）。
+  - `investor_flow.py`: 週次 investor-types。published_date から known_at（publication gating）、
+    primary_date = period_end。「本日は外国人が…」を書けない構造。
+  - `facts.py` / `contexts.py` / `snapshot.py`: Phase 3-A Fact model・3-B Context model へ正規接続。
+    `breadth_state` / `breadth_trend` / `turnover_state` / `sector_leadership` /
+    `size_leadership` / `investor_flow_state` / `index_leadership`
+    （NIKKEI_LED / TOPIX_LED × BROAD_CONFIRMATION / NARROW_LEADERSHIP）。
+    Morning snapshot へ `internals_status`（AVAILABLE / MISSING / STALE /
+    INSUFFICIENT_HISTORY / NOT_ENTITLED）。
+  - `compass_claims.py`: 決定論的 generator への最小接続（FACTUAL 銘柄数 / RELATIONAL 上回った /
+    INTERPRETIVE 広がり＝**JP_INT_001** 参照 / 売買代金 / 業種 / 規模 / 直近公表週の海外投資家）。
+  - `adversarial.py`: 捏造銘柄数・逆方向・週次を日次・業種の因果・internals無しでの断定 → 必ずREJECT。
+  - `store.py`（manifests / aggregates: JSONL append-only ＋ 再構築可能SQLite）、
+    `ingest.py`（J-Quants Light **date指定** 1 session=1リクエスト。可否は実応答で判定し、
+    使えなければ code指定 sample → LIMITED_USE）、`quality.py`、`backfill_estimate.py`、
+    `pipeline.py`、`pilot.py`（`::P35_*::` marker）。
+- Phase 3-C pre-flight（language safety）:
+  - `compass/market_principles.py`【新規】: 経験則 registry（Compass DNA rule_id）。
+    claim に `rule_ref / interpretation_type / market_principle_version` を構造化
+    （Investment Interpretation を Fact から分離。FACTUAL は空）。
+  - `compass/principle_validation.py`【新規】: `interpretation_without_principle`（warning）/
+    `unknown_market_principle` / `principle_context_mismatch` / `factual_with_principle`。
+  - `compass/confidence_validation.py`【新規】＋ `lexicon.OUTLOOK_PHRASES`:
+    HIGH=見込まれる / MEDIUM=可能性がある / LOW=余地がある を機械的に固定し、
+    食い違えば `confidence_language_mismatch`。
+  - `language_rules`: `weekly_flow_as_daily`（投資家＋本日/今日）を error。
+    「買い越し／売り越し」は助言語彙から除外。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3.5 step 追加（JQUANTS_API_KEY のみ
+  runtime injection）。timeout 15→25分（`LIVE_RUN_CLOSEOUT_PROTOCOL.md` の表を更新）。
+- `docs/databank/MARKET_INTERNALS_SPEC.md`【新規】（仕様＋live evidence）。
+  live実測（p2d-market-pilot run #20）: date指定取得 46 session × 4,441行（1 session=1リクエスト）、
+  universe 1,555銘柄、Fact 4,123 / Context 535、manifest 再現性 90/90、look-ahead leaks 0、
+  Compass BEFORE/AFTER 5 mornings 全て VALID（outlook・one-liner 不変、internals claims 35/35 grounded）、
+  adversarial 6/6、backfill 推奨 ROLLING_WINDOW（5年backfillは未実行）。
+- オフラインテスト 88 件追加（`tests/intelligence/test_market_internals.py`【新規】54 件、
+  `tests/intelligence/test_compass_language_safety.py`【新規】34 件）。
+
+### 改善
+
+- `context/model.py`: `ContextStatus.NOT_ENTITLED`、`CompassContextSnapshot.internals_status`
+  （既定は空。3-B の挙動は不変）。
+- `context/salience.py`（1.1.0）: internals 型の tier（breadth_state / index_leadership =
+  PRIMARY、他 = SECONDARY）、週次公表の鮮度規則、note の説明キーを components へ。
+- `compass/evidence_package.py`（1.1.0）: internals 次元の代表Context固定・`internals_status`
+  併合。業種 leaders/laggards は要約と一緒に固定。
+- `compass/lexicon.py` / `direction_validation.py` / `missingness_validation.py`:
+  internals 主語（値上がり銘柄・売買代金・業種別・大型株・海外投資家）の方向／欠落検証。
+- `compass/generator.py`: OUTLOOK 文を confidence 別の強度表現へ。WHY / RISK に rule_ref。
+- `market/jquants_light_store.py`: `prices_on` / `security_effective_dates` /
+  `securities_effective` / `investor_flows_published_by` を追加（既存queryは不変）。
+
+### 修正
+
+- なし。
+
 ## v4.34 (2026-09-01) — Phase 3-C: Evidence-Grounded Compass Generator
 
 Fact Layer（3-A）＋ Context Engine（3-B）で確認された情報**だけ**を根拠に、
