@@ -808,3 +808,26 @@ jquants_ops:
   partial_session_ratio: "0.90"     # 行数がこの比率未満なら PARTIAL_SESSION
   request_interval_seconds: "0.3"
   pilot_seed_sessions: 30           # live pilot の seed（本番 70 の mechanism 検証）
+
+# Phase 3.7 Compass Corpus Foundation（src/intelligence/corpus/）。
+# 原本 PDF（社外秘）は Git 非管理の local research area に置く。コードは source_dir を config 経由でのみ受け取る。
+# Corpus store は INTELLIGENCE_DATA_ROOT 配下（compass_corpus / compass_corpus_pilot）。offline-first・credential なし。
+compass_corpus:
+  source_dir: "research/source_docs/compass"   # 承認済み local research area（CONFIDENTIAL_RESEARCH_POLICY §2）
+  inbox_dir: "research/source_docs/compass/inbox"   # Phase 3.75 local inbox contract（今回は contract 定義のみ）
+  document_family: "okasan_global_investment_compass"
+  family_markers_version: "1.0.0"
+  family_min_markers: 5                # page-1 の安定 marker がこれ未満なら QUARANTINED（fail-closed）
+  min_pages: 3
+  max_pages: 12
+  min_chars_per_page: 200              # text layer が薄いページ → LOW_TEXT（OCR は default で行わない）
+  extractor_version: "pypdf_text_layer:1.0.0"
+  analysis_version: "1.0.0"
+  coverage_thresholds_version: "1.0.0"
+  coverage_min_docs_per_label: 3       # dimension × label が well_represented になる最低本数
+  milestones: [10, 30, 50, 100, 200]   # CORPUS_10 / 30 / 50 / 100 / 200
+  inbox_stable_seconds: 5              # copy 途中のファイルを処理しない（mtime がこれ以上前で size 不変）
+  inbox_stable_samples: 2
+  alignment_tolerance_pct: "0.05"      # NEAR_MATCH の許容（%）。Fact Store は書き換えない
+  max_statement_chars: 200
+  max_observations_per_category: 40

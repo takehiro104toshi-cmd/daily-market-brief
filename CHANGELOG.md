@@ -4,6 +4,55 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.37 (2026-09-02) — Phase 3.7: Compass Corpus Foundation
+
+「グローバル投資の羅針盤」PDF を **historical analytical corpus** として蓄積する foundation
+（PDF → identity → immutable source → corpus record → extraction artifact → structured record →
+coverage → evaluation eligibility）。Corpus は market truth / Fact Store ではない。offline-first・
+credential なし・production rule を変更しない。
+
+### 追加
+
+- `src/intelligence/corpus/`【新規】（1機能=1ファイル）:
+  - `identity.py` / `source.py`: sha256 中心の deterministic identity（filename 非依存）、immutable source
+    copy（hash 検証・read-only・`verify_original`）、同日別 PDF の `date_sequence`。
+  - `validation.py` / `family.py` / `status.py`: PDF magic / page count / document family（page-1 の
+    安定 marker、filename 非依存）/ document_date を fail-closed に検証。RECEIVED … ANALYZED / PARTIAL /
+    QUARANTINED / FAILED を status_events に記録（silent failure なし）。
+  - `extraction.py` / `page_sections.py` / `header_values.py`: text layer artifact（page / line / kind /
+    quality / extractor_version、OCR は default で行わない）、section 判定、P1 ヘッダー 10 列と P2 指数表の
+    EXTRACTED_VALUE。
+  - `structured_record.py`: 15 category の structured Compass record。observation level
+    （SOURCE_STATEMENT / EXTRACTED_VALUE / ANALYST_INTERPRETATION / OUTLOOK（確信度ラダー 0–5）/ RISK /
+    SYSTEM_DERIVED_LABEL）を分離。
+  - `temporal.py`: document_date / publication_date / received_at / referenced_market_session
+    （カレンダー無しは UNKNOWN）/ future_event_mentions。
+  - `alignment.py`: header 値と Market Bank series の MATCH / NEAR_MATCH / CONFLICT / NOT_AVAILABLE /
+    NOT_COMPARABLE（Fact Store は書かない）。
+  - `quality.py` / `coverage.py` / `milestones.py`: VALID / PARTIAL / LIMITED_USE / QUARANTINED、
+    11 dimension の coverage label（CONTEXT ＞ EXTRACTED_VALUE ＞ TEXT_KEYWORD ＞ UNKNOWN、thresholds
+    version 化）と well / under / missing report、CORPUS_10/30/50/100/200。
+  - `versioning.py` / `store.py` / `snapshot.py`: append-only supersession、canonical JSONL 10 ファイル＋
+    SQLite index（rebuild 可・idempotent）、`CorpusSnapshot`（Phase 3.8 read model）。
+  - `inventory.py` / `intake.py` / `inbox.py` / `pipeline.py` / `pilot.py`: 既存 Compass 棚卸し
+    （PDF_SOURCE と DERIVED_HISTORICAL_ARTIFACT を区別）、Mobile Intake boundary（cloud 非依存）、
+    local inbox contract（stable-file / lock / ledger、原本を動かさない）、ingest orchestration、
+    実データ pilot（`::P37_*::`）。
+- `config.yaml`: `compass_corpus` セクション。`docs/databank/COMPASS_CORPUS_SPEC.md`【新規】。
+- オフラインテスト 42 件（`tests/intelligence/test_compass_corpus.py`【新規】、合成 PDF・FakeExtractor）。
+- 実 corpus pilot（isolated root、offline 4.9 s）: 実在する原本 10 本（2026-06-18..07-01）を
+  10/10 ANALYZED・VALID、artifacts 883・observations 1,173、dedup（同名 / 改名 / 同日別 PDF）・
+  quarantine・FAILED・reanalysis（supersession）・SQLite rebuild・idempotency・inbox 全て PASS。
+  coverage: CORPUS_10 到達、next CORPUS_30（あと 20 本）、breadth / sector は CONTEXT 待ち UNKNOWN。
+
+### 改善
+
+- なし（既存モジュール不変）。
+
+### 修正
+
+- なし。
+
 ## v4.36 (2026-09-02) — Phase 3.6: J-Quants Production Data Strategy
 
 J-Quants Light を pilot data source から **production-grade incremental market data source** へ
