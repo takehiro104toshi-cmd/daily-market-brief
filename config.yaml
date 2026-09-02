@@ -883,3 +883,12 @@ compass_research:
   research_retry_max_attempts: 2       # Corpus 成功後の研究解析 bounded retry
   batch_max_files: 20                  # historical batch import の 1 回上限
   corpus_size_caveat_below: 30         # eligible がこれ未満なら全 pattern 結論に corpus-size limitation
+
+# ------------------------------------------------------------------
+# Phase 3.9.1 Decision Foundation（PHASE_3_9_SPECIFICATION_FREEZE_V1）
+# 人間の decision を append-only に記録する土台。評価・推奨・ranking・promotion はここに入れない（3.9.2 以降）。
+# 値を変えるときは policy_version を必ず上げる（同じ version で内容が変わると decision の append を拒否する）。
+compass_decision:
+  policy_version: "1.0.0"
+  formal_review_min_corpus: 100        # CORPUS_100: eligible document がこれ未満なら formal APPROVED 不可（SHADOW MODE）。100 未満には設定できない
+  auto_approval: false                 # 常に false（true は起動時に拒否）

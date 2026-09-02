@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.43 (2026-09-03) — Phase 3.9.1 Decision Foundation（append-only decision history・CORPUS_100 gate）
+
+Phase 3.8 evidence と production Compass DNA の間の supervised Decision Layer の土台。評価知能（推奨・ranking・
+replay・promotion）は含まない（3.9.2 以降）。
+
+### 追加
+
+- `src/intelligence/decision/`【新規 package】: `policy.py`（config.yaml `compass_decision`、versioned、digest、
+  allowed transitions、auto_approval=false 固定、formal_review_min_corpus 下限 100）、`models.py`（DecisionRecord /
+  EvidenceSnapshot、schema 1.0.0、deterministic id、record hash）、`store.py`（append-only JSONL、連番 + hash chain、
+  validate-before-append、corruption は fail closed）、`state.py`（決定的 current-state 導出、transition check）、
+  `corpus_state.py`（canonical corpus metric = eligible_for_pattern_evidence）、`gates.py`（CORPUS_100 formal
+  approval gate / human action / reason）、`evidence.py`（3.8 artifact を読むだけの compact snapshot、本文なし）、
+  `service.py`（validate = 読むだけ / decide = 唯一の append path、head 同一内容の retry は no-op）、
+  `cli.py`（gate / list / history / show / validate は read、decide だけ mutating）。
+- decision states: KEEP_REVIEWING / APPROVED / REJECTED / REOPENED_FOR_REVIEW / SUPERSEDED / RETIRED。
+  REJECTED → REOPENED_FOR_REVIEW、APPROVED → SUPERSEDED / RETIRED は履歴を消さずに表現できる。
+- `config.yaml`: `compass_decision`（policy_version 1.0.0 / formal_review_min_corpus 100 / auto_approval false）。
+- `docs/databank/COMPASS_DECISION_FOUNDATION_SPEC.md`【新規】。
+- `tests/intelligence/test_decision_foundation.py`【新規】22 件（append-only、reason 必須、gate 99/100/101、
+  3.8 analyzer・intake・3.75 processor が decision を作れない、SYSTEM actor 拒否、APPROVED ≠ promotion、
+  production DNA / registry / review queue の hash 不変、reopen、supersede / retire、決定的 state、
+  corruption fail closed、data-root isolation、evidence に本文なし、policy / schema version、CLI）。
+
+### 改善
+
+- なし。
+
+### 修正
+
+- なし（Windows CompassData・PDF・Corpus・review queue・registry は未変更。Phase 3.9.2 は未着手）。
+
 ## v4.42 (2026-09-03) — Processor queue fairness / scalability fix（既知ファイル fast path・新規優先）
 
 Windows 実機で ledger 登録済み 44 件を毎回 1 秒ずつ安定サンプリングしていたため、既知ファイルが増えると
