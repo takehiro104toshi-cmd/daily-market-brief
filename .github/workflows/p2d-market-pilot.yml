@@ -78,3 +78,13 @@ jobs:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
           JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
         run: python -m src.intelligence.internals.pilot --sessions 45 --mornings 5
+      # Phase 3.6: J-Quants Production Data Strategy。isolated pilot root で
+      # seed（意図的な欠落付き）→ gap detection → repair（欠落だけ）→ daily incremental
+      # （最新 session だけ）→ rerun（0リクエスト）→ master diff → weekly flow refresh →
+      # health / readiness / morning simulation を実測する。JQUANTS_API_KEY のみ runtime
+      # injection。NOT_ENTITLED endpoint は probe しない。5年 backfill はしない。
+      - name: Phase 3.6 J-Quants production data strategy real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.jquants_ops.pilot --mornings 4

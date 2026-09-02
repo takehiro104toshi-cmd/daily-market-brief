@@ -790,3 +790,21 @@ market_internals:
     investor_types: ["foreign_investors", "individuals", "trust_banks", "business_corporations"]
   request_interval_seconds: "0.3"     # J-Quants への礼儀（rate limit配慮）
   fallback_sample_size: 30            # date指定取得が使えない場合の code指定sample（LIMITED_USE）
+
+# Phase 3.6 J-Quants Production Data Strategy（src/intelligence/jquants_ops/）。
+# rolling window は「計算に使う直近 session 数」であり canonical の削除ではない。
+# retry は bounded。credential はここに書かない。
+jquants_ops:
+  seed_sessions: 70                 # 初期構築（active 60 + safety buffer 10）
+  active_calculation_sessions: 60   # 朝の指標計算に使う直近 session
+  safety_buffer_sessions: 10        # corporate action / 欠落 session の余裕（25 ちょうどは禁止）
+  max_metric_window: 25             # 最長の指標窓（25日騰落レシオ）
+  calendar_range_days: 150
+  master_refresh_days: 7            # listed master は週1回（＋イベント時）。毎朝は取らない
+  flow_lookback_days: 14            # 週次flowの差分取得レンジ
+  earnings_calendar_days_ahead: 90
+  retry_max_attempts: 2             # bounded retry（auth/entitlement/schema は retry しない）
+  retry_backoff_seconds: [2, 4]
+  partial_session_ratio: "0.90"     # 行数がこの比率未満なら PARTIAL_SESSION
+  request_interval_seconds: "0.3"
+  pilot_seed_sessions: 30           # live pilot の seed（本番 70 の mechanism 検証）
