@@ -831,3 +831,23 @@ compass_corpus:
   alignment_tolerance_pct: "0.05"      # NEAR_MATCH の許容（%）。Fact Store は書き換えない
   max_statement_chars: 200
   max_observations_per_category: 40
+
+# Phase 3.75 Mobile / One-Tap Compass Intake（src/intelligence/mobile_intake/）。
+# iPhone → 共有シート「羅針盤に追加」→ private 同期フォルダ（iCloud Drive）→ Windows → bounded processor → Corpus。
+# 機械固有の絶対 path はここに書かない（env COMPASS_INBOX_DIR / INTELLIGENCE_DATA_ROOT または ~/.compass_intake/local_config.json）。
+mobile_intake:
+  provider: "ICLOUD_DRIVE"             # ICLOUD_DRIVE（選定）/ ONEDRIVE / GOOGLE_DRIVE / LOCAL_FOLDER（手動 fallback）
+  inbox_subpath: "Shortcuts/CompassInbox"   # 同期 root からの相対（iCloud Drive/Shortcuts/CompassInbox）
+  stable_seconds: 20                   # size 不変かつ mtime がこれ以上前なら転送完了とみなす
+  stable_samples: 2
+  sample_interval_seconds: 1.0
+  unstable_timeout_minutes: 30         # これを超えて転送中なら FAILED(TIMEOUT_UNSTABLE)。それまでは WAITING_UNSTABLE
+  stale_lock_minutes: 15               # crash 残骸の lock を回収する閾値
+  max_files_per_run: 20                # bounded（1 回の上限）
+  time_budget_seconds: 120             # bounded（1 回の時間上限）
+  scheduler_interval_minutes: 5        # Windows Task Scheduler の間隔（ユーザー権限・daemon なし）
+  task_name: "CompassIntake"
+  status_in_inbox: true                # 同期フォルダの _status/latest_status.txt に結果を書く（iPhone から確認可）
+  status_dir_name: "_status"
+  shortcut_name: "羅針盤に追加"
+  local_config_dir_name: ".compass_intake"

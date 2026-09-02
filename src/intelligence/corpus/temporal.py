@@ -17,6 +17,18 @@ from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 UNKNOWN = "UNKNOWN"
 BASIS_CALENDAR = "CALENDAR"           # 営業日カレンダーで確定
+
+# ---- publication time provenance（Phase 3.75 pre-flight）。PDF metadata を無条件の真実にしない。
+PUB_SOURCE_DOCUMENT_TEXT = "DOCUMENT_TEXT"        # 紙面に明記された発行時刻（例: 右上の 7:30）
+PUB_SOURCE_PDF_METADATA = "PDF_METADATA"          # PDF CreationDate（ファイル生成時刻。発行時刻の近似）
+PUB_SOURCE_RECEIVED_TIME = "RECEIVED_TIME"        # 受領時刻しか分からない（pipeline は自動採用しない）
+PUB_SOURCE_EXTERNAL_VERIFIED = "EXTERNAL_VERIFIED"  # 外部で検証済み（将来用。今回は付与しない）
+PUB_SOURCE_UNKNOWN = "UNKNOWN"
+PUBLICATION_TIME_SOURCES = (PUB_SOURCE_DOCUMENT_TEXT, PUB_SOURCE_PDF_METADATA,
+                            PUB_SOURCE_RECEIVED_TIME, PUB_SOURCE_EXTERNAL_VERIFIED,
+                            PUB_SOURCE_UNKNOWN)
+_TEXT_TIME = re.compile(r"(?<!\d)(\d{1,2})[:：](\d{2})(?!\d)")
+_TEXT_TIME_SCAN_LINES = 12                         # page-1 冒頭（タイトル・日付・発行時刻の領域）のみ
 BASIS_NO_CALENDAR = "NO_CALENDAR"     # カレンダー無し → UNKNOWN
 BASIS_OUT_OF_RANGE = "OUT_OF_RANGE"   # カレンダー範囲外 → UNKNOWN
 
@@ -94,11 +106,17 @@ class TemporalSemantics:
     candidate_previous_weekday: str       # ヒント（session ではない。祝日を考慮しない）
     future_event_mentions: Tuple[str, ...] = ()
     conflicts: Tuple[str, ...] = ()
+    publication_time_source: str = PUB_SOURCE_UNKNOWN   # DOCUMENT_TEXT / PDF_METADATA / … / UNKNOWN
+    metadata_creation_date: str = ""      # PDF CreationDate（参考値。publication と分離して保持）
+    metadata_creation_time_jst: str = ""
 
     def as_dict(self) -> Dict[str, object]:
         return {"document_date": self.document_date,
                 "publication_date": self.publication_date,
                 "publication_time_jst": self.publication_time_jst,
+                "publication_time_source": self.publication_time_source,
+                "metadata_creation_date": self.metadata_creation_date,
+                "metadata_creation_time_jst": self.metadata_creation_time_jst,
                 "received_at": self.received_at,
                 "referenced_market_session": self.referenced_market_session,
                 "referenced_session_basis": self.referenced_session_basis,
@@ -157,21 +175,53 @@ def future_event_mentions(texts: Sequence[str], limit: int = 20) -> Tuple[str, .
     return tuple(found)
 
 
+def extract_publication_time_text(page1_text: str) -> str:
+    """page-1 冒頭に明記された発行時刻（"7:30" 等）→ "HH:MM:00"。無ければ ""（捏造しない）。"""
+    lines = [l.strip() for l in (page1_text or "").splitlines() if l.strip()][:_TEXT_TIME_SCAN_LINES]
+    for line in lines:
+        m = _TEXT_TIME.search(line)
+        if m:
+            hh, mm = int(m.group(1)), int(m.group(2))
+            if 0 <= hh < 24 and 0 <= mm < 60:
+                return f"{hh:02d}:{mm:02d}:00"
+    return ""
+
+
+def publication_provenance(document_date: str, page1_text: str,
+                           metadata: Optional[Mapping[str, str]] = None
+                           ) -> Tuple[str, str, str, str, str]:
+    """→ (publication_date, publication_time_jst, source, metadata_date, metadata_time)。
+
+    優先順位: 紙面の明記時刻（DOCUMENT_TEXT）＞ PDF CreationDate（PDF_METADATA）＞ UNKNOWN。
+    received_at は別 field。時刻が分からなければ空のまま（RECEIVED_TIME で埋めない）。"""
+    meta_date, meta_time = "", ""
+    if metadata:
+        meta_date, meta_time = parse_pdf_date(str(metadata.get("/CreationDate")
+                                                  or metadata.get("CreationDate") or ""))
+    text_time = extract_publication_time_text(page1_text)
+    if document_date and text_time:
+        return document_date, text_time, PUB_SOURCE_DOCUMENT_TEXT, meta_date, meta_time
+    if meta_date:
+        return meta_date, meta_time, PUB_SOURCE_PDF_METADATA, meta_date, meta_time
+    return "", "", PUB_SOURCE_UNKNOWN, meta_date, meta_time
+
+
 def temporal_semantics(document_date: str, *, received_at: datetime,
                        metadata: Optional[Mapping[str, str]] = None,
                        trading_days: Optional[Sequence[str]] = None,
                        body_texts: Sequence[str] = (),
                        conflicts: Sequence[str] = ()) -> TemporalSemantics:
-    pub_date, pub_time = "", ""
-    if metadata:
-        pub_date, pub_time = parse_pdf_date(str(metadata.get("/CreationDate")
-                                                or metadata.get("CreationDate") or ""))
+    page1 = body_texts[0] if body_texts else ""
+    pub_date, pub_time, pub_source, meta_date, meta_time = publication_provenance(
+        document_date, page1, metadata)
     session, basis = resolve_referenced_session(document_date, trading_days)
     if received_at.tzinfo is None:
         received_at = received_at.replace(tzinfo=timezone.utc)
     return TemporalSemantics(
         document_date=document_date, publication_date=pub_date, publication_time_jst=pub_time,
         received_at=received_at.astimezone(timezone.utc).isoformat(),
+        publication_time_source=pub_source, metadata_creation_date=meta_date,
+        metadata_creation_time_jst=meta_time,
         referenced_market_session=session, referenced_session_basis=basis,
         candidate_previous_weekday=previous_weekday(document_date),
         future_event_mentions=future_event_mentions(body_texts),

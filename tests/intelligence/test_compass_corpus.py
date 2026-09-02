@@ -75,6 +75,12 @@ from src.intelligence.corpus.structured_record import (
     event_state_from_text,
 )
 from src.intelligence.corpus.temporal import (
+    PUB_SOURCE_DOCUMENT_TEXT,
+    PUB_SOURCE_PDF_METADATA,
+    PUB_SOURCE_UNKNOWN,
+    PUBLICATION_TIME_SOURCES,
+    extract_publication_time_text,
+    publication_provenance,
     BASIS_CALENDAR,
     BASIS_NO_CALENDAR,
     UNKNOWN,
@@ -420,7 +426,9 @@ def test_temporal_semantics_keep_dates_apart():
                            metadata={"/CreationDate": "D:20260618073200+09'00'"}, trading_days=days,
                            body_texts=[page1(), page2()])
     assert t.document_date == "2026-06-18" and t.publication_date == "2026-06-18"
-    assert t.publication_time_jst == "07:32:00" and t.received_at.startswith("2026-09-02")
+    assert t.publication_time_jst == "07:30:00" and t.received_at.startswith("2026-09-02")
+    assert t.publication_time_source == "DOCUMENT_TEXT"            # 紙面明記の 7:30 が PDF metadata より優先
+    assert t.metadata_creation_time_jst == "07:32:00" and t.metadata_creation_date == "2026-06-18"
     assert t.referenced_market_session == "2026-06-17" and t.referenced_session_basis == BASIS_CALENDAR
     assert t.future_event_mentions
     # 月曜の号 → 前営業日は金曜（週末を飛ばす）
@@ -429,6 +437,36 @@ def test_temporal_semantics_keep_dates_apart():
     none = temporal_semantics("2026-06-22", received_at=NOW)
     assert none.referenced_market_session == UNKNOWN and none.referenced_session_basis == BASIS_NO_CALENDAR
     assert none.candidate_previous_weekday == "2026-06-19"
+
+
+def test_publication_time_provenance_is_explicit_and_never_fabricated():
+    assert set(PUBLICATION_TIME_SOURCES) == {"DOCUMENT_TEXT", "PDF_METADATA", "RECEIVED_TIME",
+                                             "EXTERNAL_VERIFIED", "UNKNOWN"}
+    assert extract_publication_time_text(page1()) == "07:30:00"
+    no_time = page1().replace("7:30", "")
+    assert extract_publication_time_text(no_time) == ""
+    meta = {"/CreationDate": "D:20260618073200+09'00'"}
+    assert publication_provenance("2026-06-18", page1(), meta)[:3] == ("2026-06-18", "07:30:00", PUB_SOURCE_DOCUMENT_TEXT)
+    assert publication_provenance("2026-06-18", no_time, meta)[:3] == ("2026-06-18", "07:32:00", PUB_SOURCE_PDF_METADATA)
+    assert publication_provenance("2026-06-18", no_time, {})[:3] == ("", "", PUB_SOURCE_UNKNOWN)
+    t = temporal_semantics("2026-06-18", received_at=NOW, body_texts=[no_time])
+    assert t.publication_time_source == PUB_SOURCE_UNKNOWN and t.publication_time_jst == ""
+    assert t.received_at.startswith("2026-09-02")               # received_at は publication と別
+    # 本文の中盤にある時刻（例: 「日本時間25日 5:00頃」）は発行時刻として拾わない
+    assert extract_publication_time_text(no_time + "\n現地24日引け後（日本時間25日 5:00頃）") == ""
+
+
+def test_publication_provenance_persisted_via_pipeline(tmp_path):
+    store = make_store(tmp_path)
+    p = make_pdf(tmp_path / "prov_time.pdf")
+    r = ingest(store, p, fake({"prov_time.pdf": compass_pages()},
+                              {"prov_time.pdf": {"/CreationDate": "D:20260618073200"}}))
+    t = store.temporal_for(r.document_id)
+    assert t["publication_time_source"] == PUB_SOURCE_DOCUMENT_TEXT and t["publication_time_jst"] == "07:30:00"
+    assert t["metadata_creation_time_jst"] == "07:32:00"
+    snap = build_snapshot(store, CFG, NOW)
+    assert snap.documents[0]["publication_time_source"] == PUB_SOURCE_DOCUMENT_TEXT
+    store.close()
 
 
 # ============================================================ market alignment

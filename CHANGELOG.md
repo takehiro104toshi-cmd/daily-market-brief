@@ -4,6 +4,44 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.38 (2026-09-02) — Phase 3.75: Mobile / One-Tap Compass Intake
+
+iPhone の共有シート「羅針盤に追加」→ private 同期フォルダ（iCloud Drive）→ Windows の bounded processor →
+Phase 3.7 の `CompassIntakeService` → Corpus。PC 側の手作業（Discord / download / Explorer / rename /
+移動 / project copy）を廃止。MOBILE_ACTION_COUNT = 2。offline・credential なし・cloud SDK なし。
+
+### 追加
+
+- `src/intelligence/mobile_intake/`【新規】（1機能=1ファイル）:
+  - `adapters.py`: provider 評価（iCloud Drive 選定 / OneDrive・Google Drive fallback / LOCAL_FOLDER 手動）と
+    `SyncFolderAdapter`（同期フォルダ＝ローカル FS のみ。placeholder / 一時ファイル検出）。
+  - `local_config.py`: 機械ローカル設定（env `COMPASS_INBOX_DIR` / `~/.compass_intake/local_config.json` /
+    provider 既定）と path privacy（`redact_path` / `inbox://<basename>`）。repository に絶対 path を書かない。
+  - `processor.py`: bounded inbox processor（discover → 安定判定 → lock → IntakeRequest → submit → ledger →
+    status）。転送中は WAITING_UNSTABLE、30 分超で TIMEOUT_UNSTABLE、同一 bytes は DUPLICATE、
+    crash 残骸 lock は回収、max_files / time_budget / single-instance。原本を動かさない。
+  - `result.py` / `status.py`: SUCCESS / DUPLICATE / WAITING_UNSTABLE / QUARANTINED / FAILED ＋ reason code
+    （NOT_PDF / NOT_COMPASS / UNSTABLE_TRANSFER / UNREADABLE_PDF / DATE_UNKNOWN / SYNC_NOT_AVAILABLE …）と
+    日本語ヒント、`latest_status.txt/json`（「羅針盤追加成功 Corpus: 9 → 10 / Next: CORPUS_30 / Remaining: 20」）。
+  - `scheduler.py`: Windows Task Scheduler の bounded scheduled invocation（5 分・ユーザー権限・daemon なし）、
+    `run_intake.cmd` 生成、single-instance lock。
+  - `shortcut.py`: iOS ショートカット「羅針盤に追加」の作成手順（署名済み .shortcut は生成しない）。
+  - `setup.py`: `check`（MOBILE_INTAKE_READY / PARTIAL / NOT_READY と diagnostics）/ `init` / `task` / `shortcut`。
+  - `pilot.py`: end-to-end local pilot（`::P375_*::`）。
+- `config.yaml`: `mobile_intake` セクション。`docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md`【新規】。
+- オフラインテスト 29 件（`tests/intelligence/test_mobile_intake.py`【新規】）。
+
+### 改善
+
+- Phase 3.7 pre-flight: `corpus/temporal.py` に `publication_time_source`（DOCUMENT_TEXT / PDF_METADATA /
+  RECEIVED_TIME / EXTERNAL_VERIFIED / UNKNOWN）を追加。紙面明記の発行時刻（7:30）を PDF metadata より優先し、
+  metadata は `metadata_creation_*` として分離保持。不明なら捏造しない。`received_at` は別。
+  snapshot の document view に `publication_time_source` を追加。regression テスト 2 件。原本 PDF は書き換えない。
+
+### 修正
+
+- なし。
+
 ## v4.37 (2026-09-02) — Phase 3.7: Compass Corpus Foundation
 
 「グローバル投資の羅針盤」PDF を **historical analytical corpus** として蓄積する foundation

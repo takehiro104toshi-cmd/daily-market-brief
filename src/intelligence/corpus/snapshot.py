@@ -101,6 +101,7 @@ def build_snapshot(store: CorpusStore, config: CorpusConfig, now: datetime) -> C
             "sha256": doc.sha256, "storage_locator": doc.storage_locator,
             "page_count": doc.page_count, "family_confidence": doc.family_confidence,
             "received_at": doc.received_at, "publication_date": doc.publication_date,
+            "publication_time_source": temporal.get("publication_time_source", ""),
             "referenced_market_session": temporal.get("referenced_market_session", ""),
             "current_analysis_id": str(current.get("record_id", "")) if current else "",
             "analysis_versions": [str(a.get("analysis_version", "")) for a in analyses],
