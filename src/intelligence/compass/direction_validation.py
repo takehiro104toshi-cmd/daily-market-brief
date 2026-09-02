@@ -35,6 +35,10 @@ from .lexicon import (
     DIRECTION_PATTERN,
     FX_FROM_LEVEL,
     FX_KEY,
+    INTERNALS_FROM_LEVEL,
+    INTERNALS_FROM_RELATIVE,
+    INTERNALS_KEY_CONTEXT_TYPE,
+    INTERNALS_KEYS,
     KEY_SUBJECT,
     MA_KEY,
     NIKKEI_KEY,
@@ -104,6 +108,15 @@ def _contexts(package: EvidencePackage, claim: CompassClaim, context_type: str,
     return [latest] if latest is not None else []
 
 
+def _internals_candidates(package: EvidencePackage, claim: CompassClaim, key: str
+                          ) -> List[ContextItem]:
+    """internals主語（breadth等）: 引用した同型Contextを優先し、無ければpackage内の同型。"""
+    ctype = INTERNALS_KEY_CONTEXT_TYPE[key]
+    cited = [package.context(c) for c in claim.supporting_context_ids]
+    hits = [c for c in cited if c is not None and c.context_type == ctype]
+    return hits or package.contexts_of(ctype)
+
+
 def _relative_target(pos: int, mentions: Sequence[Tuple[int, str]]
                      ) -> Tuple[str, str, bool]:
     """上回る/下回る → (context_type, subject_id, invert)。"""
@@ -129,6 +142,23 @@ def _check_sentence(claim: CompassClaim, sentence: str, package: EvidencePackage
         candidates: List[ContextItem] = []
         expected: FrozenSet[Direction] = dirs
         label = ""
+        nearest = _nearest_subject(pos, mentions)
+        if nearest in INTERNALS_KEYS and kind in ("level", "relative"):
+            # Phase 3.5: 市場内部の主語は internals Context と照合する
+            table = (INTERNALS_FROM_LEVEL if kind == "level"
+                     else INTERNALS_FROM_RELATIVE)[nearest]
+            expected = frozenset(table[d] for d in dirs if d in table)
+            candidates = _internals_candidates(package, claim, nearest)
+            if not candidates:
+                issues.append(_issue(claim, "direction_unsupported",
+                                     f"{nearest}の方向を裏付けるContextがpackageに無い"))
+            elif not any(c.direction in expected for c in candidates):
+                actual = ",".join(sorted({c.direction.value for c in candidates}))
+                issues.append(_issue(claim, "direction_mismatch",
+                                     f"{nearest}: 文は"
+                                     f"{'/'.join(sorted(d.value for d in expected))}"
+                                     f"だがContextは{actual}"))
+            continue
         if kind == "fx":
             candidates = _contexts(package, claim, FX_DIRECTION, KEY_SUBJECT[FX_KEY])
             label = "ドル円"

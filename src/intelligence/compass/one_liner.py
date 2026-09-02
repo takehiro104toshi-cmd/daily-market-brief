@@ -13,7 +13,7 @@ from typing import List, Optional, Sequence
 
 from .config import CompassConfig
 from .language_rules import (
-    ADVICE_PATTERN, OUTLOOK_FORM, TARGET_NUMBER_PATTERN, TARGET_WORD_PATTERN,
+    ADVICE_PATTERN, OUTLOOK_FORMS, TARGET_NUMBER_PATTERN, TARGET_WORD_PATTERN,
 )
 from .model import ClaimRole, CompassClaim, SEVERITY_ERROR, SEVERITY_WARNING, ValidationIssue
 
@@ -79,8 +79,8 @@ def validate_one_liner(text: str, config: CompassConfig) -> List[ValidationIssue
     if TARGET_WORD_PATTERN.search(text) or TARGET_NUMBER_PATTERN.search(text):
         issues.append(ValidationIssue(validator=VALIDATOR, code="numeric_target",
                                       message="数値目標を含む", severity=SEVERITY_ERROR))
-    if OUTLOOK_FORM not in text:
+    if not any(form in text for form in OUTLOOK_FORMS):
         issues.append(ValidationIssue(validator=VALIDATOR, code="outlook_form",
-                                      message="見通し文（〜となろう）を含まない",
+                                      message="見通し文（見込まれる/可能性がある/余地がある）を含まない",
                                       severity=SEVERITY_WARNING))
     return issues

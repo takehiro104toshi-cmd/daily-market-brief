@@ -29,9 +29,19 @@ from ..context.model import (
 from ..context.snapshot import _DIMENSION_SOURCES
 from ..core.ids import content_id
 from ..facts.model import Fact, FactStatus
+from ..internals.types import (
+    DIM_FLOW,
+    DIM_SECTOR,
+    FOREIGN_INVESTORS,
+    INTERNALS_DIMENSION_SOURCES,
+    INTERNALS_DIMENSIONS,
+    INVESTOR_FLOW_STATE,
+    SECTOR_LEADERSHIP,
+)
 from .config import DEFAULT_BUDGET
 
-PACKAGE_RULE_VERSION = "evidence_package:1.0.0"
+#: 1.1.0: Phase 3.5 market_internals 次元（breadth等）をpackageの次元として保持する
+PACKAGE_RULE_VERSION = "evidence_package:1.1.0"
 
 #: 水準Fact（cited subjectの「いくらか」を言うために添える）
 LEVEL_FACT_TYPES: Tuple[str, ...] = (
@@ -61,6 +71,8 @@ class EvidencePackage:
     excluded_unusable_fact: Tuple[str, ...] = ()
     budget: Mapping[str, int] = field(default_factory=dict)
     rule_version: str = PACKAGE_RULE_VERSION
+    #: Phase 3.5: market_internals 次元の充足状況（dimension_statusにも併合済み）
+    internals_status: Mapping[str, ContextStatus] = field(default_factory=dict)
 
     # ---------------------------------------------------------------- lookup
 
@@ -101,8 +113,14 @@ class EvidencePackage:
         cid = self.dimension_context_ids.get(dimension)
         return self.context(cid) if cid else None
 
+    @property
+    def all_dimensions(self) -> Tuple[str, ...]:
+        """market state次元 ＋（付与されていれば）market_internals次元。"""
+        return tuple(STATE_DIMENSIONS) + tuple(
+            d for d in INTERNALS_DIMENSIONS if d in self.dimension_status)
+
     def dimensions_with_status(self, *statuses: ContextStatus) -> Tuple[str, ...]:
-        return tuple(d for d in STATE_DIMENSIONS
+        return tuple(d for d in self.all_dimensions
                      if self.dimension_status.get(d, ContextStatus.MISSING) in statuses)
 
     @property
@@ -114,7 +132,7 @@ class EvidencePackage:
         """**語ってはいけない**次元（欠落・古い・矛盾・履歴不足）。"""
         return self.dimensions_with_status(
             ContextStatus.MISSING, ContextStatus.STALE, ContextStatus.CONFLICTED,
-            ContextStatus.INSUFFICIENT_HISTORY)
+            ContextStatus.INSUFFICIENT_HISTORY, ContextStatus.NOT_ENTITLED)
 
     def facts_for_context(self, context_id: str) -> List[Fact]:
         item = self.context(context_id)
@@ -143,6 +161,7 @@ class EvidencePackage:
             "context_count": len(self.contexts),
             "fact_count": len(self.facts),
             "dimension_status": {k: v.value for k, v in self.dimension_status.items()},
+            "internals_status": {k: v.value for k, v in self.internals_status.items()},
             "dimension_context_ids": dict(self.dimension_context_ids),
             "excluded_look_ahead": list(self.excluded_look_ahead),
             "excluded_over_budget": list(self.excluded_over_budget),
@@ -192,6 +211,24 @@ def _dimension_representatives(items: Sequence[ContextItem]) -> Dict[str, Contex
             latest[key] = c
     out: Dict[str, ContextItem] = {}
     for dimension, source in _DIMENSION_SOURCES.items():
+        item = latest.get(source)
+        if item is not None:
+            out[dimension] = item
+    out.update(_internals_representatives(latest))
+    return out
+
+
+def _internals_representatives(latest: Mapping[Tuple[str, str], ContextItem]
+                               ) -> Dict[str, ContextItem]:
+    """Phase 3.5: market_internals 各次元の代表Context（flowは海外投資家）。"""
+    out: Dict[str, ContextItem] = {}
+    for dimension, source in INTERNALS_DIMENSION_SOURCES.items():
+        if dimension == DIM_FLOW:
+            flows = [c for (ctype, sid), c in latest.items()
+                     if ctype == INVESTOR_FLOW_STATE and sid.endswith(f":{FOREIGN_INVESTORS}")]
+            if flows:
+                out[dimension] = max(flows, key=lambda c: c.time.session_date)
+            continue
         item = latest.get(source)
         if item is not None:
             out[dimension] = item
@@ -251,7 +288,16 @@ def build_evidence_package(
             continue
         usable.append(item)
 
-    pinned = [c.context_id for c in _dimension_representatives(usable).values()]
+    representatives = _dimension_representatives(usable)
+    pinned = [c.context_id for c in representatives.values()]
+    # Phase 3.5: 業種leaders/laggards（要約Contextと同session）は要約と一緒に固定する
+    # （予算で業種別Contextだけ落ちると「上回り/下回った」の根拠が消えるため）
+    sector_summary = representatives.get(DIM_SECTOR)
+    if sector_summary is not None:
+        pinned += [c.context_id for c in usable
+                   if c.context_type == SECTOR_LEADERSHIP
+                   and c.context_id != sector_summary.context_id
+                   and c.time.session_date == sector_summary.time.session_date]
     chosen, dropped = _select_by_budget(usable, budget, pinned)
     selected = chosen["core"] + chosen["supporting"] + chosen["optional"]
 
@@ -284,17 +330,34 @@ def build_evidence_package(
         item = selected_by_key.get(source)
         if item is not None:
             dimension_context_ids[dimension] = item.context_id
+    for dimension, item in _internals_representatives(selected_by_key).items():
+        dimension_context_ids[dimension] = item.context_id
     dimension_status: Dict[str, ContextStatus] = {}
     for dimension in STATE_DIMENSIONS:
         status = snapshot.dimension_status.get(dimension, ContextStatus.MISSING)
         if dimension not in dimension_context_ids and status is not ContextStatus.MISSING:
             status = ContextStatus.MISSING   # 除外/予算超過で使えない→欠落として扱う
         dimension_status[dimension] = status
+    # Phase 3.5: market_internals 次元（snapshotに付与されている場合のみ）。
+    # 代表Contextが除外されれば MISSING。INSUFFICIENT_HISTORY / NOT_ENTITLED は
+    # Contextが無い理由そのものなので保持する（黙って MISSING に潰さない）。
+    internals_status: Dict[str, ContextStatus] = {}
+    for dimension in INTERNALS_DIMENSIONS:
+        if dimension not in snapshot.internals_status:
+            continue
+        status = snapshot.internals_status[dimension]
+        if dimension not in dimension_context_ids and status not in (
+                ContextStatus.MISSING, ContextStatus.INSUFFICIENT_HISTORY,
+                ContextStatus.NOT_ENTITLED):
+            status = ContextStatus.MISSING
+        internals_status[dimension] = status
+    dimension_status.update(internals_status)
 
     package_id = content_id(
         "evpkg", snapshot.session_date, snapshot.reference_session, cutoff.isoformat(),
         PACKAGE_RULE_VERSION, "|".join(c.context_id for c in selected),
-        "|".join(fact_ids))
+        "|".join(fact_ids),
+        "|".join(f"{k}={v.value}" for k, v in sorted(internals_status.items())))
     return EvidencePackage(
         package_id=package_id, session_date=snapshot.session_date,
         reference_session=snapshot.reference_session, cutoff=cutoff,
@@ -307,4 +370,4 @@ def build_evidence_package(
         excluded_look_ahead=tuple(look_ahead),
         excluded_over_budget=tuple(c.context_id for c in dropped),
         excluded_unusable_fact=tuple(unusable_fact),
-        budget=budget)
+        budget=budget, internals_status=internals_status)

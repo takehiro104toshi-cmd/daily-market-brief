@@ -61,6 +61,7 @@ class ContextStatus(str, Enum):
     INSUFFICIENT_HISTORY = "INSUFFICIENT_HISTORY"
     CONFLICTED = "CONFLICTED"
     LIMITED_USE = "LIMITED_USE"
+    NOT_ENTITLED = "NOT_ENTITLED"        # 契約上取得できない（Phase 3.5: Light plan制約）
 
 
 class PriorityTier(str, Enum):
@@ -296,6 +297,9 @@ class CompassContextSnapshot:
     reference_session: str = ""
     generated_at: Optional[datetime] = None
     schema_version: str = CONTEXT_SCHEMA_VERSION
+    #: Phase 3.5: market_internals 次元（breadth / turnover / sector_leadership /
+    #: size_leadership / investor_flow）の充足状況。internalsを付けない場合は空。
+    internals_status: Mapping[str, ContextStatus] = field(default_factory=dict)
 
     def as_dict(self) -> Dict[str, object]:
         return {
@@ -305,6 +309,7 @@ class CompassContextSnapshot:
             "market_state": self.market_state.as_dict(),
             "market_state_status": self.market_state.status_dict(),
             "dimension_status": {k: v.value for k, v in self.dimension_status.items()},
+            "internals_status": {k: v.value for k, v in self.internals_status.items()},
             "missing_dimensions": list(self.missing_dimensions),
             "context_count": len(self.items),
             "priority_contexts": [

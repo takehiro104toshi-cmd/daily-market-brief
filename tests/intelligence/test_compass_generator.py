@@ -58,7 +58,7 @@ from src.intelligence.compass.historical_eval import (
     parse_pre_market_levels,
     summarize_evaluations,
 )
-from src.intelligence.compass.language_rules import validate_language
+from src.intelligence.compass.language_rules import OUTLOOK_FORMS, validate_language
 from src.intelligence.compass.missingness_validation import validate_missingness
 from src.intelligence.compass.model import (
     ClaimRole,
@@ -480,7 +480,8 @@ class TestDeterministicGenerator:
             if c.claim_type is ClaimType.INTERPRETIVE or c.claim_type is ClaimType.RISK:
                 assert "とみられる" in c.text, c.text
             if c.claim_type is ClaimType.OUTLOOK:
-                assert "となろう" in c.text, c.text
+                # 見通し文は confidence に対応する強度表現で結ぶ（Phase 3.5 pre-flight B）
+                assert any(form in c.text for form in OUTLOOK_FORMS), c.text
 
     def test_abstaining_plan_yields_no_claims(self, result):
         plan = replace(result.plan, abstain_reason=ABSTAIN_NO_COUNTER, allowed_roles=())
@@ -661,7 +662,7 @@ class TestOneLiner:
     def test_built_from_grounded_claims_only(self, result):
         text = build_one_liner(result.gate.claims, CompassConfig())
         assert 2 <= sentence_count(text) <= 4
-        assert "となろう" in text and "反対材料" in text
+        assert any(form in text for form in OUTLOOK_FORMS) and "反対材料" in text
         assert "経験則" not in text                         # 出典タグは外す
         assert validate_one_liner(text, CompassConfig()) == []
         assert result.draft.one_liner == text
@@ -711,7 +712,8 @@ class TestGoldenConstraints:
         headline = result.draft.claims_for_role(ClaimRole.HEADLINE)[0].text
         assert "となった" in headline and "とみられる" not in headline
         outlook = result.draft.claims_for_role(ClaimRole.OUTLOOK)[0].text
-        assert "となろう" in outlook and "確度" in outlook and "無効化条件" in outlook
+        assert any(form in outlook for form in OUTLOOK_FORMS)
+        assert "確度" in outlook and "無効化条件" in outlook
         risk = result.draft.claims_for_role(ClaimRole.RISK)[0].text
         assert risk.startswith("反対材料")
 

@@ -31,7 +31,9 @@ from ..context.model import ContextItem, ContextStatus, Direction
 from ..core.contracts import LLMProvider
 from .config import CompassConfig
 from .evidence_package import EvidencePackage
-from .lexicon import SUBJECT_LABELS, direction_word, fmt_level, fmt_magnitude
+from ..internals.compass_claims import internals_claims
+from .lexicon import SUBJECT_LABELS, direction_word, fmt_level, fmt_magnitude, outlook_phrase
+from .market_principles import MARKET_PRINCIPLE, MARKET_PRINCIPLE_VERSION
 from .model import (
     ClaimRole,
     ClaimType,
@@ -63,8 +65,18 @@ class NarrativeGenerator(Protocol):
 
 def new_claim(*, session_date: str, role: ClaimRole, claim_type: ClaimType, text: str,
               fact_ids: Sequence[str] = (), context_ids: Sequence[str] = (),
-              generator: str, order: int) -> CompassClaim:
-    """claim_idは内容から決定論的に作る（処理時刻を含めない）。"""
+              generator: str, order: int, rule_ref: str = "",
+              interpretation_type: str = "",
+              market_principle_version: str = "") -> CompassClaim:
+    """claim_idは内容から決定論的に作る（処理時刻を含めない）。
+
+    `rule_ref` を渡すと Investment Interpretation の出典（Compass DNA rule_id）と
+    その種別・版を claim に構造化して残す（Phase 3.5 pre-flight A）。
+    """
+    if rule_ref and not interpretation_type:
+        interpretation_type = MARKET_PRINCIPLE
+    if rule_ref and not market_principle_version:
+        market_principle_version = MARKET_PRINCIPLE_VERSION
     return CompassClaim(
         claim_id=make_claim_id(session_date=session_date, claim_role=role,
                                claim_type=claim_type, text=text,
@@ -72,7 +84,9 @@ def new_claim(*, session_date: str, role: ClaimRole, claim_type: ClaimType, text
                                supporting_context_ids=context_ids),
         claim_type=claim_type, claim_role=role, text=text,
         supporting_fact_ids=tuple(fact_ids), supporting_context_ids=tuple(context_ids),
-        generator=generator, order=order)
+        generator=generator, order=order, rule_ref=rule_ref,
+        interpretation_type=interpretation_type,
+        market_principle_version=market_principle_version)
 
 
 # ---------------------------------------------------------------- deterministic
@@ -181,13 +195,14 @@ class DeterministicNarrativeGenerator:
         order = 0
 
         def add(role: ClaimRole, ctype: ClaimType, text: str,
-                fact_ids: Sequence[str] = (), context_ids: Sequence[str] = ()) -> None:
+                fact_ids: Sequence[str] = (), context_ids: Sequence[str] = (),
+                rule_ref: str = "") -> None:
             nonlocal order
             order += 1
             claims.append(new_claim(session_date=sd, role=role, claim_type=ctype,
                                     text=text, fact_ids=fact_ids,
                                     context_ids=context_ids, generator=self.name,
-                                    order=order))
+                                    order=order, rule_ref=rule_ref))
 
         # ---- HEADLINE（lead）
         lead = package.context(plan.lead_context_id)
@@ -217,6 +232,12 @@ class DeterministicNarrativeGenerator:
                 add(ClaimRole.WHAT_HAPPENED, ClaimType.FACTUAL, body,
                     list(item.supporting_fact_ids), [item.context_id])
 
+        # ---- Phase 3.5: market internals（breadth / turnover / sector / size / flow）。
+        #      語れる次元だけを、既存validator経路で検証される文として追加する
+        for spec in internals_claims(package, plan):
+            add(spec.role, spec.claim_type, spec.text, spec.fact_ids, spec.context_ids,
+                rule_ref=spec.rule_ref)
+
         # ---- WHY（outlookの支持材料。因果は主張しない）
         supporters = [package.context(c) for c in outlook.supporting_context_ids]
         supporters = [s for s in supporters if s is not None][:self.max_why]
@@ -229,7 +250,8 @@ class DeterministicNarrativeGenerator:
                 text = (f"根拠{rule}: {body[:-1]}ことが同時に観測され、"
                         f"株式にとって{sign}とみられる（因果関係は特定しない）。")
                 add(ClaimRole.WHY, ClaimType.INTERPRETIVE, text,
-                    list(item.supporting_fact_ids), [item.context_id])
+                    list(item.supporting_fact_ids), [item.context_id],
+                    rule_ref=imp.rule_ref if imp else "")
         elif lead is not None:
             text = ("根拠: 向きを持つ材料が朝の時点で確認できず、"
                     "見通しは前営業日の状態だけに基づくとみられる（因果関係は特定しない）。")
@@ -241,7 +263,9 @@ class DeterministicNarrativeGenerator:
             [lead.context_id] if lead is not None else [])
         if outlook_ids:
             conds = "／".join(outlook.invalidation_conditions) or "なし"
-            text = (f"次の東京セッションは{_OUTLOOK_PHRASE[outlook.direction]}となろう"
+            # confidence → 言語強度を lexicon で機械的に固定する（pre-flight B）
+            text = (f"次の東京セッションは"
+                    f"{outlook_phrase(outlook.direction, outlook.confidence)}"
                     f"（確度: {_CONFIDENCE_JA[outlook.confidence]}）。"
                     f"無効化条件: {conds}。")
             add(ClaimRole.OUTLOOK, ClaimType.OUTLOOK, text, (), outlook_ids)
@@ -269,7 +293,7 @@ class DeterministicNarrativeGenerator:
                 sign = _SIGN_JA.get(imp.sign if imp else "", "反対側の材料")
                 text = (f"反対材料{rule}: {body[:-1]}ことは、株式にとって{sign}とみられる。")
             add(ClaimRole.RISK, ClaimType.RISK, text, list(item.supporting_fact_ids),
-                [item.context_id])
+                [item.context_id], rule_ref=imp.rule_ref if imp else "")
             risk_count += 1
 
         # ---- COVERAGE（語れない範囲を明示）

@@ -299,3 +299,35 @@ class JQuantsLightStore:
         return self._rows(
             "SELECT * FROM investor_type_flows WHERE period_end>=? "
             "AND period_end<=? ORDER BY period_end, section", (start, end))
+
+    # ------------------------------------------------- Phase 3.5 market internals
+
+    def prices_on(self, trading_date: str) -> List[sqlite3.Row]:
+        """1営業日の全銘柄価格（breadth集計の入力）。"""
+        return self._rows(
+            "SELECT * FROM daily_prices WHERE trading_date=? ORDER BY code",
+            (trading_date,))
+
+    def price_dates(self) -> List[str]:
+        return [r["trading_date"] for r in self._rows(
+            "SELECT DISTINCT trading_date FROM daily_prices ORDER BY trading_date")]
+
+    def security_effective_dates(self) -> List[str]:
+        return [r["effective_date"] for r in self._rows(
+            "SELECT DISTINCT effective_date FROM securities ORDER BY effective_date")]
+
+    def securities_effective(self, effective_date: str) -> List[sqlite3.Row]:
+        return self._rows(
+            "SELECT * FROM securities WHERE effective_date=? ORDER BY code",
+            (effective_date,))
+
+    def investor_flows_published_by(self, published_date: str,
+                                    section: str = "") -> List[sqlite3.Row]:
+        """公表日が `published_date` 以前のflow（新しい公表順）。look-ahead防止の入力。"""
+        sql = "SELECT * FROM investor_type_flows WHERE published_date<=?"
+        params: List = [published_date]
+        if section:
+            sql += " AND section=?"
+            params.append(section)
+        sql += " ORDER BY published_date DESC, period_end DESC, section"
+        return self._rows(sql, params)

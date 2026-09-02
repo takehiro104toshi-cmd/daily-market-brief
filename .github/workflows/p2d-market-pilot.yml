@@ -27,7 +27,7 @@ concurrency:
 jobs:
   pilot:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -67,3 +67,14 @@ jobs:
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
         run: python -m src.intelligence.compass.pilot --sessions 5
+      # Phase 3.5: Japan Market Internals。J-Quants Light の daily bars（date指定・
+      # 1 session=1リクエスト）・security master・investor-types（週次）から
+      # universe / breadth / turnover / sector / size / flow を集計し、Fact Layer・
+      # Context Engine・Morning snapshot・Compass Evidence Package へ接続して
+      # BEFORE/AFTER を実測する。JQUANTS_API_KEY のみ runtime injection（値は出力しない）。
+      # full 5年backfillはしない（直近 sessions のみ。見積りを報告する）。
+      - name: Phase 3.5 Japan Market Internals real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.internals.pilot --sessions 45 --mornings 5

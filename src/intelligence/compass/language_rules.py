@@ -28,8 +28,9 @@ VALIDATOR = "language"
 CAUSAL_PATTERN = re.compile(
     r"押し下げ|押し上げ|を受け|受けて|背景に|により|によって|要因|影響で|につれて|に伴い"
     r"|because|due to|caused|driven by", re.IGNORECASE)
+#: 「買い越し／売り越し」は投資部門別の**事実**語であり助言ではない（除外）
 ADVICE_PATTERN = re.compile(
-    r"買い|売り|推奨|買い場|売り場|目標株価|参入|エントリー|利確|損切り|ポートフォリオ|組み入れ"
+    r"買い(?!越)|売り(?!越)|推奨|買い場|売り場|目標株価|参入|エントリー|利確|損切り|ポートフォリオ|組み入れ"
     r"|\bbuy\b|\bsell\b", re.IGNORECASE)
 TARGET_WORD_PATTERN = re.compile(r"目標|ターゲット|目指す|上値目処|下値目処|メド|目処")
 TARGET_NUMBER_PATTERN = re.compile(
@@ -37,8 +38,13 @@ TARGET_NUMBER_PATTERN = re.compile(
 INJECTION_PATTERN = re.compile(
     r"ignore (?:all |the )?(?:previous|prior|above) instructions|system prompt"
     r"|以前の指示|指示を無視|instructions?\s*:\s*|新しい指示", re.IGNORECASE)
-INFERENTIAL_PATTERN = re.compile(r"とみられる|となろう|見込|だろう|可能性")
+INFERENTIAL_PATTERN = re.compile(r"とみられる|となろう|見込|だろう|可能性|余地")
 OUTLOOK_FORM = "となろう"
+#: 見通し文として認める述語（confidence別の強度表現。Phase 3.5 pre-flight B）
+OUTLOOK_FORMS = ("となろう", "見込まれる", "可能性がある", "余地がある")
+#: 週次データ（投資部門別売買）を日次として語る文（Phase 3.5 §19: 絶対に書かない）
+FLOW_SUBJECT_PATTERN = re.compile(r"投資家|投資部門")
+DAILY_WORD_PATTERN = re.compile(r"本日|今日|当日|きょう")
 
 
 def _issue(claim: CompassClaim, code: str, message: str,
@@ -64,7 +70,11 @@ def validate_language(claim: CompassClaim) -> List[ValidationIssue]:
     if claim.claim_type is ClaimType.FACTUAL and INFERENTIAL_PATTERN.search(text):
         issues.append(_issue(claim, "factual_form", "事実文に推量表現が混じる",
                              SEVERITY_WARNING))
-    if claim.claim_role is ClaimRole.OUTLOOK and OUTLOOK_FORM not in text:
-        issues.append(_issue(claim, "outlook_form", "見通し文が「〜となろう」で結ばれていない",
+    if claim.claim_role is ClaimRole.OUTLOOK and not any(f in text for f in OUTLOOK_FORMS):
+        issues.append(_issue(claim, "outlook_form",
+                             "見通し文が強度表現（見込まれる/可能性がある/余地がある）で結ばれていない",
                              SEVERITY_WARNING))
+    if FLOW_SUBJECT_PATTERN.search(text) and DAILY_WORD_PATTERN.search(text):
+        issues.append(_issue(claim, "weekly_flow_as_daily",
+                             "週次の投資部門別売買を日次（本日/今日）として語っている"))
     return issues

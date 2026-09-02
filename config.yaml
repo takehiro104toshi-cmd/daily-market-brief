@@ -760,3 +760,33 @@ compass_generator:
   llm_max_claim_chars: 200
   llm_max_tokens: 1500
   outlook_horizon: "next_tokyo_session"
+
+# Phase 3.5 Japan Market Internals（src/intelligence/internals/）。
+# universe / 価格変化の定義 / 閾値はすべてversion化し、恣意的なscoreを作らない。
+# credentialはここに書かない（JQUANTS_API_KEY は runtime injection のみ）。
+market_internals:
+  universe:
+    id: "tse_prime_common"
+    version: "1.0.0"
+    market_codes: ["0111"]            # プライム（P2-H実測: Mkt=0111 / MktNm=プライム）
+    common_stock_code_suffixes: ["0"] # 5桁コード末尾0=普通株（優先株等の5桁目≠0を除外）
+    exclude_sector33_codes: ["", "9999"]   # 業種未設定（ETF/REIT等）を除外
+  price_movement:
+    version: "1.0.0"
+    basis: "raw_close_vs_previous_session_raw_close"   # 生終値どうし。調整係数≠1の日は除外
+  sessions: 45                        # pilot window（25日騰落レシオ＋20日平均を検証できる最小）
+  sector_classification: "S17"        # Morning Compass用途は17業種（33業種は使わない）
+  sector_top_n: 3
+  sector_min_relative_gap_pct_point: "0.30"   # 市場平均との差がこれ未満ならleader/laggardにしない
+  turnover_flat_band_ratio: "0.10"    # 20営業日平均比 ±10%以内はFLAT
+  turnover_unusual_ratio: "0.30"      # ±30%超は unusual（説明用flag。scoreではない）
+  breadth_trend_threshold_pct_point: "3.0"    # 5日平均−20日平均の騰落比率差（pt）
+  breadth_extreme_advance_ratio_pct: "80.0"   # 値上がり(下がり)比率がこれ以上/以下でextreme
+  ad_ratio_sessions: 25               # 騰落レシオ（25日）: Σ値上がり/Σ値下がり×100
+  investor_flow:
+    section: "TSEPrime"               # J-Quants investor-types の Section（pilotが観測値を報告）
+    publication_hour_jst: 16          # 公表日の何時に既知とみなすか（保守的な仮定）
+    max_age_days: 14                  # 最新公表週がこれより古ければSTALE
+    investor_types: ["foreign_investors", "individuals", "trust_banks", "business_corporations"]
+  request_interval_seconds: "0.3"     # J-Quants への礼儀（rate limit配慮）
+  fallback_sample_size: 30            # date指定取得が使えない場合の code指定sample（LIMITED_USE）

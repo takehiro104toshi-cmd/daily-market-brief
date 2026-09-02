@@ -103,6 +103,11 @@ class CompassClaim:
     issues: Tuple[ValidationIssue, ...] = ()
     generator: str = ""
     order: int = 0
+    #: Investment Interpretation の出典（Phase 3.5 pre-flight A）。
+    #: FACTUAL claimは空。INTERPRETIVE / RISK は Compass DNA の rule_id を持つ。
+    rule_ref: str = ""
+    interpretation_type: str = ""          # "market_principle" 等（Factではない印）
+    market_principle_version: str = ""     # 参照した経験則カタログの版
 
     def __post_init__(self) -> None:
         if not self.claim_id or not self.text:
@@ -116,7 +121,9 @@ class CompassClaim:
             supporting_fact_ids=self.supporting_fact_ids,
             supporting_context_ids=self.supporting_context_ids,
             grounding_status=status, issues=tuple(issues),
-            generator=self.generator, order=self.order)
+            generator=self.generator, order=self.order,
+            rule_ref=self.rule_ref, interpretation_type=self.interpretation_type,
+            market_principle_version=self.market_principle_version)
 
     @property
     def is_grounded(self) -> bool:
@@ -135,6 +142,9 @@ class CompassClaim:
             "issues": [i.as_dict() for i in self.issues],
             "generator": self.generator,
             "order": self.order,
+            "rule_ref": self.rule_ref,
+            "interpretation_type": self.interpretation_type,
+            "market_principle_version": self.market_principle_version,
         }
 
 

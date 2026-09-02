@@ -29,6 +29,8 @@ from .direction_validation import validate_direction
 from .evidence_package import EvidencePackage
 from .grounding import validate_grounding
 from .language_rules import validate_language
+from .confidence_validation import validate_confidence
+from .principle_validation import validate_principles
 from .missingness_validation import validate_missingness
 from .model import (
     ClaimRole, CompassClaim, CompassOutlook, GroundingStatus, QualityVerdict,
@@ -61,6 +63,8 @@ def evaluate_claim(claim: CompassClaim, package: EvidencePackage,
     issues += validate_temporal(claim, package)
     issues += validate_missingness(claim, package)
     issues += validate_language(claim)
+    issues += validate_principles(claim, package)          # Phase 3.5 pre-flight A
+    issues += validate_confidence(claim, outlook)          # Phase 3.5 pre-flight B
     if any(i.severity == SEVERITY_ERROR for i in issues):
         status = GroundingStatus.REJECTED
     elif issues:

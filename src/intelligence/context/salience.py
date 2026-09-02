@@ -33,26 +33,66 @@ from .builders import (
     RELATIVE_PERFORMANCE,
     TREND_VS_MA,
 )
+from ..internals.types import (
+    BREADTH_STATE,
+    BREADTH_TREND,
+    INDEX_LEADERSHIP,
+    INVESTOR_FLOW_STATE,
+    SECTOR_LEADERSHIP,
+    SIZE_LEADERSHIP,
+    TURNOVER_STATE,
+)
 from .model import ContextItem, ContextStatus, Direction, PriorityTier
 
-SALIENCE_RULE_VERSION = "salience:1.0.0"
+SALIENCE_RULE_VERSION = "salience:1.1.0"    # 1.1.0: Phase 3.5 market internals型を追加
 
 #: 中核次元（Morning Compassの骨格）
 _PRIMARY_TYPES = frozenset({
     INDEX_DIRECTION, RELATIVE_PERFORMANCE, NT_RATIO_STATE,
     RATE_DIRECTION, CURVE_SHAPE, FX_DIRECTION,
+    BREADTH_STATE, INDEX_LEADERSHIP,            # Phase 3.5: 市場内部の骨格
 })
 #: 補助次元
-_SECONDARY_TYPES = frozenset({TREND_VS_MA, CROSS_ASSET_COOCCURRENCE})
+_SECONDARY_TYPES = frozenset({
+    TREND_VS_MA, CROSS_ASSET_COOCCURRENCE,
+    BREADTH_TREND, TURNOVER_STATE, SECTOR_LEADERSHIP, SIZE_LEADERSHIP,
+    INVESTOR_FLOW_STATE,                        # Phase 3.5: 補助（週次flowを含む）
+})
 #: eventが「近い」とみなす日数（Morning Compassの実務的な視野）
 _NEAR_EVENT_DAYS = 7
+#: 週次公表（投資部門別）を「最新」とみなす日数（次の公表が来るまで）
+_WEEKLY_FRESH_DAYS = 14
+#: Contextのnoteから priority_components へ写す説明キー（black-box scoreではない）
+_NOTE_FLAGS = ("state", "extreme", "unusual", "publication")
 
 #: 並び順の安定化に使うtypeの序列（決定論的なranking）
 _TYPE_ORDER = (
     INDEX_DIRECTION, RELATIVE_PERFORMANCE, NT_RATIO_STATE, TREND_VS_MA,
     RATE_DIRECTION, CURVE_SHAPE, FX_DIRECTION, CROSS_ASSET_COOCCURRENCE,
     EVENT_PROXIMITY,
+    BREADTH_STATE, INDEX_LEADERSHIP, BREADTH_TREND, TURNOVER_STATE,
+    SECTOR_LEADERSHIP, SIZE_LEADERSHIP, INVESTOR_FLOW_STATE,
 )
+
+
+def _weekly_fresh(item: ContextItem, session_date: str) -> bool:
+    """週次flow: 対象期間末が session_date 以前かつ _WEEKLY_FRESH_DAYS 以内なら最新。"""
+    try:
+        end = date.fromisoformat(item.time.session_date)
+        session = date.fromisoformat(session_date)
+    except ValueError:
+        return False
+    return end <= session and (session - end).days <= _WEEKLY_FRESH_DAYS
+
+
+def _note_flags(note: str) -> dict:
+    out = {}
+    for token in (note or "").split(";"):
+        if "=" in token:
+            key, value = token.split("=", 1)
+            if key.strip() in _NOTE_FLAGS:
+                out[key.strip()] = value.strip()
+    return out
 
 
 def _base_tier(item: ContextItem) -> PriorityTier:
@@ -83,9 +123,15 @@ def score_item(item: ContextItem, *, session_date: str) -> ContextItem:
     # --- freshness: 当日セッションのFactかどうか（暦日ではなくsession一致）
     fresh = item.time.session_date == session_date
     components["freshness"] = "current_session" if fresh else "older_session"
+    if not fresh and item.context_type == INVESTOR_FLOW_STATE \
+            and _weekly_fresh(item, session_date):
+        fresh = True                       # 週次公表は「最新公表週」を最新とみなす
+        components["freshness"] = "latest_weekly_publication"
     if not fresh:
         tier = _demote(tier)
         components["demoted_by"] = "stale_session"
+    for key, value in _note_flags(item.note).items():
+        components[f"note_{key}"] = value   # 説明用（tierは変えない）
 
     # --- 品質: LIMITED_USE / CONFLICTED は降格（黙って同格に扱わない）
     if item.status in (ContextStatus.LIMITED_USE, ContextStatus.CONFLICTED):

@@ -61,7 +61,7 @@ Automated Closeout が待機する **live validation / pilot workflow** の上�
 |---|---|---|
 | `p1c-live-validation.yml` | 10 | 12分 |
 | `p2a-e2e-pilot.yml` | 10 | 12分 |
-| `p2d-market-pilot.yml` | 15 | 17分 |
+| `p2d-market-pilot.yml` | 25 | 27分 |
 | `p2h-jquants-light.yml` | 20 | 22分 |
 
 `tests/intelligence/test_live_run_closeout.py` が、これらのworkflowの全jobに

@@ -23,6 +23,7 @@ _CODES: Dict[ContextStatus, str] = {
     ContextStatus.STALE: "stale_dimension_assertion",
     ContextStatus.CONFLICTED: "conflicted_dimension_assertion",
     ContextStatus.INSUFFICIENT_HISTORY: "insufficient_history_assertion",
+    ContextStatus.NOT_ENTITLED: "not_entitled_dimension_assertion",
 }
 
 
