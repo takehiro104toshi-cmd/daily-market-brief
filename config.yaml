@@ -852,6 +852,7 @@ mobile_intake:
   shortcut_name: "羅針盤に追加"
   local_config_dir_name: ".compass_intake"
   trigger_research: true               # Corpus 追加成功後に Phase 3.8 incremental research を 1 回呼ぶ（失敗しても Corpus は不変）
+  recover_environment_failures: false  # environment 由来（extractor 欠落）で FAILED になった同一 hash を gate 付きで再検証（通常は batch_import --recover で明示実行）
 
 # Phase 3.8 Automatic Compass Corpus Analyzer（src/intelligence/corpus_research/）。
 # 決定的・versioned・append-only。外部 LLM / embedding なし。production Compass DNA は変更しない。

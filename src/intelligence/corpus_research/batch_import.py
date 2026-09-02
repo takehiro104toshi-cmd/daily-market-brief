@@ -15,7 +15,7 @@ from typing import Callable, Dict, List, Optional
 
 from ..core.paths import data_root
 from ..corpus.config import CorpusConfig, load_corpus_config
-from ..corpus.extraction import PypdfExtractor, TextLayerExtractor
+from ..corpus.extraction import ExtractorUnavailable, PypdfExtractor, TextLayerExtractor, ensure_extractor_available
 from ..corpus.intake import SOURCE_HISTORICAL_IMPORT
 from ..corpus.pipeline import ingest_path
 from ..corpus.store import CorpusStore, corpus_root
@@ -32,6 +32,8 @@ class BatchReport:
     failed: int = 0
     errors: int = 0
     skipped_over_limit: int = 0
+    recovered: int = 0
+    environment_error: str = ""          # 例: EXTRACTOR_UNAVAILABLE:… → Corpus には何も書いていない
     results: List[Dict[str, object]] = field(default_factory=list)
     research: Dict[str, object] = field(default_factory=dict)
     duration_seconds: float = 0.0
@@ -42,7 +44,8 @@ class BatchReport:
 
 def batch_import(source_dir: Path, store: CorpusStore, *, corpus_config: CorpusConfig, extractor: TextLayerExtractor,
                  max_files: int, now: Optional[datetime] = None, on_progress: Optional[Callable[[int, int, str], None]] = None,
-                 research_engine=None, recursive: bool = False) -> BatchReport:
+                 research_engine=None, recursive: bool = False,
+                 recover_environment_failures: bool = False) -> BatchReport:
     """source_dir の PDF を Corpus へ追加する。既定は **直下のみ**（同期フォルダの sub folder を勝手に読まない）。
     0 byte / sync placeholder は読まずに SKIPPED_PLACEHOLDER。原本は移動・削除・改変しない。"""
     now = now or datetime.now(timezone.utc)
@@ -56,6 +59,12 @@ def batch_import(source_dir: Path, store: CorpusStore, *, corpus_config: CorpusC
     else:
         pdfs = sorted(p for p in source_dir.iterdir() if p.is_file() and p.suffix.lower() == ".pdf")
     report.scanned = len(pdfs)
+    try:
+        ensure_extractor_available(extractor)               # precondition gate: 1 件も処理する前に止める
+    except ExtractorUnavailable as exc:
+        report.environment_error = f"EXTRACTOR_UNAVAILABLE:{exc}"
+        report.duration_seconds = round(time.monotonic() - t0, 3)
+        return report
     for i, pdf in enumerate(pdfs, start=1):
         if pdf.name.startswith(".") or pdf.stat().st_size == 0:
             report.results.append({"file": pdf.name, "status": "SKIPPED_PLACEHOLDER"})
@@ -68,7 +77,8 @@ def batch_import(source_dir: Path, store: CorpusStore, *, corpus_config: CorpusC
             on_progress(i, len(pdfs), pdf.name)
         try:
             r = ingest_path(store, pdf, config=corpus_config, extractor=extractor, now=now,
-                            source_type=SOURCE_HISTORICAL_IMPORT)
+                            source_type=SOURCE_HISTORICAL_IMPORT,
+                            recover_environment_failures=recover_environment_failures)
             status = r.status
             if r.status == "DUPLICATE":
                 report.duplicates += 1
@@ -78,8 +88,14 @@ def batch_import(source_dir: Path, store: CorpusStore, *, corpus_config: CorpusC
                 report.quarantined += 1
             else:
                 report.failed += 1
+            if r.recovered:
+                report.recovered += 1
             report.results.append({"file": pdf.name, "status": status, "document_id": r.document_id,
-                                   "document_date": r.document_date, "reasons": list(r.reasons)})
+                                   "document_date": r.document_date, "reasons": list(r.reasons),
+                                   "recovered": r.recovered})
+        except ExtractorUnavailable as exc:                     # environment failure: 残りを処理せず停止
+            report.environment_error = f"EXTRACTOR_UNAVAILABLE:{exc}"
+            break
         except Exception as exc:  # noqa: BLE001 1 ファイルの失敗を batch 全体へ広げない
             report.errors += 1
             report.results.append({"file": pdf.name, "status": "ERROR", "error_type": type(exc).__name__})
@@ -116,6 +132,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--no-research", action="store_true")
     parser.add_argument("--data-root", default="", help="INTELLIGENCE_DATA_ROOT の上書き（通常は local config）")
     parser.add_argument("--recursive", action="store_true", help="sub folder も読む（既定: 直下のみ）")
+    parser.add_argument("--recover", action="store_true",
+                        help="environment 由来（extractor 欠落）で FAILED になった同一 hash document を gate 付きで再検証する")
     args = parser.parse_args(argv)
     corpus_config = load_corpus_config()
     from .config import load_research_config
@@ -133,9 +151,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     report = batch_import(Path(args.source), store, corpus_config=corpus_config,
                           extractor=PypdfExtractor(corpus_config.extractor_version), max_files=max_files,
                           on_progress=lambda i, n, name: print(f"[batch] {i}/{n} {name}"), research_engine=engine,
-                          recursive=args.recursive)
+                          recursive=args.recursive, recover_environment_failures=args.recover)
     store.close()
     print(json.dumps({k: v for k, v in report.as_dict().items() if k != "results"}, ensure_ascii=False))
+    if report.environment_error:
+        print(f"[batch] ENVIRONMENT FAILURE: {report.environment_error} — nothing was written to the corpus. "
+              "Run `pip install -r requirements.txt` and re-run.")
+        return 2
     return 0
 
 

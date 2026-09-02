@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.41 (2026-09-03) — Windows runtime blocker fix: pypdf 依存宣言・fail-fast・FAILED recovery
+
+Windows 実機の初回取り込みで 44/44 が `PDF_UNREADABLE,ModuleNotFoundError` になった事故
+（pypdf が依存として宣言されておらず、extractor 欠落が document ごとの FAILED として Corpus に書かれた）の修正。
+
+### 追加
+
+- `requirements.txt` / `pyproject.toml`: `pypdf>=4.0` を正式依存として宣言（両者同期）。
+- `corpus/extraction.py`: `ExtractorUnavailable`（environment / precondition failure）、`extractor_availability()`、
+  `ensure_extractor_available()`。`PypdfExtractor` は ImportError をこれに変換する。
+- `corpus/validation.py`: `ExtractorUnavailable` は FAILED に変換せず伝播（Corpus に書かない）。
+  `is_environment_failure()` で過去 record の reason（`PDF_UNREADABLE,ModuleNotFoundError` 等）を判別。
+- `corpus/pipeline.py`: `recovery_eligibility()` と `ingest_path(recover_environment_failures=True)`。
+  gate（現在 FAILED / reason が環境由来 / hash 一致 / 原本未保存 / 今も PDF として読める / extractor 復旧）を通った
+  document だけ in-place で再検証。audit trail: FAILED → RECEIVED(`recovery_from_environment_failure`) → VALIDATED → …。
+- `corpus/status.py`: `FAILED → RECEIVED` を **recovery 専用** 遷移として追加。
+- `corpus/store.py`: `document_updates.jsonl`（append-only の row 改訂）と `update_document()`、`last_status_event()`。
+  元 row と元 event は残る。index は rebuild で改訂を再生する。
+- `corpus_research/batch_import.py`: 開始前 precondition gate（1 件も処理せず `environment_error`、exit 2）、
+  `--recover`、`recovered` 件数。
+- `mobile_intake/processor.py` / `result.py`: 開始前 gate（`EXTRACTOR_UNAVAILABLE`、status に日本語ヒント、ledger 不変、exit 2）、
+  config `recover_environment_failures`（既定 false）。
+- `mobile_intake/setup.py`: `check` に `extractor_available` / module / version。無ければ READY にならない（preflight gate）。
+- `tests/intelligence/test_runtime_blocker_fix.py`【新規】9 件（依存宣言の同期、extractor 欠落時の 0 record・0 event、
+  readiness、壊れた PDF は document-level、Windows と同じ FAILED record の in-place recovery と audit trail、
+  gate 拒否、通常 duplicate 不変、recovered document の Phase 3.8 N+1 と rebuild 等価、processor の recover 設定）。
+- `docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md` §10: 依存 install → init → check（gate）→ status → inventory →
+  batch_import（--recover）→ status → runtime validation → Task Scheduler の順序。
+
+### 改善
+
+- なし。
+
+### 修正
+
+- extractor 欠落が document validation failure として Corpus を汚す問題（上記）。
+
 ## v4.40 (2026-09-02) — Phase 3.75/3.8 Windows 実機接続 runbook と既存 PDF 初回取り込みの整合
 
 iCloud Drive「羅針盤」フォルダ（Windows 実機）へ既存実装を接続するための最小整合。新 Phase ではない。

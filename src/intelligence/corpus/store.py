@@ -18,6 +18,7 @@ from .source import SourceDocument, source_from_dict
 #: canonical ファイル名 → key 列
 CANONICAL: Dict[str, tuple] = {
     "documents": ("documents.jsonl", "document_id"),
+    "document_updates": ("document_updates.jsonl", "update_id"),   # recovery 等による row の改訂（append-only）
     "status_events": ("status_events.jsonl", "event_id"),
     "duplicates": ("duplicates.jsonl", "duplicate_id"),
     "temporal": ("temporal.jsonl", "temporal_id"),
@@ -157,6 +158,10 @@ class CorpusStore:
                       f"VALUES ({','.join('?' * len(_DOC_COLUMNS))})",
                       tuple(d.get(col, "") if col not in ("date_sequence", "page_count", "byte_size")
                             else int(d.get(col, 0) or 0) for col in _DOC_COLUMNS))
+        elif name == "document_updates":
+            doc = dict(d.get("document") or {})
+            if doc.get("document_id"):
+                self._index("documents", doc)               # index は最新 row（canonical は両方残る）
         elif name == "status_events":
             c.execute("INSERT OR REPLACE INTO status_events VALUES (?,?,?,?,?,?)",
                       (d["event_id"], d.get("document_id", ""), d.get("status", ""),
@@ -251,6 +256,19 @@ class CorpusStore:
 
     def add_status_event(self, event) -> bool:
         return self._append("status_events", [event.as_dict()])["added"] == 1
+
+    def update_document(self, doc: SourceDocument, reason: str, at: str) -> bool:
+        """既存 document row の改訂（recovery 用）。canonical には update record を **追記** し、
+        index の documents row を最新にする。元の row は documents.jsonl に残る（audit）。"""
+        import hashlib
+
+        update_id = "csu_" + hashlib.sha1(f"{doc.document_id}|{reason}|{at}".encode("utf-8")).hexdigest()[:16]
+        return self._append("document_updates", [{"update_id": update_id, "document_id": doc.document_id,
+                                                   "reason": reason, "at": at, "document": doc.as_dict()}])["added"] == 1
+
+    def last_status_event(self, document_id: str) -> Optional[Dict]:
+        rows = self._rows("SELECT * FROM status_events WHERE document_id=? ORDER BY rowid DESC LIMIT 1", (document_id,))
+        return dict(rows[0]) if rows else None
 
     def add_duplicate(self, entry: Mapping) -> bool:
         return self._append("duplicates", [entry])["added"] == 1

@@ -157,38 +157,56 @@ machine-specific な絶対 path は **repository のどこにも書かず**、`~
 （`setup init` が生成、Git 非管理）にだけ置く。コマンドはリポジトリ直下の cmd.exe で実行
 （PowerShell では `%USERPROFILE%` を `$env:USERPROFILE` に読み替える）。
 
+**`setup check` は preflight gate**: `MOBILE_INTAKE_READY`（少なくとも `extractor_available: true`）でない限り
+取り込みを開始しない。extractor（pypdf）が無い環境では batch / processor は **1 件も処理せず**
+`EXTRACTOR_UNAVAILABLE` で停止し、Corpus には何も書かない（2026-09-02 の 44/44 FAILED 事故の再発防止）。
+
 ```
-:: 0) 事前確認（変更しない）
+:: 0) 依存関係（pypdf を含む）。最初に必ず実行する
+pip install -r requirements.txt
+python -c "import pypdf; print(pypdf.__version__)"          ← 版が表示されれば OK
+
+:: 1) 事前確認（変更しない）
 git status
 git branch --show-current
-git ls-files | findstr /i "\.pdf$"                       ← 何も出なければ tracked PDF 0
+git ls-files | findstr /i "\.pdf$"                          ← 何も出なければ tracked PDF 0
 
-:: 1) 機械ローカル設定（Inbox と private data root。repository には何も書かれない）
+:: 2) 機械ローカル設定（Inbox と private data root。repository には何も書かれない）
 python -m src.intelligence.mobile_intake.setup init --inbox "%USERPROFILE%\iCloudDrive\羅針盤" --data-root "%USERPROFILE%\CompassData" --provider ICLOUD_DRIVE
 
-:: 2) readiness / BEFORE / 棚卸し（読むだけ。移動・削除・改変なし）
-python -m src.intelligence.mobile_intake.setup check      ← inbox configured/exists/readable/writable/outside repo/corpus reachable/provider root
-python -m src.intelligence.mobile_intake.setup status     ← BEFORE: unique/usable/eligible/date_range/milestone
-python -m src.intelligence.mobile_intake.setup inventory  ← items / PDF / stable / unstable / placeholders / non-PDF / 既存 Corpus との hash duplicate
+:: 3) preflight gate / BEFORE / 棚卸し（読むだけ。移動・削除・改変なし）
+python -m src.intelligence.mobile_intake.setup check       ← extractor_available / inbox / corpus reachable / provider root
+python -m src.intelligence.mobile_intake.setup status      ← BEFORE: unique/usable/eligible/failed/date_range/milestone
+python -m src.intelligence.mobile_intake.setup inventory   ← items / PDF / stable / placeholders / non-PDF / hash duplicate
 
-:: 3) 既存 PDF の初回取り込み（bounded・hash dedup・失敗隔離・直下のみ・最後に Phase 3.8 incremental を 1 回）
+:: 4) 初回取り込み（bounded・hash dedup・失敗隔離・直下のみ・最後に Phase 3.8 incremental を 1 回）
 python -m src.intelligence.corpus_research.batch_import --source "%USERPROFILE%\iCloudDrive\羅針盤" --max 50
 
-:: 4) AFTER と研究状態（milestone は実測値だけを使う）
+:: 4') 既に environment 由来の FAILED record（例: 2026-09-02 の 44 件）がある Corpus では --recover を付ける。
+::     gate（同一 hash・FAILED・reason が環境由来・原本が未保存・PDF として読める・extractor 復旧）を通った
+::     document だけを in-place で再検証する。Corpus root の削除・rename は不要。
+python -m src.intelligence.corpus_research.batch_import --source "%USERPROFILE%\iCloudDrive\羅針盤" --max 50 --recover
+
+:: 5) AFTER と研究状態（milestone は実測値だけを使う）
 python -m src.intelligence.mobile_intake.setup status
 
-:: 5) 自動化（ユーザー権限・5 分間隔・常駐なし）
-python -m src.intelligence.mobile_intake.setup task       ← 表示された schtasks /Create ... をそのまま実行
-python -m src.intelligence.mobile_intake.processor --once ← 手動 1 回。既存ファイルは DUPLICATE として 1 回だけ ledger に載り、以後 skip（正常）
-python -m src.intelligence.mobile_intake.processor --once ← rerun idempotency（結果 0 件・Corpus 不変）
-python -m src.intelligence.mobile_intake.setup check      ← MOBILE_INTAKE_READY
+:: 6) runtime validation（自動処理系を既存ファイルで確認）
+python -m src.intelligence.mobile_intake.processor --once  ← 既存ファイルは DUPLICATE として 1 回だけ ledger に載り、以後 skip（正常）
+python -m src.intelligence.mobile_intake.processor --once  ← rerun idempotency（結果 0 件・Corpus 不変）
+
+:: 7) 自動化（ユーザー権限・5 分間隔・常駐なし）
+python -m src.intelligence.mobile_intake.setup task        ← 表示された schtasks /Create ... をそのまま実行
+python -m src.intelligence.mobile_intake.setup check       ← MOBILE_INTAKE_READY
 ```
 
 - `batch_import` は `~/.compass_intake/local_config.json` の data root を processor と共有する
   （`--data-root` で上書き可）。sub folder は既定で読まない（`--recursive` で明示）。0 byte / `.icloud` placeholder は読まない。
+- environment failure（extractor 欠落）と document failure（壊れた PDF・非羅針盤・日付不明）は区別される。
+  前者は開始前に停止（Corpus 不変・exit code 2）、後者は従来どおり document ごとに FAILED / QUARANTINED。
 - 44 項目あっても CORPUS_30 到達を仮定しない。`setup status` の AFTER 値（hash duplicate・validation・quality 判定後）だけを報告する。
 - 研究解析（Phase 3.8）が失敗しても Corpus 取り込みは巻き戻らない（CORPUS_SUCCESS + RESEARCH_ANALYSIS_FAILED、bounded retry）。
-- 初回取り込み後の processor 実行で既存ファイルが DUPLICATE になるのは想定どおり（Corpus は二重登録されない）。
+- recovery の audit trail: 元の documents row と RECEIVED → FAILED は残り、`document_updates.jsonl` に改訂 row、
+  status_events に `recovery_from_environment_failure` → VALIDATED → … が追記される。一般の FAILED は再処理しない。
 - 本当の N+1（iPhone から新しい号を保存 → 5 分以内に自動取り込み）は次に新しい羅針盤を保存した時点で確認する
   （REAL_N_PLUS_ONE_PENDING）。既存ファイルを複製して「新規」とみなさない。
 

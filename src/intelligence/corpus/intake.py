@@ -51,11 +51,13 @@ class IntakeOutcome:
     quality: str = ""
     duplicate_of: str = ""
     corpus_status: str = ""
+    recovered: bool = False
 
     def as_dict(self) -> Dict[str, object]:
         return {"status": self.status, "document_id": self.document_id,
                 "reasons": list(self.reasons), "quality": self.quality,
-                "duplicate_of": self.duplicate_of, "corpus_status": self.corpus_status}
+                "duplicate_of": self.duplicate_of, "corpus_status": self.corpus_status,
+                "recovered": self.recovered}
 
 
 class CompassIntakeService:
@@ -64,13 +66,15 @@ class CompassIntakeService:
     def __init__(self, store: CorpusStore, config: CorpusConfig, extractor: TextLayerExtractor, *,
                  trading_days: Optional[Sequence[str]] = None,
                  market_lookup: Optional[Callable] = None,
-                 context_labels: Optional[Callable[[str], Mapping[str, str]]] = None) -> None:
+                 context_labels: Optional[Callable[[str], Mapping[str, str]]] = None,
+                 recover_environment_failures: bool = False) -> None:
         self.store = store
         self.config = config
         self.extractor = extractor
         self.trading_days = trading_days
         self.market_lookup = market_lookup
         self.context_labels = context_labels
+        self.recover_environment_failures = recover_environment_failures   # environment 由来 FAILED の再検証を許すか
 
     def submit(self, request: IntakeRequest) -> IntakeOutcome:
         from .pipeline import ingest_path
@@ -86,7 +90,8 @@ class CompassIntakeService:
                              now=received, source_type=request.source_type,
                              original_filename=request.original_filename,
                              trading_days=self.trading_days, market_lookup=self.market_lookup,
-                             context_labels=self.context_labels)
+                             context_labels=self.context_labels,
+                             recover_environment_failures=self.recover_environment_failures)   # ExtractorUnavailable は伝播
         if result.status == DUPLICATE:
             return IntakeOutcome(OUTCOME_DUPLICATE, result.document_id, result.reasons,
                                  duplicate_of=result.duplicate_of, corpus_status=result.status)
@@ -97,4 +102,4 @@ class CompassIntakeService:
             return IntakeOutcome(OUTCOME_FAILED, result.document_id, result.reasons,
                                  corpus_status=result.status)
         return IntakeOutcome(ACCEPTED, result.document_id, result.reasons, quality=result.quality,
-                             corpus_status=result.status)
+                             corpus_status=result.status, recovered=result.recovered)

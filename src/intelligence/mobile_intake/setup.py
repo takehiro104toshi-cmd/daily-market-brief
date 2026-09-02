@@ -16,6 +16,7 @@ from typing import Dict, List, Optional
 
 from ..core.paths import data_root
 from ..corpus.config import load_corpus_config
+from ..corpus.extraction import extractor_availability
 from ..corpus.identity import sha256_file
 from ..corpus.inbox import is_stable, sample_file
 from ..corpus.snapshot import build_snapshot
@@ -45,10 +46,19 @@ NOT_READY = "MOBILE_INTAKE_NOT_READY"
 
 
 def readiness(config: MobileIntakeConfig, local: LocalConfig, *, repo_root: Path,
-              task_registered: Optional[bool] = None, env=None) -> Dict[str, object]:
+              task_registered: Optional[bool] = None, env=None,
+              extractor_info: Optional[Dict[str, object]] = None) -> Dict[str, object]:
+    """preflight gate。extractor（pypdf）が無ければ他が揃っていても READY にならない。"""
     environ = os.environ if env is None else env
     checks: Dict[str, object] = {}
     diagnostics: List[str] = []
+    info = dict(extractor_info) if extractor_info is not None else extractor_availability()
+    checks["extractor_available"] = bool(info.get("available"))
+    checks["extractor_module"] = str(info.get("module", ""))
+    checks["extractor_version"] = str(info.get("version", ""))
+    if not checks["extractor_available"]:
+        diagnostics.append("PDF extractor（pypdf）未インストール: リポジトリで `pip install -r requirements.txt` を実行"
+                           f"（{info.get('error_type', '')}）。この状態では取り込みを開始しない")
     inbox = local.inbox_dir
     checks["inbox_configured"] = inbox is not None
     if inbox is None:
@@ -93,8 +103,8 @@ def readiness(config: MobileIntakeConfig, local: LocalConfig, *, repo_root: Path
     checks["provider"] = local.provider
     checks["mobile_action_count"] = MOBILE_ACTION_COUNT
 
-    core_ok = all(bool(checks[k]) for k in ("inbox_configured", "inbox_exists", "inbox_readable",
-                                             "inbox_writable", "corpus_reachable"))
+    core_ok = all(bool(checks[k]) for k in ("extractor_available", "inbox_configured", "inbox_exists",
+                                             "inbox_readable", "inbox_writable", "corpus_reachable"))
     if not core_ok:
         status = NOT_READY
     elif checks["processor_configured"] is True and checks["shortcut_instructions_generated"] \

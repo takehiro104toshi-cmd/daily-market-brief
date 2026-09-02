@@ -29,8 +29,11 @@ TRANSITIONS: Dict[str, FrozenSet[str]] = {
     ANALYZED: frozenset({ANALYZED, PARTIAL}),      # 再解析（新 version）
     PARTIAL: frozenset({ANALYZED, PARTIAL}),
     QUARANTINED: frozenset({VALIDATED}),           # marker version 更新後の再検証のみ
-    FAILED: frozenset(),
+    FAILED: frozenset({RECEIVED}),                 # **recovery のみ**: environment 由来 FAILED を pipeline の gate
+                                                   # （同一 hash・環境復旧・source 再読可）を通した場合だけ再受領する
 }
+
+RECOVERY_REASON_PREFIX = "recovery_from_environment_failure"
 
 TERMINAL_FOR_ANALYSIS = frozenset({ANALYZED, PARTIAL})
 

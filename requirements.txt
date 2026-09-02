@@ -5,6 +5,7 @@ lxml>=4.9
 PyYAML>=6.0
 yfinance>=0.2.40
 pytz>=2024.1
+pypdf>=4.0        # Compass Corpus の PDF text layer 抽出（Phase 3.7〜）
 
 # テスト用
 pytest>=7.4

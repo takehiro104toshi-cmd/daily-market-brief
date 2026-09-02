@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from .config import CorpusConfig
-from .extraction import TextLayerExtractor
+from .extraction import ExtractorUnavailable, TextLayerExtractor
 from .family import HIGH, FamilyDecision, detect_family
 from .status import FAILED, QUARANTINED, VALIDATED
 from .temporal import DocumentDateDecision, extract_document_date
@@ -25,6 +25,15 @@ R_PAGE_COUNT = "PAGE_COUNT_OUT_OF_RANGE"
 R_FAMILY = "FAMILY_CONFIDENCE_"
 R_DATE_MISSING = "DOCUMENT_DATE_MISSING"
 R_DATE_CONFLICT = "DOCUMENT_DATE_CONFLICT_"
+
+#: 過去に environment 由来で FAILED と記録された reason の目印（fail-fast 導入前の record を含む）
+ENVIRONMENT_FAILURE_MARKERS = ("ModuleNotFoundError", "ImportError", "ExtractorUnavailable", "EXTRACTOR_UNAVAILABLE")
+
+
+def is_environment_failure(reason: str) -> bool:
+    """status event の reason（例: 'PDF_UNREADABLE,ModuleNotFoundError'）が環境由来か。"""
+    text = str(reason or "")
+    return R_UNREADABLE in text and any(m in text for m in ENVIRONMENT_FAILURE_MARKERS)
 
 
 @dataclass(frozen=True)
@@ -64,7 +73,9 @@ def validate_document(path: Path, extractor: TextLayerExtractor, config: CorpusC
     try:
         page_texts = extractor.page_texts(path)
         metadata = extractor.metadata(path)
-    except Exception as exc:  # noqa: BLE001 例外の型名のみ記録（本文・パスを漏らさない）
+    except ExtractorUnavailable:
+        raise                                             # environment failure: 呼び出し側が停止（Corpus に書かない）
+    except Exception as exc:  # noqa: BLE001 document-level failure。例外の型名のみ記録（本文・パスを漏らさない）
         return ValidationResult(True, False, 0, None, None, FAILED,
                                 (R_UNREADABLE, type(exc).__name__)), [], {}
     page_count = len(page_texts)

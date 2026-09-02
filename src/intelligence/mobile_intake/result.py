@@ -24,6 +24,7 @@ R_SYNC_NOT_AVAILABLE = "SYNC_NOT_AVAILABLE"
 R_LOCKED = "LOCKED"
 R_TIMEOUT_UNSTABLE = "TIMEOUT_UNSTABLE"
 R_INTERNAL_ERROR = "INTERNAL_ERROR"
+R_EXTRACTOR_UNAVAILABLE = "EXTRACTOR_UNAVAILABLE"   # environment failure（Corpus には何も書かない）
 
 HINTS_JA: Dict[str, str] = {
     R_OK: "羅針盤を Corpus に追加しました。",
@@ -38,6 +39,7 @@ HINTS_JA: Dict[str, str] = {
     R_LOCKED: "別の処理が進行中です。次回の実行で処理されます。",
     R_TIMEOUT_UNSTABLE: "転送が完了しませんでした。iPhone からもう一度共有してください。",
     R_INTERNAL_ERROR: "内部エラーです。ログ（ledger）を確認してください。",
+    R_EXTRACTOR_UNAVAILABLE: "PDF 抽出ライブラリ（pypdf）が未インストールです。リポジトリで pip install -r requirements.txt を実行してから再実行してください。Corpus には何も記録していません。",
 }
 
 

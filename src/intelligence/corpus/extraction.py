@@ -30,6 +30,32 @@ PAGE_EMPTY = "EMPTY"
 
 EXTRACTOR_PYPDF = "pypdf_text_layer"
 
+
+class ExtractorUnavailable(RuntimeError):
+    """PDF extractor（pypdf）が環境に無い＝ **environment / precondition failure**。
+
+    document-level の validation failure（壊れた PDF 等）とは区別する。pipeline はこれを FAILED として
+    Corpus に書かず、呼び出し側（batch / processor / setup check）が開始前に停止する。"""
+
+
+def extractor_availability(module_name: str = "pypdf") -> Dict[str, object]:
+    """extractor 依存の有無を **import して** 確認する（credential 不要・network 不要）。"""
+    try:
+        module = __import__(module_name)
+    except Exception as exc:  # noqa: BLE001 ImportError 以外（壊れた install）も unavailable
+        return {"available": False, "module": module_name, "version": "", "error_type": type(exc).__name__}
+    return {"available": True, "module": module_name, "version": str(getattr(module, "__version__", "")),
+            "error_type": ""}
+
+
+def ensure_extractor_available(extractor: "TextLayerExtractor") -> Dict[str, object]:
+    """extractor が使えなければ ExtractorUnavailable（Corpus に何も書く前に止めるための gate）。"""
+    probe = getattr(extractor, "availability", None)
+    info = probe() if callable(probe) else {"available": True, "module": getattr(extractor, "name", ""), "version": ""}
+    if not info.get("available"):
+        raise ExtractorUnavailable(f"{info.get('module', 'extractor')} unavailable ({info.get('error_type', '')})")
+    return info
+
 _BANNER_TOKENS = ("お客様への配布は厳禁", "社外秘（岡三証券社内限")
 _HEADING_RE = re.compile(r"^(【.+】|▼.+|.*(相場見通し|投資戦略|投資アイデア|注目の日本株|物色動向|主な株価・市況関連指数|要人発言).*)$")
 _TABLE_RE = re.compile(r"^(終値|前日比)\s|^[^\d]{1,24}\s[\d,]+\.\d+\s[+\-][\d.]+|CLOSED|Closed")
@@ -55,9 +81,14 @@ class PypdfExtractor:
     def __init__(self, version: str = "pypdf_text_layer:1.0.0") -> None:
         self.version = version
 
-    def _reader(self, path: Path):
-        import pypdf  # 既存依存
+    def availability(self) -> Dict[str, object]:
+        return extractor_availability("pypdf")
 
+    def _reader(self, path: Path):
+        try:
+            import pypdf  # 正式依存（requirements.txt / pyproject.toml）
+        except ImportError as exc:                       # environment failure: document-level FAILED にしない
+            raise ExtractorUnavailable(f"pypdf unavailable ({type(exc).__name__})") from exc
         return pypdf.PdfReader(str(path))
 
     def page_texts(self, path: Path) -> List[str]:
@@ -75,6 +106,9 @@ class PypdfExtractor:
 
 class FakeExtractor:
     """テスト用: path → page texts を注入する（PDF を読まない）。"""
+
+    def availability(self) -> Dict[str, object]:
+        return {"available": True, "module": "fake", "version": getattr(self, "version", ""), "error_type": ""}
 
     name = "fake_text_layer"
 

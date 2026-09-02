@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from ..corpus.config import CorpusConfig, load_corpus_config
-from ..corpus.extraction import PypdfExtractor, TextLayerExtractor
+from ..corpus.extraction import ExtractorUnavailable, PypdfExtractor, TextLayerExtractor, ensure_extractor_available
 from ..corpus.identity import sha256_file
 from ..corpus.inbox import is_stable, sample_file
 from ..corpus.intake import ACCEPTED, SOURCE_INBOX, SOURCE_MOBILE_UPLOAD, CompassIntakeService, IntakeRequest
@@ -36,6 +36,7 @@ from .result import (
     FAILED,
     HINTS_JA,
     QUARANTINED,
+    R_EXTRACTOR_UNAVAILABLE,
     R_INTERNAL_ERROR,
     R_LOCKED,
     R_SYNC_NOT_AVAILABLE,
@@ -74,6 +75,7 @@ class ProcessorReport:
     corpus_after: int = 0
     bounded_by: str = ""
     duration_seconds: float = 0.0
+    environment_error: str = ""                  # EXTRACTOR_UNAVAILABLE 等。Corpus / ledger には何も書いていない
     status_written: List[str] = field(default_factory=list)
     results: List[ProcessingResult] = field(default_factory=list)
 
@@ -91,6 +93,7 @@ class ProcessorReport:
                 "skipped_processed": self.skipped_processed, "skipped_locked": self.skipped_locked,
                 "corpus_before": self.corpus_before, "corpus_after": self.corpus_after,
                 "bounded_by": self.bounded_by, "duration_seconds": round(self.duration_seconds, 3),
+                "environment_error": self.environment_error,
                 "status_written": list(self.status_written), "counts": self.counts(),
                 "results": [r.as_dict() for r in self.results]}
 
@@ -106,7 +109,8 @@ class InboxProcessor:
         self.local = local
         self.corpus_config = corpus_config
         self.store = store
-        self.service = CompassIntakeService(store, corpus_config, extractor)
+        self.service = CompassIntakeService(store, corpus_config, extractor,
+                                            recover_environment_failures=config.recover_environment_failures)
         self.sampler = sampler
         self.sleeper = sleeper
         self.now_fn = now_fn
@@ -284,6 +288,17 @@ class InboxProcessor:
             report.duration_seconds = time.monotonic() - t0
             return report
 
+        try:
+            ensure_extractor_available(self.service.extractor)      # precondition gate: ファイルを 1 件も触る前に止める
+        except ExtractorUnavailable as exc:
+            report.environment_error = f"{R_EXTRACTOR_UNAVAILABLE}:{exc}"
+            text = "\n".join([day, "環境エラー: PDF 抽出ライブラリ未インストール", HINTS_JA[R_EXTRACTOR_UNAVAILABLE]])
+            report.status_written = [redact_path(p) for p in write_status(
+                self._status_dirs(), text, {"result": FAILED, "reason_code": R_EXTRACTOR_UNAVAILABLE,
+                                            "hint": HINTS_JA[R_EXTRACTOR_UNAVAILABLE], "at": now.isoformat(),
+                                            "milestone": ms, "corpus_written": False})]
+            report.duration_seconds = time.monotonic() - t0
+            return report
         instance = acquire_instance_lock(self.home, self.config.stale_lock_minutes, now)
         if instance is None:
             report.single_instance_acquired = False
@@ -359,6 +374,9 @@ class InboxProcessor:
                                        quality=outcome.quality, milestone=milestone)
                     report.corpus_after = after
                     before = after
+                except ExtractorUnavailable as exc:                 # environment failure: ledger に FAILED を書かず停止
+                    report.environment_error = f"{R_EXTRACTOR_UNAVAILABLE}:{exc}"
+                    res = None
                 except Exception as exc:  # noqa: BLE001 型名のみ（本文・path を出さない）
                     res = self._result(FAILED, path, R_INTERNAL_ERROR, now=now, sha=sha, before=before,
                                        after=report.corpus_after, duration=time.monotonic() - t1)
@@ -368,6 +386,8 @@ class InboxProcessor:
                         lock.unlink()
                     except OSError:
                         pass
+                if res is None:
+                    break
                 if self.post_ingest is not None and res.result == SUCCESS and res.document_id:
                     try:
                         research = self.post_ingest(res.document_id)
@@ -438,6 +458,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         counts = report.counts()
         print(f"[compass-intake] inbox={report.inbox} sync={report.sync_available} "
               f"candidates={report.candidates} results={counts} corpus={report.corpus_before}->{report.corpus_after}")
+    if report.environment_error:
+        print(f"[compass-intake] ENVIRONMENT FAILURE: {report.environment_error} — nothing written to the corpus")
+        return 2
     return 0 if report.sync_available else 1
 
 

@@ -29,6 +29,7 @@ class MobileIntakeConfig:
     shortcut_name: str = "羅針盤に追加"
     local_config_dir_name: str = ".compass_intake"
     trigger_research: bool = True                  # Corpus SUCCESS 後に Phase 3.8 incremental analysis を呼ぶ
+    recover_environment_failures: bool = False     # environment 由来 FAILED の同一 hash を gate 付きで再検証する
 
     def as_dict(self) -> Dict[str, Any]:
         return {"provider": self.provider, "inbox_subpath": self.inbox_subpath,
@@ -42,7 +43,8 @@ class MobileIntakeConfig:
                 "task_name": self.task_name, "status_in_inbox": self.status_in_inbox,
                 "status_dir_name": self.status_dir_name, "shortcut_name": self.shortcut_name,
                 "local_config_dir_name": self.local_config_dir_name,
-                "trigger_research": self.trigger_research}
+                "trigger_research": self.trigger_research,
+                "recover_environment_failures": self.recover_environment_failures}
 
 
 def config_from_mapping(section: Optional[Mapping[str, Any]]) -> MobileIntakeConfig:
@@ -79,7 +81,8 @@ def config_from_mapping(section: Optional[Mapping[str, Any]]) -> MobileIntakeCon
         shortcut_name=str(s.get("shortcut_name", base.shortcut_name) or base.shortcut_name),
         local_config_dir_name=str(s.get("local_config_dir_name", base.local_config_dir_name)
                                   or base.local_config_dir_name),
-        trigger_research=bool(s.get("trigger_research", base.trigger_research)))
+        trigger_research=bool(s.get("trigger_research", base.trigger_research)),
+        recover_environment_failures=bool(s.get("recover_environment_failures", base.recover_environment_failures)))
 
 
 def load_mobile_intake_config(config_path: Path = Path("config.yaml")) -> MobileIntakeConfig:
