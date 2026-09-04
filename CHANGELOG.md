@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.44 (2026-09-04) — Phase 3.9.2 Evaluation Engine（frozen 6 axis / Reference Score / Recommendation）
+
+Phase 3.8 の research evidence を凍結仕様どおりに評価し、Reference Score と Recommendation を導く層。
+Decision は書かない・DNA へ promote しない・Reference Score で state を決めない。
+
+### 追加
+
+- `src/intelligence/evaluation/`【新規 package】: `config.py`（compass_evaluation / compass_recommendation。
+  versioned + content digest。同一 version で内容が変われば `PolicyError` で fail closed。
+  `requires_novelty` / `allowed_for_state_transition` の true は起動時に拒否）、`models.py`（AxisResult /
+  EvaluationRecord schema 1.0.0、deterministic `evaluation_id` と `inputs_digest`、本文混入を禁じる validation）、
+  `contradiction.py`（現行 registry から毎回再計算する narrow contradiction 索引。stale queue を信頼しない）、
+  `axes.py`（6 axis の frozen classifier と構造的 applicability）、`score.py`（applicable axis での再正規化、
+  `applicable_weight_sum < 60` は NOT_COMPARABLE、review ordering key）、`rules.py`（precedence: NOT_READY >
+  REJECT > APPROVE > REVIEW > KEEP_REVIEWING、first match wins）、`store.py`（derived evaluation store。
+  atomic replace。append-only の decision store とは別）、`engine.py`（read-only 入力 → 評価 → derived store。
+  policy drift を fail closed で拒否）、`cli.py`（evaluate / evaluate-one / show / summary / list / validate-policy、
+  `--dry-run` は完全 read-only）。
+- `config.yaml`: `compass_evaluation` / `compass_recommendation`（全 threshold と weight を config へ）。
+- `docs/databank/COMPASS_EVALUATION_ENGINE_SPEC.md`【新規】。
+- `tests/intelligence/test_evaluation_engine.py`【新規】27 件（axis 3 帯、FULL の Evidence Strength N/A、
+  UNKNOWN regime 除外、Cross-Regime HIGH gate、FULL/STATE の Cross-Regime N/A、narrow contradiction が
+  RANGE sibling を巻き込まないこと、supporting document の UP/DOWN 矛盾、non-directional の MEDIUM cap、
+  DNA Novelty の N/A、Data Quality 3 段、score 再正規化と NOT_COMPARABLE floor、precedence、
+  孤立矛盾では reject しない、反復矛盾で reject、outlook-free と FULL は approve 不可、shadow APPROVE 可、
+  Decision を書かない（AST で import 境界を検証）、policy drift fail closed、replay 決定性、
+  dry-run 無書き込み、source research artifact と production DNA の hash 不変、CLI）。
+
+### 改善
+
+- なし（Phase 3.8 lifecycle・Phase 3.9.1 decision 層・production DNA は未変更）。
+
+### 修正
+
+- なし（Windows CompassData・PDF・Corpus は未変更。Phase 3.9.3 は未着手）。
+
 ## v4.43 (2026-09-03) — Phase 3.9.1 Decision Foundation（append-only decision history・CORPUS_100 gate）
 
 Phase 3.8 evidence と production Compass DNA の間の supervised Decision Layer の土台。評価知能（推奨・ranking・

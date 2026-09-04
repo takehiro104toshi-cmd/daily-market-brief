@@ -892,3 +892,83 @@ compass_decision:
   policy_version: "1.0.0"
   formal_review_min_corpus: 100        # CORPUS_100: eligible document がこれ未満なら formal APPROVED 不可（SHADOW MODE）。100 未満には設定できない
   auto_approval: false                 # 常に false（true は起動時に拒否）
+
+# ------------------------------------------------------------------
+# Phase 3.9.2 Evaluation Engine（frozen 6 axis / Reference Score）
+# threshold と weight はすべてここに置く（コードへ埋めない）。値を変えるときは policy_version を必ず上げる
+# （同じ version で内容が変わると評価の書き込みを拒否する = silent な threshold 変更を防ぐ）。
+compass_evaluation:
+  policy_version: "1.0.0"
+  strength:                              # Q15 canonical input = eligible_support
+    low_max: 1                           # LOW: 1
+    medium_max: 3                        # MEDIUM: 2-3 / HIGH: >=4
+    not_ranked_types: ["FULL"]           # FULL は support_ranked=false（score では NOT_APPLICABLE）
+    relative_share_min_denominator: 30   # これ未満は NOT_APPLICABLE。tie-break 専用で axis state は変えない
+  time:                                  # Q16
+    medium_span_days: 14
+    medium_months: 2
+    high_span_days: 60
+    high_months: 3
+  cross_regime:                          # Q17 2D core / 3D confirmation。UNKNOWN は regime ではない
+    core_dimensions: ["equity_direction", "yen_direction"]
+    confirm_dimensions: ["equity_direction", "yen_direction", "us_rate_direction"]
+    medium_cells: 2
+    high_cells: 3
+    high_support: 3
+    high_span_days: 30
+    high_confirmed_cells: 1              # >=2 supporting document を持つ 2D cell
+    not_applicable_types: ["FULL", "STATE_OUTLOOK"]   # identity が regime を固定するため構造的に不可能
+  consistency:                           # Q18
+    committed_directions: ["UP", "DOWN"]
+    soft_directions: ["RANGE", "MIXED", "UNCERTAIN"]  # v1 は MEDIUM 上限
+    high_min_support: 2
+  novelty:                               # Q19
+    low_relations: ["SAME", "CONDITIONAL"]
+    low_min_overlap: 1
+  quality:                               # Q20（market_alignment の不在は defect ではない）
+    medium_valid_ratio_floor: "0.8"
+    blocking_document_qualities: ["LIMITED_USE", "QUARANTINED"]
+    degraded_document_qualities: ["PARTIAL"]
+    supported_structure_schema_versions: ["1.0.0"]
+    supported_analysis_versions: ["1.0.0"]
+  score:                                 # Reference Score は secondary display / ordering のみ
+    weights:
+      evidence_strength: 30
+      time_stability: 25
+      cross_regime: 20
+      evidence_consistency: 15
+      dna_novelty: 10
+    map: {LOW: 0, MEDIUM: 50, HIGH: 100}
+    applicable_weight_floor: 60          # 構造的 N/A 除外後がこれ未満なら NOT_COMPARABLE
+  formal_review_min_corpus: 100          # shadow 判定用（formal APPROVED は Phase 3.9.1 が守る）
+
+# Phase 3.9.2 Recommendation（frozen precedence・first match wins）
+compass_recommendation:
+  policy_version: "1.0.0"
+  precedence: ["NOT_READY", "REJECT_RECOMMENDED", "APPROVE_RECOMMENDED", "REVIEW_RECOMMENDED", "KEEP_REVIEWING"]
+  not_ready:
+    min_applicable_core_axes: 2          # FULL は 2（Time / Consistency）なので NOT_READY にはならない
+  reject:                                # 孤立した 1 件の矛盾では絶対に reject しない
+    require_consistency: "LOW"
+    min_strength: "HIGH"
+    min_time: "MEDIUM"
+    min_documents_each_side: 2
+    min_sibling_support: 2
+    min_dna_conflict_support: 2
+  approve:                               # strict。DNA Novelty は要求しない
+    require_quality: "HIGH"
+    require_consistency: "HIGH"
+    require_time: "HIGH"
+    require_cross_regime_where_applicable: "HIGH"
+    min_applicable_core: "MEDIUM"
+    excluded_types: ["FULL", "EVIDENCE_WHY", "EVIDENCE_RISK"]   # outlook-free は v1 REVIEW_ONLY
+    requires_novelty: false              # 常に false（true は起動時に拒否）
+  review:
+    min_strength: "MEDIUM"
+    min_time: "MEDIUM"
+    consistency_not: "LOW"
+  shadow_mode:
+    allow_approve_recommended: true      # CORPUS_100 未満でも助言は出す（3.9.4 replay の材料を残す）
+    label: "SHADOW_ONLY"
+  score_use:
+    allowed_for_state_transition: false  # 常に false（true は起動時に拒否）
