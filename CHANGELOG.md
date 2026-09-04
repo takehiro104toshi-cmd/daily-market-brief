@@ -4,6 +4,20 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.45.1 (2026-09-04) — Fix ADVERSE_OVERFLOW が逆行証拠専用でなかった問題
+
+### 修正
+
+- `src/intelligence/shadow_review/queue.py`: diversity を bypass する state（REJECT / APPROVE）の
+  溢れをまとめて ADVERSE_OVERFLOW へ入れていたため、APPROVE_RECOMMENDED が top_n に収まらない
+  ときに **非 adverse な pattern が「adverse」区画に入り、`adverse_overflow_count` が
+  「捌けていない逆行件数」を意味しなくなっていた**。ADVERSE_OVERFLOW は REJECT_RECOMMENDED 専用とし、
+  他の bypass state の溢れは backlog（件数と型内訳つき）へ回す。escalated の総数会計は不変。
+  CORPUS_50 時点は APPROVE 0 件だったため顕在化せず、CORPUS_100 到達（APPROVE 7 件）で初めて発火する。
+  docs の仕様記述は元から REJECT 専用と書かれており、**コードを仕様へ合わせる修正**（仕様変更ではない）。
+- `tests/intelligence/test_shadow_review.py`: 3 件追加（APPROVE の溢れが backlog へ行くこと、
+  ADVERSE_OVERFLOW が REJECT のみを保持すること、CORPUS_100 到達後の実分布の形での queue 構成）。
+
 ## v4.45 (2026-09-04) — Phase 3.9.3 Shadow Review（queue / explanation / human feedback）
 
 Phase 3.9.2 の推奨を**再分類せず**、「今日、人間が何をレビューすべきか」だけを決める層。

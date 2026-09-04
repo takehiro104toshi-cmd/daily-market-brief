@@ -234,7 +234,11 @@ class ShadowReviewQueueBuilder:
             slots = max(0, self.policy.top_n - len(main))
             if state in self.policy.diversity_bypass_states:
                 main.extend(pool[:slots])
-                overflow.extend(pool[slots:])                 # 隠さない（ADVERSE_OVERFLOW へ）
+                if state == REJECT_RECOMMENDED:
+                    # ADVERSE_OVERFLOW は「逆行証拠が top_n に収まらなかった分」専用の区画。
+                    # 他の bypass state（APPROVE）の溢れをここへ入れると adverse_overflow_count が
+                    # 「捌けていない逆行件数」を意味しなくなるので、backlog（件数と型内訳つき）へ回す。
+                    overflow.extend(pool[slots:])
             else:
                 main.extend(round_robin(pool, slots, self.policy, key))
         selected_ids = {str(r.get("pattern_id")) for r in main} | {str(r.get("pattern_id")) for r in overflow}

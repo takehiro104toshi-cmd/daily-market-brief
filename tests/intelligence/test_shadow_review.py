@@ -436,6 +436,61 @@ def test_reject_beyond_top_n_goes_to_adverse_overflow_not_hidden(tmp_path):
     assert report.main_queue_count + report.adverse_overflow_count + report.backlog_count == 13
 
 
+def test_approve_overflow_goes_to_backlog_not_adverse_overflow(tmp_path):
+    """ADVERSE_OVERFLOW は逆行証拠専用。APPROVE の溢れを混ぜると
+    adverse_overflow_count が「捌けていない逆行件数」を意味しなくなる。"""
+    rows = [reject_row("r0")] + [approve_row(f"a{i}") for i in range(7)] + review_rows(4, "STATE_OUTLOOK")
+    report, queue, summary, _c = Lab(tmp_path, rows=rows).build()
+    assert report.main_queue_count == 8
+    assert [c["recommendation"] for c in queue["main"]] == [REJECT_RECOMMENDED] + [APPROVE_RECOMMENDED] * 7
+    assert report.adverse_overflow_count == 0                              # 逆行は溢れていない
+    assert queue["adverse_overflow"] == []
+    assert summary["calibration_metrics"]["adverse_overflow_count"] == 0
+    assert queue["backlog"]["by_recommendation"] == {"REVIEW_RECOMMENDED": 4}
+    assert report.main_queue_count + report.adverse_overflow_count + report.backlog_count \
+        == report.escalated_count
+
+
+def test_adverse_overflow_holds_only_reject(tmp_path):
+    rows = [reject_row(f"r{i}") for i in range(10)] + [approve_row(f"a{i}") for i in range(3)]
+    report, queue, _s, _c = Lab(tmp_path, rows=rows).build()
+    assert report.main_queue_count == 8 and report.adverse_overflow_count == 2
+    assert {c["recommendation"] for c in queue["adverse_overflow"]} == {REJECT_RECOMMENDED}
+    assert queue["backlog"]["by_recommendation"] == {"APPROVE_RECOMMENDED": 3}
+
+
+def test_real_corpus_100_shape_queue(tmp_path):
+    """CORPUS_100 到達後の実分布の形（REJECT 4 / APPROVE 7 / REVIEW 39 / KEEP 319 / NOT_READY 5）。
+    件数の形だけを合成する（実データは使わない）。frozen precedence の帰結を固定する。"""
+    rows = [reject_row(f"rj{i}", "EVIDENCE_WHY" if i % 2 else "EVIDENCE_RISK") for i in range(4)]
+    rows += [approve_row(f"ap{i}", "STATE_OUTLOOK" if i % 2 else "THEME_OUTLOOK") for i in range(7)]
+    rows += (review_rows(13, "STATE_OUTLOOK") + review_rows(13, "THEME_OUTLOOK")
+             + review_rows(13, "EVIDENCE_RISK"))
+    rows += [evaluation(f"kp{i:03d}", recommendation=KEEP_REVIEWING, triggered_rule=R_KEEP)
+             for i in range(319)]
+    rows += [evaluation(f"nr{i}", recommendation=NOT_READY, triggered_rule="NOT_READY:DATA_QUALITY_LOW",
+                        states={**{a: "MEDIUM" for a in AXES}, A_QUALITY: "LOW"}) for i in range(5)]
+    lab = Lab(tmp_path, rows=rows)
+    report, queue, summary, _c = lab.builder(
+        corpus={"eligible": 108, "milestone": "CORPUS_100"}).build()
+    assert report.evaluated_count == 374 and report.escalated_count == 50
+    assert report.shadow_mode is False and report.formal_review_gate_reached is True
+    assert report.main_queue_count == 8
+    assert report.adverse_overflow_count == 0
+    assert report.backlog_count == 42
+    assert [c["recommendation"] for c in queue["main"]] == \
+        [REJECT_RECOMMENDED] * 4 + [APPROVE_RECOMMENDED] * 4
+    assert queue["backlog"]["by_recommendation"] == {"APPROVE_RECOMMENDED": 3,
+                                                     "REVIEW_RECOMMENDED": 39}
+    assert report.main_queue_count + report.adverse_overflow_count + report.backlog_count == 50
+    assert NOT_READY not in summary["by_recommendation"]                   # queue へは入れない
+    # CORPUS_100 到達後も APPROVE_RECOMMENDED は承認ではない
+    approve_card = next(c for c in queue["main"] if c["recommendation"] == APPROVE_RECOMMENDED)
+    assert approve_card["governance"]["formal_review_gate_reached"] is True
+    assert "AGREE is not APPROVED" in approve_card["governance"]["note"]
+    assert any("NOT_FORMAL_APPROVAL" in b for b in queue["boundaries"])
+
+
 def test_watch_section_stays_separate_when_enabled(tmp_path):
     keep = [evaluation(f"k{i}", recommendation=KEEP_REVIEWING, triggered_rule=R_KEEP) for i in range(4)]
     rows = review_rows(2, "STATE_OUTLOOK") + keep
