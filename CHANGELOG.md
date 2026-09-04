@@ -4,6 +4,17 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.44.1 (2026-09-04) — Fix Windows 依存の mobile intake readiness テスト
+
+### 修正
+
+- `tests/intelligence/test_mobile_intake.py::test_setup_readiness_levels`: `task_registered=None`
+  （= 実機の Task Scheduler を自動検出）で呼んでいたため、CompassIntake を実際に登録済みの Windows では
+  MOBILE_INTAKE_READY となり、期待値 MOBILE_INTAKE_PARTIAL と一致しなかった。未登録ケースは
+  `task_registered=False` を明示し、自動検出経路は probe を差し替えて 3 状態（判定不能 / 未登録 / 登録済み）を
+  決定的に再現するようにした。**テストのみの変更で production の readiness semantics は未変更**
+  （`None` = 自動検出は `setup check` CLI の仕様として維持）。
+
 ## v4.44 (2026-09-04) — Phase 3.9.2 Evaluation Engine（frozen 6 axis / Reference Score / Recommendation）
 
 Phase 3.8 の research evidence を凍結仕様どおりに評価し、Reference Score と Recommendation を導く層。

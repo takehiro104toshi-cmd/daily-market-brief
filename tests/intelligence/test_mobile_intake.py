@@ -488,7 +488,9 @@ def test_shortcut_recipe_and_action_count():
     assert "共有シートに表示" in text and "既に登録済み" in text and "CompassInbox" in text
 
 
-def test_setup_readiness_levels(tmp_path):
+def test_setup_readiness_levels(tmp_path, monkeypatch):
+    from src.intelligence.mobile_intake import setup as mi_setup
+
     cfg = MobileIntakeConfig()
     home = tmp_path / "home"
     missing = LocalConfig(home=home, inbox_dir=None, data_root=tmp_path / "root", provider="ICLOUD_DRIVE")
@@ -503,11 +505,22 @@ def test_setup_readiness_levels(tmp_path):
     assert out["inbox_created"] and (inbox / "_status").is_dir() and "schtasks" in out["task_command"]
     local = load_local_config(cfg, env={}, home=home)
     assert local.inbox_dir == inbox and local.data_root == tmp_path / "root"
-    partial = readiness(cfg, local, repo_root=REPO_ROOT, task_registered=None, env={})
+    partial = readiness(cfg, local, repo_root=REPO_ROOT, task_registered=False, env={})   # 未登録を明示
     assert partial["status"] == PARTIAL and partial["checks"]["inbox_exists"] and partial["checks"]["corpus_reachable"]
+    assert partial["checks"]["processor_configured"] is False
+    assert any("Task Scheduler" in d for d in partial["diagnostics"])
     ready = readiness(cfg, local, repo_root=REPO_ROOT, task_registered=True, env={})
     assert ready["status"] == READY and ready["checks"]["shortcut_instructions_generated"]
     assert str(tmp_path) not in json.dumps(ready) and "token" not in json.dumps(ready).lower()
+    # task_registered=None は「実機の Task Scheduler を自動検出」の意味。テストが実行機の登録状態
+    # （Windows の CompassIntake の有無）に左右されないよう、probe を差し替えて 3 状態を決定的に再現する。
+    for probe, expected, configured in ((lambda config: None, PARTIAL, None),        # 判定不能（非 Windows）
+                                        (lambda config: False, PARTIAL, False),      # 未登録
+                                        (lambda config: True, READY, True)):         # 登録済み
+        monkeypatch.setattr(mi_setup, "is_task_registered", probe)
+        auto = readiness(cfg, local, repo_root=REPO_ROOT, task_registered=None, env={})
+        assert (auto["status"], auto["checks"]["processor_configured"]) == (expected, configured)
+    monkeypatch.undo()
     with pytest.raises(ValueError):
         init(cfg, home=home, inbox_dir=inbox, data_root_dir=None, provider="DROPBOX", python_exe="python",
              repo_root=REPO_ROOT)
