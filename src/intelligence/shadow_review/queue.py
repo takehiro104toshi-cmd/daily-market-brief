@@ -51,7 +51,13 @@ from .diversity import round_robin
 from .explain import explain
 from .events import ShadowReviewEventStore
 from .material import material_digest
-from .models import REVIEW_BOUNDARIES, ReviewCard, assert_no_forbidden_keys, canonical_json
+from .models import (
+    REVIEW_BOUNDARIES,
+    ReviewCard,
+    assert_no_forbidden_keys,
+    canonical_json,
+    sha256_hex,
+)
 from .ranking import eligible_support, shadow_ordering_key, span_days
 from .state import CurrentReview, derive_current_reviews
 
@@ -59,6 +65,10 @@ QUEUE_FILE = "queue.json"
 SUMMARY_FILE = "summary.json"
 CURRENT_REVIEWS_FILE = "current_reviews.json"
 NOT_AVAILABLE = "NOT_AVAILABLE"
+
+class ShadowReviewInputDrift(RuntimeError):
+    """build 中に入力（evaluation / research）が変化した。torn な queue を書かずに fail closed。"""
+
 
 DEFERRED_COOLDOWN = "COOLDOWN"
 DEFERRED_NOT_SELECTED = "NOT_SELECTED_THIS_ROUND"
@@ -77,6 +87,8 @@ class QueueReport:
     by_pattern_type: Dict[str, int] = field(default_factory=dict)
     corpus_size: int = 0
     corpus_milestone: str = ""
+    corpus_context_source: str = ""
+    inputs_fingerprint: str = ""
     shadow_mode: bool = True
     formal_review_gate_reached: bool = False
     evaluation_policy_version: str = ""
@@ -153,6 +165,46 @@ class ShadowReviewQueueBuilder:
                 dates[doc] = date
         return {"patterns": patterns, "document_dates": dates}
 
+    def corpus_context(self, evaluations: Sequence[Mapping[str, Any]]) -> "tuple[int, str, str]":
+        """queue の corpus 文脈は **evaluation record**（atomic replace された snapshot）を正とする。
+
+        live corpus を読むと、評価時点と queue 生成時点で corpus が食い違い、「eligible 122 で
+        評価した card に 123 と刻む」内部不整合が起きる（並行 intake 中に実測）。評価一式は 1 回の
+        atomic replace で書かれるので、その corpus_size / milestone は必ず一貫している。
+        記録が互いに食い違う場合は混在 store なので、黙って 1 つ選ばず fail closed。
+        """
+        if not evaluations:
+            return (int(self.corpus_state.get("eligible", 0)),
+                    str(self.corpus_state.get("milestone", "")), "INJECTED_CORPUS_STATE")
+        sizes = {int(r.get("corpus_size", 0)) for r in evaluations}
+        milestones = {str(r.get("corpus_milestone", "")) for r in evaluations}
+        if len(sizes) > 1 or len(milestones) > 1:
+            raise ShadowReviewInputDrift(
+                "evaluation store mixes corpus snapshots "
+                f"(sizes={sorted(sizes)}, milestones={sorted(milestones)}); "
+                "re-run the Phase 3.9.2 evaluate command to rebuild a single consistent snapshot")
+        return sizes.pop(), milestones.pop(), "EVALUATION_SNAPSHOT"
+
+    def inputs_fingerprint(self, evaluations: Sequence[Mapping[str, Any]],
+                           patterns: Mapping[str, Mapping[str, Any]],
+                           document_dates: Mapping[str, str]) -> str:
+        """build が実際に使った入力の識別子。build 前後で比較して drift を検出する。"""
+        payload = {
+            # record 全体（volatile な evaluated_at のみ除外）を見る。identity field だけに頼ると
+            # 中身が変わったのに fingerprint が動かない取りこぼしが起きうる。
+            "evaluations": sorted(
+                canonical_json({k: v for k, v in dict(r).items() if k != "evaluated_at"})
+                for r in evaluations),
+            "patterns": sorted((pid, str(row.get("status", "")),
+                                tuple(str(d) for d in (row.get("supporting_document_ids") or [])))
+                               for pid, row in patterns.items()),
+            "document_dates": sorted(document_dates.items()),
+            "evaluation_policy_digest": self.evaluation_policy.digest(),
+            "recommendation_policy_digest": self.recommendation_policy.digest(),
+            "shadow_review_policy_digest": self.policy.digest(),
+        }
+        return sha256_hex(canonical_json(payload))[:16]
+
     @property
     def root(self) -> Path:
         return self.events.root
@@ -205,12 +257,15 @@ class ShadowReviewQueueBuilder:
         events = self.events.records() if self.events.exists() else []
         reviews = derive_current_reviews(events, self.policy, current_for_state, now)
 
-        corpus_size = int(self.corpus_state.get("eligible", 0))
+        corpus_size, corpus_milestone, corpus_source = self.corpus_context(evaluations)
         gate_reached = corpus_size >= self.evaluation_policy.formal_review_min_corpus
         report.corpus_size = corpus_size
-        report.corpus_milestone = str(self.corpus_state.get("milestone", ""))
+        report.corpus_milestone = corpus_milestone
+        report.corpus_context_source = corpus_source
         report.formal_review_gate_reached = gate_reached
         report.shadow_mode = not gate_reached
+        fingerprint = self.inputs_fingerprint(evaluations, patterns, document_dates)
+        report.inputs_fingerprint = fingerprint
 
         # ---- escalated pool（Recommendation state は読むだけ）
         escalated = [r for r in evaluations if str(r.get("recommendation")) in self.policy.state_priority]
@@ -256,7 +311,7 @@ class ShadowReviewQueueBuilder:
         # ---- cards
         def card_for(row: Mapping[str, Any], rank: int, section: str) -> ReviewCard:
             return self._card(row, rank, section, patterns, document_dates, digests, reviews,
-                              corpus_size, gate_reached)
+                              corpus_size, gate_reached, corpus_milestone)
 
         main_cards, overflow_cards, watch_cards = [], [], []
         for index, row in enumerate(main, start=1):
@@ -288,6 +343,7 @@ class ShadowReviewQueueBuilder:
             "generated_at": now.isoformat(),
             "top_n": self.policy.top_n, "watch_n": self.policy.watch_n,
             "corpus_size": corpus_size, "corpus_milestone": report.corpus_milestone,
+            "corpus_context_source": corpus_source, "inputs_fingerprint": fingerprint,
             "shadow_mode": report.shadow_mode, "formal_review_gate_reached": gate_reached,
             "evaluation_policy_version": report.evaluation_policy_version,
             "evaluation_policy_digest": report.evaluation_policy_digest,
@@ -312,6 +368,15 @@ class ShadowReviewQueueBuilder:
                        "shadow_review_policy_digest": self.policy.digest(),
                        "patterns": {pid: review.as_dict() for pid, review in sorted(reviews.items())}}
 
+        fresh = self.load_research(pattern_version)
+        fresh_evaluations = self.evaluations.records() if self.evaluations.exists() else []
+        if self.inputs_fingerprint(fresh_evaluations, fresh["patterns"],
+                                   fresh["document_dates"]) != fingerprint:
+            raise ShadowReviewInputDrift(
+                "evaluation / research inputs changed while the queue was being built "
+                f"(inputs_fingerprint {fingerprint} no longer current); nothing was written — "
+                "re-run build once the concurrent intake finishes")
+
         assert_no_forbidden_keys(queue_doc, "queue.json")
         assert_no_forbidden_keys(summary_doc, "summary.json")
         assert_no_forbidden_keys(current_doc, "current_reviews.json")
@@ -329,7 +394,7 @@ class ShadowReviewQueueBuilder:
     def _card(self, row: Mapping[str, Any], rank: int, section: str,
               patterns: Mapping[str, Mapping[str, Any]], document_dates: Mapping[str, str],
               digests: Mapping[str, str], reviews: Mapping[str, CurrentReview],
-              corpus_size: int, gate_reached: bool) -> ReviewCard:
+              corpus_size: int, gate_reached: bool, corpus_milestone: str = "") -> ReviewCard:
         pid = str(row.get("pattern_id"))
         pattern = dict(patterns.get(pid) or {})
         components = dict(pattern.get("components") or {})
@@ -385,7 +450,7 @@ class ShadowReviewQueueBuilder:
                         "formal_review_gate_reached": gate_reached,
                         "formal_review_min_corpus": self.evaluation_policy.formal_review_min_corpus,
                         "corpus_size": corpus_size,
-                        "corpus_milestone": str(self.corpus_state.get("milestone", "")),
+                        "corpus_milestone": corpus_milestone,
                         "note": "AGREE is not APPROVED; no shadow review promotes to Compass DNA"},
             history={"review_count": review.review_count if review else 0,
                      "last_outcome": review.last_outcome if review else "",
@@ -457,6 +522,8 @@ class ShadowReviewQueueBuilder:
             "shadow_mode": report.shadow_mode,
             "formal_review_gate_reached": report.formal_review_gate_reached,
             "corpus_size": report.corpus_size, "corpus_milestone": report.corpus_milestone,
+            "corpus_context_source": report.corpus_context_source,
+            "inputs_fingerprint": report.inputs_fingerprint,
             "evaluated": report.evaluated_count, "escalated": report.escalated_count,
             "main_queue_count": report.main_queue_count,
             "adverse_overflow_count": report.adverse_overflow_count,

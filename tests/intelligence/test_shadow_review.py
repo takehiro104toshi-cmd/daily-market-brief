@@ -65,6 +65,7 @@ from src.intelligence.shadow_review.models import (
 )
 from src.intelligence.shadow_review.queue import (
     CURRENT_REVIEWS_FILE,
+    ShadowReviewInputDrift,
     QUEUE_FILE,
     SUMMARY_FILE,
     ShadowReviewQueueBuilder,
@@ -90,7 +91,8 @@ def evaluation(pattern_id: str, *, pattern_type: str = "STATE_OUTLOOK",
                contradiction_repeated: bool = False, narrow: bool = False,
                classification: str = "PARTIALLY_EXPLAINED", share=None,
                docs=("d1", "d2", "d3"), blocking=(), supporting=(),
-               eval_digest: str = "", rec_digest: str = "") -> dict:
+               eval_digest: str = "", rec_digest: str = "",
+               corpus_size: int = 55, corpus_milestone: str = "CORPUS_50") -> dict:
     """validate_record を通る合成 EvaluationRecord row。"""
     states = dict(states or {a: "MEDIUM" for a in AXES})
     applicability = dict(applicability or {a: "APPLICABLE" for a in AXES})
@@ -130,8 +132,9 @@ def evaluation(pattern_id: str, *, pattern_type: str = "STATE_OUTLOOK",
         "evaluation_policy_digest": eval_digest or EVAL_POLICY.digest(),
         "recommendation_policy_version": REC_POLICY.policy_version,
         "recommendation_policy_digest": rec_digest or REC_POLICY.digest(),
-        "shadow_mode": True, "formal_review_gate_reached": False,
-        "corpus_size": 55, "corpus_milestone": "CORPUS_50",
+        "shadow_mode": corpus_size < 100,
+        "formal_review_gate_reached": corpus_size >= 100,
+        "corpus_size": corpus_size, "corpus_milestone": corpus_milestone,
         "inputs_digest": "deadbeefdeadbeef",
         "confirmation_3d": {"distinct_3d_cells": cells, "confirmed_3d_cells": confirmed_cells,
                             "documents_counted": support, "role": "SECONDARY_CONFIRMATION_ONLY"},
@@ -462,14 +465,18 @@ def test_adverse_overflow_holds_only_reject(tmp_path):
 def test_real_corpus_100_shape_queue(tmp_path):
     """CORPUS_100 到達後の実分布の形（REJECT 4 / APPROVE 7 / REVIEW 39 / KEEP 319 / NOT_READY 5）。
     件数の形だけを合成する（実データは使わない）。frozen precedence の帰結を固定する。"""
-    rows = [reject_row(f"rj{i}", "EVIDENCE_WHY" if i % 2 else "EVIDENCE_RISK") for i in range(4)]
-    rows += [approve_row(f"ap{i}", "STATE_OUTLOOK" if i % 2 else "THEME_OUTLOOK") for i in range(7)]
-    rows += (review_rows(13, "STATE_OUTLOOK") + review_rows(13, "THEME_OUTLOOK")
-             + review_rows(13, "EVIDENCE_RISK"))
-    rows += [evaluation(f"kp{i:03d}", recommendation=KEEP_REVIEWING, triggered_rule=R_KEEP)
+    at100 = {"corpus_size": 108, "corpus_milestone": "CORPUS_100"}
+    rows = [reject_row(f"rj{i}", "EVIDENCE_WHY" if i % 2 else "EVIDENCE_RISK", **at100)
+            for i in range(4)]
+    rows += [approve_row(f"ap{i}", "STATE_OUTLOOK" if i % 2 else "THEME_OUTLOOK", **at100)
+             for i in range(7)]
+    rows += (review_rows(13, "STATE_OUTLOOK", **at100) + review_rows(13, "THEME_OUTLOOK", **at100)
+             + review_rows(13, "EVIDENCE_RISK", **at100))
+    rows += [evaluation(f"kp{i:03d}", recommendation=KEEP_REVIEWING, triggered_rule=R_KEEP, **at100)
              for i in range(319)]
     rows += [evaluation(f"nr{i}", recommendation=NOT_READY, triggered_rule="NOT_READY:DATA_QUALITY_LOW",
-                        states={**{a: "MEDIUM" for a in AXES}, A_QUALITY: "LOW"}) for i in range(5)]
+                        states={**{a: "MEDIUM" for a in AXES}, A_QUALITY: "LOW"}, **at100)
+             for i in range(5)]
     lab = Lab(tmp_path, rows=rows)
     report, queue, summary, _c = lab.builder(
         corpus={"eligible": 108, "milestone": "CORPUS_100"}).build()
@@ -513,6 +520,120 @@ def test_not_ready_never_enters_the_queue(tmp_path):
     report, queue, _s, _c = Lab(tmp_path, rows=rows).build()
     ids = {c["pattern_id"] for c in queue["main"]} | {i["pattern_id"] for i in queue["backlog"]["items"]}
     assert "nr" not in ids and report.escalated_count == 2
+
+
+# ============================================ D2. snapshot / concurrency semantics
+def test_live_corpus_growth_does_not_change_the_queue(tmp_path):
+    """並行 intake で corpus が増えても、同じ evaluation store なら queue は不変。
+
+    Windows acceptance で queue_digest が食い違った実事象の再現。原因は corpus が
+    122->123 に増えたことで、queue の中身（順位・構成）は一切変わっていなかった。
+    """
+    rows = [reject_row("r0", corpus_size=122, corpus_milestone="CORPUS_100")] + \
+        review_rows(3, "STATE_OUTLOOK", corpus_size=122, corpus_milestone="CORPUS_100")
+    lab = Lab(tmp_path, rows=rows)
+    _r1, q1, _s1, _c1 = lab.builder(corpus={"eligible": 122, "milestone": "CORPUS_100"}).build()
+    _r2, q2, _s2, _c2 = lab.builder(corpus={"eligible": 123, "milestone": "CORPUS_100"}).build()
+    strip = lambda d: {k: v for k, v in d.items() if k != "generated_at"}   # noqa: E731
+    assert strip(q1) == strip(q2)
+    assert q1["corpus_size"] == q2["corpus_size"] == 122                    # evaluation snapshot が正
+    assert q1["inputs_fingerprint"] == q2["inputs_fingerprint"]
+
+
+def test_corpus_context_comes_from_evaluation_snapshot_not_live_read(tmp_path):
+    rows = [reject_row("r0", corpus_size=108, corpus_milestone="CORPUS_100")]
+    lab = Lab(tmp_path, rows=rows)
+    report, queue, summary, _c = lab.builder(
+        corpus={"eligible": 9999, "milestone": "CORPUS_200"}).build()      # live 値は採用しない
+    assert report.corpus_size == 108 and report.corpus_milestone == "CORPUS_100"
+    assert report.corpus_context_source == "EVALUATION_SNAPSHOT"
+    assert queue["corpus_size"] == 108 and queue["corpus_milestone"] == "CORPUS_100"
+    assert queue["main"][0]["governance"]["corpus_size"] == 108
+    assert queue["main"][0]["governance"]["corpus_milestone"] == "CORPUS_100"
+    assert summary["corpus_context_source"] == "EVALUATION_SNAPSHOT"
+
+
+def test_injected_corpus_state_used_only_when_no_evaluations(tmp_path):
+    lab = Lab(tmp_path, rows=[])
+    report, _q, _s, _c = lab.builder(corpus={"eligible": 7, "milestone": "CORPUS_NONE"}).build()
+    assert report.corpus_size == 7 and report.corpus_context_source == "INJECTED_CORPUS_STATE"
+
+
+def test_mixed_corpus_snapshots_in_evaluation_store_fail_closed(tmp_path):
+    """1 回の atomic replace で書かれた評価一式は corpus 文脈が一致するはず。
+    食い違う store は混在＝壊れているので、黙って片方を選ばない。"""
+    rows = [reject_row("r0", corpus_size=122, corpus_milestone="CORPUS_100"),
+            reject_row("r1", corpus_size=123, corpus_milestone="CORPUS_100")]
+    lab = Lab(tmp_path, rows=rows)
+    with pytest.raises(ShadowReviewInputDrift) as exc:
+        lab.build()
+    assert "mixes corpus snapshots" in str(exc.value)
+
+
+def test_input_drift_during_build_writes_nothing(tmp_path):
+    """build 中に research が変化したら torn な queue を書かずに fail closed。"""
+    rows = [reject_row("r0")] + review_rows(2, "STATE_OUTLOOK")
+    lab = Lab(tmp_path, rows=rows)
+    builder = lab.builder()
+    real = builder.load_research
+    calls = {"n": 0}
+
+    def drifting(pattern_version="1.0.0"):
+        calls["n"] += 1
+        data = real(pattern_version)
+        if calls["n"] > 1:                                                 # 2 回目＝書き込み直前の再読
+            data["patterns"]["r0"] = {**data["patterns"]["r0"], "status": "REVIEW_CANDIDATE"}
+        return data
+
+    builder.load_research = drifting
+    with pytest.raises(ShadowReviewInputDrift) as exc:
+        builder.build()
+    assert "inputs changed while the queue was being built" in str(exc.value)
+    assert not (shadow_review_root(tmp_path) / QUEUE_FILE).exists()        # 何も書かれていない
+
+
+def test_inputs_fingerprint_tracks_real_input_changes(tmp_path):
+    rows = [reject_row("r0")] + review_rows(2, "STATE_OUTLOOK")
+    lab = Lab(tmp_path, rows=rows)
+    _r, q1, _s, _c = lab.build()
+    lab.lifecycles["r0"] = "REVIEW_CANDIDATE"                              # research が実際に変わる
+    lab.write()
+    _r, q2, _s, _c = lab.build()
+    assert q1["inputs_fingerprint"] != q2["inputs_fingerprint"]
+    lab.rows = [evaluation("r0", support=99)] + rows[1:]                   # evaluation が変わる
+    lab.write()
+    _r, q3, _s, _c = lab.build()
+    assert q3["inputs_fingerprint"] not in (q1["inputs_fingerprint"], q2["inputs_fingerprint"])
+
+
+def test_cli_retries_once_on_input_drift(tmp_path, monkeypatch, capsys):
+    """並行 intake で 1 回 drift しても、入力を読み直して再試行し成功する。"""
+    lab = Lab(tmp_path, rows=[reject_row("r0")] + review_rows(2, "STATE_OUTLOOK"))
+    _patch_cli(monkeypatch, tmp_path)
+    real_builder = sr_cli.build_builder
+    state = {"n": 0}
+
+    def flaky(root):
+        builder = real_builder(root)
+        state["n"] += 1
+        if state["n"] == 1:                                                # 1 回目だけ drift させる
+            original = builder.load_research
+            seen = {"n": 0}
+
+            def drifting(pattern_version="1.0.0"):
+                seen["n"] += 1
+                data = original(pattern_version)
+                if seen["n"] > 1:
+                    data["patterns"]["r0"] = {**data["patterns"]["r0"], "status": "REVIEW_CANDIDATE"}
+                return data
+
+            builder.load_research = drifting
+        return builder
+
+    monkeypatch.setattr(sr_cli, "build_builder", flaky)
+    assert sr_cli.main(["build"]) == 0
+    assert state["n"] == 2                                                 # 再試行して成功
+    assert "REPLACE" in json.loads(capsys.readouterr().out)["mutation"]
 
 
 # =================================================================== E. cards

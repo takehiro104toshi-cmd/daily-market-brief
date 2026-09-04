@@ -135,6 +135,36 @@ formal Decision を書く command も、DNA へ promote する command も存在
 データが無い指標は `null` または `NOT_AVAILABLE` を返し、値を捏造しない
 （`time_to_first_escalation` は escalate 時刻が未記録のため v1 では常に `NOT_AVAILABLE`）。
 
+## 12. スナップショット意味論と並行 intake
+
+**決定性の定義: 同一の入力スナップショットに対してのみ保証する。** 並行して走る intake が corpus を
+書き換えている最中でも、queue が同じであることは保証しない（そもそも入力が違う）。
+
+そのうえで、queue が**内部矛盾を起こさない**ことは保証する:
+
+- **corpus 文脈は evaluation record を正とする。** `corpus_size` / `corpus_milestone` は live corpus を
+  読まず、評価一式（1 回の atomic replace で書かれた snapshot）が記録している値を使う。
+  live 読みだと「eligible 122 で評価した card に 123 と刻む」内部矛盾が起きる（並行 intake 中に実測）。
+  評価記録が無いときだけ、注入された corpus state に fallback する（`corpus_context_source` に記録）。
+- **評価記録どうしが食い違う corpus 文脈を持っていたら fail closed**（混在 store）。黙って片方を選ばない。
+- **build 中の入力 drift を検出する。** build が実際に使った入力（evaluation record 全体・pattern の
+  status と supporting document・document date・policy digest 3 種）から `inputs_fingerprint` を作り、
+  書き込み直前に再読して照合する。変化していれば torn な queue を書かずに `ShadowReviewInputDrift`。
+  CLI は入力を読み直して **1 回だけ自動再試行**し、それでも動くなら exit 4 で fail closed。
+  queue は derived なので、intake が落ち着いてから再実行すれば足りる。
+- `inputs_fingerprint` は `queue.json` / `summary.json` に記録する。**2 つの queue が同一入力から作られた
+  かどうかは、この値の一致で判定する**（live corpus に依存しない正しい決定性チェック）。
+
+### corpus と research のラグ
+
+intake は「corpus へ ingest → research を incremental 実行」の順に進むため、
+`corpus.documents` が `research.analyzed_documents` を一時的に 1〜数件上回るのは**正常な過渡状態**である
+（research 解析が失敗しても corpus ingestion は巻き戻さない、という Phase 3.8 の boundary の帰結）。
+
+この状態で評価・queue 生成を行っても、**評価は「その時点で存在する pattern」に対して内部一貫している**。
+したがって Phase 3.9.3 は待たず、失敗もせず、**最新の完了済み research snapshot を受け入れる**。
+ラグそのものは Phase 3.8 の設計どおりで、証拠なしに挙動を変えない。
+
 ## 12. policy
 
 `config.yaml` `compass_shadow_review`（`policy_version` + content digest）。同一 version で内容が

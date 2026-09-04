@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.45.2 (2026-09-04) — Fix queue の corpus 文脈が live 読みで内部矛盾する問題 / 入力 drift 検出
+
+Windows 実機 acceptance で `queue_rebuildable = false` となった事象の根本原因対応。
+queue 自体に非決定性は無く（同一入力で 6/6 一致を実測）、**並行 intake による入力 drift**が原因だった。
+
+### 修正
+
+- `src/intelligence/shadow_review/queue.py`: queue の `corpus_size` / `corpus_milestone` を
+  **live corpus 読みから evaluation record（atomic replace された snapshot）由来へ変更**。
+  従来は「eligible 122 で評価した card に、build 時点の 123 を刻む」内部矛盾が起き、
+  並行 intake 中は 2 回の build で digest が食い違っていた。評価記録が無いときのみ
+  注入 corpus state に fallback し、由来を `corpus_context_source` に記録する。
+  評価記録どうしで corpus 文脈が食い違う混在 store は `ShadowReviewInputDrift` で fail closed。
+
+### 追加
+
+- 入力 drift 検出: build が使った入力（evaluation record 全体・pattern status・supporting document・
+  document date・policy digest 3 種）の `inputs_fingerprint` を書き込み直前に再照合し、
+  変化していれば torn な queue を書かずに fail closed。CLI は 1 回だけ自動再試行し、
+  それでも drift するなら exit 4。`queue.json` / `summary.json` に fingerprint を記録する
+  （live corpus に依存しない正しい決定性チェックの基準）。
+- `docs/databank/COMPASS_SHADOW_REVIEW_SPEC.md` §12「スナップショット意味論と並行 intake」
+  （corpus/research ラグは正常な過渡状態であり、最新の完了済み research snapshot を受け入れる）。
+- `tests/intelligence/test_shadow_review.py` 7 件追加（live corpus 増加で queue が変わらないこと、
+  corpus 文脈が evaluation snapshot 由来であること、評価なし時の fallback、混在 store の fail closed、
+  build 中 drift で何も書かないこと、fingerprint が実入力変化を追うこと、CLI の 1 回再試行）。
+
+policy は未変更（digest 3 種とも不変）。Phase 3.9.2 / 3.9.1 / production DNA も未変更。
+
 ## v4.45.1 (2026-09-04) — Fix ADVERSE_OVERFLOW が逆行証拠専用でなかった問題
 
 ### 修正

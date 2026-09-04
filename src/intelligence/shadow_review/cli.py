@@ -6,7 +6,8 @@
 
 summary / list / show / history / validate-policy / validate-events は何も書かない。
 formal Decision を書く command は存在しない。DNA へ promote する command も存在しない。
-exit: 0 = ok / 1 = 見つからない・未生成 / 2 = policy error or store corruption / 3 = 書き込み拒否。
+exit: 0 = ok / 1 = 見つからない・未生成 / 2 = policy error or store corruption / 3 = 書き込み拒否 /
+4 = build 中に入力が変化（並行 intake）。derived なので intake 終了後に再実行すればよい。
 """
 from __future__ import annotations
 
@@ -37,6 +38,7 @@ from .queue import (
     CURRENT_REVIEWS_FILE,
     QUEUE_FILE,
     SUMMARY_FILE,
+    ShadowReviewInputDrift,
     ShadowReviewQueueBuilder,
     read_json,
 )
@@ -230,8 +232,14 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901 CLI の分岐�
             return 0 if history else 1
         if args.command == "record":
             return _record(args, root)
-        builder = build_builder(root)
-        report, queue_doc, _summary_doc, _current = builder.build(args.pattern_version, dry_run=args.dry_run)
+        try:
+            report, queue_doc, _summary_doc, _current = build_builder(root).build(
+                args.pattern_version, dry_run=args.dry_run)
+        except ShadowReviewInputDrift:
+            # 並行 intake が走っていると入力が build 中に動く。入力を読み直して 1 回だけ再試行し、
+            # それでも動くようなら torn な queue を書かずに fail closed（下の except が拾う）。
+            report, queue_doc, _summary_doc, _current = build_builder(root).build(
+                args.pattern_version, dry_run=args.dry_run)
         payload = report.as_dict()
         if args.dry_run:
             payload["top_n_composition"] = [
@@ -241,6 +249,11 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901 CLI の分岐�
             payload["backlog"] = {k: v for k, v in (queue_doc.get("backlog") or {}).items() if k != "items"}
         _dump(payload)
         return 0
+    except ShadowReviewInputDrift as exc:
+        _dump({"error": "SHADOW_REVIEW_INPUT_DRIFT", "detail": str(exc), "mutation": "NONE",
+               "hint": "concurrent intake changed evaluation/research inputs mid-build; "
+                       "the queue is derived and safe to rebuild once intake is idle"})
+        return 4
     except ShadowReviewValidationError as exc:
         _dump({"error": "SHADOW_REVIEW_WRITE_REJECTED", "errors": exc.errors, "mutation": "NONE"})
         return 3
