@@ -4,6 +4,41 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.45 (2026-09-04) — Phase 3.9.3 Shadow Review（queue / explanation / human feedback）
+
+Phase 3.9.2 の推奨を**再分類せず**、「今日、人間が何をレビューすべきか」だけを決める層。
+Decision は書かない・DNA へ promote しない・Recommendation state を変えない。
+
+### 追加
+
+- `src/intelligence/shadow_review/`【新規 package】: `config.py`（compass_shadow_review。versioned +
+  content digest。auto_decision_write / auto_promotion / SYSTEM reviewer / outcome 語彙衝突 /
+  material field への reference_score 混入を起動時に拒否）、`models.py`（event / card schema 1.0.0、
+  禁止 key の**再帰**検査、理由要件）、`material.py`（material change digest。Reference Score・
+  relative share・span_days・3D confirmation を構造的に除外）、`ranking.py`（Phase 3.9.2 の
+  `ordering_key()` を基底に eligible_support / span_days を追加。frozen code は未変更）、
+  `diversity.py`（REVIEW の型 round-robin + hard cap。REJECT / APPROVE は bypass）、
+  `explain.py`（triggered_rule ごとの決定的テンプレート。LLM 不使用。未知は
+  `EXPLANATION_TEMPLATE_MISSING` で fail loud）、`cooldown.py`（outcome 別 cooldown。0 は
+  MATERIAL_CHANGE_ONLY で「cooldown 無し」ではない。REJECT は 7 日上限）、`events.py`
+  （append-only + hash chain の人間レビュー履歴。冪等再送・矛盾重複拒否・削除 API なし）、
+  `state.py`（履歴からの current state 導出。履歴は不変）、`queue.py`（MAIN / ADVERSE_OVERFLOW /
+  BACKLOG / WATCH の構築と atomic 置換。policy drift を fail closed で拒否）、`cli.py`
+  （build / summary / list / show / history / validate-policy / validate-events / record）。
+- `config.yaml`: `compass_shadow_review`（top_n 8・watch_n 0・cooldown・型順序・理由要件をすべて config へ）。
+- `docs/databank/COMPASS_SHADOW_REVIEW_SPEC.md`【新規】。
+- `tests/intelligence/test_shadow_review.py`【新規】54 件（policy fail-closed 7、ranking 4、
+  diversity 5、top_n / section 4、card 4、explanation 3、outcome / 理由 5、event store 4、
+  derived state 2、material digest 2、cooldown 4、境界 4、CLI 4、決定性・指標 2）。
+
+### 改善
+
+- なし（Phase 3.8 / Phase 3.9.1 / Phase 3.9.2 / production DNA は未変更）。
+
+### 修正
+
+- なし（Phase 3.9.4 は未着手。formal approval は CORPUS_100 の Phase 3.9.1 gate のまま）。
+
 ## v4.44.1 (2026-09-04) — Fix Windows 依存の mobile intake readiness テスト
 
 ### 修正

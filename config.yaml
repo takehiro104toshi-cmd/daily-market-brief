@@ -972,3 +972,76 @@ compass_recommendation:
     label: "SHADOW_ONLY"
   score_use:
     allowed_for_state_transition: false  # 常に false（true は起動時に拒否）
+
+# ------------------------------------------------------------------
+# Phase 3.9.3 Shadow Review（frozen queue / cooldown / reason 要件）
+# Recommendation state は読むだけで、この層は再分類しない。Decision も DNA も書かない。
+# 値を変えるときは policy_version を必ず上げる（同じ version で内容が変わると build/record を拒否する）。
+compass_shadow_review:
+  policy_version: "1.0.0"
+
+  top_n: 8                               # 逆行件数 + アクティブ型数 + 予備。全 REVIEW 型を最低 1 件カバーする最小サイズ
+  watch_n: 0                             # v1 は 0（WATCH 機構は存在するが既定の production 出力は空）
+
+  state_priority: ["REJECT_RECOMMENDED", "APPROVE_RECOMMENDED", "REVIEW_RECOMMENDED"]
+  excluded_states: ["NOT_READY"]         # applicable core axis < 2。人間に見せる材料が無い
+  watch_source_state: "KEEP_REVIEWING"   # main queue には絶対に入れない
+  watch_excluded_lifecycles: ["OBSERVED"]
+
+  ranking_order:                         # 凍結（並べ替え不可）。質的 state が第一で score は tie-break
+    - high_axis_count
+    - reference_score
+    - relative_support_share
+    - eligible_support
+    - span_days
+    - pattern_id
+
+  type_diversity:
+    mode: "ROUND_ROBIN_WITH_CAP"
+    bypass_states: ["REJECT_RECOMMENDED", "APPROVE_RECOMMENDED"]   # 逆行証拠を型の都合で隠さない
+    type_order: ["EVIDENCE_OUTLOOK", "STATE_OUTLOOK", "THEME_OUTLOOK",
+                 "EVIDENCE_WHY", "EVIDENCE_RISK", "FULL"]          # 同順時の決定化のみ
+    type_caps: {EVIDENCE_WHY: 3, EVIDENCE_RISK: 3}                 # backstop。通常は round-robin が先に効く
+
+  cooldowns:                             # 0 = MATERIAL_CHANGE_ONLY（時間経過では戻さない。cooldown 無しではない）
+    AGREE: 30
+    DISAGREE: 0
+    NEEDS_MORE_EVIDENCE: 0
+    UNCLEAR: 14
+    DUPLICATE_OR_OVERLAPPING: 90
+    NOT_ACTIONABLE: 90
+  adverse_cooldown_cap: 7                # REJECT_RECOMMENDED は最大 7 日で必ず再確認する
+
+  material_change_fields:                # 再提示を決める唯一の材料
+    - recommendation
+    - axis_states
+    - axis_applicability
+    - eligible_support
+    - distinct_2d_cells
+    - contradiction
+    - lifecycle
+    - evaluation_policy_digest
+    - recommendation_policy_digest
+  material_change_excluded:              # Reference Score が再レビューを駆動しないための担保（起動時に検証）
+    - reference_score
+    - relative_support_share
+    - span_days
+    - confirmed_3d_cells
+
+  review_outcomes: ["AGREE", "DISAGREE", "NEEDS_MORE_EVIDENCE", "UNCLEAR",
+                    "DUPLICATE_OR_OVERLAPPING", "NOT_ACTIONABLE"]   # Decision / Recommendation 語彙と交差禁止
+  reason_requirements:
+    AGREE: "OPTIONAL"
+    DISAGREE: "REQUIRED"
+    NEEDS_MORE_EVIDENCE: "REQUIRED_STRUCTURED"
+    UNCLEAR: "REQUIRED"
+    DUPLICATE_OR_OVERLAPPING: "REQUIRED_WITH_REFERENCE"
+    NOT_ACTIONABLE: "REQUIRED"
+  min_reason_chars: 10
+
+  show_supporting_document_dates: true    # ISO 日付のみ。本文・ファイル名・path は出さない
+
+  default_reviewer_id: "SUPERVISOR"
+  allowed_reviewer_types: ["HUMAN"]       # SYSTEM は起動時に拒否（自動レビュー不可）
+  auto_decision_write: false              # 常に false（true は起動時に拒否）
+  auto_promotion: false                   # 常に false（true は起動時に拒否）
