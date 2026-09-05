@@ -33,7 +33,7 @@
   production 無変更、PDF 非参照、決定性、drift、temp cleanup、forbidden key、CLI）。
 
 Phase 3.8 / 3.9.2 / 3.9.3 / Decision / DNA は未変更（evaluation `1a8443098f64d679` /
-recommendation `0a979d8421a01d08` / shadow_review `e6f5094cacef6fec` 不変）。replay policy digest `3215cecb31567ebd`。
+recommendation `0a979d8421a01d08` / shadow_review `e6f5094cacef6fec` 不変）。replay policy digest `d205c3763d07111b`。
 formal review・Decision 記録・人間 review event・DNA promotion は行わない（Phase 3.9.5 は未着手）。
 
 ## v4.45.2 (2026-09-04) — Fix queue の corpus 文脈が live 読みで内部矛盾する問題 / 入力 drift 検出

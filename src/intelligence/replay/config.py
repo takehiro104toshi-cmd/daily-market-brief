@@ -93,7 +93,10 @@ class ReplayPolicy:
         }
 
     # digest から除外する運用フィールド（replay 意味論に影響しないもの）。
-    _NON_SEMANTIC_KEYS = ("temp_workspace", "retain_debug_runs")
+    # full_replay_enabled は mode 選択の許可フラグであり、選ばれた mode 自体は manifest に記録される。
+    # これを digest に含めると、較正用 FULL_REPLAY を同じ data root で 1 回走らせるだけで
+    # policy_version の bump が必要になってしまう。
+    _NON_SEMANTIC_KEYS = ("temp_workspace", "retain_debug_runs", "full_replay_enabled")
 
     def semantic_dict(self) -> Dict[str, Any]:
         return {k: v for k, v in self.as_dict().items() if k not in self._NON_SEMANTIC_KEYS}

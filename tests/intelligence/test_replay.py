@@ -427,9 +427,12 @@ def test_transition_refinement_adds_intermediate_positions(prod, tmp_path):
 
 
 def test_full_replay_every_eligible_increment(prod, tmp_path):
+    default = run_replay(prod, tmp_path / "default")                       # 同じ data root に既定 run が保存済み
     out = run_replay(prod, tmp_path, mode=MODE_FULL, full_replay_enabled=True)
     assert out["summary"]["positions"] == list(range(1, N_DOCS))
     assert out["summary"]["refined_intervals"] == []
+    assert out["manifest"]["replay_policy"]["digest"] == default["manifest"]["replay_policy"]["digest"]  # 較正 FULL は version bump 不要
+    assert out["manifest"]["replay_mode"] == MODE_FULL != default["manifest"]["replay_mode"]
 
 
 # ================================================================== 23-27 events / metrics
