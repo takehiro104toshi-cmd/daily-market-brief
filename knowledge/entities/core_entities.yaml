@@ -1,0 +1,276 @@
+# =============================================================================
+# Entity Catalog（Phase 2-E PART: ENTITY CATALOG / versioned knowledge asset）
+# =============================================================================
+# 原則: FALSE ENTITY LINK IS WORSE THAN MISSED ENTITY LINK（高precision優先）
+#
+# - 対象: 現在の歴史コーパス3,056記事＋Compass対象（config.yaml watchlist）に
+#   必要な主要企業・国・中央銀行・指数・コモディティ・通貨。**巨大な全世界DBを作らない**。
+# - alias安全度の3段階:
+#     aliases_safe    … 単独マッチ許可（一般語衝突がない表記。case-sensitive）
+#     aliases_context … **文脈必須**alias（Apple/Meta/Amazon等の一般語衝突対策。
+#                       context_termsのいずれかが同一テキスト内に共起した場合のみlink）
+#     ticker          … 単独の大文字語としては**絶対にマッチさせない**
+#                       （$NVDA / NASDAQ:NVDA / (7203.T) 等の明示記法のみ。
+#                       AI/IT/US/CAT等の一般大文字語の誤linkを構造的に排除）
+# - country/sector はentityの**属性**（domicile・所属業種）であり、
+#   記事の分類（subject country / article theme）とは別物（混同禁止）。
+# - entity_idは "<kind>:<slug>" で安定。市場系列（market catalog）のinstrument_idと
+#   揃えられるものは揃える（index:nikkei225等——bank横断の結線点）。
+
+id: entities_core
+version: "1.0.0"
+description: >-
+  Enrichment用コアentityカタログ（企業・国・中央銀行・政府・人物・指数・
+  コモディティ・通貨）。alias安全度と文脈規則を含む（Phase 2-E）。
+source: "config.yaml watchlist（Compass対象）＋tank歴史コーパス3,056記事の頻出entity"
+status: active
+
+companies:
+  # ----- Compass対象（日本株 watchlist） -----
+  - { entity_id: "company:toyota", name: "トヨタ自動車", ticker: "7203.T", exchange: "TSE",
+      country: "JP", sector: "consumer_discretionary", industry: "automobiles",
+      aliases_safe: ["トヨタ自動車", "トヨタ", "Toyota"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:sony", name: "ソニーグループ", ticker: "6758.T", exchange: "TSE",
+      country: "JP", sector: "consumer_discretionary", industry: "electronics",
+      aliases_safe: ["ソニーグループ", "ソニー", "Sony"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:softbank_group", name: "ソフトバンクグループ", ticker: "9984.T", exchange: "TSE",
+      country: "JP", sector: "communication_services", industry: "internet_services",
+      aliases_safe: ["ソフトバンクグループ", "ソフトバンク", "SoftBank"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:mufg", name: "三菱UFJフィナンシャル・グループ", ticker: "8306.T", exchange: "TSE",
+      country: "JP", sector: "financials", industry: "banks",
+      aliases_safe: ["三菱UFJ", "MUFG", "Mitsubishi UFJ"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:hitachi", name: "日立製作所", ticker: "6501.T", exchange: "TSE",
+      country: "JP", sector: "industrials", industry: "conglomerates",
+      aliases_safe: ["日立製作所", "日立", "Hitachi"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:tokyo_electron", name: "東京エレクトロン", ticker: "8035.T", exchange: "TSE",
+      country: "JP", sector: "information_technology", industry: "semiconductor_equipment",
+      aliases_safe: ["東京エレクトロン", "Tokyo Electron"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:recruit", name: "リクルートホールディングス", ticker: "6098.T", exchange: "TSE",
+      country: "JP", sector: "industrials", industry: "staffing_hr",
+      aliases_safe: ["リクルートホールディングス", "リクルート", "Recruit Holdings"],
+      aliases_context: [], context_terms: [] }  # 英語"Recruit"単独は一般語→safeにしない
+  - { entity_id: "company:kawasaki_heavy", name: "川崎重工業", ticker: "7012.T", exchange: "TSE",
+      country: "JP", sector: "industrials", industry: "heavy_machinery",
+      aliases_safe: ["川崎重工業", "川崎重工", "Kawasaki Heavy"],
+      aliases_context: ["Kawasaki"], context_terms: ["heavy", "defense", "shipbuilding", "重工"] }
+  - { entity_id: "company:denso", name: "デンソー", ticker: "6902.T", exchange: "TSE",
+      country: "JP", sector: "consumer_discretionary", industry: "auto_components",
+      aliases_safe: ["デンソー", "Denso"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:nidec", name: "ニデック", ticker: "6594.T", exchange: "TSE",
+      country: "JP", sector: "industrials", industry: "electrical_components",
+      aliases_safe: ["ニデック", "Nidec"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:furukawa_electric", name: "古河電工", ticker: "5801.T", exchange: "TSE",
+      country: "JP", sector: "industrials", industry: "electrical_components",
+      aliases_safe: ["古河電工", "古河電気工業", "Furukawa Electric"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:sumitomo_electric", name: "住友電工", ticker: "5802.T", exchange: "TSE",
+      country: "JP", sector: "industrials", industry: "electrical_components",
+      aliases_safe: ["住友電工", "住友電気工業", "Sumitomo Electric"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:panasonic", name: "パナソニックHD", ticker: "6752.T", exchange: "TSE",
+      country: "JP", sector: "consumer_discretionary", industry: "electronics",
+      aliases_safe: ["パナソニック", "Panasonic"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:mitsubishi_chemical", name: "三菱ケミカルグループ", ticker: "4188.T", exchange: "TSE",
+      country: "JP", sector: "materials", industry: "chemicals",
+      aliases_safe: ["三菱ケミカル", "Mitsubishi Chemical"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:asahi_kasei", name: "旭化成", ticker: "3407.T", exchange: "TSE",
+      country: "JP", sector: "materials", industry: "chemicals",
+      aliases_safe: ["旭化成", "Asahi Kasei"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:kinden", name: "きんでん", ticker: "1944.T", exchange: "TSE",
+      country: "JP", sector: "industrials", industry: "construction_engineering",
+      aliases_safe: ["きんでん", "Kinden"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:ntt", name: "日本電信電話", ticker: "9432.T", exchange: "TSE",
+      country: "JP", sector: "communication_services", industry: "telecom",
+      aliases_safe: ["日本電信電話", "NTT"], aliases_context: [], context_terms: [] }
+
+  # ----- Compass対象（米国株 watchlist） -----
+  - { entity_id: "company:apple", name: "Apple", ticker: "AAPL", exchange: "NASDAQ",
+      country: "US", sector: "information_technology", industry: "consumer_electronics",
+      aliases_safe: ["Apple Inc", "アップル"],
+      aliases_context: ["=Apple"],
+      context_terms: ["iPhone", "iPad", "Mac", "Tim Cook", "AAPL", "App Store", "Cupertino"] }
+  - { entity_id: "company:microsoft", name: "Microsoft", ticker: "MSFT", exchange: "NASDAQ",
+      country: "US", sector: "information_technology", industry: "software",
+      aliases_safe: ["Microsoft", "マイクロソフト"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:nvidia", name: "NVIDIA", ticker: "NVDA", exchange: "NASDAQ",
+      country: "US", sector: "information_technology", industry: "semiconductors",
+      aliases_safe: ["NVIDIA", "Nvidia", "エヌビディア"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:tesla", name: "Tesla", ticker: "TSLA", exchange: "NASDAQ",
+      country: "US", sector: "consumer_discretionary", industry: "automobiles",
+      aliases_safe: ["Tesla", "テスラ"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:amazon", name: "Amazon", ticker: "AMZN", exchange: "NASDAQ",
+      country: "US", sector: "consumer_discretionary", industry: "internet_services",
+      aliases_safe: ["Amazon.com", "アマゾン"],
+      aliases_context: ["=Amazon"],
+      context_terms: ["AWS", "e-commerce", "Prime", "Bezos", "Jassy", "AMZN", "retail", "cloud"] }
+  - { entity_id: "company:alphabet", name: "Alphabet", ticker: "GOOGL", exchange: "NASDAQ",
+      country: "US", sector: "communication_services", industry: "internet_services",
+      aliases_safe: ["Alphabet Inc", "Google", "グーグル"],
+      aliases_context: ["=Alphabet"],
+      context_terms: ["Google", "YouTube", "GOOGL", "search", "Android"] }
+  - { entity_id: "company:meta", name: "Meta Platforms", ticker: "META", exchange: "NASDAQ",
+      country: "US", sector: "communication_services", industry: "internet_services",
+      aliases_safe: ["Meta Platforms"],
+      aliases_context: ["=Meta"],
+      context_terms: ["Facebook", "Instagram", "Zuckerberg", "WhatsApp", "META",
+                      "social media", "data center"] }
+  - { entity_id: "company:palantir", name: "Palantir", ticker: "PLTR", exchange: "NASDAQ",
+      country: "US", sector: "information_technology", industry: "software",
+      aliases_safe: ["Palantir", "パランティア"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:arm", name: "Arm Holdings", ticker: "ARM", exchange: "NASDAQ",
+      country: "GB", sector: "information_technology", industry: "semiconductors",
+      aliases_safe: ["Arm Holdings", "アーム"],
+      aliases_context: ["=Arm"],
+      context_terms: ["chip", "semiconductor", "SoftBank", "licensing", "chip design"] }
+  - { entity_id: "company:tsmc", name: "TSMC", ticker: "TSM", exchange: "NYSE",
+      country: "TW", sector: "information_technology", industry: "semiconductors",
+      aliases_safe: ["TSMC", "Taiwan Semiconductor"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:asml", name: "ASML", ticker: "ASML", exchange: "NASDAQ",
+      country: "NL", sector: "information_technology", industry: "semiconductor_equipment",
+      aliases_safe: ["ASML"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:lam_research", name: "Lam Research", ticker: "LRCX", exchange: "NASDAQ",
+      country: "US", sector: "information_technology", industry: "semiconductor_equipment",
+      aliases_safe: ["Lam Research"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:kla", name: "KLA", ticker: "KLAC", exchange: "NASDAQ",
+      country: "US", sector: "information_technology", industry: "semiconductor_equipment",
+      aliases_safe: ["KLA Corporation", "KLA Corp"],
+      aliases_context: ["KLA"],
+      context_terms: ["semiconductor", "chip", "KLAC", "equipment"] }
+
+  # ----- コーパス頻出の追加企業（最小限） -----
+  - { entity_id: "company:openai", name: "OpenAI", ticker: "", exchange: "",
+      country: "US", sector: "information_technology", industry: "software",
+      aliases_safe: ["OpenAI", "オープンAI"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:intel", name: "Intel", ticker: "INTC", exchange: "NASDAQ",
+      country: "US", sector: "information_technology", industry: "semiconductors",
+      aliases_safe: ["Intel", "インテル"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:samsung", name: "Samsung Electronics", ticker: "005930.KS", exchange: "KRX",
+      country: "KR", sector: "information_technology", industry: "electronics",
+      aliases_safe: ["Samsung Electronics", "Samsung", "サムスン"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:blackrock", name: "BlackRock", ticker: "BLK", exchange: "NYSE",
+      country: "US", sector: "financials", industry: "asset_management",
+      aliases_safe: ["BlackRock", "ブラックロック"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:nippon_steel", name: "日本製鉄", ticker: "5401.T", exchange: "TSE",
+      country: "JP", sector: "materials", industry: "steel",
+      aliases_safe: ["日本製鉄", "Nippon Steel"], aliases_context: [], context_terms: [] }
+  - { entity_id: "company:boeing", name: "Boeing", ticker: "BA", exchange: "NYSE",
+      country: "US", sector: "industrials", industry: "aerospace_defense",
+      aliases_safe: ["Boeing", "ボーイング"], aliases_context: [], context_terms: [] }
+
+# 記事のsubject country判定に使う（**field意味=記事の主題国**。
+# publisher国・企業domicile・影響市場とは別概念——classifier_nameで明示する）
+countries:
+  - { entity_id: "country:US", code: "US", name: "United States",
+      aliases: ["U.S.", "USA", "United States", "米国", "アメリカ", "US"] }
+  - { entity_id: "country:JP", code: "JP", name: "Japan",
+      aliases: ["Japan", "Japanese", "日本"] }
+  - { entity_id: "country:CN", code: "CN", name: "China",
+      aliases: ["China", "Chinese", "中国", "Beijing"] }
+  - { entity_id: "country:TW", code: "TW", name: "Taiwan",
+      aliases: ["Taiwan", "台湾"] }
+  - { entity_id: "country:KR", code: "KR", name: "South Korea",
+      aliases: ["South Korea", "韓国", "Seoul"] }
+  - { entity_id: "country:KP", code: "KP", name: "North Korea",
+      aliases: ["North Korea", "北朝鮮", "Pyongyang"] }
+  - { entity_id: "country:IN", code: "IN", name: "India",
+      aliases: ["India", "Indian", "インド", "New Delhi"] }
+  - { entity_id: "country:GB", code: "GB", name: "United Kingdom",
+      aliases: ["UK", "Britain", "United Kingdom", "British", "英国", "イギリス"] }
+  - { entity_id: "country:DE", code: "DE", name: "Germany",
+      aliases: ["Germany", "German", "ドイツ", "Berlin"] }
+  - { entity_id: "country:FR", code: "FR", name: "France",
+      aliases: ["France", "French", "フランス"] }
+  - { entity_id: "country:EU", code: "EU", name: "European Union",
+      aliases: ["EU", "European Union", "欧州連合", "Brussels"],
+      note: "国ではなくbloc（region）。country次元でEUコードとして扱う（明示）" }
+  - { entity_id: "country:RU", code: "RU", name: "Russia",
+      aliases: ["Russia", "Russian", "ロシア", "Moscow", "Kremlin"] }
+  - { entity_id: "country:UA", code: "UA", name: "Ukraine",
+      aliases: ["Ukraine", "Ukrainian", "ウクライナ", "Kyiv"] }
+  - { entity_id: "country:IR", code: "IR", name: "Iran",
+      aliases: ["Iran", "Iranian", "イラン", "Tehran"] }
+  - { entity_id: "country:IL", code: "IL", name: "Israel",
+      aliases: ["Israel", "Israeli", "イスラエル"] }
+  - { entity_id: "country:SA", code: "SA", name: "Saudi Arabia",
+      aliases: ["Saudi Arabia", "Saudi", "サウジアラビア", "Riyadh"] }
+  - { entity_id: "country:HK", code: "HK", name: "Hong Kong",
+      aliases: ["Hong Kong", "香港"] }
+  - { entity_id: "country:SG", code: "SG", name: "Singapore",
+      aliases: ["Singapore", "シンガポール"] }
+
+central_banks:
+  - { entity_id: "central_bank:fed", name: "Federal Reserve", country: "US",
+      aliases: ["Federal Reserve", "the Fed", "FOMC", "FRB", "米連邦準備"],
+      aliases_context: ["=Fed"],
+      context_terms: ["rate", "rates", "policy", "inflation", "Powell", "interest",
+                      "central bank", "Treasury"] }
+  - { entity_id: "central_bank:boj", name: "Bank of Japan", country: "JP",
+      aliases: ["Bank of Japan", "BOJ", "日銀", "日本銀行"] }
+  - { entity_id: "central_bank:ecb", name: "European Central Bank", country: "EU",
+      aliases: ["European Central Bank", "ECB", "欧州中央銀行"] }
+  - { entity_id: "central_bank:boe", name: "Bank of England", country: "GB",
+      aliases: ["Bank of England", "BoE"] }
+  - { entity_id: "central_bank:pboc", name: "People's Bank of China", country: "CN",
+      aliases: ["People's Bank of China", "PBOC", "中国人民銀行"] }
+
+governments:
+  - { entity_id: "government:us", name: "U.S. government", country: "US",
+      aliases: ["White House", "Pentagon", "U.S. Congress", "ホワイトハウス", "米政府"] }
+  - { entity_id: "government:jp", name: "日本政府", country: "JP",
+      aliases: ["日本政府", "Japanese government", "経産省", "financial services agency"] }
+
+persons:
+  - { entity_id: "person:jerome_powell", name: "Jerome Powell", role: "Fed Chair",
+      aliases_safe: ["Jerome Powell", "パウエル議長"],
+      aliases_context: ["=Powell"],
+      context_terms: ["Fed", "Federal Reserve", "chair", "rate", "FOMC"] }
+  - { entity_id: "person:kazuo_ueda", name: "Kazuo Ueda", role: "BOJ Governor",
+      aliases_safe: ["Kazuo Ueda", "植田和男", "植田総裁"],
+      aliases_context: ["=Ueda"],
+      context_terms: ["BOJ", "Bank of Japan", "日銀", "governor"] }
+  - { entity_id: "person:donald_trump", name: "Donald Trump", role: "US President",
+      aliases_safe: ["Donald Trump", "=Trump", "トランプ"],
+      aliases_context: [], context_terms: [] }
+
+# instrument_idは市場カタログ（knowledge/market_series）と整合させる（bank横断結線）
+indices:
+  - { entity_id: "index:nikkei225", name: "日経平均株価",
+      aliases: ["Nikkei 225", "日経平均", "Nikkei"] }
+  - { entity_id: "index:topix", name: "TOPIX", aliases: ["TOPIX", "Topix"] }
+  - { entity_id: "index:spx", name: "S&P 500", aliases: ["S&P 500", "S&P500"] }
+  - { entity_id: "index:dji", name: "NYダウ",
+      aliases: ["Dow Jones", "NYダウ", "Dow Jones Industrial Average"] }
+  - { entity_id: "index:nasdaq_composite", name: "ナスダック総合",
+      aliases: ["Nasdaq Composite", "ナスダック"] }
+  - { entity_id: "index:vix", name: "VIX", aliases: ["VIX"] }
+  - { entity_id: "index:sox", name: "SOX指数",
+      aliases: ["Philadelphia Semiconductor Index", "SOX指数"] }
+
+commodities:
+  - { entity_id: "commodity:crude_oil", name: "原油",
+      aliases: ["crude oil", "oil prices", "WTI", "Brent", "原油", "oil price"] }
+  - { entity_id: "commodity:gold", name: "金",
+      aliases: ["gold prices", "gold price", "gold futures", "bullion", "金価格", "金相場"] }
+  - { entity_id: "commodity:copper", name: "銅", aliases: ["copper", "銅価格"] }
+  - { entity_id: "commodity:natural_gas", name: "天然ガス",
+      aliases: ["natural gas", "LNG", "天然ガス"] }
+  - { entity_id: "commodity:rare_earths", name: "レアアース",
+      aliases: ["rare earth", "rare earths", "rare-earth", "レアアース", "critical minerals"] }
+
+currencies:
+  - { entity_id: "currency:JPY", name: "円", aliases: ["yen", "円相場", "円安", "円高"] }
+  - { entity_id: "currency:USD", name: "米ドル", aliases: ["U.S. dollar", "米ドル", "ドル高", "ドル安"] }
+  - { entity_id: "currency:EUR", name: "ユーロ", aliases: ["euro", "ユーロ"] }
+  - { entity_id: "currency:BTC", name: "ビットコイン",
+      aliases: ["Bitcoin", "bitcoin", "BTC", "ビットコイン"],
+      note: "暗号資産。市場慣行に合わせcurrency kindで扱う（明示）" }
+
+# 会社→sector/industryの語彙（会社属性mapping用。**記事→sector分類には使わない**——
+# 記事レベルのsector自動分類はP2-Eでは実施しない（decision: 混同リスク回避））
+sector_vocabulary:
+  sectors: [information_technology, financials, industrials, consumer_discretionary,
+            communication_services, materials, energy, utilities, health_care,
+            consumer_staples, real_estate]
+  industries: [semiconductors, semiconductor_equipment, automobiles, auto_components,
+               electronics, electrical_components, banks, asset_management, telecom,
+               chemicals, heavy_machinery, internet_services, software,
+               consumer_electronics, staffing_hr, construction_engineering,
+               conglomerates, steel, aerospace_defense]

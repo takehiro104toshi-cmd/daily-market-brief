@@ -4,6 +4,1834 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.48.2 (2026-09-06) — Fix Windows path 区切りに依存していた formal review test / Improve replay run policy の可視化
+
+### 修正
+
+- `tests/intelligence/test_formal_review.py`: `_tree_digest` の key を `Path.relative_to().as_posix()` に統一し、
+  「変更 file は論理 directory compass_formal_review 配下のみ」の判定を区切り文字非依存（PurePosixPath / PureWindowsPath）
+  にした。Windows 実機で `compass_formal_review\build_manifest.json` が `startswith("compass_formal_review/")` に
+  一致せず落ちていた test portability 欠陥（runtime の欠陥ではない）。backslash 形式を Linux 上でも検証する
+  parametrized regression を追加。production の storage path は変更しない。
+- 同 test に、旧 replay policy の run しか無い状態（`POLICY_DIGEST_MISMATCH:replay`）から現行 policy の新 run が
+  latest になると互換性と dry-run が回復する regression（Windows follow-up の再現）を追加。
+
+### 改善
+
+- `src/intelligence/formal_review/service.py`: build_manifest の inputs に、選ばれた replay run が記録している
+  policy digest（`replay_run_policy_digests` / `replay_run_replay_policy`）を記録。
+- `src/intelligence/formal_review/validation.py`: BUILD 節で選ばれた replay run id・その policy digest・現行 replay policy を
+  出力（実機で `POLICY_DIGEST_MISMATCH:replay` の原因 run を特定できる）。
+
+policy 6 層・凍結層は不変。real Decision は書いていない。
+
+## v4.48.1 (2026-09-06) — Add Phase 3.9.5 real-data packet validation driver（Windows 1 操作・dry-run only）
+
+### 追加
+
+- `src/intelligence/formal_review/validation.py`【新規】: HEAD / 6 層 policy digest / 安全 baseline / real build /
+  determinism（live 再 build + 固定入力 2 回組み立て）/ queue 安全要約 / replay 互換 / freshness（changed block 名のみ）/
+  sibling 集計 / 全 primary candidate の dry-run sweep（C3 acknowledgement を packet から導出、想定外 guard 結果は fail）/
+  symmetry / reopen-check / metadata 制約 / 変更なし証明を `::P395_*::` marker で出力。formal Decision は書かない。
+  console に人間の Shadow Review reason 本文・原文・path を出さない。
+- `tests/intelligence/test_formal_review.py` 8 件追加（dress rehearsal・privacy・no mutation、policy 不一致で build 前 fail、
+  gate 未到達の想定外 guard で fail、replay 欠落は legitimate、corpus-only growth で dry-run 有効、intake なしの stale は fail、
+  replay age / C3 集計、CLI）。
+
+Phase 3.8 / 3.9.1 / 3.9.2 / 3.9.3 / 3.9.4 / formal review policy（`cca7b43627b9a355`）は不変。real Decision は書いていない。
+
+## v4.48 (2026-09-06) — Add Phase 3.9.5 First Formal DNA Review（human-bound evidence packet + fail-closed guard）
+
+**NOT_AUTOMATIC_APPROVAL / NOT_DNA_PROMOTION / EVIDENCE_PACKET_BOUND / HUMAN_ONE_AT_A_TIME**
+
+### 追加
+
+- `src/intelligence/formal_review/`【新規 package、1 機能 = 1 ファイル】: 現在の APPROVE_RECOMMENDED / REJECT_RECOMMENDED
+  を動的に選出し（`population.py`）、EVIDENCE_OUTLOOK narrow sibling group（`groups.py`）、証拠 packet と
+  `packet_evidence_digest`（`packet.py`）、警告（`warnings.py`）、凍結 ordering（`ordering.py`）、REOPEN 適格
+  （`reopen.py`）、22 段の fail-closed guard と metadata binder（`guard.py`）、運用 metrics（`metrics.py`）、
+  derived 出力（`store.py`）、build / decide（`service.py`）、CLI（`cli.py`）。
+  formal Decision の書き込みは `FormalReviewGuard → DecisionRequest → DecisionService.validate → decide` のみ。
+  recommendation symmetry（APPROVED は APPROVE_RECOMMENDED のみ / REJECTED は REJECT_RECOMMENDED のみ）、
+  sibling C1 hard block・C3 acknowledgement、replay evidence 必須（APPROVED / REJECTED）、reason 最小文字数、
+  重複は KEEP_REVIEWING + metadata、promotion は常に NOT_PROMOTED、batch なし、dry-run は何も書かない。
+- `config.yaml` `compass_formal_review`（1.0.0、digest `cca7b43627b9a355`、凍結値は validate で固定）。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md`。
+- `tests/intelligence/test_formal_review.py`（population / packet / digest / stale / symmetry / sibling / replay /
+  ordering / reason / reopen / write path / idempotency / promotion / DNA / CLI / 凍結層 digest）。
+
+Phase 3.8 / 3.9.1 / 3.9.2 / 3.9.3 / 3.9.4 の semantics と digest は不変（evaluation `1a8443098f64d679` /
+recommendation `0a979d8421a01d08` / shadow_review `e6f5094cacef6fec` / replay 1.1.0 `197db7c73eb0db77`）。
+real Decision は書いていない（first real human review は監督者の明示 GO 後）。Phase 4 は未着手。
+
+## v4.47 (2026-09-05) — Improve Phase 3.9.4 replay 実行 metadata・Fix 較正凍結（policy 1.1.0）
+
+Windows 実データ FULL_REPLAY（eligible 139 / patterns 463）の監督者レビュー PASS を受けた finalization。
+
+### 改善
+
+- `src/intelligence/replay/runner.py`: 精密化計画を粗い pass の結果から exact に算出し、`execution` metadata
+  （`strategy` / `planned_coverage` COMPLETE|PARTIAL / `full_fallback` / `work` counter）を manifest・summary・
+  result に別建てで記録（`run_digest` 不変）。最終 coarse position の checkpoint（復元されない）を省略。
+  FULL fallback は実測（run_incremental 1 回 ≫ checkpoint 復元 1 回、評価 position 集合は不変）により
+  **採らない**ことを決定し、理由を metadata と SPEC §4.1 に明記。
+- `src/intelligence/replay/research.py` / `evaluate.py`: snapshot の `research_digest` に `run_incremental`
+  が返した digest を再利用（`ResearchStore.digest` と同値、test で固定）。work counter を追加。
+
+### 修正
+
+- stability 較正の凍結: `config.yaml` `compass_replay.policy_version` 1.0.0 → 1.1.0、
+  `stability.calibration_state` PROVISIONAL_CALIBRATION_ONLY → **CALIBRATED_CORPUS_139_V1**。
+  閾値の値（15 / 0.8 / 2・単位 eligible_documents）は不変。replay policy digest d205c3763d07111b → 197db7c73eb0db77。
+  metrics / formal_review_input の `provisional` は false。較正根拠は `docs/databank/COMPASS_REPLAY_SPEC.md` §9.1。
+- `validation.py`: calibration note を policy 状態から出力（PROVISIONAL 固定文言を除去）。
+
+### 追加
+
+- `tests/intelligence/test_replay.py` 10 件追加（62 件）: 全区間遷移 corpus で計画 COMPLETE と fallback 不採用、
+  疎な遷移で PARTIAL、digest 再利用の同値性、transition 出力 = FULL 行・research digest、semantic run_digest の
+  golden 値と execution 除外、milestone 等価性、凍結閾値、version bump 許可 / 同 version 変更拒否、
+  凍結層 digest 3 種、Decision / review event / DNA 非書き込み。
+
+Phase 3.8 / 3.9.2 / 3.9.3 / Decision / DNA は未変更（evaluation `1a8443098f64d679` / recommendation
+`0a979d8421a01d08` / shadow_review `e6f5094cacef6fec`）。Phase 3.9.5 は未着手。
+Phase 3.8 engine step 7 の performance-only 修正（similarity list の hoisting、synthetic で replay 2.1 倍高速、
+digest 完全一致）は提案のみ（監督者承認待ち・未適用）。
+
+## v4.46.1 (2026-09-05) — Add Phase 3.9.4 real-data validation（fixed-snapshot 再 run / FULL 運用 override）
+
+### 追加
+
+- `src/intelligence/replay/runner.py`: `input_snapshot`（保持した run の temp から同じ不変入力宇宙を再 replay。
+  production を再捕捉しないので live intake が進んでも run_digest は一致する）。manifest に `input_source` を記録。
+- `src/intelligence/replay/snapshot.py`: Context export に `context_meta.json` を追加し、`load_context_snapshot` で
+  保持 snapshot から同じ digest の Context を復元。
+- `src/intelligence/replay/cli.py`: `run --retain-temp` / `--from-run <run_id>` / `--enable-full-replay`
+  （config.yaml を編集せずに較正 FULL を許可する運用 override。digest 外）。
+- `src/intelligence/replay/validation.py`【新規】: Windows 実機 real-data validation を 1 操作で実行する
+  fail-closed runner（`::P394_*::` marker、ASCII のみ、文書名・path 非出力、決定性は固定 snapshot ×2 と
+  live ×2 の両方、FULL 較正分布、APPROVE / REJECT stress、queue replay、rebuild equivalence、handoff、
+  run 後 safety。並行 intake による corpus 増加は replay 変更と区別して報告）。
+- `tests/intelligence/test_replay.py` 8 件追加（52 件）。
+
+Phase 3.8 / 3.9.2 / 3.9.3 / Decision / DNA / replay policy digest（`d205c3763d07111b`）は未変更。
+
+## v4.46 (2026-09-05) — Add Phase 3.9.4 Replay / Simulation（retrospective stability replay）
+
+**NOT_PREDICTIVE / NOT_FORMAL_APPROVAL / HUMAN_FEEDBACK_ONLY / IMMUTABLE_INPUT_UNIVERSE / PROVISIONAL_CALIBRATION_ONLY**
+
+### 追加
+
+- `src/intelligence/replay/`（新規 package、1 機能 = 1 ファイル）: corpus が N 件だった時点の
+  Phase 3.8 → 3.9.2 → 3.9.3 の出力を事後再構成し、推奨の安定性を測る。
+  - `snapshot.py`: live corpus を `sqlite3.Connection.backup()` で不変 snapshot 化（OS copy 不使用、
+    CompassIntake は停止しない）。Context は run 開始時に行ごと export し `context_manifest_digest` で固定。
+  - `manifest.py` / `ordering.py`: 入力 manifest と canonical ordering（既定 CHRONOLOGICAL =
+    document_date, date_sequence, document_id。INGESTION は明示時のみ。undated は除外・記録・閾値超で fail closed）。
+  - `view.py`: prefix 外 read を `ReplayLeakageDetected` で拒否する read-only corpus view。
+  - `research.py` / `evaluate.py`: temp root で既存 engine を呼ぶ（Phase 3.8 incremental + milestone での
+    full rebuild 等価性、3.9.2 dry-run 評価、3.9.3 空 event store での queue 再構成、漏洩監査、sanity）。
+  - `timeline.py` / `events.py` / `metrics.py` / `stress.py`: timeline row、FIRST_* / *_CHANGED event、
+    安定性指標（accuracy 系の命名なし）、PROVISIONAL 分類、APPROVE / REJECT stress、
+    Phase 3.9.5 向け `formal_review_input`（Decision / review 履歴は read-only 参照のみ）。
+  - `store.py` / `runner.py` / `cli.py`: `<data_root>/compass_replay/` への atomic 出力、
+    replay 所有 temp のみ cleanup、determinism digest（policy / manifest / snapshot / run）、
+    入力 drift（捕捉済み入力の改変）で fail closed、CLI（run / validate-policy / list-runs / summary / show）。
+- `config.yaml` `compass_replay`（policy_version 1.0.0、既定 MILESTONE_AND_TRANSITION、
+  transition_resolution 5、stability 閾値は PROVISIONAL）。
+- `docs/databank/COMPASS_REPLAY_SPEC.md`。
+- `tests/intelligence/test_replay.py` 44 件（backup 一貫性、Context 不変、順序、eligibility、
+  prefix 閉包、漏洩検出、rebuild 等価性、identity、mode、event、metrics、sanity、空 event store、
+  production 無変更、PDF 非参照、決定性、drift、temp cleanup、forbidden key、CLI）。
+
+Phase 3.8 / 3.9.2 / 3.9.3 / Decision / DNA は未変更（evaluation `1a8443098f64d679` /
+recommendation `0a979d8421a01d08` / shadow_review `e6f5094cacef6fec` 不変）。replay policy digest `d205c3763d07111b`。
+formal review・Decision 記録・人間 review event・DNA promotion は行わない（Phase 3.9.5 は未着手）。
+
+## v4.45.2 (2026-09-04) — Fix queue の corpus 文脈が live 読みで内部矛盾する問題 / 入力 drift 検出
+
+Windows 実機 acceptance で `queue_rebuildable = false` となった事象の根本原因対応。
+queue 自体に非決定性は無く（同一入力で 6/6 一致を実測）、**並行 intake による入力 drift**が原因だった。
+
+### 修正
+
+- `src/intelligence/shadow_review/queue.py`: queue の `corpus_size` / `corpus_milestone` を
+  **live corpus 読みから evaluation record（atomic replace された snapshot）由来へ変更**。
+  従来は「eligible 122 で評価した card に、build 時点の 123 を刻む」内部矛盾が起き、
+  並行 intake 中は 2 回の build で digest が食い違っていた。評価記録が無いときのみ
+  注入 corpus state に fallback し、由来を `corpus_context_source` に記録する。
+  評価記録どうしで corpus 文脈が食い違う混在 store は `ShadowReviewInputDrift` で fail closed。
+
+### 追加
+
+- 入力 drift 検出: build が使った入力（evaluation record 全体・pattern status・supporting document・
+  document date・policy digest 3 種）の `inputs_fingerprint` を書き込み直前に再照合し、
+  変化していれば torn な queue を書かずに fail closed。CLI は 1 回だけ自動再試行し、
+  それでも drift するなら exit 4。`queue.json` / `summary.json` に fingerprint を記録する
+  （live corpus に依存しない正しい決定性チェックの基準）。
+- `docs/databank/COMPASS_SHADOW_REVIEW_SPEC.md` §12「スナップショット意味論と並行 intake」
+  （corpus/research ラグは正常な過渡状態であり、最新の完了済み research snapshot を受け入れる）。
+- `tests/intelligence/test_shadow_review.py` 7 件追加（live corpus 増加で queue が変わらないこと、
+  corpus 文脈が evaluation snapshot 由来であること、評価なし時の fallback、混在 store の fail closed、
+  build 中 drift で何も書かないこと、fingerprint が実入力変化を追うこと、CLI の 1 回再試行）。
+
+policy は未変更（digest 3 種とも不変）。Phase 3.9.2 / 3.9.1 / production DNA も未変更。
+
+## v4.45.1 (2026-09-04) — Fix ADVERSE_OVERFLOW が逆行証拠専用でなかった問題
+
+### 修正
+
+- `src/intelligence/shadow_review/queue.py`: diversity を bypass する state（REJECT / APPROVE）の
+  溢れをまとめて ADVERSE_OVERFLOW へ入れていたため、APPROVE_RECOMMENDED が top_n に収まらない
+  ときに **非 adverse な pattern が「adverse」区画に入り、`adverse_overflow_count` が
+  「捌けていない逆行件数」を意味しなくなっていた**。ADVERSE_OVERFLOW は REJECT_RECOMMENDED 専用とし、
+  他の bypass state の溢れは backlog（件数と型内訳つき）へ回す。escalated の総数会計は不変。
+  CORPUS_50 時点は APPROVE 0 件だったため顕在化せず、CORPUS_100 到達（APPROVE 7 件）で初めて発火する。
+  docs の仕様記述は元から REJECT 専用と書かれており、**コードを仕様へ合わせる修正**（仕様変更ではない）。
+- `tests/intelligence/test_shadow_review.py`: 3 件追加（APPROVE の溢れが backlog へ行くこと、
+  ADVERSE_OVERFLOW が REJECT のみを保持すること、CORPUS_100 到達後の実分布の形での queue 構成）。
+
+## v4.45 (2026-09-04) — Phase 3.9.3 Shadow Review（queue / explanation / human feedback）
+
+Phase 3.9.2 の推奨を**再分類せず**、「今日、人間が何をレビューすべきか」だけを決める層。
+Decision は書かない・DNA へ promote しない・Recommendation state を変えない。
+
+### 追加
+
+- `src/intelligence/shadow_review/`【新規 package】: `config.py`（compass_shadow_review。versioned +
+  content digest。auto_decision_write / auto_promotion / SYSTEM reviewer / outcome 語彙衝突 /
+  material field への reference_score 混入を起動時に拒否）、`models.py`（event / card schema 1.0.0、
+  禁止 key の**再帰**検査、理由要件）、`material.py`（material change digest。Reference Score・
+  relative share・span_days・3D confirmation を構造的に除外）、`ranking.py`（Phase 3.9.2 の
+  `ordering_key()` を基底に eligible_support / span_days を追加。frozen code は未変更）、
+  `diversity.py`（REVIEW の型 round-robin + hard cap。REJECT / APPROVE は bypass）、
+  `explain.py`（triggered_rule ごとの決定的テンプレート。LLM 不使用。未知は
+  `EXPLANATION_TEMPLATE_MISSING` で fail loud）、`cooldown.py`（outcome 別 cooldown。0 は
+  MATERIAL_CHANGE_ONLY で「cooldown 無し」ではない。REJECT は 7 日上限）、`events.py`
+  （append-only + hash chain の人間レビュー履歴。冪等再送・矛盾重複拒否・削除 API なし）、
+  `state.py`（履歴からの current state 導出。履歴は不変）、`queue.py`（MAIN / ADVERSE_OVERFLOW /
+  BACKLOG / WATCH の構築と atomic 置換。policy drift を fail closed で拒否）、`cli.py`
+  （build / summary / list / show / history / validate-policy / validate-events / record）。
+- `config.yaml`: `compass_shadow_review`（top_n 8・watch_n 0・cooldown・型順序・理由要件をすべて config へ）。
+- `docs/databank/COMPASS_SHADOW_REVIEW_SPEC.md`【新規】。
+- `tests/intelligence/test_shadow_review.py`【新規】54 件（policy fail-closed 7、ranking 4、
+  diversity 5、top_n / section 4、card 4、explanation 3、outcome / 理由 5、event store 4、
+  derived state 2、material digest 2、cooldown 4、境界 4、CLI 4、決定性・指標 2）。
+
+### 改善
+
+- なし（Phase 3.8 / Phase 3.9.1 / Phase 3.9.2 / production DNA は未変更）。
+
+### 修正
+
+- なし（Phase 3.9.4 は未着手。formal approval は CORPUS_100 の Phase 3.9.1 gate のまま）。
+
+## v4.44.1 (2026-09-04) — Fix Windows 依存の mobile intake readiness テスト
+
+### 修正
+
+- `tests/intelligence/test_mobile_intake.py::test_setup_readiness_levels`: `task_registered=None`
+  （= 実機の Task Scheduler を自動検出）で呼んでいたため、CompassIntake を実際に登録済みの Windows では
+  MOBILE_INTAKE_READY となり、期待値 MOBILE_INTAKE_PARTIAL と一致しなかった。未登録ケースは
+  `task_registered=False` を明示し、自動検出経路は probe を差し替えて 3 状態（判定不能 / 未登録 / 登録済み）を
+  決定的に再現するようにした。**テストのみの変更で production の readiness semantics は未変更**
+  （`None` = 自動検出は `setup check` CLI の仕様として維持）。
+
+## v4.44 (2026-09-04) — Phase 3.9.2 Evaluation Engine（frozen 6 axis / Reference Score / Recommendation）
+
+Phase 3.8 の research evidence を凍結仕様どおりに評価し、Reference Score と Recommendation を導く層。
+Decision は書かない・DNA へ promote しない・Reference Score で state を決めない。
+
+### 追加
+
+- `src/intelligence/evaluation/`【新規 package】: `config.py`（compass_evaluation / compass_recommendation。
+  versioned + content digest。同一 version で内容が変われば `PolicyError` で fail closed。
+  `requires_novelty` / `allowed_for_state_transition` の true は起動時に拒否）、`models.py`（AxisResult /
+  EvaluationRecord schema 1.0.0、deterministic `evaluation_id` と `inputs_digest`、本文混入を禁じる validation）、
+  `contradiction.py`（現行 registry から毎回再計算する narrow contradiction 索引。stale queue を信頼しない）、
+  `axes.py`（6 axis の frozen classifier と構造的 applicability）、`score.py`（applicable axis での再正規化、
+  `applicable_weight_sum < 60` は NOT_COMPARABLE、review ordering key）、`rules.py`（precedence: NOT_READY >
+  REJECT > APPROVE > REVIEW > KEEP_REVIEWING、first match wins）、`store.py`（derived evaluation store。
+  atomic replace。append-only の decision store とは別）、`engine.py`（read-only 入力 → 評価 → derived store。
+  policy drift を fail closed で拒否）、`cli.py`（evaluate / evaluate-one / show / summary / list / validate-policy、
+  `--dry-run` は完全 read-only）。
+- `config.yaml`: `compass_evaluation` / `compass_recommendation`（全 threshold と weight を config へ）。
+- `docs/databank/COMPASS_EVALUATION_ENGINE_SPEC.md`【新規】。
+- `tests/intelligence/test_evaluation_engine.py`【新規】27 件（axis 3 帯、FULL の Evidence Strength N/A、
+  UNKNOWN regime 除外、Cross-Regime HIGH gate、FULL/STATE の Cross-Regime N/A、narrow contradiction が
+  RANGE sibling を巻き込まないこと、supporting document の UP/DOWN 矛盾、non-directional の MEDIUM cap、
+  DNA Novelty の N/A、Data Quality 3 段、score 再正規化と NOT_COMPARABLE floor、precedence、
+  孤立矛盾では reject しない、反復矛盾で reject、outlook-free と FULL は approve 不可、shadow APPROVE 可、
+  Decision を書かない（AST で import 境界を検証）、policy drift fail closed、replay 決定性、
+  dry-run 無書き込み、source research artifact と production DNA の hash 不変、CLI）。
+
+### 改善
+
+- なし（Phase 3.8 lifecycle・Phase 3.9.1 decision 層・production DNA は未変更）。
+
+### 修正
+
+- なし（Windows CompassData・PDF・Corpus は未変更。Phase 3.9.3 は未着手）。
+
+## v4.43 (2026-09-03) — Phase 3.9.1 Decision Foundation（append-only decision history・CORPUS_100 gate）
+
+Phase 3.8 evidence と production Compass DNA の間の supervised Decision Layer の土台。評価知能（推奨・ranking・
+replay・promotion）は含まない（3.9.2 以降）。
+
+### 追加
+
+- `src/intelligence/decision/`【新規 package】: `policy.py`（config.yaml `compass_decision`、versioned、digest、
+  allowed transitions、auto_approval=false 固定、formal_review_min_corpus 下限 100）、`models.py`（DecisionRecord /
+  EvidenceSnapshot、schema 1.0.0、deterministic id、record hash）、`store.py`（append-only JSONL、連番 + hash chain、
+  validate-before-append、corruption は fail closed）、`state.py`（決定的 current-state 導出、transition check）、
+  `corpus_state.py`（canonical corpus metric = eligible_for_pattern_evidence）、`gates.py`（CORPUS_100 formal
+  approval gate / human action / reason）、`evidence.py`（3.8 artifact を読むだけの compact snapshot、本文なし）、
+  `service.py`（validate = 読むだけ / decide = 唯一の append path、head 同一内容の retry は no-op）、
+  `cli.py`（gate / list / history / show / validate は read、decide だけ mutating）。
+- decision states: KEEP_REVIEWING / APPROVED / REJECTED / REOPENED_FOR_REVIEW / SUPERSEDED / RETIRED。
+  REJECTED → REOPENED_FOR_REVIEW、APPROVED → SUPERSEDED / RETIRED は履歴を消さずに表現できる。
+- `config.yaml`: `compass_decision`（policy_version 1.0.0 / formal_review_min_corpus 100 / auto_approval false）。
+- `docs/databank/COMPASS_DECISION_FOUNDATION_SPEC.md`【新規】。
+- `tests/intelligence/test_decision_foundation.py`【新規】22 件（append-only、reason 必須、gate 99/100/101、
+  3.8 analyzer・intake・3.75 processor が decision を作れない、SYSTEM actor 拒否、APPROVED ≠ promotion、
+  production DNA / registry / review queue の hash 不変、reopen、supersede / retire、決定的 state、
+  corruption fail closed、data-root isolation、evidence に本文なし、policy / schema version、CLI）。
+
+### 改善
+
+- なし。
+
+### 修正
+
+- なし（Windows CompassData・PDF・Corpus・review queue・registry は未変更。Phase 3.9.2 は未着手）。
+
+## v4.42 (2026-09-03) — Processor queue fairness / scalability fix（既知ファイル fast path・新規優先）
+
+Windows 実機で ledger 登録済み 44 件を毎回 1 秒ずつ安定サンプリングしていたため、既知ファイルが増えると
+`time_budget_seconds`（120 秒）が既知ファイルの走査だけで尽き、sort 末尾の新規ファイルが処理されない
+starvation（既知 ≥120 件で必ず発生）の修正。ledger 形式・dedup・idempotency は変更しない（既存 44 entry の移行なし）。
+
+### 改善
+
+- `mobile_intake/processor.py`: 処理順を「ledger 未登録の名前（新規）→ ledger 登録済みの名前（既知）」（各群 filename 順）に変更。
+  既知の名前は sleep 無しで hash 再確認だけを行い、`(sha256, filename)` が ledger と一致すれば skip、
+  不一致（ledger 後に bytes が変わった）なら新規と同じ安定判定・lock・submit 経路へ（skip しない）。
+  `max_files_per_run` は新規・変更ファイルの実作業にだけ適用（既知の skip 確認は上限に数えない）。`time_budget_seconds` は run 全体に適用。
+- `ProcessorReport` に `known_candidates` / `unknown_candidates` / `changed_known` / `stability_checks` / `sleep_seconds` を追加。
+  CLI summary: `candidates= new= known= results= skipped_processed= stability_checks= bounded_by= corpus=`。
+- 計測（scratch、fake clock）: 既知のみ 44 / 120 / 200 件の run で安定サンプリング 44 / 120 / 121 回（200 件は 121 秒で
+  time budget 到達）→ **0 / 0 / 0 回**（sleep 0 秒、bounded_by なし）。新規 1 件は sort 末尾でも次の run で SUCCESS。
+- `docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md`: §4 処理順・fast path、§10 に期待 summary（`new=0 … stability_checks=0`）。
+
+### 追加
+
+- `tests/intelligence/test_processor_queue_fairness.py`【新規】10 件（44 / 120 / 200 既知 + 新規 sort 末尾、sort 先頭、
+  既知のみ `--once` 反復で sampling 0・ledger / Corpus 不変、max_files=20 で 25 新規は 20 → 5、time budget は実作業でのみ消費、
+  ledger 後に変更された既知名は skip しない、unstable 新規 / placeholder 保護、duplicate / idempotency、Phase 3.8 hook exactly once）。
+
+### 修正
+
+- なし（Windows 実機 Corpus・PDF・ledger は未変更。Phase 3.9 は未着手）。
+
+## v4.41 (2026-09-03) — Windows runtime blocker fix: pypdf 依存宣言・fail-fast・FAILED recovery
+
+Windows 実機の初回取り込みで 44/44 が `PDF_UNREADABLE,ModuleNotFoundError` になった事故
+（pypdf が依存として宣言されておらず、extractor 欠落が document ごとの FAILED として Corpus に書かれた）の修正。
+
+### 追加
+
+- `requirements.txt` / `pyproject.toml`: `pypdf>=4.0` を正式依存として宣言（両者同期）。
+- `corpus/extraction.py`: `ExtractorUnavailable`（environment / precondition failure）、`extractor_availability()`、
+  `ensure_extractor_available()`。`PypdfExtractor` は ImportError をこれに変換する。
+- `corpus/validation.py`: `ExtractorUnavailable` は FAILED に変換せず伝播（Corpus に書かない）。
+  `is_environment_failure()` で過去 record の reason（`PDF_UNREADABLE,ModuleNotFoundError` 等）を判別。
+- `corpus/pipeline.py`: `recovery_eligibility()` と `ingest_path(recover_environment_failures=True)`。
+  gate（現在 FAILED / reason が環境由来 / hash 一致 / 原本未保存 / 今も PDF として読める / extractor 復旧）を通った
+  document だけ in-place で再検証。audit trail: FAILED → RECEIVED(`recovery_from_environment_failure`) → VALIDATED → …。
+- `corpus/status.py`: `FAILED → RECEIVED` を **recovery 専用** 遷移として追加。
+- `corpus/store.py`: `document_updates.jsonl`（append-only の row 改訂）と `update_document()`、`last_status_event()`。
+  元 row と元 event は残る。index は rebuild で改訂を再生する。
+- `corpus_research/batch_import.py`: 開始前 precondition gate（1 件も処理せず `environment_error`、exit 2）、
+  `--recover`、`recovered` 件数。
+- `mobile_intake/processor.py` / `result.py`: 開始前 gate（`EXTRACTOR_UNAVAILABLE`、status に日本語ヒント、ledger 不変、exit 2）、
+  config `recover_environment_failures`（既定 false）。
+- `mobile_intake/setup.py`: `check` に `extractor_available` / module / version。無ければ READY にならない（preflight gate）。
+- `tests/intelligence/test_runtime_blocker_fix.py`【新規】9 件（依存宣言の同期、extractor 欠落時の 0 record・0 event、
+  readiness、壊れた PDF は document-level、Windows と同じ FAILED record の in-place recovery と audit trail、
+  gate 拒否、通常 duplicate 不変、recovered document の Phase 3.8 N+1 と rebuild 等価、processor の recover 設定）。
+- `docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md` §10: 依存 install → init → check（gate）→ status → inventory →
+  batch_import（--recover）→ status → runtime validation → Task Scheduler の順序。
+
+### 改善
+
+- なし。
+
+### 修正
+
+- extractor 欠落が document validation failure として Corpus を汚す問題（上記）。
+
+## v4.40 (2026-09-02) — Phase 3.75/3.8 Windows 実機接続 runbook と既存 PDF 初回取り込みの整合
+
+iCloud Drive「羅針盤」フォルダ（Windows 実機）へ既存実装を接続するための最小整合。新 Phase ではない。
+machine-specific path は repository に書かない（`~/.compass_intake/local_config.json` のみ）。
+
+### 追加
+
+- `mobile_intake/setup.py`: `inventory`（実 Inbox の読み取り専用棚卸し: items / PDF / stable / unstable /
+  placeholders / non-PDF / 既存 Corpus との hash duplicate）と `status`（Corpus BEFORE/AFTER: unique / usable /
+  eligible / date range / milestone、Research: patterns by status / conflicts / review queue / regime signatures）。
+- `docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md` §10: Windows 実機 runbook（init → check → status → inventory →
+  batch_import → status → task → processor --once ×2 → check）と iPhone 保存先の注意。
+- targeted tests 2 件（inventory/status、batch import の data root 共有と placeholder skip）。
+
+### 改善
+
+- `corpus_research/batch_import.py`: data root を processor と同じ順序で解決（env → local_config.json →
+  config.yaml、`--data-root` で上書き）。既定で直下のみ（`--recursive`）、0 byte / `.icloud` placeholder は読まない。
+
+### 修正
+
+- なし。
+
+## v4.39 (2026-09-02) — Phase 3.8: Automatic Compass Corpus Analyzer
+
+Corpus へ document が追加されるたびに structured analysis → market-state alignment → pattern extraction →
+cross-document comparison → pattern evidence → coverage → benchmark を自動・決定的・versioned に実行する研究層。
+production Compass rule は学習・変更しない。pattern status は STRONG_PATTERN_CANDIDATE まで。外部 LLM なし。
+
+### 追加
+
+- `src/intelligence/corpus_research/`【新規】（1機能=1ファイル）:
+  - `categories.py` / `statements.py` / `salience.py` / `links.py` / `why_model.py` / `outlook_model.py` /
+    `risk_model.py`: controlled vocabulary、文 index、versioned salience（語数不使用）、段落内の analytical link、
+    EXPLICIT_WHY と IMPLICIT_ASSOCIATION の分離、outlook（direction / horizon NOT_STATED 許容 / target /
+    条件 / caveat）、risk（explicit / counterargument / invalidation / uncertainty / watch item）。
+  - `regime.py`: `MarketConnector`（Tokyo calendar / Context / Market Bank へ読み取り専用）。CONTEXT 優先、
+    known_at ≤ 発行 cutoff（look-ahead 拒否）、無ければ UNKNOWN（捏造なし）。
+  - `structure.py` / `comparator.py` / `patterns.py` / `lifecycle.py`: AnalyticalStructure、explainable
+    similarity（重み付き Jaccard、shared / different features）、pattern identity と partial pattern type、
+    versioned thresholds（support / regime diversity / 期間 / quality）と anti-overfitting limitation。
+  - `store.py` / `engine.py`: canonical JSONL research store、incremental（影響範囲のみ更新）/ full rebuild /
+    digest equivalence、version_key ごとの state（旧結果保持・混在なし）、idempotent。
+  - `dna_comparison.py`: `market_rules.yaml` との比較（EXPLAINED / PARTIAL / NEW / CONFLICT / NOT_COMPARABLE）と
+    conflict 記録（判断しない）。
+  - `benchmark.py` / `review_queue.py` / `acquisition.py` / `research_snapshot.py`: reconstruction benchmark
+    （予測精度ではない）、Supervisor Review Queue（auto approval なし）、coverage-guided acquisition、
+    CompassCorpusResearchSnapshot と Pattern Registry（研究 evidence、production と分離）。
+  - `intake_hook.py` / `batch_import.py` / `pilot.py`: 3.75 との event boundary（失敗隔離・bounded retry）、
+    private batch 追加、実 10 document pilot（`::P38_*::`）。
+- `config.yaml`: `compass_research` セクション、`mobile_intake.trigger_research`。
+  `docs/databank/COMPASS_CORPUS_RESEARCH_SPEC.md`【新規】。
+- オフラインテスト 29 件（`tests/intelligence/test_corpus_research.py`【新規】）。
+- 実 pilot（offline）: 10/10 structures、similarities 45、patterns 53（NEW_PATTERN_CANDIDATE 4、APPROVED 0）、
+  DNA 比較 EXPLAINED 3 / PARTIAL 49 / NEW 1 / conflict 0、review queue 17、idempotent、N+1 fixture mechanics、
+  incremental == rebuild、version isolation、failure isolation PASS。alignment は本環境に calendar / Context が
+  無いため comparable 0（テストで CONTEXT 優先と look-ahead 拒否を検証）。
+
+### 改善
+
+- `mobile_intake/processor.py`: SUCCESS 後に任意の `post_ingest` callable を呼ぶ event boundary（失敗しても
+  Corpus 結果は不変）。`result.py` に `research` field、`config.py` に `trigger_research`。
+
+### 修正
+
+- なし。
+
+## v4.38 (2026-09-02) — Phase 3.75: Mobile / One-Tap Compass Intake
+
+iPhone の共有シート「羅針盤に追加」→ private 同期フォルダ（iCloud Drive）→ Windows の bounded processor →
+Phase 3.7 の `CompassIntakeService` → Corpus。PC 側の手作業（Discord / download / Explorer / rename /
+移動 / project copy）を廃止。MOBILE_ACTION_COUNT = 2。offline・credential なし・cloud SDK なし。
+
+### 追加
+
+- `src/intelligence/mobile_intake/`【新規】（1機能=1ファイル）:
+  - `adapters.py`: provider 評価（iCloud Drive 選定 / OneDrive・Google Drive fallback / LOCAL_FOLDER 手動）と
+    `SyncFolderAdapter`（同期フォルダ＝ローカル FS のみ。placeholder / 一時ファイル検出）。
+  - `local_config.py`: 機械ローカル設定（env `COMPASS_INBOX_DIR` / `~/.compass_intake/local_config.json` /
+    provider 既定）と path privacy（`redact_path` / `inbox://<basename>`）。repository に絶対 path を書かない。
+  - `processor.py`: bounded inbox processor（discover → 安定判定 → lock → IntakeRequest → submit → ledger →
+    status）。転送中は WAITING_UNSTABLE、30 分超で TIMEOUT_UNSTABLE、同一 bytes は DUPLICATE、
+    crash 残骸 lock は回収、max_files / time_budget / single-instance。原本を動かさない。
+  - `result.py` / `status.py`: SUCCESS / DUPLICATE / WAITING_UNSTABLE / QUARANTINED / FAILED ＋ reason code
+    （NOT_PDF / NOT_COMPASS / UNSTABLE_TRANSFER / UNREADABLE_PDF / DATE_UNKNOWN / SYNC_NOT_AVAILABLE …）と
+    日本語ヒント、`latest_status.txt/json`（「羅針盤追加成功 Corpus: 9 → 10 / Next: CORPUS_30 / Remaining: 20」）。
+  - `scheduler.py`: Windows Task Scheduler の bounded scheduled invocation（5 分・ユーザー権限・daemon なし）、
+    `run_intake.cmd` 生成、single-instance lock。
+  - `shortcut.py`: iOS ショートカット「羅針盤に追加」の作成手順（署名済み .shortcut は生成しない）。
+  - `setup.py`: `check`（MOBILE_INTAKE_READY / PARTIAL / NOT_READY と diagnostics）/ `init` / `task` / `shortcut`。
+  - `pilot.py`: end-to-end local pilot（`::P375_*::`）。
+- `config.yaml`: `mobile_intake` セクション。`docs/databank/MOBILE_COMPASS_INTAKE_SETUP.md`【新規】。
+- オフラインテスト 29 件（`tests/intelligence/test_mobile_intake.py`【新規】）。
+
+### 改善
+
+- Phase 3.7 pre-flight: `corpus/temporal.py` に `publication_time_source`（DOCUMENT_TEXT / PDF_METADATA /
+  RECEIVED_TIME / EXTERNAL_VERIFIED / UNKNOWN）を追加。紙面明記の発行時刻（7:30）を PDF metadata より優先し、
+  metadata は `metadata_creation_*` として分離保持。不明なら捏造しない。`received_at` は別。
+  snapshot の document view に `publication_time_source` を追加。regression テスト 2 件。原本 PDF は書き換えない。
+
+### 修正
+
+- なし。
+
+## v4.37 (2026-09-02) — Phase 3.7: Compass Corpus Foundation
+
+「グローバル投資の羅針盤」PDF を **historical analytical corpus** として蓄積する foundation
+（PDF → identity → immutable source → corpus record → extraction artifact → structured record →
+coverage → evaluation eligibility）。Corpus は market truth / Fact Store ではない。offline-first・
+credential なし・production rule を変更しない。
+
+### 追加
+
+- `src/intelligence/corpus/`【新規】（1機能=1ファイル）:
+  - `identity.py` / `source.py`: sha256 中心の deterministic identity（filename 非依存）、immutable source
+    copy（hash 検証・read-only・`verify_original`）、同日別 PDF の `date_sequence`。
+  - `validation.py` / `family.py` / `status.py`: PDF magic / page count / document family（page-1 の
+    安定 marker、filename 非依存）/ document_date を fail-closed に検証。RECEIVED … ANALYZED / PARTIAL /
+    QUARANTINED / FAILED を status_events に記録（silent failure なし）。
+  - `extraction.py` / `page_sections.py` / `header_values.py`: text layer artifact（page / line / kind /
+    quality / extractor_version、OCR は default で行わない）、section 判定、P1 ヘッダー 10 列と P2 指数表の
+    EXTRACTED_VALUE。
+  - `structured_record.py`: 15 category の structured Compass record。observation level
+    （SOURCE_STATEMENT / EXTRACTED_VALUE / ANALYST_INTERPRETATION / OUTLOOK（確信度ラダー 0–5）/ RISK /
+    SYSTEM_DERIVED_LABEL）を分離。
+  - `temporal.py`: document_date / publication_date / received_at / referenced_market_session
+    （カレンダー無しは UNKNOWN）/ future_event_mentions。
+  - `alignment.py`: header 値と Market Bank series の MATCH / NEAR_MATCH / CONFLICT / NOT_AVAILABLE /
+    NOT_COMPARABLE（Fact Store は書かない）。
+  - `quality.py` / `coverage.py` / `milestones.py`: VALID / PARTIAL / LIMITED_USE / QUARANTINED、
+    11 dimension の coverage label（CONTEXT ＞ EXTRACTED_VALUE ＞ TEXT_KEYWORD ＞ UNKNOWN、thresholds
+    version 化）と well / under / missing report、CORPUS_10/30/50/100/200。
+  - `versioning.py` / `store.py` / `snapshot.py`: append-only supersession、canonical JSONL 10 ファイル＋
+    SQLite index（rebuild 可・idempotent）、`CorpusSnapshot`（Phase 3.8 read model）。
+  - `inventory.py` / `intake.py` / `inbox.py` / `pipeline.py` / `pilot.py`: 既存 Compass 棚卸し
+    （PDF_SOURCE と DERIVED_HISTORICAL_ARTIFACT を区別）、Mobile Intake boundary（cloud 非依存）、
+    local inbox contract（stable-file / lock / ledger、原本を動かさない）、ingest orchestration、
+    実データ pilot（`::P37_*::`）。
+- `config.yaml`: `compass_corpus` セクション。`docs/databank/COMPASS_CORPUS_SPEC.md`【新規】。
+- オフラインテスト 42 件（`tests/intelligence/test_compass_corpus.py`【新規】、合成 PDF・FakeExtractor）。
+- 実 corpus pilot（isolated root、offline 4.9 s）: 実在する原本 10 本（2026-06-18..07-01）を
+  10/10 ANALYZED・VALID、artifacts 883・observations 1,173、dedup（同名 / 改名 / 同日別 PDF）・
+  quarantine・FAILED・reanalysis（supersession）・SQLite rebuild・idempotency・inbox 全て PASS。
+  coverage: CORPUS_10 到達、next CORPUS_30（あと 20 本）、breadth / sector は CONTEXT 待ち UNKNOWN。
+
+### 改善
+
+- なし（既存モジュール不変）。
+
+### 修正
+
+- なし。
+
+## v4.36 (2026-09-02) — Phase 3.6: J-Quants Production Data Strategy
+
+J-Quants Light を pilot data source から **production-grade incremental market data source** へ
+昇格させる運用設計。新しい分析機能は追加しない。**J-Quants First** を project-wide rule として
+導入（CLAUDE.md / `docs/databank/JQUANTS_FIRST_RULE.md`）。Standard / Premium endpoint を迂回せず、
+plan upgrade を自動実施せず、canonical は append-only（rolling ≠ 削除）。
+
+### 追加
+
+- `src/intelligence/jquants_ops/`【新規】（1機能=1ファイル）:
+  - `registry.py`: capability registry（dataset / endpoint / plan / entitlement / strategy /
+    frequency class / publication semantics / historical depth / pagination / request pattern /
+    canonical store / consumers / morning role / fallback / last_live_verified_at。
+    P2-H run #1/#3・Phase 3.5 run #20 の live evidence に基づく。既知の 403 は再 probe しない）。
+  - `capability_gate.py`: J-Quants First gate（CURRENT_PLAN_SUPPORTED / CURRENT_PLAN_UNSUPPORTED /
+    ALREADY_AVAILABLE / NEEDS_NEW_ENDPOINT / PLAN_UPGRADE_CANDIDATE / DEFER）＋既存 Phase の監査。
+  - `plan_upgrade_register.py`: NOT_ENTITLED dataset の用途・必要プラン・優先度・回避策・価値
+    （markets_short_ratio のみ P2 候補。他は LIGHT_SUFFICIENT / NOT_NEEDED）。
+  - `morning_contract.py`: 朝の cutoff 時点で dataset ごとに「前営業日／公表済み週／snapshot／公表済み予定」
+    のどれであるべきかを明示。
+  - `rolling_window.py`: seed 70 / active 60 / buffer 10 / max window 25 を分離。
+    25 ちょうどの設計を validate で拒否。retention は append-only。
+  - `session_gap.py`: CURRENT / MISSING_SESSION / PARTIAL_SESSION / STALE / FUTURE_DATA / CALENDAR_UNKNOWN。
+  - `incremental.py`: gap → plan（NOOP / DAILY / REPAIR / SEED / BLOCKED）→ 欠落だけ取得（bounded retry）
+    → 冪等 append → affected rolling metrics only 再計算。
+  - `master_refresh.py`: date 指定 snapshot（週1回＋イベント時）・diff（added / removed / market /
+    S17 / S33 / ScaleCat）・KNOWN_LIMITATION_HISTORICAL_UNIVERSE。
+  - `corporate_actions.py` / `weekly_flow.py` / `financial_summary.py` / `earnings_calendar.py` /
+    `topix_strategy.py`: production contract（生終値判定・週次差分・event-driven fins・予定の revision・
+    TOPIX 差分＋Nikkei alignment）。
+  - `storage_budget.py` / `request_budget.py`: store 別の日次／月次／年次増分、scenario 別 request 数。
+  - `failure_policy.py`: AUTH_FAILURE / NOT_ENTITLED / RATE_LIMIT / TIMEOUT / HTTP_ERROR /
+    SCHEMA_CHANGE / EMPTY_RESPONSE / PARTIAL_DATA / SESSION_GAP、impact（CONTINUE / DEGRADED / ABSTAIN）、
+    bounded retry（最大2試行・auth/entitlement/schema は retry しない）。
+  - `schema_drift.py`: unknown field 追加と required field 欠落を区別。
+  - `health.py` / `readiness.py`: dataset health snapshot と READY / READY_WITH_WARNINGS / DEGRADED /
+    NOT_READY（required / internals / optional）。
+  - `fifty_two_week.py`: 52週高値安値 = IMPLEMENT_LATER（daily incremental で蓄積。5年 backfill なし）。
+  - `pilot.py`: isolated root で seed（意図的欠落）→ repair → daily → rerun → master diff →
+    weekly flow → health / readiness → morning simulation を実測（`::P36_*::`）。
+- `config.yaml`: `jquants_ops` セクション。`CLAUDE.md`: J-Quants First ルール。
+- `docs/databank/JQUANTS_FIRST_RULE.md`【新規】、`docs/databank/JQUANTS_PRODUCTION_DATA_STRATEGY.md`【新規】。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3.6 step 追加（JQUANTS_API_KEY のみ）。
+- オフラインテスト 47 件追加（`tests/intelligence/test_jquants_ops.py`【新規】）。
+- live evidence（p2d-market-pilot run #21、231.8 s）: seed 29 session / 40 request → repair
+  （MISSING_SESSION 2 → REPAIR 2 request、gap CURRENT）→ daily（STALE 1 → DAILY 1 request、6.84 s）
+  → rerun NOOP 0 request（idempotent）。master snapshot 8 本・diff 36 変更、fins date mode AVAILABLE、
+  readiness READY_WITH_WARNINGS（earnings_cal MISSING）、morning simulation 4 朝 look-ahead 0、
+  合計 45 request。詳細は `docs/databank/JQUANTS_PRODUCTION_DATA_STRATEGY.md` §11 / §14。
+
+### 改善
+
+- なし（既存モジュールは変更していない。3.5 の ingest / pipeline を再利用）。
+
+### 修正
+
+- なし。
+
+## v4.35 (2026-09-02) — Phase 3.5: Japan Market Internals Foundation
+
+日本株市場の「指数の値」だけでなく**市場内部で何が起きているか**（騰落銘柄数・売買代金・
+業種／規模別の相対パフォーマンス・投資部門別フロー・指数の主導構造）を
+Evidence-Grounded に観測可能にする層。Compass Generator（3-C）は大規模改修せず、
+Evidence Package が internals Context を通常Contextとして受け取る最小接続に留めた。
+因果説明をしない／週次を日次として語らない／Standard・Premium限定データを迂回しない／
+全銘柄×5年backfillはしない（見積りのみ）。
+
+### 追加
+
+- `src/intelligence/internals/`【新規】（1機能=1ファイル）:
+  - `types.py` / `config.py`: 統制語彙・次元・subject id・`config.yaml: market_internals`
+    （universe / 価格変化定義 / 閾値をすべて version 付きで保持）。
+  - `universe.py`: 東証プライム普通株 universe（`tse_prime_common:1.0.0`。Mkt=0111・
+    5桁コード末尾0・業種未設定を除外）。session 以前で最新の master を使い、無ければ
+    遡及適用を `master_applied_backwards` として明示（survivorship の LIMITATION）。
+  - `price_movement.py`: **生終値 vs 前営業日生終値**。当日 AdjFactor≠1 または raw/adjusted
+    の騰落率不一致は `corporate_action` として判定しない（誤方向を数えない）。
+  - `breadth.py`: 騰落集計 ＋ **aggregation manifest**（manifest_id / input_count /
+    input_set_hash / universe_version / calculation_version / input_record_ids）。
+    数千件の入力を manifest から再構築できる。
+  - `turnover.py` / `sector.py`（S17・等ウェイト・市場平均との差・leaders/laggards）/
+    `size.py`（ScaleCat: TOPIX 100 / Mid400 / Small を source 定義のまま）/
+    `breadth_history.py`（25日騰落レシオ＝Σ値上がり/Σ値下がり×100、5 vs 20 セッション trend）。
+  - `investor_flow.py`: 週次 investor-types。published_date から known_at（publication gating）、
+    primary_date = period_end。「本日は外国人が…」を書けない構造。
+  - `facts.py` / `contexts.py` / `snapshot.py`: Phase 3-A Fact model・3-B Context model へ正規接続。
+    `breadth_state` / `breadth_trend` / `turnover_state` / `sector_leadership` /
+    `size_leadership` / `investor_flow_state` / `index_leadership`
+    （NIKKEI_LED / TOPIX_LED × BROAD_CONFIRMATION / NARROW_LEADERSHIP）。
+    Morning snapshot へ `internals_status`（AVAILABLE / MISSING / STALE /
+    INSUFFICIENT_HISTORY / NOT_ENTITLED）。
+  - `compass_claims.py`: 決定論的 generator への最小接続（FACTUAL 銘柄数 / RELATIONAL 上回った /
+    INTERPRETIVE 広がり＝**JP_INT_001** 参照 / 売買代金 / 業種 / 規模 / 直近公表週の海外投資家）。
+  - `adversarial.py`: 捏造銘柄数・逆方向・週次を日次・業種の因果・internals無しでの断定 → 必ずREJECT。
+  - `store.py`（manifests / aggregates: JSONL append-only ＋ 再構築可能SQLite）、
+    `ingest.py`（J-Quants Light **date指定** 1 session=1リクエスト。可否は実応答で判定し、
+    使えなければ code指定 sample → LIMITED_USE）、`quality.py`、`backfill_estimate.py`、
+    `pipeline.py`、`pilot.py`（`::P35_*::` marker）。
+- Phase 3-C pre-flight（language safety）:
+  - `compass/market_principles.py`【新規】: 経験則 registry（Compass DNA rule_id）。
+    claim に `rule_ref / interpretation_type / market_principle_version` を構造化
+    （Investment Interpretation を Fact から分離。FACTUAL は空）。
+  - `compass/principle_validation.py`【新規】: `interpretation_without_principle`（warning）/
+    `unknown_market_principle` / `principle_context_mismatch` / `factual_with_principle`。
+  - `compass/confidence_validation.py`【新規】＋ `lexicon.OUTLOOK_PHRASES`:
+    HIGH=見込まれる / MEDIUM=可能性がある / LOW=余地がある を機械的に固定し、
+    食い違えば `confidence_language_mismatch`。
+  - `language_rules`: `weekly_flow_as_daily`（投資家＋本日/今日）を error。
+    「買い越し／売り越し」は助言語彙から除外。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3.5 step 追加（JQUANTS_API_KEY のみ
+  runtime injection）。timeout 15→25分（`LIVE_RUN_CLOSEOUT_PROTOCOL.md` の表を更新）。
+- `docs/databank/MARKET_INTERNALS_SPEC.md`【新規】（仕様＋live evidence）。
+  live実測（p2d-market-pilot run #20）: date指定取得 46 session × 4,441行（1 session=1リクエスト）、
+  universe 1,555銘柄、Fact 4,123 / Context 535、manifest 再現性 90/90、look-ahead leaks 0、
+  Compass BEFORE/AFTER 5 mornings 全て VALID（outlook・one-liner 不変、internals claims 35/35 grounded）、
+  adversarial 6/6、backfill 推奨 ROLLING_WINDOW（5年backfillは未実行）。
+- オフラインテスト 88 件追加（`tests/intelligence/test_market_internals.py`【新規】54 件、
+  `tests/intelligence/test_compass_language_safety.py`【新規】34 件）。
+
+### 改善
+
+- `context/model.py`: `ContextStatus.NOT_ENTITLED`、`CompassContextSnapshot.internals_status`
+  （既定は空。3-B の挙動は不変）。
+- `context/salience.py`（1.1.0）: internals 型の tier（breadth_state / index_leadership =
+  PRIMARY、他 = SECONDARY）、週次公表の鮮度規則、note の説明キーを components へ。
+- `compass/evidence_package.py`（1.1.0）: internals 次元の代表Context固定・`internals_status`
+  併合。業種 leaders/laggards は要約と一緒に固定。
+- `compass/lexicon.py` / `direction_validation.py` / `missingness_validation.py`:
+  internals 主語（値上がり銘柄・売買代金・業種別・大型株・海外投資家）の方向／欠落検証。
+- `compass/generator.py`: OUTLOOK 文を confidence 別の強度表現へ。WHY / RISK に rule_ref。
+- `market/jquants_light_store.py`: `prices_on` / `security_effective_dates` /
+  `securities_effective` / `investor_flows_published_by` を追加（既存queryは不変）。
+
+### 修正
+
+- なし。
+
+## v4.34 (2026-09-01) — Phase 3-C: Evidence-Grounded Compass Generator
+
+Fact Layer（3-A）＋ Context Engine（3-B）で確認された情報**だけ**を根拠に、
+Morning Compassとして利用可能なgrounded narrativeを生成する層。
+**LLM MAY WRITE. LLM MAY NOT INVENT.** 生成物は全てvalidator／quality gateを通り、
+合否を決めるのはgeneratorではなくvalidatorである。実データpilotは決定論的generatorのみ
+（LLM provider未接続・secret未注入・新しいAPI keyを要求しない）。
+
+### 追加
+
+- `src/intelligence/compass/`【新規】（1機能=1ファイル・既存コード不変）:
+  - `model.py`: ClaimType（FACTUAL / RELATIONAL / INTERPRETIVE / OUTLOOK / RISK）と
+    ClaimRole（HEADLINE / WHAT_HAPPENED / WHY / OUTLOOK / RISK / COVERAGE）を分離し、
+    claim毎に fact_id / context_id の引用を必須化。推奨語彙（buy/sell/target）は存在しない。
+  - `evidence_package.py`: Morning Snapshot → generatorに渡してよい根拠集合。
+    look-ahead FAIL-CLOSED・evidence budget（tier別上限）・missingness保持・
+    Factを複製しない。`prompt_payload()` はwhitelistフィールドのみ（note/excerpt/locator不可）。
+  - `outlook.py`: Compass DNA（JP_DIR_001 / JP_US_001 / JP_FX_001 / JP_INT_003 /
+    JP_DIR_004）による決定論的含意分類・方向・確度ladder・無効化条件・反対材料常設。
+  - `narrative_plan.py`: lead / support / counter / coverage / prohibited を IDと統制語彙だけで決定。
+    反対材料0・leadが古い・根拠無しはabstain（捏造しない）。
+  - `generator.py`: DeterministicNarrativeGenerator（既定）／ LLMNarrativeGenerator
+    （既存 `LLMProvider` 境界・出力はuntrusted・provider未設定ならフォールバック）／
+    FakeNarrativeGenerator（adversarial用）。
+  - `grounding.py` / `numeric_validation.py` / `direction_validation.py` /
+    `temporal_validation.py` / `missingness_validation.py` / `language_rules.py`:
+    引用チェーン・数値・方向・時制／look-ahead・欠落次元・因果断定／助言／数値目標／
+    prompt injection marker の各validator。
+  - `quality_gate.py` / `one_liner.py` / `pipeline.py`: 全validator適用 → verdict
+    （VALID / VALID_WITH_WARNINGS / REJECTED / ABSTAINED）→ repair → 2〜4文one-liner →
+    content-addressed CompassDraft。
+  - `store.py`: canonical JSONL append-only ＋ 再構築可能SQLite（idempotent by draft_id）。
+  - `historical_eval.py`: 過去Compass（`output/history/<date>/pre_market.html`・読み取りのみ）
+    との水準／方向の**観測**比較（rule最適化はしない）。
+  - `adversarial.py` / `pilot.py`: 13 adversarial case と実データpilot
+    （`::P3C_*::` closeout marker・secret値は出力しない）。
+- `config.yaml`: `compass_generator` セクション（budget / tolerance / max_rejected_ratio /
+  min_counter_contexts / one_liner_sentences / near_event_days / llm上限 / horizon）。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3-B pilotの後に Phase 3-C pilot step を追加
+  （決定論的generator・secret注入なし・履歴HTMLは読み取りのみ）。
+  live実測（run #19）: 5営業日全て VALID、rejected 0、look-ahead除外 0、
+  adversarial 13/13、store idempotent／再構築一致、llm_calls 0、credential出力 0。
+- `docs/databank/COMPASS_GENERATOR_SPEC.md`【新規】（仕様＋live evidence）。
+- オフラインテスト80件追加（`tests/intelligence/test_compass_generator.py`【新規】:
+  config / evidence package / outlook / plan / claim model / generator / validators /
+  gate / one-liner / golden / adversarial / LLM boundary / persistence / historical /
+  security / end-to-end）。
+
+### 改善
+
+- なし（既存モジュールは変更していない）。
+
+### 修正
+
+- なし。
+
+## v4.33 (2026-09-01) — Phase 3-B: Compass Context Engine
+
+Phase 3-AのFactを、Morning Compassが使える**structured investment context**へ
+変換する層。ロードマップ訂正のとおり3-Bは**Context Engineであって
+Generatorではない**——自然言語Compassの生成は行わない（3-Cの責務）。
+生成経路は**完全に決定論的でLLMを一切使わない**。
+
+### 追加
+
+- `context/model.py`【新規】: Direction（統制語彙）/ Relationship /
+  ContextItem / MarketState / CompassContextSnapshot / `make_context_id`。
+  **`Relationship`に`CAUSES`を定義しない**（因果を実装上表現できない）。
+  flat bandは**正当化できるunitだけ**（金利pct_pointの0.001＝公表最小刻み）に定義し、
+  指数・為替は厳密な符号で判定。大きさの区分（SMALL/MODERATE/LARGE）は
+  根拠が無いため**導入しない**（`MAGNITUDE_CATEGORIES_ENABLED = False`）。
+- `context/builders.py`【新規】: index_direction / index_trend_vs_ma25 /
+  relative_performance / nt_ratio_state / rate_direction / us_curve_shape /
+  fx_direction / cross_asset_cooccurrence / event_proximity。
+  既存derived Factは**参照**して再計算しない。比較は**同一session**のFact同士のみ。
+  入力が欠ければContextを作らない。**USDJPY UP = 円安 / DOWN = 円高**を明文化。
+- `context/salience.py`【新規】: 説明可能なtier（PRIMARY/SECONDARY/BACKGROUND）と
+  決定論的ranking。**LLMに重要度を決めさせない／0-100スコアを作らない**。
+  品質・鮮度による**降格のみ**（昇格しない）。判定要素は`priority_components`へ全保存。
+- `context/snapshot.py`【新規】: 朝（JST 6:00）のcontext snapshotと
+  look-ahead防止（**全支持Factが既知**でなければ利用不可＝FAIL-CLOSED）、
+  market state vector（**RISK_ON等の解釈分類を作らない**）と次元ごとの充足状況。
+- `context/store.py`【新規】: canonical JSONL append-only ＋ 再構築可能なSQLite ＋
+  query（session / type / subject / **fact_id逆引き** / high priority /
+  divergence / event）。**Factを複製せずID参照だけを持つ**。
+- `context/compass_alignment.py`【新規】: 過去Compass（`output/history/<date>/
+  pre_market.html`）の前日比サマリーの**符号**とContextの方向を突き合わせ、
+  MATCH / PARTIAL / CONFLICT / NOT_AVAILABLE を報告（履歴HTMLは読み取りのみ）。
+  比較できない次元は分母から外す。**人間の文章を再現するようruleを最適化しない**。
+- `context/pilot.py`【新規】: 実データpilot（複数session生成・朝snapshot・
+  look-ahead検査・上位Context・冪等性・SQLite再構築・query・過去Compass整合）。
+  live実測（p2d-market-pilot run #18）: 5営業日・165 Fact → 48 Context、
+  重複0 / provenance欠落0 / 冪等 / SQLite再構築一致、**look-ahead leak 0**。
+- `docs/databank/LIVE_RUN_CLOSEOUT_PROTOCOL.md`【新規】＋
+  `tests/intelligence/test_live_run_closeout.py`【新規】: live runの完了待機を
+  `trigger → bounded polling → completed detection → evidence retrieval` に固定。
+  待機上限は対象workflowの `timeout-minutes` から決め、**無期限待機を禁止**する。
+  「応答が取れない」を「未完了」と誤判定しないことを明記（今回の待機shell滞留の
+  直接原因）。closeout対象workflowが上限を宣言していることをテストで固定する
+  （本番 `daily-market-brief.yml` は対象外・未変更——CLAUDE.mdルール15）。
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3-A pilotの後に
+  Phase 3-B pilotを追加（新規fetchなし。既存のTOPIX V2経路は不変）。
+- `docs/databank/CONTEXT_ENGINE_SPEC.md`【新規】。
+- オフラインテスト68件追加（`tests/intelligence/test_context_engine.py`【新規】）。
+
+### 改善
+
+- `context/snapshot.py`: 朝のsnapshotは**当日クローズを知り得ない**ため、
+  鮮度の基準を「cutoff時点で利用できた最新session」(`reference_session`)とした。
+  前営業日クローズが暦日違いだけで降格されない。同じ次元に複数sessionがある場合は
+  並び順ではなく**最新session**を採用し、それより古いものは`STALE`として報告する。
+
+### 修正
+
+- `facts/model.py` / `facts/store.py` / `facts/jquants_builder.py`:
+  Phase 3-B pre-flightの**実データ**pilotで検出した`duplicate_fact_ids: 26`を修正。
+  Factのidentityに`identity_discriminator`を追加し、同一銘柄・同一開示日の
+  複数指標（売上高・営業利益…）が互いをSUPERSEDEしないようにした（回帰テスト6件追加）。
+
+## v4.32 (2026-09-01) — Phase 3-A: Evidence-Grounded Fact Layer
+
+Data Bankの観測・記事evidence・J-Quants構造化データを、Morning Compassが安全に
+使える**atomic fact**へ変換する層。**FACT ≠ INTERPRETATION ≠ OUTLOOK ≠
+RECOMMENDATION** ——ここで作るのはFACTだけで、文章生成・見通し・推奨は含まない。
+
+### 追加
+
+- `facts/model.py`【新規】: Fact / FactSubject / FactValue / FactTimeContext /
+  FactEvidenceRef / FactCalculation。**決定論的fact_id**（処理時刻を含めず、
+  値が変われば別ID→`revision_of`で履歴追跡）。usable Factはprovenanceと値が必須、
+  値は**Decimal限定**（floatは型で拒否）。
+- `facts/calculations.py`【新規】: return_pct / change_abs / moving_average /
+  distance_from_ma_pct / nt_ratio / yield_spread を `name:version` で登録。
+  入力不足はNoneを返し、**forward fill・0補完・近傍日代用をしない**。
+- `facts/market_builder.py`【新規】: **session-aware**（暦日ではなく観測セッションで
+  数える）。25本未満の移動平均・21本未満の20営業日リターンは生成しない。
+  各セッション時点のFactを作る `build_history_facts` も提供。
+- `facts/availability.py`【新規】: morning cutoff（JST 6:00）とlook-ahead防止。
+  `known_at` が無いFactは「既知だった」と**見なさない**（FAIL-CLOSED）。
+- `facts/conflict.py`【新規】: AGREE / CONFLICT / STALE / SUPERSEDED / UNKNOWN。
+  値が割れたら**両方保持**し勝手に勝者を決めない（arbitration engineは作らない）。
+- `facts/store.py`【新規】: canonical JSONL append-only ＋ **再構築可能**なSQLite ＋
+  query（latest / by date / range / entity / series / **evidence source** /
+  **derived inputs** / conflicted）。
+- `facts/jquants_builder.py`【新規】: 実績値と会社予想値を**別fact_type**で分離。
+  security master・日次価格・カレンダー・週次需給はFactへ複製しない。
+- `facts/news_builder.py`【新規】: **LLM要約をFactにしない**。文書メタデータ由来の
+  `document_published` のみを**citation-ready**（excerpt span付き）で生成。
+- `facts/pilot.py`【新規】＋ `docs/databank/FACT_LAYER_SPEC.md`【新規】。
+- オフラインテスト77件追加。
+
+### 改善
+
+- **P2-H pilot summaryの曖昧さを解消**（Phase 3 pre-flight hygiene）:
+  `datasets_attempted` を `non_sample_datasets_attempted` /
+  `sample_dataset_families_attempted` / `market_bank_datasets_validated` /
+  `total_dataset_families_validated` へ分解。**historical run #3の出力は改竄せず**、
+  current code側の意味を明確化した。
+
+### QA / provenance規律
+
+- `reject` 判定のevidenceから**production Factを作らない**。`limited_use` は
+  `LIMITED_USE` として明示し、morning snapshotから既定で除外する。
+- 全Factが Observation / RawItem / FetchAttempt まで辿れる。derived factは
+  入力observation_id / fact_id を保持する。**「LLMがそう言った」をprovenanceにしない**。
+
+### 実測（live pilot run #17・2026-09-01・実データ）
+
+- 入力: Nikkei 267 / TOPIX 268 / JGB10Y 267 / UST2Y_par 275 / UST10Y_par 275 /
+  USDJPY 285セッション、QA判定 22,325件
+- 生成 **165 facts / 14 fact types / 5 Tokyo sessions**。provenance 165/165、
+  derived with inputs 135、canonical 165 → **SQLite再構築165（一致）**
+- **Compass数値replay**: TOPIX 4181.86（2026-09-01）・25DMA 4077.95・乖離+2.548094%、
+  日経 66311.93・25DMA 65700.638・乖離+0.930420%、JGB10Y 2.943、UST2Y_par 4.34、
+  UST10Y_par 4.75、ドル円 160.122、**NT倍率 15.954596**、**米10-2年 0.410000**。
+  NT倍率とスプレッドは**Market Data Bank側の派生値と完全一致**（独立経路での再現）
+- **look-ahead防止**: 5セッションのmorning snapshotで
+  21 / 54 / 87 / 125 / 153 facts が利用可能、**leak 0件**・
+  全セッションで未来日付なし（各朝のsnapshotは前営業日までのFactのみ）
+- data quality: 重複fact_id **0** / provenance欠落 **0** / derived入力欠落 **0** /
+  conflict 0
+
+### 境界（実装していないもの）
+
+natural-language Compass generation / LLM market outlook / 投資推奨 /
+theme inference / market narrative / causal inference / Market Internals分析 /
+breadth engine / screener / company scoring / portfolio / MCP / frontend / scheduler。
+
+## v4.31 (2026-09-01) — Phase 2-H: J-Quants Light Core Data Foundation
+
+P2-Gで実証したJ-Quants V2接続を、**TOPIX専用provider**から
+**再利用可能なLight Core Data Foundation**へ昇格。取得可能だから実装するのではなく、
+**どのInvestment Intelligence機能で使うか説明できるdatasetだけ**を採用した
+（MINIMAL / REUSABLE / AUDITABLE / FAIL-CLOSED）。
+
+entitlement・endpoint・項目名はすべて **live実測**（probe run #1 / pilot run #3・
+2026-09-01）。公式ドキュメントからの類推でAVAILABLE扱いしたものは無い。
+
+### 追加
+
+- `jquants_v2_client.py`【新規】: 任意path＋params＋pagination＋entitlement判定の
+  汎用取得経路。credential解決・scrub・原因分類・HTTPは既存 `jquants_v2` を
+  **importして再利用**し、live実証済みのTOPIX providerには**一切触れない**。
+- `jquants_light_datasets.py`【新規】: dataset registry。REQUIRED 6 / USEFUL 1 /
+  DEFER 7。NOT_ENTITLED 6件も証拠として保持（**迂回実装しない**）。
+- `jquants_records.py`【新規】: God Objectを作らず6種へ分離——SecurityMaster /
+  DailyPrice / FinancialSummary / EarningsSchedule / TradingCalendar /
+  InvestorTypeFlow。全recordが provenance（source / provider / api_version=v2 /
+  endpoint / retrieved_at / raw参照 / normalizer version）を保持。
+- `jquants_light_store.py`【新規】: canonical JSONL（append-only・冪等）＋
+  **再構築可能**なSQLite＋query（code / 社名 / 価格履歴 / 最新価格 / 財務 /
+  最新会社予想 / 決算予定 / カレンダー範囲 / 需給期間）。
+- `tokyo_calendar.py`【新規】: latest completed Tokyo session の最小判定。
+- `p2h_light_probe.py`【新規】/ `p2h_light_pilot.py`【新規】/
+  `p2h-jquants-light.yml`【新規】: entitlement/schema discovery と small live pilot。
+- docs 2件【新規】: `JQUANTS_LIGHT_CAPABILITY_MATRIX.md` /
+  `JQUANTS_LIGHT_CORE_ARCHITECTURE.md`。
+- オフラインテスト66件追加。
+
+### 改善
+
+- **TOPIX freshnessが代理指標だけに依存しなくなった**（P2-G.2の残課題）:
+  `evaluate_topix_freshness()` に `calendar_session` を追加し、公式取引カレンダー
+  基準で判定できるようにした。**未指定なら従来どおり参照系列（日経平均）で判定**
+  ——既定の挙動は不変でP2-G.2のlive実証結果を壊さない。
+
+### 修正
+
+- `p2h_light_pilot._store_raw` が `RawItem` を誤ったモジュールから取り込んでいた
+  （live run #2 で ImportError）。`sources.model` へ修正し、`_store_raw` と
+  pilot本体をオフラインで通す回帰テストを追加。
+
+### identity規律（潰さないもの）
+
+- Company（企業） ≠ **listed security（上場銘柄）**——security recordは
+  company entityのidentityを張らない（既存Entity Catalogの責務を侵さない）。
+- **生close ≠ 調整後close**（C / AdjC を別フィールド＋AdjFactor保持。
+  total returnはsourceに無いので作らない）。
+- 実績 ≠ 会社予想 ≠ 翌期予想（Sales / FSales / NxFSales を分離）。
+- **公表日 ≠ 対象期間**（investor flowはPubDateとStDate/EnDateを分離・週次を明示）。
+- **TOPIXはMarket Data Bankが所有**し、light storeへは保存しない（二重の真実を作らない）。
+
+### 実測（live pilot run #3・2026-09-01）
+
+- listed_master **4,441銘柄** / daily_bars 代表8銘柄×**244セッション**
+  （2025-09-01〜2026-09-01・計1,952行）/ fins_summary 200件 /
+  markets_calendar 401件 / investor_types 68件（64期間・週次）
+- **TOPIX regression PASS**: HTTP 200・項目 `C/Date/H/L/O` がP2-G.2実測と一致・
+  light storeへ書き込みゼロ
+- **取引カレンダー区分を実測検証**: TOPIX観測日と21件照合し**21一致・不一致0**
+  → `HolDiv=1` のみ営業日として採用（`0` `3` は営業日扱いしない）。
+  `latest_completed_session=2026-09-01` がTOPIX最新日と一致
+- **persistence PASS**: SQLiteをcanonicalのみから再構築し全dataset件数一致
+- **data quality**: 重複record_id **0件** / raw provenance欠落 **0件**（全6 dataset）
+- **scale見積り**: 794 bytes/価格1行 → 全銘柄×5年で約 **5,418,020行 ≒ 4.3 GB**・
+  約4,441リクエスト。pilotは21リクエスト/16.9秒
+- **full-universe backfillは実施していない**（P2-Hの対象外）
+
+### 境界（実装していないもの）
+
+Phase 3 / Fact extraction / Compass Generator / Market Internals analysis /
+breadth / anomaly detector / 投資推奨 / screener / company scoring / MCP /
+frontend / scheduler / Standard・Premium限定機能の迂回実装。
+
+## v4.30 (2026-09-01) — PROJECT-WIDE RETROACTIVE AUDIT（既存状態の棚卸しと不整合の解消）
+
+プロジェクト開始時点から現在までの全実装・全Phaseを対象に、**現在のリポジトリを
+Ground Truth**として実装／テスト／live evidence／catalog／health／workflow／
+documentation／CHANGELOG／Git historyを横断照合した。新Phase・新機能の実装は行わない。
+
+### 修正
+
+- **テストが実ネットワークへ出ていた（test isolation違反・重大）**:
+  `main.py` は各collectorへ `config.get("<name>_sources")` を渡し、キーが無いと
+  collector側の**既定URL（実サイト）**へフォールバックする。v2.9で追加された
+  `fed` / `sec` / `us_gov_stats` / `ecb` / `crypto_news` / `yahoo_finance_us` が
+  テスト用configに追随しておらず、「ネットワークなしで検証する」と明記された
+  テストが毎回実サイトへ接続していた（1回の全体実行で103接続を実測）。
+  テスト用configで全キーを空にして解消（**production semanticsは無変更**）。
+  full suiteの実行時間も約60秒→約27秒へ短縮。
+- **テストが追跡対象の実データを書き換えていた**:
+  `investment_journal.dir` 等を指定しないと既定のリポジトリ配下
+  `data/investment_journal/` へ書き込むため、`tests/test_main.py` /
+  `tests/test_v4_schedule_main.py` の実行で `journal.json` の `top_news` が
+  空配列に上書きされていた。出力先をtmpへ隔離して解消。
+- **legacy V1 providerのTypeError**: `jquants_topix.py` の `no_symbol` 分岐で
+  `**base` と `url=` が二重指定になりTypeErrorを送出していた（V2側は修正済み）。
+  GAPとして正常に返すよう最小修正。
+
+### 改善
+
+- **legacy/probeコードの隔離明示**: J-Quants **V1**（2026-06-01終了）モジュールへ
+  LEGACY/SUPERSEDEDバナーを追加。調査用プローブ3件
+  （`p2g_probe` / `p2g1_auth_probe` / `p2g2_v2_discovery`）へ
+  HISTORICAL PROBEバナーを追加。**削除はしない**（当時の実測を再現・参照するため）。
+- **workflowの記述と実態の一致**: `p2d-market-pilot.yml` のヘッダが
+  「Secrets不使用」のままだったため、`JQUANTS_API_KEY` のみをruntime injectionする
+  現状を明記。
+- **stale documentationの解消**（歴史は上書きせず注記・追記で明確化）:
+  `CRITICAL_MARKET_SOURCE_GAP_CLOSURE.md`（G10がPARTIALLY_RESOLVEDのまま）へ
+  現況バナーと §6 closeoutを追加、`PHASE2_ACCEPTANCE_REPORT.md` へ現況注記、
+  `DATA_BANK_HEALTH_SPEC.md` へ状態導出表と §5 現況を追加、
+  `MARKET_SOURCE_MAPPING.md` のsymbol対応表を現行カタログへ更新、
+  `MARKET_DATA_QUALITY.md` の「データなし3系列」をHISTORICAL RECORD化、
+  `MARKET_SERIES_CATALOG_SPEC.md` からカタログ版数の焼き込みを除去。
+
+### 追加（リグレッションガード。テストのみ・production変更なし）
+
+- `test_secret_hygiene.py`【新規】: 追跡ファイル全体を対象に、プロバイダ発行キー
+  形式のリテラルと**credentialを載せたURL**を検出（値は検出時も出力しない）。
+  V2 providerがAPI Keyをヘッダでのみ送りURL/body/error_detailへ残さないことも固定。
+- `test_legacy_isolation.py`【新規】: V1 providerとprobeモジュールが
+  production path・workflowから到達不能であること、pilot workflowが注入する
+  secretが `JQUANTS_API_KEY` **のみ**であること、docsがcatalogと矛盾しないこと、
+  V1を現行APIとして記載したdocsが無いことを固定。
+- `test_derived_provenance_audit.py`【新規】: run #15の実測形（TOPIXだけ1営業日
+  新しい）でNT倍率を**forward-fillしない**ことを両方向で固定。provenance
+  （入力2件のobservation_id＋calculation_method）・Decimal・ゼロ除算・欠測も固定。
+- `test_jquants_v2.py`: G10のacceptance criteriaを機械検証（25DMA閾値・
+  遅延データはRESOLVEDにしない・履歴不足はRESOLVEDにしない・
+  live source validationとlocal data availabilityの区別）。
+- `test_main.py`: collectorキーの網羅性と、レポート生成がリポジトリ配下
+  `data/` を書き換えないことを固定。
+
+### 監査結果（修正不要と確認した領域）
+
+- Git history: revert・hotfix・意図しない巻き戻しなし（480 commits・linear）。
+- secret混入: 追跡ファイル・Git history・workflowいずれにも実値なし。
+  workflowはsecretをechoしていない。
+- catalog↔implementation: provider集合・preferred_source・api_version・
+  probe/enabledが一致。
+- health/gap/gate: G10/G11を含む全gapが実データから機械導出され、
+  live source validationとlocal data availabilityが別次元で扱われている。
+- 派生データ: NT倍率・spreadとも同一trading_dateのみで生成し、
+  片側欠落日を補完しない。provenanceは全行で完全。
+- TODO/FIXME/XXX/HACK: `src/` `tests/` `main.py` に0件。
+- vNextコードにbare except / except-passなし（fail-openなし）。
+
+## v4.29 (2026-09-01) — Phase 2-G.2 closeout: TOPIX V2 live取得実証（G10 RESOLVED）
+
+### 改善
+
+- カタログ1.2.1: TOPIXを `probe: false` へ（live実証済み）。これにより
+  data bank healthのcritical gap判定が実データ由来で RESOLVED を導出する。
+
+### 実測（live pilot run #15・Light plan投入後）
+
+- **V2 authenticated fetch: HTTP 200**。`auth_method_validated: api_key_header`
+  が**初めて非空**になった（data endpointの200をもってのみ「検証済み」と宣言する
+  規律の帰結）。API Keyはヘッダのみで送信し、URL・raw payload・FetchAttempt・
+  ログ・例外のいずれにも秘密は出ていない。
+- 応答schema実測: top keys `["data"]` / row fields `["C","Date","H","L","O"]`
+  ——事前に一次情報で確認したV2仕様と**完全一致**（推測変換なし）。
+- TOPIX identity: `index:topix.close.closing.tokyo`。ETF（1306.T）・先物・
+  近似指数の代用なし。
+- historical **268営業日**（2025-07-28〜2026-09-01）・25DMA可能・unit `index`。
+- latest trading date **2026-09-01**・close `4181.86`・
+  as_of `2026-09-01T06:30:00+00:00`（15:30 JST）。
+- freshness **CURRENT_USABLE**（`gap_sessions: 0` / `lag_days: 0`。基準系列
+  日経平均の最新2026-08-31に対しTOPIXは同一以上のセッション）。Morning Compass
+  当日入力として**利用可**。
+- QA: **`MARKET_OBSERVATION:accept` 268件**（issue 0）。
+- 永続化: canonical 22,289観測＝別プロセスでのindex再構築22,289・
+  `recovered_lines: 0`・latest一致16/16・backup verify 0/0/0。
+- NT倍率 **266行**（latest 2026-08-31 = `15.954596 x`・input 2件の
+  observation_id＋`calculation_method: nt_ratio:1.0.0`）。TOPIXが2026-09-01まで
+  あるのに対し基準の日経平均が2026-08-31までのため、片側欠落の2026-09-01は
+  **生成していない**（同一trading_dateのみ・捏造しない）。
+- 併走系列も成功: JGB10Y 267行（〜2026-08-31・2.943 pct）／UST2Y_par 275行
+  （4.34 pct）／UST10Y_par 275行（4.75 pct）／official spread 275行
+  （0.41 pct_point）。Treasury dedupはFetchAttempt 1件・RawItem共有を維持。
+- **G10 = RESOLVED**（`live_authenticated_fetch` / `history_ge_25dma` /
+  `current_session_available` / `matches_reference_tokyo_session`）。
+
+## v4.28 (2026-08-30) — Phase 2-G.2: J-Quants V1→V2 migration（TOPIX経路）
+
+### 追加
+
+- `src/intelligence/market/jquants_v2.py`【新規】: **V2専用**のTOPIX provider。
+  Base URL `https://api.jquants.com/v2`・TOPIX専用パス
+  `/indices/bars/daily/topix`・応答 `{"data": [...], "pagination_key": ...}`・
+  V2短縮項目名（`O`/`H`/`L`/`C`、`Date`は不変）に対応。
+- `JQuantsV2CredentialResolver`: 認証は**API Keyをリクエストヘッダで送る方式**
+  （V1のtoken交換は廃止）。`JQUANTS_API_KEY` **のみ**受理し、V1のenv名
+  （MAIL / PASSWORD / REFRESH_TOKEN / ID_TOKEN）は**V2では受理しない**
+  ——旧仕様をV2の既定へ持ち込まないことをテストで固定。
+- 原因分類 `classify_v2_failure()`: `api_version_mismatch` /
+  `plan_not_entitled` / `credential_rejected` を応答messageから機械分類する。
+- `ProviderInfo.api_version`（既定は空・後方互換）とカタログ
+  `providers.jquants.api_version: v2`。
+- テスト34件追加（`tests/intelligence/test_jquants_v2.py`【新規】）。
+
+### 改善
+
+- **PLAN_CAPABILITY**: entitlement次元のみ VERIFIED（TOPIX四本値は
+  **Lightプラン以上**・更新は毎営業日16:30頃JST——公式クイックスタートV2）。
+  プラン別の遅延日数・履歴範囲は依然 **UNVERIFIED**（実取得結果で確定する）。
+- 秘密安全の強化: 応答本文をエラー診断へ載せる前に**部分一致でも遮断**し、
+  API Gatewayが返す SHA-256/Base64 ダイジェストのエコーも除去する。
+  API Keyはヘッダのみで送り、永続化されるURLへ載せない。
+- workflowをV2 pilotのみへ整理（EOL済みV1を現行候補として叩き続けない）。
+- カタログ1.2.0（endpoint_templateをV2専用パスへ）。series identity
+  `index:topix.close.closing.tokyo` と NO PROXY SUBSTITUTION 原則は不変。
+
+### 修正
+
+- **run #7〜#12の403の再分類**: J-Quants V1は2026-06-01に終了しており、
+  当時のV1エンドポイントへのアクセスは `legacy_v1_endpoint` /
+  `api_version_mismatch` を主要原因候補とする（credential不正と断定しない）。
+  過去の実測記録はappend-onlyで保全し、`TOPIX_SOURCE_DECISION.md` §7で
+  解釈のみを訂正した。
+- `g10_state()` が版数不整合を `auth_failure` として報告しないよう分岐を追加。
+- V2 providerで、jquantsのsymbolを持たない系列を渡すと
+  `ProviderFetchResult` のキーワード重複でTypeErrorになる不具合を修正
+  （`no_symbol` のGAPとして正常に返す。回帰テスト追加）。
+
+### 実測（live pilot run #14・2026-08-30）
+
+- **V2 endpoint到達・契約識別まで成立**: `GET /v2/indices/bars/daily/topix` は
+  HTTP 403だが応答は *"This API is not available on your subscription. If you
+  want more data, please check other plans: …"*。V1時代の内容のない
+  `{"message":"Forbidden"}` とは異なり、**サーバがサブスクリプションを特定した
+  うえでの権限拒否**である——endpoint・API版数・API Keyの搬送方式は正しい。
+- G10 = **BLOCKED**（`access_level_insufficient` / `plan_not_entitled`）。
+  残る障害は**プラン権限のみ**で、TOPIX四本値は**Lightプラン以上**が条件
+  （公式ドキュメントとlive応答の2系統で一致）。
+- `auth_method_validated` は**空のまま**（data endpointの200を得ていないため、
+  認証方式を「実APIで検証済み」とは宣言しない）。
+- TOPIX raw 0行 → freshness `NO_DATA`・NT倍率0行（片側だけで生成しない）。
+- 併走系列は無変更で成功: JGB10Y 265行（〜2026-08-27・2.897 pct）／
+  UST2Y_par 274行（〜2026-08-28・4.34 pct）／UST10Y_par 274行（4.73 pct）／
+  official spread 274行（0.39 pct_point）。Treasury dedupは
+  FetchAttempt 1件・RawItem共有を維持。
+- 永続化検証 PASS（canonical 20,689観測＝index再構築一致・recovered_lines 0）。
+
+## v4.27 (2026-08-30) — Phase 2-G.1: API Key認証方式の実測判定とTOPIX authenticated pilot
+
+### 追加
+
+- `p2g1_auth_probe.py`【新規】: 投入credentialがどの搬送方式で通るかを実APIで
+  判定するプローブ（秘密値・token値は一切出力しない）。
+- `METHOD_API_KEY`: `JQUANTS_API_KEY` を型宣言のないcredentialとして受理し、
+  搬送方式を**上限2回**で判定（refreshToken交換 → Bearer直挿し）。成功した
+  方式のみ `mechanism_validated` に記録（未成功は空のまま断定しない）。
+- テスト9件追加（計1,184 passed）。
+
+### 修正
+
+- `_default_http`が非2xxをHTTPErrorとして送出しており、403がnegotiationを
+  素通りして生の例外文字列になっていた（run #11実測）。ステータスとして返す
+  よう修正し、構造化診断
+  （`api_key_mechanism_not_accepted:<方式>:http_<code>`）が出るようにした。
+
+### 実測（run #10〜#12）
+
+- **投入されたJQUANTS_API_KEYは5搬送方式すべてで HTTP 403**（refreshtoken
+  クエリ/body・Bearer・x-api-key・Authorization生値）。公式docsはJS描画・
+  OpenAPIは403のため仕様本文も機械取得できず → **API Keyが現行の正式な
+  認証方式であることは確認できていない**（旧方式の推測適用もしない）。
+- TOPIX STEP 1-8: auth_error → 履歴0・NO_DATA・NT倍率0 →
+  **G10 = BLOCKED（auth_failure）**。API Key値は一切出力していない。
+- Treasury dedup継続確認: FetchAttempt 1件・両par系列が同一RawItem/Attempt共有・
+  spread 274行・persistence 20,689観測一致・backup verify 0/0/0。
+
+## v4.26 (2026-08-30) — Phase 2-G.1 レビュー反映: Treasury dedup / PLAN_CAPABILITY訂正
+
+監督者レビュー（P2G1_TOPIX_CLOSEOUT_ACCEPTED）の指摘反映。TOPIXのcredential
+待ち状態は変更なし（追加のnetwork retryは行っていない）。
+
+### 追加
+
+- **MINI TASK A（Treasury curve fetch dedup）**: ONE SOURCE DOCUMENT MAY
+  PRODUCE MULTIPLE OBSERVATIONS。同一年CSVを系列ごとに再取得せず、1 run中は
+  年ごと1回だけ取得してrun-localキャッシュから配る。再利用時は
+  `served_from_cache` を立て、storeは新規FetchAttemptを記録せず
+  **同一RawItem・同一FetchAttempt**を共有する（起きていない取得を記録しない）。
+  series identityは非マージ（UST2Y_par ≠ UST10Y_par。observation_id・列・値・
+  単位は独立）。payload単位で**1回だけ**再試行（run #8のtimeout対処）。
+  **live実測（run #9）**: treasury FetchAttempt記録 2→**1**・両系列が同一
+  RawItem/FetchAttemptを共有・run #8でfailedだったUST10Y_parが**success 274行**
+  へ回復・official spread 274行復帰。requested 16 = success 15 + gap 1 +
+  **failed 0**。
+- G10結果状態に **C: access_level_insufficient** / **D: auth_failure** を追加
+  （fetch失敗理由をreason codeへ写像）。
+- `auth_method_validated`: **実APIのdata endpointが200を返した方式のみ**を
+  検証済みとして記録（解決できた方式をsupportedと断定しない）。
+- テスト26件追加（計1,175 passed）。
+
+### 修正
+
+- **PLAN_CAPABILITY = UNVERIFIED**（監督者訂正）: 「Free=12週遅延 /
+  Light以上=当日利用可」等のJ-Quantsプラン能力をsystem ground truthとして
+  固定していた記述を、コード（access要件レポート）・カタログ・docsから撤回。
+  実credentialでの取得結果、または取得可能な公式documentation evidenceで
+  確定する。必要access tierの断定は保留し、判定は実測のfreshness verdictで行う。
+
+### 改善
+
+- NT倍率: TOPIXが遅延している期間は「current」として使わない旨をpilot出力へ明示。
+
+## v4.25 (2026-08-30) — Phase 2-G.1: TOPIX Credentialed Live Closeout
+
+対象はTOPIX（G10）のみ。原則: **DO NOT LIE ABOUT FRESHNESS**（API接続成功と
+履歴取得と当日利用可否を区別する）＋**NO PROXY FALLBACK**。
+live実測: run #8（success 14 / gap 1 / failed 1・raw 3,971・derived 15,128・
+persistence 19,099観測一致・backup verify 0/0/0）。
+
+### 追加
+
+- credential resolver契約 `JQuantsCredentialResolver`＋`EnvCredentialResolver`:
+  id_token / refresh_token / mail_password を優先順に解決し、方式名と由来env名
+  **のみ**を報告。J-Quantsの認証仕様変更（token/API key方式等）はresolverの
+  差し替えで吸収する（env名を恒久仕様と仮定しない）。
+- credential safety: `Secret`型でrepr/str封鎖・全error_detailのscrub・
+  認証応答の非永続・locator/raw payloadへの秘密非混入。credential未設定時は
+  **ネットワークを1回も叩かず**正常停止（TOPIX_CREDENTIAL_MISSING）。
+- schema/identity guard `validate_topix_payload`: 銘柄コード・NAV・限月・
+  清算値等を含む応答を`identity_mismatch`で拒否（ETF NAV/先物を1行も
+  取り込まない）。
+- `src/intelligence/market/topix_freshness.py`【新規】: 当日利用可否を
+  **同一東京セッションの実データ基準**で判定（休日カレンダーを推測しない）。
+  CURRENT_USABLE / DELAYED_NOT_CURRENT / NO_DATA＋lag_days・gap_sessions。
+  G10状態遷移（RESOLVED / HISTORICAL_RESOLVED_CURRENT_BLOCKED /
+  PARTIALLY_RESOLVED / BLOCKED）＋reason code必須。access要件レポート
+  （必要tier・観測遅延をユーザー判断事項として提示）。
+- pilot `::P2G1_TOPIX::` STEP1-8マーカー（秘密を一切出力しない）＋
+  J-Quants認証仕様の実API応答プローブ。
+- テスト40件追加（計1,149 passed）。
+
+### 改善
+
+- health.py: G10をfreshness込みで機械判定（`SOURCE_VALIDATED_DATA_NOT_LOCAL`
+  状態を追加。live実証済みだがcanonicalが本rootに無い場合の正直な申告）。
+- workflowのcredential注入を4変数（ID_TOKEN/REFRESH_TOKEN/MAIL/PASSWORD）へ
+  拡張——repository secretsのみ・値はGit/configへ保存しない。
+
+### 修正
+
+- なし（TOPIX以外の系列・既存挙動は変更していない）。
+  ※run #8で `rates:UST10Y_par` がtimeoutでfailed（run #7は成功）。
+  同一年ファイルの重複取得が一因と見られるが、P2-G.1の範囲外のため
+  **提案のみ**（CRITICAL_MARKET_SOURCE_GAP_CLOSURE.md §5.1）。
+
+## v4.24 (2026-08-30) — Phase 2-G: Critical Market Source Gap Closure
+
+原則: **NO PROXY SUBSTITUTION**（TOPIX→ETF・JGB10Y→別年限/入札・UST2Y→
+別概念yieldの代用禁止）。対象はTOPIX/JGB10Y/UST2Yの3系列のみ。
+live実測: probe run #6（source調査）＋run #7（requested 16 = success 15 +
+gap 1 + failed 0・raw 4,245・derived 16,444・persistence/backup全green）。
+
+### 追加
+
+- `src/intelligence/market/treasury_curve.py`【新規】: 米財務省Daily Treasury
+  Par Yield Curve provider（年別CSV・複数年は連結申告・fair-access UA実測）。
+  official par yieldは市場実勢index（^TNX型）と**別概念**のため
+  `rates:UST2Y_par` / `rates:UST10Y_par` の新seriesとして接続——
+  live実測 各274行（2025-07-28〜2026-08-28・latest 4.34 / 4.73 pct・
+  as_of 15:30 ET）。既存^TNX系列は無変更で併存。
+- `src/intelligence/market/mof_jgb.py`【新規】: 財務省国債金利情報provider
+  （jgbcm_all＋当月jgbcm の2ファイル実測構成・Shift_JIS・和暦→ISO決定論変換・
+  constant maturity 15時クローズ）→ JGB10Y series——live実測 265行
+  （〜2026-08-27・latest 2.897 pct・as_of 15:00 JST）。
+- `src/intelligence/market/jquants_topix.py`【新規】: J-Quants（JPX公式系API）
+  TOPIX provider（指数値そのもの・ETF/先物代用なし・credentialは環境変数
+  runtime injectionのみ・parse_float=strでfloat非経由・token非永続）。
+  credential未投入のためlive取得は正直なgap（no_credentials）——
+  ユーザーのJ-Quants登録＋repo secrets投入後に同pilotで自動実証。
+- `src/intelligence/market/p2g_probe.py`【新規】: 公式ソース実測調査プローブ。
+- official spread `rates:UST10Y_par_UST2Y_par.spread.derived_metric`——
+  live 274行生成（latest 0.390000 pct_point・calculation provenance付き。
+  ^TNX×official parの概念混合spreadは生成しない）。NT倍率は定義済み
+  （TOPIXデータ待ち・入力なしでは出力しない）。
+- `docs/databank/`【新規3ファイル】: CRITICAL_MARKET_SOURCE_GAP_CLOSURE /
+  OFFICIAL_RATE_SERIES_SPEC / TOPIX_SOURCE_DECISION。
+- テスト38件追加（計1,109 passed）。
+
+### 改善
+
+- カタログ1.1.0: PRIMARY_OFFICIAL providers（treasury_gov/mof_japan/jquants・
+  Tier1）追加・live実証済み3系列のprobe解除・旧UST2Y（市場実勢・実績ゼロ）は
+  identity定義のみへ（official値を混入しない）。
+- health.py: critical gapsの解決状態をカタログ＋ローカル実データから機械導出
+  （G11=RESOLVED・G10=PARTIALLY_RESOLVED。TOPIX未解決の間phase3はBLOCKED）。
+- pilot_runnerへ::P2G_GAPS::マーカー・ProviderFetchResult.media_type追加。
+
+### 修正
+
+- なし（既存系列・既存挙動の変更なし）。
+
+## v4.23 (2026-08-30) — Phase 2-F: Data Bank QA / Query / Human Review
+
+原則: THE DATA BANK MUST BE EXPLAINABLE, CORRECTABLE, AND REBUILDABLE。
+Phase 2最終統合ゲート。**zero unknown loss機械証明**（会計恒等式
+2,976+25+55=3,056）・P2-C/P2-D持ち越しwarningの意味論的解決（捏造・削除なし）・
+Phase 3が使う統一読み出し契約まで。分析エンジンは未実装（DO NOT遵守）。
+
+### 追加
+
+- `src/intelligence/review/`【新規7ファイル】: Human Reviewワークフロー
+  （ReviewItem/ReviewDecisionRecord append-only・ALLOWED_DECISIONS型制限・
+  decided_by=user:強制・manual優先適用・intake冪等・CLI。実データ88件 open——
+  架空のhuman decisionは投入しない）＋Identity Decision Ledger（CANDIDATE 25件へ
+  confidence/シグナル/algorithm版永続・post_hoc derivation明示・migration-safe）
+  ＋Revision/Syndication role精緻化（same_publisher_update 53・
+  cross_feed_same_article 2・UNKNOWN 0——DO NOT GUESS）。
+- MIGRATED_PROVENANCE（HISTORICAL v1.1.0）: legacy shard/fingerprintへtrace
+  可能な移行由来文書はmigrated_provenance PASS。実データ3,056件再評価
+  ACCEPT 0→3,008・missing_raw_item 3,056→0（旧評価保持・6,112件併存）。
+- Market Observation trust v2（MARKET_OBSERVATION v1.0.0＋ProviderTrace）:
+  provider経路provenanceで評価、SUPPORTS link非必須方向へ。live run #5で
+  raw 3,432件再評価 ACCEPT 0→3,432・missing_supporting_evidence_ref 3,432→0
+  （旧評価保持・trace欠落はWARN維持）。
+- 統一クエリ層: NewsQuery entity/classification_provenance/review_status・
+  MarketQuery複合（trading_date範囲/source/QA判定/current_only/latest_session）・
+  review_items索引・publisher時系列集計（OBSERVED COUNTのみ）。
+- Cross-domain foundation: TradingWindow（JST朝窓・東京セッション・実データ
+  導出の前米国セッション・event窓）＋fetch_window_slice（同一window取得のみ・
+  causal分析なし・UTC暦日join禁止）。
+- DataBankHealthReport（HEALTHY/DEGRADED/BLOCKED＋reason codes・
+  critical source gaps（TOPIX/JGB10Y/UST2Y）を常時表示）・Phase 2統合
+  reconciliation（重複ID/orphan/恒等式/QA被覆/schema版/SQLite一致の機械検査）。
+- backup/restore演習テスト（manifest→copy→1byte破壊検知→復元→SQLite再構築→
+  クエリ等価）・Phase 2全層統合トレーステスト。
+- `docs/databank/`【新規8ファイル】: HUMAN_REVIEW_WORKFLOW /
+  MIGRATED_PROVENANCE_SPEC / MARKET_OBSERVATION_TRUST_POLICY /
+  UNIFIED_QUERY_SPEC / DATA_BANK_HEALTH_SPEC / PHASE2_RECONCILIATION /
+  SCHEMA_INVENTORY / PHASE2_ACCEPTANCE_REPORT（8本）。
+- テスト52件追加（計1,071 passed）。
+
+### 改善
+
+- SqliteNewsIndex: entity横断検索・review status結合・親ディレクトリ自動作成。
+- SqliteMarketIndex: search_market複合検索（revision解決・最新セッション）。
+
+### 修正
+
+- なし（既存挙動の変更なし。旧trust policyの評価結果は全て保持）。
+
+## v4.22 (2026-08-30) — Phase 2-E: News Classification / Metadata Enrichment
+
+原則: CLASSIFICATION IS NOT FACT / EVERY ENRICHMENT MUST HAVE PROVENANCE /
+FALSE ENTITY LINK IS WORSE THAN MISSED ENTITY LINK。
+**full 3,001 NewsItemへのenrichment backfill完了**: 分類3,592件（entity 2,192・
+rule 1,400）・validation 0 issues・冪等再実行0追加・review queue 63件保存・
+校正fixture全次元precision/recall 1.000・実corpusクエリsmoke成功。
+Fact抽出・市場影響・重要度スコアは未生成（DO NOT遵守）。P2-F未着手。
+
+### 追加
+
+- `knowledge/entities/core_entities.yaml`【新規】: Entity Catalog v1.0.0
+  （80 entities。alias安全3段階: safe／context必須（Apple/Meta/Amazon/Fed等）／
+  ticker明示記法限定——AI/IT/US/CAT等の裸大文字語の誤link構造排除。
+  case-sensitive marker（=Fed等）で動詞fed・果物apple誤爆を実測校正）。
+- `knowledge/enrichment/theme_taxonomy.yaml`【新規】: 30テーマ（既存
+  theme_relations/themes.yaml監査＋監督者指定17テーマ）。slug・parent/related
+  階層foundation・strong/weak多信号規則（weak単独タグ禁止）・exclude・
+  tank slug対応（legacy比較専用）。
+- `knowledge/enrichment/event_types.yaml`【新規】: 16イベント種別＋高precision
+  フレーズ規則（OTHER自動判定なし）＋time horizon高確信規則。
+- `src/intelligence/enrichment/`【新規14ファイル】: L0-L4層分離engine・
+  決定論matcher群（evidence span保持）・provider中立LLM層（optional・
+  スキーマ検証・未知label→review queue・不正reject・audit）・USER override
+  （優先・履歴保持）・append-only store（effective view導出）・
+  backfill（corpus fingerprint・段階実行・冪等）・validation 10種・品質レポート。
+- NewsClassification拡張（0.x非破壊: confidence/confidence_type/role/
+  evidence_field/evidence_text/taxonomy_version/basis_document_id）・
+  ClassificationDimension/EntityKind拡張・SqliteNewsIndexへ時系列集計foundation
+  （count_by_dimension_over_time / count_values——件数取得まで）。
+- tests: +88件（matcher安全則30・engine/LLM/store/override 25・validation/
+  backfill/quality 25ほか・校正fixture 30件。**1,019 passed**）。
+- docs/databank: NEWS_ENRICHMENT_ARCHITECTURE / ENTITY_CATALOG_SPEC /
+  THEME_TAXONOMY_SPEC / EVENT_TYPE_TAXONOMY / CLASSIFICATION_PROVENANCE_SPEC /
+  NEWS_ENRICHMENT_BACKFILL_REPORT / NEWS_ENRICHMENT_QUALITY。
+
+### 改善
+
+- 実corpus初回実行で発見した冪等バグ（run跨ぎのcreated_at差によるID衝突）を
+  semantic equality原則に沿って修正（クリーン再実行でfailed 0を確認）。
+- 校正初回測定のevent誤爆2件（"surges"単独・"new chip"）を規則側で修正し
+  fixture precision 1.000へ。
+
+## v4.21 (2026-08-30) — Phase 2-D: Market Data Bank
+
+原則: A NUMBER WITHOUT IDENTITY AND CONTEXT IS NOT MARKET DATA。
+**live pilot成功**（Actions run #4）: 12系列×約13ヶ月の日足を実取得——raw 3,432＋
+派生13,080=canonical 16,512件・QA全件・**別プロセス永続化検証gate通過**
+（fresh process再オープン・index全再構築・latest 12/12一致）・backup manifest検証OK。
+データ本体はGit非管理（Data BankはGitリポジトリではない）。P2-E未着手（禁止遵守）。
+
+### 追加
+
+- `knowledge/market_series/core_series.yaml`【新規】: MarketSeries正式カタログ
+  v1.0.0（19系列。series_id規約検証・指数/ETF/先物・spot/fixingの非混同・
+  yield=pct固定・session/as_of_policy・provider種別 PRIMARY_OFFICIAL vs
+  MARKET_DATA_PROVIDER・派生定義・enabled/probe/GAP意味論）＋
+  `src/intelligence/market/series_catalog.py`【新規】loader/validator。
+- `src/intelligence/market/providers.py`【新規】: MarketDataProvider Protocol＋
+  **yfinance一次**（legacy本番構成再現・provider_normalized=true・float供給を
+  provider_float_transitとして全件申告）＋**Stooqフォールバック**（生CSV保存・
+  legacy UA再利用・非CSV応答の診断snippet）。
+- `src/intelligence/market/ingest.py`【新規】: 決定論正規化（stringトークン→
+  Decimal直接・trading_date/as_of分離のセッションモデル・欠測非補完・
+  週末/未来/重複の検知のみ・content-addressed ID・revision_of・source切替記録）。
+- `src/intelligence/market/derived.py`【新規】: 派生基盤（return_1d/5d・25DMA・
+  乖離率・金利スプレッド・NT倍率。inputs＋calculation_method:version必須・
+  Decimal 6桁ROUND_HALF_EVEN固定・欠測非補間）。
+- `src/intelligence/market/store.py`【新規】: MarketBankStore（JSONL canonical＋
+  SqliteMarketIndex。latest_trading_session / latest_as_of / latest_revision_for /
+  revision_chainの**latest意味論明示**・改定解決・decision結合クエリ・全再構築）。
+- `src/intelligence/market/backfill.py`【新規】: provider chainエンジン（fallback
+  発動の必須記録・全試行FetchAttempt永続・run manifest MarketBackfillRun・
+  GAP/FAILED区分・冪等・HISTORICAL QA・依存伝播付き派生QA）。
+- `src/intelligence/core/paths.py`【新規】＋config.yaml `vnext.data_root`:
+  INTELLIGENCE_DATA_ROOT環境変数→config→既定の解決（絶対パス固定なし）。
+- `src/intelligence/core/backup.py`【新規】: backup manifest基盤（file inventory×
+  sha256×schema version・verify照合）。
+- `src/intelligence/market/persistence_check.py`【新規】: 別プロセス永続化検証
+  （canonical読み戻し・index空から再構築・latest照合）＋
+  `pilot_runner.py`【新規】＋`quality_report.py`【新規】＋
+  `.github/workflows/p2d-market-pilot.yml`【新規】＋trigger。
+- Observation.trading_date追加（0.x非破壊）・SCHEMA_VERSION 0.4.0。
+- tests: +95件（catalog/identity安全・provider・ingest・derived・store/latest・
+  backfill/fallback・persistence subprocess・quality・trace描画。**931 passed**）。
+- docs/databank: MARKET_SERIES_CATALOG_SPEC / MARKET_INGESTION_ARCHITECTURE /
+  MARKET_STORAGE_AND_PERSISTENCE / MARKET_SOURCE_MAPPING /
+  MARKET_BACKFILL_REPORT / MARKET_DATA_QUALITY。SOURCE_GAPSへG9〜G12追記。
+
+### 改善
+
+- live実測でprovider実態を確定: StooqのhistoryエンドポイントはIP制限で
+  Actionsランナーから不達（HTML制限ページ）→ legacyの本番実績構成
+  （yfinance一次）へ整合。TOPIXは1306.T ETFを指数へ流用せず正直にGAP化。
+
+### 修正
+
+- 同一内容再取得時のRawItem ID衝突（初回provenance保持・試行のみ追記へ）。
+- pilot trace描画のQAIssue属性名誤り（オフライン回帰テスト追加）。
+
+## v4.20 (2026-08-30) — Phase 2-C: Historical Tank Backfill
+
+tank 3,056記事のvNext正式移行（BACKFILL IS A DATA MIGRATION, NOT A FILE COPY）。
+**full実行完了**: 3,056/3,056 success・会計完全一致・REVISION 55統合検出・
+CANDIDATE 25 queue保存・validation 0 issues。データ本体はGit非管理
+（data/vnext/databank/）。P2-D未着手・新解釈生成ゼロ（禁止遵守）。
+
+### 追加
+
+- `databank/backfill_inventory.py`: 実測inventory（件数・分布・欠損・重複ID・
+  invalid JSON・schema variants）＋input fingerprint（shard×sha256）＋決定論的
+  record列挙。
+- `databank/identity_blocking.py`: 候補生成のBlockingIndex（exact key＋
+  title prefix/日付×sourceバケット。**総当たりO(n²)禁止**への回答。3,056件で
+  メモリ58MB・二次劣化なし）。IdentityRuntimeへ統合＋resume用preload。
+- `databank/backfill.py`: BackfillRun manifest（fingerprint・version群・会計・
+  checkpoint）/ RejectRecord ledger（黙って捨てない）/ JsonlNewsBankStore
+  （news_items=追記ログ最新正・legacy_annotations・reject_ledger・backfill_runs）/
+  BackfillEngine（chunk 250・checkpoint/resume・冪等・source mapping
+  exact_name 42/42実測・LEGACY_UNKNOWN安全表現・FetchAttempt捏造なし）/ reconcile。
+- tests: +14件（backfill 10: inventory/fingerprint/run会計/reject ledger/
+  legacy隔離/unknown source/冪等再実行/crash→resume同値ほか・blocking 4、
+  計835 passed）。
+- `docs/databank/`: HISTORICAL_BACKFILL_ARCHITECTURE / BACKFILL_RUN_SPEC /
+  TANK_BACKFILL_REPORT / HISTORICAL_DATA_QUALITY / BACKFILL_RECONCILIATION。
+
+### 改善
+
+- 実運用発見: **同一canonical URLの更新版55組を検出・統合**（tankは正規化前URLで
+  別レコード扱い——URL正規化＋fingerprintの実データ価値を実証）。CANDIDATE 25件は
+  P2-B校正が予言したハザード族（FERC通番8・Yahoo定型7・ECBカレンダー等）で全て非merge。
+
+## v4.19 (2026-08-30) — Phase 2-B: Article Identity / Dedup / Revision
+
+Article Identity Layer。最上位原則 **FALSE MERGE IS WORSE THAN MISSED MERGE**
+（高precision・保守的threshold・曖昧なら別Article）。LLM embedding不使用・
+NewsEvent clustering未着手・full backfill未実施（禁止遵守）。
+
+### 追加
+
+- `databank/identity_signals.py`: 文字3-gram Jaccard＋SequenceMatcherの**min合成**
+  類似度（ja/en両対応・tokenizer非依存）・title_key・時刻近接・**数字トークンガード**
+  （実tank分析: 高類似別記事の上位=ECB 2027/2028・日付連載・通番が全て数字違い）。
+- `databank/identity_decision.py`: EXACT_MATCH/AUTO_MERGE/REVISION/SYNDICATED/
+  CANDIDATE（merge禁止）/DISTINCT＋matched/failed signals・confidence・
+  algorithm_version（単一score禁止）。
+- `databank/identity_resolver.py`: 4段階判定。安全規則: GUIDはsource-local・
+  same URL+changed content=REVISION・title類似単独merge禁止・**summary（内容証拠）
+  なしではfingerprint一致でもmergeしない**・数字集合不一致でAUTO_MERGE禁止。
+- `databank/article_store.py`: event-sourced Article store（CREATE/ADD_DOCUMENT/
+  MARK_REVISION/MARK_SYNDICATED/SET_PRIMARY/**MANUAL_SPLIT/MANUAL_MERGE**。
+  append-only・replay導出・manual優先で誤merge修正可能・履歴不滅）。
+- `databank/identity_runtime.py`: SourceDocument→Article→NewsItemのruntime接続・
+  primary選定（非転載→先行公開→tier。「Tier高=原文」と仮定しない）・
+  NewsDocumentLink role付与。
+- `databank/identity_report.py`: metrics＋merge監査レポート（why merged明示）。
+- `evidence_qa/policy.py`: **HISTORICAL v1.0.0**追加（古さ自体で制限しない・
+  他Gate維持。HISTORICAL ACCEPT≠DAILY ACCEPTのcontext-dependent trust実証）。
+- validation拡張: revision cycle・重複member・primary∈members検査。
+- calibration: labeled fixture 29ペア（実tankハザード＋合成）＋実tank title-only
+  ハザード40ペア＋実60記事runtime。**false merge 0・recall 12/12**。
+  校正での設計修正2件（title-only fingerprint exact廃止・threshold 0.85）。
+- tests: +38件（resolver/signals 12・calibration 6・store 8・runtime 7・
+  historical 5、計821 passed）。
+- `docs/databank/`: ARTICLE_IDENTITY_SPEC / DEDUP_STRATEGY /
+  REVISION_SYNDICATION_POLICY / IDENTITY_CALIBRATION_REPORT / HISTORICAL_TRUST_POLICY。
+
+## v4.18 (2026-08-30) — Phase 2-A: End-to-End Pilot + Data Bank Domain Schema
+
+Phase 1完了承認を受けたPhase 2初段。(1) Phase 1全層の実データ一本通し検証、
+(2) Market/News Data Bankの正式domain schema設計。P2-B semantic dedup・
+full backfill・LLM分類・自動scoringは未着手（禁止遵守）。
+
+### 追加
+
+- `src/intelligence/pipeline/`: e2e.py（Registry→Fetch→Raw→Normalize→QA→Gateの
+  実編成。mockなし・注入はtransportのみ・**NO FALSE EVIDENCE**を構造で保証）、
+  trace.py（Assessment→Document→Raw→Attempt→Endpoint→Sourceの逆引きtrace・
+  human-readable）、e2e_runner.py（Actions実行・少数source・bulk禁止）。
+- `src/intelligence/databank/`: news_model.py（ArticleIdentity/NewsItem/
+  NewsDocumentLink/NewsClassification/NewsScore/EntityReference/ThemeReference/
+  LegacyAnnotation。SourceDocument≠Article≠News Event分離・God NewsItem禁止・
+  classification provenance分離・LLM推測tagging型レベル拒否）、market_model.py
+  （MarketSeries・ObservationType・series_id導出規約。spot/Tokyo close/NY close
+  を別series強制）、validation.py（投入前gate 9検査項目）、query.py
+  （NewsQuery/MarketQuery契約）、sqlite_index.py（再構築可能SQLite索引・
+  domain層SQL禁止の隔離実装）。
+- `Observation.series_id`（0.x非破壊）・`SCHEMA_VERSION 0.3.0`
+  （migration戦略: docs/databank/DATA_BANK_ARCHITECTURE.md §5）。
+- contracts: NewsRepository正式化（NewsItem型へ置換）・ArticleIdentityRepository追加。
+- `.github/workflows/p2a-e2e-pilot.yml`: 実E2E pilot（feature branch限定・
+  Secrets不使用・7ソース各1リクエスト）。
+- tests: +29件（pipeline統合6・news model 8・market model 6・validation/query 9）。
+- `docs/databank/`: ARCHITECTURE / NEWS_DOMAIN_MODEL / MARKET_DATA_MODEL /
+  STORAGE_DECISION / TANK_BACKFILL_DRY_RUN / END_TO_END_VALIDATION（実測後追記）。
+
+### 改善
+
+- tank backfill dry run実施（20件・9 publishers・ja/en）: 20/20正規化成功・
+  validation 0件・LegacyAnnotation隔離実証。Article identityシグナル全3,056件実測
+  （canonical URL 100%ユニーク・cross-domain衝突0＝tank取込時dedup済みと確定）。
+
+## v4.17 (2026-08-30) — Phase 1-E: Evidence QA / Trust Gate
+
+「存在する情報 ≠ 信頼できるEvidence」。Normalized層の出力を分析利用可能な
+Evidenceへ昇格させる品質関門。**13次元の独立評価**（単一scoreへ潰さない）＋
+ACCEPT / ACCEPT_WITH_WARNINGS / LIMITED_USE / REJECT のGate判定。
+LLMによるFact抽出は未実装（SCOPE CORRECTION遵守。検証はsynthetic fixture）。
+
+### 追加
+
+- `src/intelligence/evidence_qa/`（新パッケージ×7）: model.py（QADimension 13次元/
+  DimensionResult/QAIssue/GateDecision/EvidenceAssessment/SourceInfo・reason code
+  語彙約50固定）、policy.py（TrustPolicy name＋version・GENERIC/DAILY_MARKET v1・
+  version上書き拒否registry）、dimensions.py（純関数評価器: provenance/source品質/
+  死活と文書有効性の分離/freshness＋horizon/日付品質/hash完全性/改定・撤回（明示
+  evidenceのみ）/転載検知/数値sanity（NaN・不可能負値・異常%・通貨不整合。補正なし）/
+  正規化品質/利用権利）、gate.py（FAIL→REJECT等の明示合成規則）、assess.py
+  （record種別別評価＋依存伝播: 上流REJECT→下流LIMITED（自動削除しない）・
+  corroboration独立性=転載10件≠独立10source）、store.py（append-only assessment
+  履歴・latest_for導出）、report.py（品質メトリクス集計＋人間可読レポート。
+  Black Box判定禁止）。
+- `core/contracts.py`: EvidenceAssessmentRepository Protocol追加。
+- `tests/intelligence/`: qa_fixtures.py（監督者指定synthetic fixture一式）＋
+  QAテスト49件（documents 17/statements 12/observation 11/policy・store・report 9）。
+- `docs/evidence_qa/`: EVIDENCE_QA_ARCHITECTURE / TRUST_POLICY_SPEC /
+  EVIDENCE_GATE_RULES / CONFLICT_REVISION_POLICY / QUALITY_METRICS_SPEC。
+
+## v4.16 (2026-08-30) — Phase 1-D: Normalization & Evidence Creation
+
+異種Raw data（RSS2/Atom/RDF/JSON/tank記事）を共通domain語彙へ変換する
+NORMALIZED EVIDENCE LAYER。RAW/PARSED/NORMALIZED/INTERPRETEDの層分離を確立し、
+**正規化は完全決定論**（LLM・現在時刻・乱数・外部検索へ非依存。処理時刻は
+NormalizationEventのみが保持）。自由文Fact生成はP1-E対象のため未実装（禁止遵守）。
+
+### 追加
+
+- `src/intelligence/normalization/`（新パッケージ・1機能=1ファイル×9）:
+  model.py（NormalizationStatus/Issue/Event/Result・決定論的doc ID導出）、
+  text.py（NFC・entity・空白のみ。意味変更/翻訳禁止・content_fingerprint）、
+  dates.py（published_raw/parsed/inferred/quality分離・URL日付の決定論推定・
+  基準時刻=retrieved_atで現在時刻非依存・unknown許容）、language.py（BCP-47系・
+  不明はund）、units.py（pct/bps/ratio明示変換・unit無視同一視の拒否）、
+  feed_normalizer.py（RSS2/Atom/RDF共通entry→SourceDocument・決定論的revision判定）、
+  observation_normalizer.py（JsonProviderSpec宣言mapping・parse_float=Decimal・
+  raw/derived区別・決定論的obs ID）、store.py（data/vnext/normalized/ JSONL・
+  append-only・冪等・crash-safe）、tank_article_normalizer.py（tank記事互換。
+  INTERPRETED系フィールドは意図的に不採用）。
+- `src/intelligence/ingestion/auth.py`＋UrllibTransport注入フック
+  （監督者DESIGN CORRECTION 1: SECRET MUST NEVER BE PERSISTED≠NEVER BE USED。
+  ephemeralヘッダのみ・永続経路ゼロをテストで検証）。
+- `src/intelligence/sources/model.py`: SourceDocumentへP1-D正規化フィールド10件を
+  0.x非破壊追加（canonical_locator/guid/published_raw/date_quality/published_inferred
+  /published_inferred_from/content_fingerprint/media_type/normalizer_name/version）。
+- `core/contracts.py`: SourceDocumentRepository / ObservationRepository /
+  NormalizationEventRepository Protocol追加。
+- `tests/intelligence/`: normalization系＋auth 53件（text/lang 7・dates 9・
+  feed_normalizer 11・observation/units 13・store 5・tank互換 5（実shard sample検証
+  含む・clone不在環境ではskip）・auth 3）。
+- `docs/normalization/`: ARCHITECTURE / SOURCE_DOCUMENT_SPEC / DATE_NORMALIZATION_SPEC /
+  OBSERVATION_NORMALIZATION_SPEC / NORMALIZATION_INVARIANTS（N1〜N17）。
+- `docs/sources/SOURCE_GAPS.md`: SOURCE_GAP/CONNECTIVITY TRACK（G1〜G8。
+  P1-D以降のblockerにしない別管理）。
+
+## v4.15 (2026-08-30) — Phase 1-C: Raw Ingestion
+
+外部Sourceの取得情報を「改変・要約・AI解釈する前のRAW SOURCE EVIDENCE」として
+安全・再現可能・追跡可能に保存する層。**RAW DATA IS IMMUTABLE**（同一URLの内容更新は
+新RawItemとして積み、旧版を消さない）。P1-D正規化・Fact抽出・LLM処理は未着手。
+
+### 追加
+
+- `src/intelligence/ingestion/`（新パッケージ・God Fetcher禁止の8分割）:
+  model.py（FetchRequest/FetchResponse/FetchAttempt。資格情報ヘッダを型レベル拒否）、
+  transport.py（HttpTransport Protocol＋stdlib urllib実装・redirect chain記録・
+  エラー分類・redact_url）、fetcher.py（retry方針: timeout/5xx/429のみ・Retry-After尊重・
+  指数backoff・最大3試行、conditional GET=Attempt列からの導出、source isolation）、
+  raw_store.py（content-addressed blob＋JSONL。atomic write・冪等・crash-safe・
+  hash検証。RawRepository/FetchAttemptRepository充足）、feed_parser.py（tank移植＋
+  RDF対応追加。RSS2/Atom/RDF/JSON/HTML検出・正規化前entry無損失抽出・encoding多段解決）、
+  url_normalize.py（tank移植。original URL必須保持）、date_quality.py（source提供/
+  naive/欠損の分類のみ。補正しない）、dedup.py（exact hash/canonical URL/GUIDのみ）、
+  live_validation.py（監督者指定11ソースの最小live検証。Actions実行用）。
+- `src/intelligence/sources/model.py`: RawItemへendpoint_id/encoding/fetch_attempt_id
+  追加、SourceEndpointへendpoint_id（content-addressed自動導出）追加（0.x非破壊）。
+- `core/contracts.py`: RawRepository / FetchAttemptRepository Protocol追加。
+- `.github/workflows/p1c-live-validation.yml`: feature branch限定・triggerファイル
+  更新時のみ・contents:read・Secrets不使用の最小live検証（監督者承認のlive validation
+  gates対応。Legacy本番workflowとGitHub Pagesは無変更）。
+- `tests/intelligence/`: ingestion系テスト65件（model 7/raw_store 7/feed_parser 20/
+  fetcher 13/url_normalize 5/date_quality 5/dedup 4/live_validation 4）。
+  すべて注入transportによる完全オフライン。
+- `docs/ingestion/`: RAW_INGESTION_ARCHITECTURE / FETCHER_CONTRACT /
+  RAW_STORAGE_SPEC / PARSER_ADAPTER_SPEC / LIVE_VALIDATION_REPORT。
+
+### 改善
+
+- **最小live validation実施**（GitHub Actions runner・監督者承認gates・計14リクエスト・
+  Secrets不使用）: CORE実接続確認 boj_whatsnew/dmb_ecb_press=HEALTHY、theverge=Atom実証、
+  fed_press=本体稼働確定（Legacy CI失敗はクライアント条件=UAと確定）。
+- `source_feeds.yaml` **v3.0.1**: live実測13ソースのcurrent_healthを更新
+  （healthy 20/degraded 1/dead 8/unverified 55/auth 2、CORE 7→5）。歴史レイヤー不変。
+
+### 修正
+
+- live実測によるDEAD確定5件を反映: dmb_boj_whatsnew・mof_whatsnew・jp_mof_press
+  （**MOF公式RSS全滅＝一次情報空白**）・jp_stat_release・uk_gov（各replacement明示）。
+
+## v4.14 (2026-08-29) — Phase 1-B: Source Registry & Health Audit
+
+全86ソースの実用性監査。**HISTORICALLY_OBSERVED ≠ CURRENTLY_HEALTHY** の分離を
+カタログ構造とテストで機械強制。Legacy挙動無変更・P1-C ingestion未着手・
+bulk取得/LLM呼出/DB runtimeなし。
+
+### 追加
+
+- `src/intelligence/sources/model.py` 拡張: SourceCategory / HealthState / AuthType /
+  FeedFormat / UsageStatus enum＋`SourceEndpoint`（取得口）/`SourceHealthObservation`
+  （死活観測の時系列レコード・tz-aware必須・Secret保持不能）。God object化を回避し
+  Source（identity）と分離。serialization登録済み。
+- `src/intelligence/sources/health_check.py`: transport注入式の死活チェッカー
+  （判定表: HEALTHY/DEGRADED/AUTH_REQUIRED/RATE_LIMITED/MOVED/DEAD/UNVERIFIED、
+  形式判定 classify_format、鮮度抽出、現在状態の導出）。開発環境はegress遮断のため
+  live実行不能だが、ネットワークのある環境でそのまま実行可能な形で提供。
+- `docs/sources/`: SOURCE_REGISTRY_SPEC / SOURCE_HEALTH_AUDIT（86ソース監査結果:
+  HEALTHY18・DEGRADED3・AUTH2・DEAD3・UNVERIFIED60）/ SOURCE_CLASSIFICATION
+  （tier×投資価値×役割の3軸、CORE7・重複7グループ、P1-Cアダプタ形式一覧）/
+  SOURCE_FAILURE_POLICY（役割別障害時挙動の設計。実装はP1-C以降）。
+- `tests/intelligence/`: test_health_check.py（22件・全状態オフライン検証）＋
+  test_source_registry.py（12件・カタログ整合性/歴史・現在分離/CORE要件/重複/
+  Secretなし/roundtrip）。
+
+### 改善
+
+- `knowledge/source_reliability/source_feeds.yaml` を **v3.0.0** へ再構成:
+  endpoint / historical（tank実績を隔離保持）/ recent_ci（Legacy CI日次レポート
+  14日実測 2026-08-16..29）/ current_health（導出値・根拠method付き）/
+  investment_value / role / duplicate_group の層構造。86ソース・実績データは
+  欠落なく引き継ぎ。CI実測により恒常失敗6ソースを確定（DEAD3・DEGRADED3）。
+
+### 修正
+
+- `source_feeds.yaml` の `marketwatch_market` URLをLegacy collectors実体
+  （realtimeheadlines）へ訂正（旧値はurl_corrected_fromで保持）。
+
+## v4.13 (2026-08-29) — Phase 1-A: Evidence Schema & Provenance（vNext schema 0.2.0）
+
+Phase 1認可を受けたP1-A実装。Evidence First Architectureの正式ドメインモデルを構築
+（Stage 1.7の履歴rewriteはMAINTENANCE TRACKへ分離・成果物保持）。
+Legacy挙動無変更・P1-B未着手・live取得/LLM呼出/DB runtimeなし。
+
+### 追加
+
+- `src/intelligence/core/`: time.py（tz-aware強制・時刻5種の分離）、ids.py（ULID＋
+  content-addressed＋slugの使い分け）、serialization.py（`_type`タグ付きJSON往復・
+  Decimal文字列化・float全面拒否）、types.py 0.2.0（VerificationState/Direction新設、
+  旧EvidenceRecord等を廃止しドメインへ再配置）、contracts.py更新（新型対応・UTC暦日契約）。
+- `src/intelligence/sources/model.py`: Source / RawItem / SourceDocument
+  （content-addressed ID・tierスナップショット・revision_of）。
+- `src/intelligence/market/model.py`: Observation（Decimal必須・raw/derived・
+  派生inputs provenance・改定は新レコード）。
+- `src/intelligence/evidence/`: model.py（Fact/Analysis/ForecastStatement分離・
+  ForecastMetadata・EvidenceLink many-to-many）、invariants.py（UNSUPPORTED検出・
+  CONFLICTING導出・分析トレース）、jsonl_store.py（参照実装ストア・重複ID規約）。
+- `tests/intelligence/`: evidence_fixtures.py（指示の10 syntheticケース＋因果チェーン）＋
+  新テスト70件（domain 25/serialization 38/store 7）・contracts書換8件・境界検査を
+  vNext全域ベンダー中立へ拡張。**総計553 passed**（Legacy 451＋vNext 102）。
+- `docs/evidence/`: EVIDENCE_DOMAIN_MODEL / PROVENANCE_MODEL / EVIDENCE_INVARIANTS /
+  STORAGE_DECISION（JSONL正本＋再構築可能SQLite索引の方針）。
+
+## v4.12 (2026-08-29) — Rebuild Stage 1.7: Confidential History Remediation（準備完了・push保留）
+
+承認A〜Dに基づく履歴除去の実行段。PRE-FLIGHT→原本安全確認（3系統MD5一致）→
+ローカルmirror/bundleバックアップ→DRY RUN（444コミット保持・対象12パスのみ除去・
+featureブランチツリーはバイト同一・rewrite後クローンで492 passed）まで完了。
+**force pushのみ実行環境の権限ブロックにより保留**（迂回せず停止。再開手段を文書化）。
+
+### 追加
+
+- `docs/security/HISTORY_REMEDIATION_EXECUTION.md`（新規）: 実行記録・EXECUTION GATE
+  停止事由・再開手段・rewrite後ブランチ戦略・コラボレータ影響・組織ガバナンス注記。
+- `docs/security/POST_REWRITE_VERIFICATION.md`（新規）: フレッシュクローン検証手順・
+  GitHub残存リスク（dangling object/キャッシュ/Support依頼の要否）・フォローアップ。
+- `docs/security/history_rewrite.sh`（新規）: 検証つきrewrite実行スクリプト
+  （フレッシュミラー→filter-repo→検証→レース検査→force push→リモート検証。冪等）。
+
+### 改善
+
+- `.github/workflows/daily-market-brief.yml`: **Security Guardステップを追加**（承認D。
+  機密ファイルがtrackingされた場合、レポート生成前にworkflowを失敗させる。
+  発効はmigration merge後）。
+- `docs/security/SECURITY_REMEDIATION_PLAN.md`: 承認事項A〜Eの決定・実施状態を反映。
+- `docs/security/GIT_HISTORY_EXPOSURE_AUDIT.md`: DRY RUN結果とリモート未反映状態を追記。
+
+## v4.11 (2026-08-29) — Rebuild Stage 1.6: Security & Data Governance Remediation
+
+監督指示（SECURITY_GATE）に基づく是正。履歴書き換え・rotation・大量削除は未実施
+（計画のみ作成し承認待ち）。Legacy本番の実行時挙動は無変更。
+
+### 追加
+
+- `docs/security/DATA_CLASSIFICATION_POLICY.md`（新規）: PUBLIC〜SECRETの5分類＋
+  SENSITIVE_IDENTIFIER。Git/公開/クラウド/LLM送信/ログ/派生データの可否マトリクスと
+  Secret取り扱い規則（ヘッダ認証必須・redaction・クエリ文字列禁止）。
+- `docs/security/CONFIDENTIAL_RESEARCH_POLICY.md`（新規）: 羅針盤PDF等
+  CONFIDENTIAL_SOURCEの正式ルール（public repo/Pages/外部アップロード禁止・
+  LLM送信は明示承認制・派生は抽象化物のみGit可）と8月PDF受け入れ手順。
+- `docs/security/GIT_HISTORY_EXPOSURE_AUDIT.md`（新規）: 完全履歴437コミットの実測監査。
+  PDFは単一コミット`128f4b9`で追加・タグ/リリース/LFS/Pages/Actions artifactへの混入なし。
+  **Secretパターン履歴スキャン2,368blob=0件、tank側キー値流出=0件（ROTATION不要）**。
+  ※shallowクローン起因の「51コミット」誤認を訂正。
+- `docs/security/SECURITY_REMEDIATION_PLAN.md`（新規）: filter-repo手順・Private化代替案・
+  output/ cleanup計画・承認待ち事項A〜E。
+- `tests/intelligence/test_confidential_guard.py`（新規5件）: tracked PDFゼロ検査・
+  research配下README限定・check-ignore実地検証・識別子ファイル非tracking・
+  vNextコードの機密パス参照禁止（strict・Legacy例外なし）。
+
+### 改善
+
+- `.gitignore`: `date/rashinban/*.pdf`・Cloudflare識別子2ファイルを保護対象に追加。
+- 羅針盤PDF 10冊を`research/source_docs/compass/`へ複製（MD5検証済み・git非管理）の上、
+  `date/rashinban/*.pdf`と識別子2ファイルの**Git trackingを解除**
+  （ディスク上のファイル・履歴内blobは保持。履歴除去は承認待ち）。
+- `date/rashinban/README.md`: セキュリティ通知と復元手順を追記。
+- `tests/intelligence/test_knowledge_assets.py`: Secret検査パターンに
+  Subscription-Key=/appId=（クエリ文字列鍵）を追加。
+
+## v4.10 (2026-08-29) — Rebuild Stage 1.5: 2旧プロジェクト横断監査と選択的移行
+
+article-intelligence-data-tank（GitHub public・READ ONLYクローン）とdaily-market-briefを
+横断監査し、資産の取捨選択（REUSE/MIGRATE/REWRITE/REFERENCE_ONLY/ARCHIVE/DISCARD）を確定。
+安全な知識資産のみvNextへ移行した。Legacy本番・tankリポジトリはともに無変更。
+
+### 追加
+
+- `docs/rebuild/CROSS_REPO_ASSET_AUDIT.md`（新規）: tank全26モジュール監査
+  （記事モデル約70フィールド・feed_parser優位・**CLI起動不能バグで5週間停止中**等の
+  重大所見T1-T7）、dmbとの重複能力比較とCanonical決定、セキュリティ所見。
+- `docs/rebuild/ASSET_SELECTION_MATRIX.md`（新規）: 約70資産群の横断分類。
+  Phase 1-2コード母体=tank系、市場データ/スケジューラ/配信=dmb系、知識正本=knowledge/。
+- `docs/rebuild/HISTORICAL_DATA_INVENTORY.md`（新規）: 過去データ全実測
+  （tank記事3,056件 2026-06-22..07-22、dmbレポート59日分、journal 5件、theme_learning 0件等）。
+- `docs/rebuild/VNEXT_RECONCILIATION.md`（新規）: Stage 1基盤のKEEP/CHANGE/ADD/
+  REMOVE_LATER再評価。core契約・パッケージ構成はKEEP確定。
+- `docs/rebuild/RASHINBAN_INVENTORY.md`（新規）: 羅針盤PDFのファイルシステム実測棚卸し
+  （6月9冊＋7月1冊=10冊・全てpublicリポジトリにtracked、**8月分0冊**→Phase 0.5継続BLOCKED。
+  public露出の解消は要承認事項として整理）。
+- `research/source_docs/compass/README.md`（新規）: 8月PDFの安全な受け渡し手順
+  （PDF本体は.gitignoreで保護しコミット不能に）。
+
+### 改善
+
+- `knowledge/source_reliability/source_feeds.yaml` v2.0.0: tank `config/sources.yaml`
+  （70ソース・source_class/country/trust_score等）を正として統合、dmb固有16件を追加
+  （計86件）。tank記事ストア実測により**42ソースをverified化**（観測記事数付き）。
+- `knowledge/theme_relations/themes.yaml` v1.1.0: tankテーマ語彙45スラッグとの対応表
+  （en_aliases 25件・unmapped 20件）を追加。
+- `tests/intelligence/`: en_aliases整合テスト追加・URL検査をhttp(s)許容へ（35→36件）。
+- `.gitignore`: `research/source_docs/` 配下を保護（README除く）。
+
+## v4.9 (2026-08-29) — Rebuild Stage 1: vNext骨格＋知識移設（Investment Intelligence OS）
+
+監督承認（LEGACY_AUDIT_APPROVED / GREENFIELD_REBUILD_AUTHORIZED）を受け、
+Legacyとは独立した新開発本線 vNext の骨格と知識資産を作成した。
+**Legacy本番（main.py・AnalysisBundle・html_builder・CI・Pages・config.yaml）は無変更**。
+Phase 1（Source / Evidence Engine）の本格実装は未着手。
+
+### 追加
+
+- `src/intelligence/`（新規）: vNext中核パッケージ。core/types.py（ドメイン型:
+  SourceTier/StatementType/Horizon/SourceMeta/ForecastAttributes/EvidenceRecord/
+  MarketObservation/LLMResult）、core/contracts.py（Protocol契約: Clock/LLMProvider/
+  EvidenceRepository/MarketRepository/NewsRepository/KnowledgeRepository。実装なし・
+  LLMはベンダー中立）、および12ドメインパッケージ（責務docstring付き）。
+- `knowledge/`（新規）: 旧config.yamlからCOPY+NORMALIZEした知識資産。
+  causal_rules（market/rates/fx、全18ルールにID・confidence付与）、
+  theme_relations（themes 29件＋durable 7件、theme_graph 37ノード）、
+  source_reliability（source_tiers 23件、source_feeds 24本＋方針記録）、
+  compass_dna/market_rules.yaml（正本を移設。docs側は凍結注記のみ）。
+- `tests/intelligence/`（新規35件）: knowledge YAML検証（パース・メタデータ・
+  ルールID横断一意・グラフ参照整合・Tier整合・Secret混入なし）、import境界の
+  AST検査（vNext→Legacy禁止・core→ベンダーSDK禁止）、core契約テスト
+  （FACT/FORECAST分離の型強制・Protocol実装可能性）。
+- `docs/rebuild/STAGE1_VNEXT_FOUNDATION.md`（新規）: 実施記録・正規化判断・リスク。
+
+### 改善
+
+- `.gitignore`: vNext実行時データ `data/vnext/` を非git管理に（Legacy既存パスへ影響なし）。
+- `docs/rebuild/MIGRATION_PLAN.md`: Stage 1実施記録を追記。
+- `docs/compass_dna/analysis_rules/market_rules.yaml`: 正本移設の凍結注記を追記（内容不変）。
+
+## v4.8 (2026-08-29) — Legacy Audit & Greenfield Rebuild Design（Investment Intelligence OS）
+
+Investment Intelligence OSの方針変更（Brownfield Audit → Selective Migration →
+Greenfield Rebuild）に伴い、リポジトリ全資産（Python約25,500行・collectors 30/
+analysis 50/report 4系・CI・Pages・Cloudflare・tests 451件・データ資産）を監査し、
+再利用判定と新アーキテクチャ・移行計画を設計した（ドキュメントのみの追加。
+既存コード・設定・CI・Pagesは無変更）。
+
+### 追加
+
+- `docs/rebuild/LEGACY_AUDIT.md`（新規）: 現状アーキテクチャ・結合・技術的負債・
+  危険な前提（src/date死にコピー、羅針盤学習の三重不一致、requirements.txtの
+  anthropic欠落、公開リポジトリ内のCloudflare識別子追跡等）・再利用資産・障害の監査。
+- `docs/rebuild/REUSE_MATRIX.md`（新規）: 56資産のREUSE/PARTIAL_REUSE/REBUILD/
+  REMOVE_LATER/UNKNOWN判定（理由・依存・品質・リスク・推奨アクション付き）。
+- `docs/rebuild/TARGET_ARCHITECTURE.md`（新規）: Sources→Evidence→Data Bank→
+  Analysis→Reports→API→PWAのデータフロー、14サブシステムの疎結合設計、
+  新ディレクトリレイアウト案、FACT/ANALYSIS/FORECASTのデータ所有権規約。
+- `docs/rebuild/MIGRATION_PLAN.md`（新規）: 稼働中パイプラインを壊さない
+  Strangler方式の5段階移行計画・ロールバック手順・要承認事項一覧。
+- `docs/rebuild/REBUILD_ROADMAP.md`（新規）: Phase 0〜12の新アーキテクチャ前提
+  タスク分解（Phase順序は不変更・変更案はproposalとして分離）。
+
+## v4.7 (2026-08-28) — Phase 0: Compass DNA解析（Investment Intelligence OS）
+
+Investment Intelligence OS計画のPhase 0として、`date/rashinban/` の
+「グローバル投資の羅針盤」10冊（2026/06/18〜07/01・55ページ）を全ページ解析し、
+紙面構造・データ分類・分析ルール・テーマ展開・FACT/ANALYSIS/FORECAST分離規約を
+リバースエンジニアリングした（ドキュメントのみの追加。既存コード・設定・CIは無変更）。
+
+### 追加
+
+- `docs/compass_dna/COMPASS_DNA_SPEC_v1.md`（新規）: 統合仕様17セクション。
+- `docs/compass_dna/MARKET_DATA_TAXONOMY.md`（新規）: CORE/SUPPORT/CONTEXTデータ分類。
+- `docs/compass_dna/ANALYSIS_RULE_CATALOG.md`（新規）: 分析ルールカタログ
+  （confidence: CONFIRMED/LIKELY/HYPOTHESIS、出典日付・ページ付き）。
+- `docs/compass_dna/THEME_DISCOVERY_RULES.md`（新規）: テーマ発火点7類型・展開手順・産業連鎖マップ。
+- `docs/compass_dna/REPORT_STRUCTURE_SPEC.md`（新規）: 紙面構造・曜日ローテーション仕様。
+- `docs/compass_dna/FACT_ANALYSIS_FORECAST_SPEC.md`（新規）: 三分類の言語仕様とEvidence Engine要件。
+- `docs/compass_dna/PHASE0_FINDINGS.md`（新規）: 主要発見10件・欠落ソース報告・Phase 1への示唆。
+- `docs/compass_dna/analysis_rules/market_rules.yaml`（新規）: ルールの機械可読サンプル（schema v0.1）。
+
 ## v4.6 (2026-07-20) — Rashinban Private Insight Vault（private記事の転送・入力UI・Future Outlook）
 
 レポート画面から気になった記事本文を貼り付けてData Tankの非公開領域へ転送し、

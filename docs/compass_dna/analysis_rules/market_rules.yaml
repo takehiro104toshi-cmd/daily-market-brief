@@ -1,0 +1,168 @@
+# market_rules.yaml — 羅針盤 Analysis Rule の機械可読サンプル（Phase 0）
+#
+# 【Stage 1注記 2026-08-29】運用上の正本は knowledge/compass_dna/market_rules.yaml へ移設した。
+# 本ファイルはPhase 0成果物（研究記録）として凍結し、以後の更新は knowledge/ 側で行う。
+#
+# 位置づけ: ANALYSIS_RULE_CATALOG.md の一部ルールをYAML化した「補助表現」。
+# Phase 0 時点ではルールエンジンは実装しない（本ファイルは将来のスキーマ検討用）。
+# confidence: confirmed / likely / hypothesis（CATALOGの表記に対応）
+# evidence: 出典号（YYYY-MM-DD）とページ。
+# horizon: intraday / 1d / 1w / medium / long
+
+schema_version: 0.1
+source_corpus: "Okasan Global Investment Compass 2026-06-18 .. 2026-07-01 (10 issues)"
+
+rules:
+  - rule_id: JP_DIR_001
+    name: overnight_us_sets_bias
+    conditions:
+      us_major_indices_prev_close: [up, down, mixed]
+    implication:
+      jp_open_bias: follows_us_direction
+      note: "必ずJP_DIR_002で補正する（単独では結論にしない）"
+    horizon: 1d
+    confidence: confirmed
+    evidence: ["2026-06-18 p1", "2026-06-24 p1", "2026-06-26 p1", "2026-07-01 p1"]
+
+  - rule_id: JP_DIR_002
+    name: night_futures_override
+    conditions:
+      nikkei_night_futures: known_level
+      conflict_with_us_direction: true
+    implication:
+      daily_call_anchor: night_futures_level
+      us_direction_weight: reduced
+    horizon: intraday
+    confidence: confirmed
+    evidence: ["2026-06-18 p1", "2026-06-23 p1", "2026-06-26 p1"]
+
+  - rule_id: JP_DIR_004
+    name: pre_event_caution_post_event_relief
+    conditions:
+      major_event_in_days: {lte: 2}   # 大型決算・FOMC・雇用統計・連休
+    implication:
+      pre_event: [profit_taking, wait_and_see]
+      post_event_if_not_negative: [aku_nuke_rebound, short_covering]
+    horizon: 1d
+    confidence: confirmed
+    evidence: ["2026-06-23 p1", "2026-06-24 p1", "2026-06-25 p1", "2026-06-26 p2"]
+
+  - rule_id: JP_INT_001
+    name: concentration_vs_breadth
+    conditions:
+      prime_top10_turnover_share_5dma: {gte: 0.50}
+    implication:
+      rally_sustainability: conditional_on_breadth_expansion
+      watch: laggard_rotation
+    horizon: 1w
+    confidence: confirmed
+    evidence: ["2026-06-19 p1", "2026-06-22 p1", "2026-06-29 p1", "2026-07-01 p1"]
+
+  - rule_id: JP_INT_003
+    name: ma_deviation_overheat_and_dip_target
+    conditions:
+      nikkei_dev_200dma: {gte: 0.20}   # 買われ過ぎ目安
+      # または個別: dev_25dma >= 0.30
+    implication:
+      overheat_flag: true
+      dip_buy_target: 25dma_level
+      override: strong_retail_demand_can_dominate
+    horizon: 1w
+    confidence: confirmed
+    evidence: ["2026-06-22 p1", "2026-06-24 p1", "2026-06-30 p4"]
+
+  - rule_id: JP_US_001
+    name: rates_up_growth_down_banks_up
+    conditions:
+      us_or_jp_10y_yield: rising
+      growth_valuation: high
+    implication:
+      growth_stocks: negative
+      banks_financials: positive
+      cheap_financials: strong_positive
+    horizon: medium
+    confidence: confirmed
+    evidence: ["2026-06-18 p1", "2026-06-19 p1", "2026-06-23 p3"]
+
+  - rule_id: JP_US_002
+    name: sox_leads_japan
+    conditions:
+      sox_prev_close: known
+      sox_nikkei_corr_30d: {gte: 0.6}
+    implication:
+      jp_semis_and_index: follow_sox
+      if_corr_topix_rising: spillover_to_broad_sectors
+    horizon: 1d
+    confidence: confirmed
+    evidence: ["2026-06-24 p1", "2026-06-26 p1"]
+
+  - rule_id: JP_FX_001
+    name: usdjpy_rate_gap_vs_intervention
+    conditions:
+      us_jp_rate_gap_expectation: widening
+      intervention_alert_level: high   # 歴史的円安水準
+    implication:
+      usdjpy: narrow_range
+      output_format: explicit_numeric_range_required
+      breakout_triggers: [us_jobs, ism, pce, boj_tankan, fed_chair_remarks]
+    horizon: 1w
+    confidence: confirmed
+    evidence: ["2026-06-18 p2", "2026-06-23 p2", "2026-06-25 p2", "2026-06-30 p2"]
+
+  - rule_id: JP_OIL_001
+    name: oil_down_dual_effect
+    conditions:
+      wti: falling
+    implication:
+      jp_cost_pressure: easing        # 化学・建設等の業績下押し緩和
+      us_consumer_leisure_airlines: positive
+      inflation_rate_hike_fear: easing
+      resources_stocks: negative_bias
+    horizon: 1w
+    confidence: confirmed
+    evidence: ["2026-06-18 p1", "2026-06-19 p2", "2026-06-22 p2", "2026-07-01 p3"]
+
+  - rule_id: JP_POL_001
+    name: policy_to_laggard_rerating
+    conditions:
+      government_investment_plan: concretized   # 金額・分野の具体化
+      related_stocks_positioning: laggard
+    implication:
+      laggard_policy_names: rerating_expected
+      slogan: "国策に売りなし"
+    horizon: medium
+    confidence: confirmed
+    evidence: ["2026-06-23 p1", "2026-06-29 p1", "2026-07-01 p1"]
+
+  - rule_id: JP_EVT_001
+    name: bellwether_earnings_as_theme_test
+    conditions:
+      theme_core_company_earnings: upcoming   # 例: マイクロン, 安川電
+    implication:
+      interpret_result_as: theme_sustainability_signal
+      spillover_map: related_names_pre_listed
+    horizon: 1w
+    confidence: confirmed
+    evidence: ["2026-06-22 p2", "2026-06-24 p2", "2026-06-25 p1", "2026-07-01 p1"]
+
+  - rule_id: JP_SEASON_001
+    name: june_dividend_reinvestment_value_tilt
+    conditions:
+      calendar: late_june
+    implication:
+      value_vs_growth: value_tilt
+      basis: "経験則と明示（配当再投資）"
+    horizon: 1w
+    confidence: confirmed
+    evidence: ["2026-06-22 p1"]
+
+  - rule_id: JP_RISK_002
+    name: theme_negative_side_check
+    conditions:
+      dominant_theme: any   # 例: AI
+    implication:
+      periodic_check: [input_cost_spike, product_delay, equity_supply_increase]
+      output: counter_thesis_article
+    horizon: medium
+    confidence: confirmed
+    evidence: ["2026-06-29 p3", "2026-06-23 p3"]

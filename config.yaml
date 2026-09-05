@@ -731,3 +731,378 @@ private_insight_intake:
   preserve_draft_on_failure: true
   clear_after_success: true
   show_optional_fields: false
+
+# ===== Phase 2-D vNext（Investment Intelligence OS）データ永続化 =====
+# canonicalデータの設置場所。開発コンテナはephemeralのため、恒久運用では
+# 環境変数 INTELLIGENCE_DATA_ROOT（最優先）または本キーで永続ディスクを指す。
+# GitリポジトリをData Bankとして使わない（data/vnext/は.gitignore済み）。
+vnext:
+  data_root: "data/vnext"
+
+# Phase 3-C Evidence-Grounded Compass Generator（src/intelligence/compass/）。
+# generator は deterministic を既定とする。llm は既存の LLMProvider 実装が
+# runtime injection されている場合のみ有効（credential はここに書かない）。
+compass_generator:
+  generator: "deterministic"
+  evidence_budget:            # Evidence Packageの上限（salience tier別）
+    core: 8
+    supporting: 8
+    optional: 4
+  numeric_tolerance_abs: "0.005"      # 丸め一致に加えて許容する絶対差
+  historical_level_tolerance_pct: "1.0"  # 過去Compassとの水準比較の許容差(%)
+  max_rejected_ratio: "0.5"           # これを超えて棄却されたらdraft全体をREJECTED
+  min_counter_contexts: 1             # 反対材料の最少数（0ならABSTAIN）
+  one_liner_sentences:
+    min: 2
+    max: 4
+  near_event_days: 2                  # Compass DNA JP_DIR_004（イベント直前の慎重姿勢）
+  llm_max_claims: 12
+  llm_max_claim_chars: 200
+  llm_max_tokens: 1500
+  outlook_horizon: "next_tokyo_session"
+
+# Phase 3.5 Japan Market Internals（src/intelligence/internals/）。
+# universe / 価格変化の定義 / 閾値はすべてversion化し、恣意的なscoreを作らない。
+# credentialはここに書かない（JQUANTS_API_KEY は runtime injection のみ）。
+market_internals:
+  universe:
+    id: "tse_prime_common"
+    version: "1.0.0"
+    market_codes: ["0111"]            # プライム（P2-H実測: Mkt=0111 / MktNm=プライム）
+    common_stock_code_suffixes: ["0"] # 5桁コード末尾0=普通株（優先株等の5桁目≠0を除外）
+    exclude_sector33_codes: ["", "9999"]   # 業種未設定（ETF/REIT等）を除外
+  price_movement:
+    version: "1.0.0"
+    basis: "raw_close_vs_previous_session_raw_close"   # 生終値どうし。調整係数≠1の日は除外
+  sessions: 45                        # pilot window（25日騰落レシオ＋20日平均を検証できる最小）
+  sector_classification: "S17"        # Morning Compass用途は17業種（33業種は使わない）
+  sector_top_n: 3
+  sector_min_relative_gap_pct_point: "0.30"   # 市場平均との差がこれ未満ならleader/laggardにしない
+  turnover_flat_band_ratio: "0.10"    # 20営業日平均比 ±10%以内はFLAT
+  turnover_unusual_ratio: "0.30"      # ±30%超は unusual（説明用flag。scoreではない）
+  breadth_trend_threshold_pct_point: "3.0"    # 5日平均−20日平均の騰落比率差（pt）
+  breadth_extreme_advance_ratio_pct: "80.0"   # 値上がり(下がり)比率がこれ以上/以下でextreme
+  ad_ratio_sessions: 25               # 騰落レシオ（25日）: Σ値上がり/Σ値下がり×100
+  investor_flow:
+    section: "TSEPrime"               # J-Quants investor-types の Section（pilotが観測値を報告）
+    publication_hour_jst: 16          # 公表日の何時に既知とみなすか（保守的な仮定）
+    max_age_days: 14                  # 最新公表週がこれより古ければSTALE
+    investor_types: ["foreign_investors", "individuals", "trust_banks", "business_corporations"]
+  request_interval_seconds: "0.3"     # J-Quants への礼儀（rate limit配慮）
+  fallback_sample_size: 30            # date指定取得が使えない場合の code指定sample（LIMITED_USE）
+
+# Phase 3.6 J-Quants Production Data Strategy（src/intelligence/jquants_ops/）。
+# rolling window は「計算に使う直近 session 数」であり canonical の削除ではない。
+# retry は bounded。credential はここに書かない。
+jquants_ops:
+  seed_sessions: 70                 # 初期構築（active 60 + safety buffer 10）
+  active_calculation_sessions: 60   # 朝の指標計算に使う直近 session
+  safety_buffer_sessions: 10        # corporate action / 欠落 session の余裕（25 ちょうどは禁止）
+  max_metric_window: 25             # 最長の指標窓（25日騰落レシオ）
+  calendar_range_days: 150
+  master_refresh_days: 7            # listed master は週1回（＋イベント時）。毎朝は取らない
+  flow_lookback_days: 14            # 週次flowの差分取得レンジ
+  earnings_calendar_days_ahead: 90
+  retry_max_attempts: 2             # bounded retry（auth/entitlement/schema は retry しない）
+  retry_backoff_seconds: [2, 4]
+  partial_session_ratio: "0.90"     # 行数がこの比率未満なら PARTIAL_SESSION
+  request_interval_seconds: "0.3"
+  pilot_seed_sessions: 30           # live pilot の seed（本番 70 の mechanism 検証）
+
+# Phase 3.7 Compass Corpus Foundation（src/intelligence/corpus/）。
+# 原本 PDF（社外秘）は Git 非管理の local research area に置く。コードは source_dir を config 経由でのみ受け取る。
+# Corpus store は INTELLIGENCE_DATA_ROOT 配下（compass_corpus / compass_corpus_pilot）。offline-first・credential なし。
+compass_corpus:
+  source_dir: "research/source_docs/compass"   # 承認済み local research area（CONFIDENTIAL_RESEARCH_POLICY §2）
+  inbox_dir: "research/source_docs/compass/inbox"   # Phase 3.75 local inbox contract（今回は contract 定義のみ）
+  document_family: "okasan_global_investment_compass"
+  family_markers_version: "1.0.0"
+  family_min_markers: 5                # page-1 の安定 marker がこれ未満なら QUARANTINED（fail-closed）
+  min_pages: 3
+  max_pages: 12
+  min_chars_per_page: 200              # text layer が薄いページ → LOW_TEXT（OCR は default で行わない）
+  extractor_version: "pypdf_text_layer:1.0.0"
+  analysis_version: "1.0.0"
+  coverage_thresholds_version: "1.0.0"
+  coverage_min_docs_per_label: 3       # dimension × label が well_represented になる最低本数
+  milestones: [10, 30, 50, 100, 200]   # CORPUS_10 / 30 / 50 / 100 / 200
+  inbox_stable_seconds: 5              # copy 途中のファイルを処理しない（mtime がこれ以上前で size 不変）
+  inbox_stable_samples: 2
+  alignment_tolerance_pct: "0.05"      # NEAR_MATCH の許容（%）。Fact Store は書き換えない
+  max_statement_chars: 200
+  max_observations_per_category: 40
+
+# Phase 3.75 Mobile / One-Tap Compass Intake（src/intelligence/mobile_intake/）。
+# iPhone → 共有シート「羅針盤に追加」→ private 同期フォルダ（iCloud Drive）→ Windows → bounded processor → Corpus。
+# 機械固有の絶対 path はここに書かない（env COMPASS_INBOX_DIR / INTELLIGENCE_DATA_ROOT または ~/.compass_intake/local_config.json）。
+mobile_intake:
+  provider: "ICLOUD_DRIVE"             # ICLOUD_DRIVE（選定）/ ONEDRIVE / GOOGLE_DRIVE / LOCAL_FOLDER（手動 fallback）
+  inbox_subpath: "Shortcuts/CompassInbox"   # 同期 root からの相対（iCloud Drive/Shortcuts/CompassInbox）
+  stable_seconds: 20                   # size 不変かつ mtime がこれ以上前なら転送完了とみなす
+  stable_samples: 2
+  sample_interval_seconds: 1.0
+  unstable_timeout_minutes: 30         # これを超えて転送中なら FAILED(TIMEOUT_UNSTABLE)。それまでは WAITING_UNSTABLE
+  stale_lock_minutes: 15               # crash 残骸の lock を回収する閾値
+  max_files_per_run: 20                # bounded（1 回の上限）
+  time_budget_seconds: 120             # bounded（1 回の時間上限）
+  scheduler_interval_minutes: 5        # Windows Task Scheduler の間隔（ユーザー権限・daemon なし）
+  task_name: "CompassIntake"
+  status_in_inbox: true                # 同期フォルダの _status/latest_status.txt に結果を書く（iPhone から確認可）
+  status_dir_name: "_status"
+  shortcut_name: "羅針盤に追加"
+  local_config_dir_name: ".compass_intake"
+  trigger_research: true               # Corpus 追加成功後に Phase 3.8 incremental research を 1 回呼ぶ（失敗しても Corpus は不変）
+  recover_environment_failures: false  # environment 由来（extractor 欠落）で FAILED になった同一 hash を gate 付きで再検証（通常は batch_import --recover で明示実行）
+
+# Phase 3.8 Automatic Compass Corpus Analyzer（src/intelligence/corpus_research/）。
+# 決定的・versioned・append-only。外部 LLM / embedding なし。production Compass DNA は変更しない。
+# pattern status は STRONG_PATTERN_CANDIDATE まで（APPROVED は Phase 3.9 の監督者 process）。
+compass_research:
+  structure_analyzer_version: "1.0.0"
+  salience_version: "1.0.0"
+  link_version: "1.0.0"
+  why_version: "1.0.0"
+  outlook_classifier_version: "1.0.0"
+  risk_classifier_version: "1.0.0"
+  similarity_version: "1.0.0"
+  pattern_version: "1.0.0"
+  lifecycle_thresholds_version: "1.0.0"
+  benchmark_version: "1.0.0"
+  dna_rules_path: "knowledge/compass_dna/market_rules.yaml"   # 読み取りのみ
+  similarity_top_k: 3
+  similarity_min_score: "0.30"
+  pattern_evidence_categories: 2       # pattern component に使う salient evidence category 数
+  new_candidate_support: 2             # OBSERVED → NEW_PATTERN_CANDIDATE（support 本数）
+  review_support: 3                    # REVIEW_CANDIDATE: eligible support ≥ 3 かつ regime ≥ 2 かつ期間 ≥ 30 日
+  review_regimes: 2
+  review_span_days: 30
+  strong_support: 5                    # STRONG: eligible ≥ 5 かつ regime ≥ 3 かつ期間 ≥ 90 日かつ全 VALID
+  strong_regimes: 3
+  strong_span_days: 90
+  strong_min_valid_ratio: "1.0"
+  research_retry_max_attempts: 2       # Corpus 成功後の研究解析 bounded retry
+  batch_max_files: 20                  # historical batch import の 1 回上限
+  corpus_size_caveat_below: 30         # eligible がこれ未満なら全 pattern 結論に corpus-size limitation
+
+# ------------------------------------------------------------------
+# Phase 3.9.1 Decision Foundation（PHASE_3_9_SPECIFICATION_FREEZE_V1）
+# 人間の decision を append-only に記録する土台。評価・推奨・ranking・promotion はここに入れない（3.9.2 以降）。
+# 値を変えるときは policy_version を必ず上げる（同じ version で内容が変わると decision の append を拒否する）。
+compass_decision:
+  policy_version: "1.0.0"
+  formal_review_min_corpus: 100        # CORPUS_100: eligible document がこれ未満なら formal APPROVED 不可（SHADOW MODE）。100 未満には設定できない
+  auto_approval: false                 # 常に false（true は起動時に拒否）
+
+# ------------------------------------------------------------------
+# Phase 3.9.2 Evaluation Engine（frozen 6 axis / Reference Score）
+# threshold と weight はすべてここに置く（コードへ埋めない）。値を変えるときは policy_version を必ず上げる
+# （同じ version で内容が変わると評価の書き込みを拒否する = silent な threshold 変更を防ぐ）。
+compass_evaluation:
+  policy_version: "1.0.0"
+  strength:                              # Q15 canonical input = eligible_support
+    low_max: 1                           # LOW: 1
+    medium_max: 3                        # MEDIUM: 2-3 / HIGH: >=4
+    not_ranked_types: ["FULL"]           # FULL は support_ranked=false（score では NOT_APPLICABLE）
+    relative_share_min_denominator: 30   # これ未満は NOT_APPLICABLE。tie-break 専用で axis state は変えない
+  time:                                  # Q16
+    medium_span_days: 14
+    medium_months: 2
+    high_span_days: 60
+    high_months: 3
+  cross_regime:                          # Q17 2D core / 3D confirmation。UNKNOWN は regime ではない
+    core_dimensions: ["equity_direction", "yen_direction"]
+    confirm_dimensions: ["equity_direction", "yen_direction", "us_rate_direction"]
+    medium_cells: 2
+    high_cells: 3
+    high_support: 3
+    high_span_days: 30
+    high_confirmed_cells: 1              # >=2 supporting document を持つ 2D cell
+    not_applicable_types: ["FULL", "STATE_OUTLOOK"]   # identity が regime を固定するため構造的に不可能
+  consistency:                           # Q18
+    committed_directions: ["UP", "DOWN"]
+    soft_directions: ["RANGE", "MIXED", "UNCERTAIN"]  # v1 は MEDIUM 上限
+    high_min_support: 2
+  novelty:                               # Q19
+    low_relations: ["SAME", "CONDITIONAL"]
+    low_min_overlap: 1
+  quality:                               # Q20（market_alignment の不在は defect ではない）
+    medium_valid_ratio_floor: "0.8"
+    blocking_document_qualities: ["LIMITED_USE", "QUARANTINED"]
+    degraded_document_qualities: ["PARTIAL"]
+    supported_structure_schema_versions: ["1.0.0"]
+    supported_analysis_versions: ["1.0.0"]
+  score:                                 # Reference Score は secondary display / ordering のみ
+    weights:
+      evidence_strength: 30
+      time_stability: 25
+      cross_regime: 20
+      evidence_consistency: 15
+      dna_novelty: 10
+    map: {LOW: 0, MEDIUM: 50, HIGH: 100}
+    applicable_weight_floor: 60          # 構造的 N/A 除外後がこれ未満なら NOT_COMPARABLE
+  formal_review_min_corpus: 100          # shadow 判定用（formal APPROVED は Phase 3.9.1 が守る）
+
+# Phase 3.9.2 Recommendation（frozen precedence・first match wins）
+compass_recommendation:
+  policy_version: "1.0.0"
+  precedence: ["NOT_READY", "REJECT_RECOMMENDED", "APPROVE_RECOMMENDED", "REVIEW_RECOMMENDED", "KEEP_REVIEWING"]
+  not_ready:
+    min_applicable_core_axes: 2          # FULL は 2（Time / Consistency）なので NOT_READY にはならない
+  reject:                                # 孤立した 1 件の矛盾では絶対に reject しない
+    require_consistency: "LOW"
+    min_strength: "HIGH"
+    min_time: "MEDIUM"
+    min_documents_each_side: 2
+    min_sibling_support: 2
+    min_dna_conflict_support: 2
+  approve:                               # strict。DNA Novelty は要求しない
+    require_quality: "HIGH"
+    require_consistency: "HIGH"
+    require_time: "HIGH"
+    require_cross_regime_where_applicable: "HIGH"
+    min_applicable_core: "MEDIUM"
+    excluded_types: ["FULL", "EVIDENCE_WHY", "EVIDENCE_RISK"]   # outlook-free は v1 REVIEW_ONLY
+    requires_novelty: false              # 常に false（true は起動時に拒否）
+  review:
+    min_strength: "MEDIUM"
+    min_time: "MEDIUM"
+    consistency_not: "LOW"
+  shadow_mode:
+    allow_approve_recommended: true      # CORPUS_100 未満でも助言は出す（3.9.4 replay の材料を残す）
+    label: "SHADOW_ONLY"
+  score_use:
+    allowed_for_state_transition: false  # 常に false（true は起動時に拒否）
+
+# ------------------------------------------------------------------
+# Phase 3.9.3 Shadow Review（frozen queue / cooldown / reason 要件）
+# Recommendation state は読むだけで、この層は再分類しない。Decision も DNA も書かない。
+# 値を変えるときは policy_version を必ず上げる（同じ version で内容が変わると build/record を拒否する）。
+compass_shadow_review:
+  policy_version: "1.0.0"
+
+  top_n: 8                               # 逆行件数 + アクティブ型数 + 予備。全 REVIEW 型を最低 1 件カバーする最小サイズ
+  watch_n: 0                             # v1 は 0（WATCH 機構は存在するが既定の production 出力は空）
+
+  state_priority: ["REJECT_RECOMMENDED", "APPROVE_RECOMMENDED", "REVIEW_RECOMMENDED"]
+  excluded_states: ["NOT_READY"]         # applicable core axis < 2。人間に見せる材料が無い
+  watch_source_state: "KEEP_REVIEWING"   # main queue には絶対に入れない
+  watch_excluded_lifecycles: ["OBSERVED"]
+
+  ranking_order:                         # 凍結（並べ替え不可）。質的 state が第一で score は tie-break
+    - high_axis_count
+    - reference_score
+    - relative_support_share
+    - eligible_support
+    - span_days
+    - pattern_id
+
+  type_diversity:
+    mode: "ROUND_ROBIN_WITH_CAP"
+    bypass_states: ["REJECT_RECOMMENDED", "APPROVE_RECOMMENDED"]   # 逆行証拠を型の都合で隠さない
+    type_order: ["EVIDENCE_OUTLOOK", "STATE_OUTLOOK", "THEME_OUTLOOK",
+                 "EVIDENCE_WHY", "EVIDENCE_RISK", "FULL"]          # 同順時の決定化のみ
+    type_caps: {EVIDENCE_WHY: 3, EVIDENCE_RISK: 3}                 # backstop。通常は round-robin が先に効く
+
+  cooldowns:                             # 0 = MATERIAL_CHANGE_ONLY（時間経過では戻さない。cooldown 無しではない）
+    AGREE: 30
+    DISAGREE: 0
+    NEEDS_MORE_EVIDENCE: 0
+    UNCLEAR: 14
+    DUPLICATE_OR_OVERLAPPING: 90
+    NOT_ACTIONABLE: 90
+  adverse_cooldown_cap: 7                # REJECT_RECOMMENDED は最大 7 日で必ず再確認する
+
+  material_change_fields:                # 再提示を決める唯一の材料
+    - recommendation
+    - axis_states
+    - axis_applicability
+    - eligible_support
+    - distinct_2d_cells
+    - contradiction
+    - lifecycle
+    - evaluation_policy_digest
+    - recommendation_policy_digest
+  material_change_excluded:              # Reference Score が再レビューを駆動しないための担保（起動時に検証）
+    - reference_score
+    - relative_support_share
+    - span_days
+    - confirmed_3d_cells
+
+  review_outcomes: ["AGREE", "DISAGREE", "NEEDS_MORE_EVIDENCE", "UNCLEAR",
+                    "DUPLICATE_OR_OVERLAPPING", "NOT_ACTIONABLE"]   # Decision / Recommendation 語彙と交差禁止
+  reason_requirements:
+    AGREE: "OPTIONAL"
+    DISAGREE: "REQUIRED"
+    NEEDS_MORE_EVIDENCE: "REQUIRED_STRUCTURED"
+    UNCLEAR: "REQUIRED"
+    DUPLICATE_OR_OVERLAPPING: "REQUIRED_WITH_REFERENCE"
+    NOT_ACTIONABLE: "REQUIRED"
+  min_reason_chars: 10
+
+  show_supporting_document_dates: true    # ISO 日付のみ。本文・ファイル名・path は出さない
+
+  default_reviewer_id: "SUPERVISOR"
+  allowed_reviewer_types: ["HUMAN"]       # SYSTEM は起動時に拒否（自動レビュー不可）
+  auto_decision_write: false              # 常に false（true は起動時に拒否）
+  auto_promotion: false                   # 常に false（true は起動時に拒否）
+
+# ------------------------------------------------------------------
+# Phase 3.9.4 Replay / Simulation（回顧的安定性研究。NOT_PREDICTIVE・NOT_FORMAL_APPROVAL）
+# 凍結規則（3.8 / 3.9.2 / 3.9.3）を過去 prefix に適用して遷移と持続性を再構成する。
+# 値を変えるときは policy_version を必ず上げる（同じ version で内容が変わると run を拒否する）。
+compass_replay:
+  policy_version: "1.1.0"                    # 1.0.0 → 1.1.0: stability calibration_state を凍結（閾値の値は不変）
+  default_mode: "MILESTONE_AND_TRANSITION"   # FULL_REPLAY は既定にしない（明示指定のみ）
+  default_ordering: "CHRONOLOGICAL"          # document_date, date_sequence, document_id。INGESTION は明示指定
+  milestone_points: [10, 30, 50, 100, 200]
+  transition_resolution: 5                   # eligible 文書 5 件刻みで粗く評価し、遷移区間を 1 件刻みへ精密化
+  refine_transitions: true
+  include_shadow_queue: true                 # 空 event store で queue を再構成（人間の回答は捏造しない）
+  full_replay_enabled: false
+  max_snapshots: 2000
+  max_undated_ratio: "0.05"                  # CHRONOLOGICAL で除外する undated がこれを超えたら fail closed
+  identity_ambiguity_tolerance: 0            # 同 pattern_id で components 不一致は 1 件も許さない
+  temp_workspace: ""                         # 空 = システム temp。<temp>/compass_replay_runs/<run_id>/
+  retain_debug_runs: false
+  fail_on_input_drift: true                  # 捕捉済み入力の改変は fail closed（新規 intake は無視して記録）
+  stability:                                 # v1 凍結（監督者決定 2026-09-05）。根拠: 実 FULL_REPLAY eligible 139 / patterns 463 /
+                                             # reversal 0=462 1=1 2+=0 / 現 APPROVE 10・REJECT 6 とも persistence 1.0・reversal 0
+    calibration_state: "CALIBRATED_CORPUS_139_V1"
+    unit: "eligible_documents"               # snapshot 数ではなく eligible 文書数で数える
+    stable_min_persistence: 15
+    mostly_stable_ratio: "0.8"
+    oscillating_min_reversals: 2
+
+# ------------------------------------------------------------------
+# Phase 3.9.5 First Formal DNA Review（human-bound evidence packet + fail-closed guard）
+# 値を変えるときは policy_version を必ず上げる（同 version で digest が変わると build を拒否）。
+# APPROVE_RECOMMENDED ≠ APPROVED / REJECT_RECOMMENDED ≠ REJECTED / APPROVED ≠ PROMOTED_TO_DNA。
+compass_formal_review:
+  policy_version: "1.0.0"
+  packet_schema_version: "1.0.0"
+  recommendation_symmetry: true              # APPROVED は APPROVE_RECOMMENDED のみ・REJECTED は REJECT_RECOMMENDED のみ（凍結）
+  sibling_guard:
+    mode: "C1_HARD_BLOCK_C3_ACKNOWLEDGE"     # C1: 反対方向 sibling が APPROVED なら block（override なし）/ C3: 未決 APPROVE_RECOMMENDED は明示 acknowledgement
+    relation: "EVIDENCE_OUTLOOK_NARROW_SIBLING"   # Phase 3.9.2 contradiction key と同じ。STATE/THEME_OUTLOOK へ広げない（v1）
+  replay_evidence:
+    required_for: ["APPROVED", "REJECTED"]  # current-compatible な replay evidence が無ければ hard block
+    age_warning_eligible_docs: 5             # current eligible − captured eligible >= 5 で W_REPLAY_EVIDENCE_AGE（警告のみ）
+  freshness:
+    anchor: "packet_evidence_digest"         # 人間が見た証拠そのものの digest。material_digest は機械側の追跡用に併存
+    stale_on_corpus_growth: false            # corpus 増加だけでは stale にしない（証拠 field が不変なら packet は有効）
+    require_recommendation_match: true
+  reason:
+    min_chars: {APPROVED: 20, REJECTED: 20, KEEP_REVIEWING: 10, REOPENED_FOR_REVIEW: 20, SUPERSEDED: 20, RETIRED: 20}
+    categories: ["MORE_DOCUMENTS", "MORE_REGIMES", "LONGER_SPAN", "BETTER_QUALITY"]   # KEEP_REVIEWING の任意 category
+  duplicate_disposition: "KEEP_REVIEWING_WITH_METADATA"   # 新 state は作らない（disposition=DUPLICATE_OR_OVERLAPPING + related_pattern_id）
+  batch_actions_allowed: false               # 1 invocation = 1 pattern。batch APPROVED / REJECTED / KEEP_REVIEWING / REOPEN なし
+  promotion_boundary: "NOT_PROMOTED"         # 全 formal decision は NOT_PROMOTED。DNA promotion は別 gate
+  ordering:
+    stability_rank: ["STABLE", "MOSTLY_STABLE", "RECENT_TRANSITION", "INSUFFICIENT_HISTORY", "OSCILLATING"]
+    reject: ["first_reject_position", "reject_persistence_ratio_desc", "eligible_support_desc", "pattern_id"]
+    approve: ["stability_rank", "first_approve_position", "eligible_support_desc", "span_days_desc", "pattern_id"]
+    reopen: ["first_reject_position", "pattern_id"]
+  warnings:
+    recent_transition: true
+    oscillating: true
+    insufficient_history: true

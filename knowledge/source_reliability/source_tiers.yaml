@@ -1,0 +1,51 @@
+# 情報源の信頼度とTier。Stage 1で旧config.yaml `source_reliability` と
+# 旧src/collectors各ファイルのRELIABILITY既定値からCOPY+NORMALIZE。
+#
+# Tier正規化（Compass DNA FACT_ANALYSIS_FORECAST_SPEC.md §2に対応）:
+#   tier 1 = 一次情報（政府・中銀・取引所・規制当局・企業公式）      … reliability >= 0.95
+#   tier 2 = 高信頼報道・市場データ                                  … 0.75 <= reliability < 0.95
+#   tier 3 = 一般ニュース・その他                                    … reliability < 0.75
+# 未掲載ソースの既定値: reliability 0.5 / tier 3（旧systemの既定値0.5を踏襲）
+
+id: source_reliability.source_tiers
+version: "1.0.0"
+description: "情報源別の信頼度スコア（0.0-1.0）とTier1-3正規化。重複記事の統合時は高信頼側を残す"
+source: "config.yaml `source_reliability` および src/collectors/*.py の RELIABILITY 既定値より移設"
+status: active
+
+default:
+  reliability: 0.5
+  tier: 3
+
+tier_thresholds:
+  tier1_min: 0.95
+  tier2_min: 0.75
+
+sources:
+  # --- tier 1: 一次情報（政府・中銀・規制当局） ---
+  - { name: "Federal Reserve Press Releases", reliability: 0.97, tier: 1, origin: "config/source_reliability" }
+  - { name: "SEC Press Releases",             reliability: 0.97, tier: 1, origin: "config/source_reliability" }
+  - { name: "BLS 最新統計",                    reliability: 0.97, tier: 1, origin: "config/source_reliability" }
+  - { name: "ECB Press Releases",             reliability: 0.97, tier: 1, origin: "config/source_reliability" }
+  - { name: "EIA Today in Energy",            reliability: 0.95, tier: 1, origin: "config/source_reliability" }
+  - { name: "日本銀行",                        reliability: 0.95, tier: 1, origin: "collectors/boj.py RELIABILITY" }
+  - { name: "財務省",                          reliability: 0.95, tier: 1, origin: "collectors/mof.py RELIABILITY" }
+
+  # --- tier 2: 高信頼報道・主要経済メディア ---
+  - { name: "日本経済新聞 電子版(見出し)",      reliability: 0.90, tier: 2, origin: "collectors/nikkei.py RELIABILITY" }
+  - { name: "NHKニュース 経済",                reliability: 0.85, tier: 2, origin: "config/source_reliability" }
+  - { name: "NHKニュース 総合",                reliability: 0.85, tier: 2, origin: "config/source_reliability" }
+  - { name: "Bloomberg Markets(見出し)",       reliability: 0.85, tier: 2, origin: "collectors/bloomberg.py RELIABILITY" }
+  - { name: "Reuters Business(見出し)",        reliability: 0.85, tier: 2, origin: "collectors/reuters.py RELIABILITY" }
+  - { name: "WSJ Markets(見出し)",             reliability: 0.85, tier: 2, origin: "collectors/wsj.py RELIABILITY" }
+  - { name: "CNBC",                            reliability: 0.80, tier: 2, origin: "collectors/cnbc.py RELIABILITY" }
+  - { name: "ロイター(Yahoo!ニュース経由)",     reliability: 0.75, tier: 2, origin: "config/source_reliability" }
+  - { name: "MarketWatch",                     reliability: 0.75, tier: 2, origin: "collectors/marketwatch.py RELIABILITY" }
+
+  # --- tier 3: 一般ニュース・その他 ---
+  - { name: "Yahoo!ニュース 経済",             reliability: 0.60, tier: 3, origin: "config/source_reliability" }
+  - { name: "Yahoo!ニュース トピックス",       reliability: 0.50, tier: 3, origin: "config/source_reliability" }
+  - { name: "Investing.com",                   reliability: 0.60, tier: 3, origin: "collectors/investing.py RELIABILITY" }
+  - { name: "CoinDesk",                        reliability: 0.60, tier: 3, origin: "config/source_reliability" }
+  - { name: "CoinTelegraph",                   reliability: 0.60, tier: 3, origin: "config/source_reliability" }
+  - { name: "Yahoo Finance US",                reliability: 0.60, tier: 3, origin: "config/source_reliability" }
