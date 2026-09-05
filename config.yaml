@@ -1045,3 +1045,29 @@ compass_shadow_review:
   allowed_reviewer_types: ["HUMAN"]       # SYSTEM は起動時に拒否（自動レビュー不可）
   auto_decision_write: false              # 常に false（true は起動時に拒否）
   auto_promotion: false                   # 常に false（true は起動時に拒否）
+
+# ------------------------------------------------------------------
+# Phase 3.9.4 Replay / Simulation（回顧的安定性研究。NOT_PREDICTIVE・NOT_FORMAL_APPROVAL）
+# 凍結規則（3.8 / 3.9.2 / 3.9.3）を過去 prefix に適用して遷移と持続性を再構成する。
+# 値を変えるときは policy_version を必ず上げる（同じ version で内容が変わると run を拒否する）。
+compass_replay:
+  policy_version: "1.0.0"
+  default_mode: "MILESTONE_AND_TRANSITION"   # FULL_REPLAY は既定にしない（明示指定のみ）
+  default_ordering: "CHRONOLOGICAL"          # document_date, date_sequence, document_id。INGESTION は明示指定
+  milestone_points: [10, 30, 50, 100, 200]
+  transition_resolution: 5                   # eligible 文書 5 件刻みで粗く評価し、遷移区間を 1 件刻みへ精密化
+  refine_transitions: true
+  include_shadow_queue: true                 # 空 event store で queue を再構成（人間の回答は捏造しない）
+  full_replay_enabled: false
+  max_snapshots: 2000
+  max_undated_ratio: "0.05"                  # CHRONOLOGICAL で除外する undated がこれを超えたら fail closed
+  identity_ambiguity_tolerance: 0            # 同 pattern_id で components 不一致は 1 件も許さない
+  temp_workspace: ""                         # 空 = システム temp。<temp>/compass_replay_runs/<run_id>/
+  retain_debug_runs: false
+  fail_on_input_drift: true                  # 捕捉済み入力の改変は fail closed（新規 intake は無視して記録）
+  stability:                                 # 語彙は凍結・閾値は PROVISIONAL（実 FULL_REPLAY で較正してから凍結）
+    calibration_state: "PROVISIONAL_CALIBRATION_ONLY"
+    unit: "eligible_documents"               # snapshot 数ではなく eligible 文書数で数える
+    stable_min_persistence: 15
+    mostly_stable_ratio: "0.8"
+    oscillating_min_reversals: 2

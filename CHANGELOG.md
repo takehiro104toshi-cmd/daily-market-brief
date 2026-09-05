@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.46 (2026-09-05) — Add Phase 3.9.4 Replay / Simulation（retrospective stability replay）
+
+**NOT_PREDICTIVE / NOT_FORMAL_APPROVAL / HUMAN_FEEDBACK_ONLY / IMMUTABLE_INPUT_UNIVERSE / PROVISIONAL_CALIBRATION_ONLY**
+
+### 追加
+
+- `src/intelligence/replay/`（新規 package、1 機能 = 1 ファイル）: corpus が N 件だった時点の
+  Phase 3.8 → 3.9.2 → 3.9.3 の出力を事後再構成し、推奨の安定性を測る。
+  - `snapshot.py`: live corpus を `sqlite3.Connection.backup()` で不変 snapshot 化（OS copy 不使用、
+    CompassIntake は停止しない）。Context は run 開始時に行ごと export し `context_manifest_digest` で固定。
+  - `manifest.py` / `ordering.py`: 入力 manifest と canonical ordering（既定 CHRONOLOGICAL =
+    document_date, date_sequence, document_id。INGESTION は明示時のみ。undated は除外・記録・閾値超で fail closed）。
+  - `view.py`: prefix 外 read を `ReplayLeakageDetected` で拒否する read-only corpus view。
+  - `research.py` / `evaluate.py`: temp root で既存 engine を呼ぶ（Phase 3.8 incremental + milestone での
+    full rebuild 等価性、3.9.2 dry-run 評価、3.9.3 空 event store での queue 再構成、漏洩監査、sanity）。
+  - `timeline.py` / `events.py` / `metrics.py` / `stress.py`: timeline row、FIRST_* / *_CHANGED event、
+    安定性指標（accuracy 系の命名なし）、PROVISIONAL 分類、APPROVE / REJECT stress、
+    Phase 3.9.5 向け `formal_review_input`（Decision / review 履歴は read-only 参照のみ）。
+  - `store.py` / `runner.py` / `cli.py`: `<data_root>/compass_replay/` への atomic 出力、
+    replay 所有 temp のみ cleanup、determinism digest（policy / manifest / snapshot / run）、
+    入力 drift（捕捉済み入力の改変）で fail closed、CLI（run / validate-policy / list-runs / summary / show）。
+- `config.yaml` `compass_replay`（policy_version 1.0.0、既定 MILESTONE_AND_TRANSITION、
+  transition_resolution 5、stability 閾値は PROVISIONAL）。
+- `docs/databank/COMPASS_REPLAY_SPEC.md`。
+- `tests/intelligence/test_replay.py` 44 件（backup 一貫性、Context 不変、順序、eligibility、
+  prefix 閉包、漏洩検出、rebuild 等価性、identity、mode、event、metrics、sanity、空 event store、
+  production 無変更、PDF 非参照、決定性、drift、temp cleanup、forbidden key、CLI）。
+
+Phase 3.8 / 3.9.2 / 3.9.3 / Decision / DNA は未変更（evaluation `1a8443098f64d679` /
+recommendation `0a979d8421a01d08` / shadow_review `e6f5094cacef6fec` 不変）。replay policy digest `3215cecb31567ebd`。
+formal review・Decision 記録・人間 review event・DNA promotion は行わない（Phase 3.9.5 は未着手）。
+
 ## v4.45.2 (2026-09-04) — Fix queue の corpus 文脈が live 読みで内部矛盾する問題 / 入力 drift 検出
 
 Windows 実機 acceptance で `queue_rebuildable = false` となった事象の根本原因対応。
