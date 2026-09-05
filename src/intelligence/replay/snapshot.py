@@ -21,6 +21,7 @@ from .errors import ReplayContextSnapshotError, ReplaySnapshotCaptureError
 
 CONTEXT_FILE = "contexts.jsonl"
 CALENDAR_FILE = "trading_days.json"
+CONTEXT_META_FILE = "context_meta.json"
 STALE = "STALE"
 #: regime 判定が読む Context 列（context_labels が参照する field + 順序を決める field）
 CONTEXT_FIELDS = ("context_id", "context_type", "subject_id", "session_date", "known_at",
@@ -231,6 +232,13 @@ def export_context_snapshot(production_data_root: Path, snapshot_dir: Path, upto
             for r in rows_by_session[session]:
                 handle.write(json.dumps(r, ensure_ascii=False, default=str) + "\n")
     (snapshot_dir / CALENDAR_FILE).write_text(json.dumps(trading_days), encoding="utf-8")
+    snap = _build_context_snapshot(rows_by_session, trading_days, context_available, calendar_available)
+    (snapshot_dir / CONTEXT_META_FILE).write_text(json.dumps(snap.as_dict(), sort_keys=True), encoding="utf-8")
+    return snap
+
+
+def _build_context_snapshot(rows_by_session: Mapping[str, List[Dict[str, Any]]], trading_days: Sequence[str],
+                            context_available: bool, calendar_available: bool) -> ContextSnapshot:
     digest = _context_digest(rows_by_session, trading_days)
     return ContextSnapshot(rows_by_session={k: tuple(v) for k, v in rows_by_session.items()},
                            trading_days=tuple(trading_days), context_manifest_digest=digest,
@@ -238,6 +246,34 @@ def export_context_snapshot(production_data_root: Path, snapshot_dir: Path, upto
                            row_count=sum(len(v) for v in rows_by_session.values()),
                            session_count=len(rows_by_session),
                            latest_session_date=max(rows_by_session) if rows_by_session else "")
+
+
+def load_context_snapshot(snapshot_dir: Path) -> ContextSnapshot:
+    """既に export 済みの Context snapshot（保持された run の temp）を **再読するだけ** で復元する。
+
+    production Context には触れない。digest は export 時と同じ規則で再計算されるので、
+    同じ snapshot からの再 run は同じ context_manifest_digest を持つ。
+    """
+    snapshot_dir = Path(snapshot_dir)
+    rows_file, cal_file, meta_file = (snapshot_dir / CONTEXT_FILE, snapshot_dir / CALENDAR_FILE,
+                                      snapshot_dir / CONTEXT_META_FILE)
+    if not rows_file.is_file() or not cal_file.is_file() or not meta_file.is_file():
+        raise ReplayContextSnapshotError("retained context snapshot is incomplete")
+    try:
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        trading_days = [str(d) for d in json.loads(cal_file.read_text(encoding="utf-8"))]
+        rows_by_session: Dict[str, List[Dict[str, Any]]] = {}
+        for line in rows_file.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                d = json.loads(line)
+                rows_by_session.setdefault(str(d.get("session_date", "")), []).append(d)
+    except (OSError, ValueError) as exc:
+        raise ReplayContextSnapshotError(f"retained context snapshot unreadable: {type(exc).__name__}") from exc
+    snap = _build_context_snapshot(rows_by_session, trading_days, bool(meta.get("context_available")),
+                                   bool(meta.get("calendar_available")))
+    if snap.context_manifest_digest != str(meta.get("context_manifest_digest", "")):
+        raise ReplayContextSnapshotError("retained context snapshot digest does not match its manifest")
+    return snap
 
 
 def live_context_digest(production_data_root: Path, upto_session_date: str) -> str:

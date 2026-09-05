@@ -25,6 +25,7 @@ from .errors import (
     ReplayError,
     ReplayInputMutated,
     ReplayPolicyError,
+    ReplaySnapshotCaptureError,
     ReplayTempCorrupt,
 )
 from .evaluate import IdentityRegistry, SnapshotEvaluator, state_signature
@@ -34,11 +35,15 @@ from .metrics import all_pattern_metrics, distribution
 from .ordering import Ordering, canonical_order, coarse_positions, milestone_positions
 from .research import ReplayResearchDriver
 from .snapshot import (
+    CALENDAR_FILE,
+    CONTEXT_FILE,
+    CONTEXT_META_FILE,
     capture_corpus_snapshot,
     export_context_snapshot,
     live_context_digest,
     live_corpus_observation,
     live_document_identity,
+    load_context_snapshot,
 )
 from .store import ReplayStore, replay_root
 from .stress import approve_stress, formal_review_input, read_only_production_references, reject_stress
@@ -46,6 +51,20 @@ from .timeline import SECTION_MAIN, canonical_json
 from .view import ReplayCorpusView
 
 OWNER_MARKER = "REPLAY_OWNED_TEMP"
+INPUT_LIVE_CAPTURE = "PRODUCTION_LIVE_CAPTURE"
+INPUT_RETAINED_SNAPSHOT = "RETAINED_SNAPSHOT"
+
+
+def workspace_base(policy: ReplayPolicy) -> Path:
+    base = Path(policy.temp_workspace) if policy.temp_workspace else Path(tempfile.gettempdir())
+    return base / "compass_replay_runs"
+
+
+def retained_snapshot_dir(policy: ReplayPolicy, run_id: str) -> Path:
+    """`--retain-temp` で保持された run の temp（= 不変入力 snapshot そのもの）の場所。"""
+    return workspace_base(policy) / run_id
+
+
 BOUNDARIES = (
     "NOT_PREDICTIVE: replay measures how today's frozen rules behave on historical prefixes",
     "NOT_FORMAL_APPROVAL: persistence never converts to APPROVED or REJECTED",
@@ -62,8 +81,11 @@ class ReplayRunner:
                  research_config: Optional[ResearchConfig] = None, corpus_config: Optional[CorpusConfig] = None,
                  mode: str = "", ordering: str = "", retain_temp: Optional[bool] = None,
                  rules_path: Optional[Path] = None, clock: Optional[Callable[[], datetime]] = None,
-                 output_root: Optional[Path] = None) -> None:
+                 output_root: Optional[Path] = None, input_snapshot: Optional[Path] = None) -> None:
         self.production = Path(production_data_root)
+        # input_snapshot: 保持された run の temp から **同じ不変入力宇宙** を再利用する（決定性 / 較正 FULL 用）。
+        # production を再捕捉しないので、live intake がいくら進んでも入力は同一。
+        self.input_snapshot = Path(input_snapshot) if input_snapshot else None
         self.policy = replay_policy or load_replay_policy()
         self.policy.validate()
         if evaluation_policy is None or recommendation_policy is None:
@@ -82,8 +104,16 @@ class ReplayRunner:
 
     # ------------------------------------------------------------- temp workspace
     def _workspace_base(self) -> Path:
-        base = Path(self.policy.temp_workspace) if self.policy.temp_workspace else Path(tempfile.gettempdir())
-        return base / "compass_replay_runs"
+        return workspace_base(self.policy)
+
+    def _input_source(self) -> Dict[str, str]:
+        if self.input_snapshot is None:
+            return {"kind": INPUT_LIVE_CAPTURE, "source_run_id": ""}
+        marker = self.input_snapshot / OWNER_MARKER
+        if not marker.is_file() or not (self.input_snapshot / "corpus" / "index" / "corpus.sqlite3").is_file() \
+                or not (self.input_snapshot / "context" / CONTEXT_META_FILE).is_file():
+            raise ReplaySnapshotCaptureError("retained input snapshot is missing or not replay-owned")
+        return {"kind": INPUT_RETAINED_SNAPSHOT, "source_run_id": marker.read_text(encoding="utf-8").strip()}
 
     def _make_temp(self, run_id: str) -> Path:
         root = self._workspace_base() / run_id
@@ -123,6 +153,7 @@ class ReplayRunner:
     def run(self) -> Dict[str, Any]:  # noqa: C901 orchestration は 1 箇所に集める
         t_start = time.perf_counter()
         self.assert_no_policy_drift()
+        input_source = self._input_source()
         run_created_at = self.clock().astimezone(timezone.utc)
         run_id = "crp_" + hashlib.sha1(
             f"{run_created_at.isoformat()}|{self.mode}|{self.ordering_mode}".encode("utf-8")).hexdigest()[:16]
@@ -135,14 +166,21 @@ class ReplayRunner:
             t0 = time.perf_counter()
             prod_corpus = corpus_root(self.production)
             live_start = live_corpus_observation(prod_corpus)
-            corpus_info = capture_corpus_snapshot(prod_corpus, temp / "corpus")
+            capture_from = (self.input_snapshot / "corpus") if self.input_snapshot is not None else prod_corpus
+            corpus_info = capture_corpus_snapshot(capture_from, temp / "corpus")
             manifest = build_manifest(temp / "corpus")
             supported = tuple(self.epol.supported_analysis_versions)
             missing = [v for v in manifest.analysis_versions if supported and v not in supported]
             if missing:
                 raise ReplayAnalyzerVersionMissing(
                     f"corpus analysis versions {missing} are not supported by the frozen evaluation policy")
-            context = export_context_snapshot(self.production, temp / "context", manifest.latest_document_date)
+            if self.input_snapshot is not None:          # 保持 snapshot の Context をそのまま再利用（production は読まない）
+                (temp / "context").mkdir(parents=True, exist_ok=True)
+                for name in (CONTEXT_FILE, CALENDAR_FILE, CONTEXT_META_FILE):
+                    shutil.copyfile(self.input_snapshot / "context" / name, temp / "context" / name)
+                context = load_context_snapshot(temp / "context")
+            else:
+                context = export_context_snapshot(self.production, temp / "context", manifest.latest_document_date)
             timings["capture_seconds"] = round(time.perf_counter() - t0, 3)
 
             ordering = canonical_order(manifest, self.ordering_mode, self.policy)
@@ -242,11 +280,13 @@ class ReplayRunner:
             timings["total_seconds"] = round(time.perf_counter() - t_start, 3)
             manifest_doc = self._manifest_doc(run_id, run_created_at, manifest, ordering, corpus_info.as_dict(),
                                               context.as_dict(), live_start, live_end, drift, positions, milestones)
+            manifest_doc["input_source"] = input_source
             summary = self._summary(run_id, run_created_at, run_digest, manifest, context, ordering, snapshot_docs,
                                     all_rows, metrics, equivalence, refined_intervals, top8, refs, timings, drift)
             ReplayStore(self.output_root).write_run(run_id, manifest=manifest_doc, snapshots=snapshot_docs,
                                                     timelines=all_rows, events=events, summary=summary)
             result = {"run_id": run_id, "run_digest": run_digest, "output_root": str(self.output_root),
+                      "input_source": input_source,
                       "snapshots": len(snapshot_docs), "timeline_rows": len(all_rows), "events": len(events),
                       "patterns": len(metrics), "final_position": final_position, "mutation": "NONE (production)",
                       "timings": timings, "temp_retained": self.retain_temp}

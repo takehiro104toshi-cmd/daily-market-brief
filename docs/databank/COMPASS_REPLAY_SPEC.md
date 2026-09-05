@@ -148,7 +148,11 @@ write 可能 API（`DecisionService` 等）は replay package から import し�
 
 ## 13. 決定性と drift
 
-- `replay_policy_digest`（semantic field のみ。`temp_workspace` / `retain_debug_runs` は除外）
+- `replay_policy_digest`（semantic field のみ。`temp_workspace` / `retain_debug_runs` / `full_replay_enabled` は除外。FULL の許可は運用フラグで、選ばれた mode は manifest に記録される）
+- 固定 snapshot 再 run: `--retain-temp` で保持した run の temp（corpus backup + Context export + marker）を
+  `--from-run <run_id>` で再利用すると、production を再捕捉せずに **同じ入力宇宙** を再 replay できる
+  （manifest `input_source.kind = RETAINED_SNAPSHOT`）。live intake が進んでいても run_digest は一致しなければならない。
+  live 再捕捉どうしは `input_manifest_digest` / `context_manifest_digest` が一致するときだけ比較可能
 - `input_manifest_digest`（文書 identity のみ）/ `snapshot_digest`（rows の semantic 部分）/ `run_digest`
 - 生成時刻（`run_created_at`）は id にだけ現れ、digest に入らない。`now` は run_created_at + step 秒で固定。
 - run 中の live corpus 増加は無視して manifest に件数だけ記録。捕捉済み文書の identity 変化や
@@ -165,5 +169,10 @@ ReplayRebuildMismatch`。すべて fail closed（部分出力を書かない）�
 ## 15. CLI
 
 `python -m src.intelligence.replay.cli [--data-root D] run [--mode M] [--ordering O] [--retain-temp]`
+`run --retain-temp`（snapshot 保持）/ `run --from-run <run_id>`（保持 snapshot から再 run）/
+`run --enable-full-replay`（config.yaml を編集せずに FULL を許可する運用 override）
 `validate-policy` / `list-runs` / `summary [--run R] [--section S]` / `show <pattern_id> [--run R]`
+`python -m src.intelligence.replay.validation --require-commit <sha> --expect-<policy> <digest>`:
+Windows 実機の real-data validation を 1 操作で実行（HEAD / policy / baseline / default ×2 / 決定性 /
+FULL 較正 / stress / queue / equivalence / handoff / safety。`::P394_*::` marker、ASCII のみ、fail closed）
 exit 0 成功 / 1 引数 / 2 policy / 3 ReplayError。`run` 以外は read-only。

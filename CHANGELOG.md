@@ -4,6 +4,24 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.46.1 (2026-09-05) — Add Phase 3.9.4 real-data validation（fixed-snapshot 再 run / FULL 運用 override）
+
+### 追加
+
+- `src/intelligence/replay/runner.py`: `input_snapshot`（保持した run の temp から同じ不変入力宇宙を再 replay。
+  production を再捕捉しないので live intake が進んでも run_digest は一致する）。manifest に `input_source` を記録。
+- `src/intelligence/replay/snapshot.py`: Context export に `context_meta.json` を追加し、`load_context_snapshot` で
+  保持 snapshot から同じ digest の Context を復元。
+- `src/intelligence/replay/cli.py`: `run --retain-temp` / `--from-run <run_id>` / `--enable-full-replay`
+  （config.yaml を編集せずに較正 FULL を許可する運用 override。digest 外）。
+- `src/intelligence/replay/validation.py`【新規】: Windows 実機 real-data validation を 1 操作で実行する
+  fail-closed runner（`::P394_*::` marker、ASCII のみ、文書名・path 非出力、決定性は固定 snapshot ×2 と
+  live ×2 の両方、FULL 較正分布、APPROVE / REJECT stress、queue replay、rebuild equivalence、handoff、
+  run 後 safety。並行 intake による corpus 増加は replay 変更と区別して報告）。
+- `tests/intelligence/test_replay.py` 8 件追加（52 件）。
+
+Phase 3.8 / 3.9.2 / 3.9.3 / Decision / DNA / replay policy digest（`d205c3763d07111b`）は未変更。
+
 ## v4.46 (2026-09-05) — Add Phase 3.9.4 Replay / Simulation（retrospective stability replay）
 
 **NOT_PREDICTIVE / NOT_FORMAL_APPROVAL / HUMAN_FEEDBACK_ONLY / IMMUTABLE_INPUT_UNIVERSE / PROVISIONAL_CALIBRATION_ONLY**

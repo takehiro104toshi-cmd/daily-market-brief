@@ -7,13 +7,14 @@ exit: 0 = ok / 1 = 未生成 / 2 = policy error / 3 = replay fail-closed（漏�
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any, List, Optional
 
 from .config import MODES, ORDERINGS, load_replay_policy
 from .errors import ReplayError, ReplayPolicyError
-from .runner import ReplayRunner
+from .runner import ReplayRunner, retained_snapshot_dir
 from .store import MANIFEST_FILE, SUMMARY_FILE, TIMELINES_FILE, ReplayStore, replay_root
 
 
@@ -34,7 +35,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_run = sub.add_parser("run", help="run a replay over an immutable snapshot (writes compass_replay/ only)")
     p_run.add_argument("--mode", default="", choices=[""] + list(MODES))
     p_run.add_argument("--ordering", default="", choices=[""] + list(ORDERINGS))
-    p_run.add_argument("--retain-temp", action="store_true")
+    p_run.add_argument("--retain-temp", action="store_true",
+                       help="keep the immutable input snapshot (temp) so a later run can reuse it via --from-run")
+    p_run.add_argument("--from-run", default="",
+                       help="reuse the retained immutable input snapshot of this run id instead of capturing production")
+    p_run.add_argument("--enable-full-replay", action="store_true",
+                       help="operational override of full_replay_enabled for this run only (config.yaml is not edited)")
     sub.add_parser("validate-policy", help="validate compass_replay and print its digest (read-only)")
     sub.add_parser("list-runs", help="list stored runs (read-only)")
     p_sum = sub.add_parser("summary", help="summary of a run (read-only)")
@@ -75,8 +81,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             _dump({"run_id": run_id, "pattern_id": args.pattern_id, "rows": rows,
                    "metrics": (summary.get("pattern_metrics") or {}).get(args.pattern_id), "mutation": "NONE"})
             return 0 if rows else 1
-        runner = ReplayRunner(root, mode=args.mode, ordering=args.ordering,
-                              retain_temp=True if args.retain_temp else None)
+        policy = load_replay_policy()
+        if args.enable_full_replay:
+            policy = dataclasses.replace(policy, full_replay_enabled=True)   # digest 外の運用フラグ（意味論は不変）
+        snapshot = retained_snapshot_dir(policy, args.from_run) if args.from_run else None
+        runner = ReplayRunner(root, replay_policy=policy, mode=args.mode, ordering=args.ordering,
+                              retain_temp=True if args.retain_temp else None, input_snapshot=snapshot)
         result = runner.run()
         _dump({**result, "mutation": "WRITE compass_replay/runs/<run_id>/ (derived) and latest.json"})
         return 0

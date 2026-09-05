@@ -40,6 +40,7 @@ from src.intelligence.replay.config import (
     replay_policy_from_mapping,
 )
 from src.intelligence.replay.errors import (
+    ReplaySnapshotCaptureError,
     ReplayIdentityAmbiguity,
     ReplayInputMutated,
     ReplayLeakageDetected,
@@ -367,8 +368,15 @@ def test_prefix_closure_no_future_contradiction_or_lifecycle_leakage(prod, tmp_p
 
 def test_replay_package_never_reads_production_research_or_evaluation():
     for py in sorted(PKG.glob("*.py")):
-        tree = ast.parse(py.read_text(encoding="utf-8"))
+        text = py.read_text(encoding="utf-8")
+        tree = ast.parse(text)
         names = {a.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) for a in node.names}
+        if py.name == "validation.py":
+            # validation harness は production derived artifact を **byte identity のためだけに** hash する。
+            # replay engine として読む（ResearchStore / EvaluationStore を production root で開く）ことはない。
+            assert "ResearchStore(" not in text and "EvaluationStore(" not in text
+            assert "research_root(self.data_root)" in text and "_dir_digest(" in text
+            continue
         assert "research_root" not in names and "evaluation_root" not in names, py.name
 
 
@@ -536,7 +544,9 @@ def test_decision_and_review_apis_are_read_only_imports():
         from_decision = {a.name for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)
                          and "decision" in (node.module or "") for a in node.names}
         if from_decision:
-            assert py.name == "stress.py" and from_decision <= {"DecisionStore", "decisions_root", "derive_current_states"}
+            allowed = {"stress.py": {"DecisionStore", "decisions_root", "derive_current_states"},
+                       "validation.py": {"DECISIONS_FILE", "decisions_root"}}          # path 定数のみ（identity hash 用）
+            assert from_decision <= allowed.get(py.name, set()), (py.name, from_decision)
         text = py.read_text(encoding="utf-8")
         assert ".append(" not in text.replace("events.append", "").replace("items.append", "").replace(
             "changes.append", "").replace("excluded.append", "").replace("docs.append", "").replace(
@@ -727,3 +737,184 @@ def test_cli_run_summary_show_and_read_only_commands(prod, tmp_path, monkeypatch
     assert {p.name: p.read_bytes() for p in (prod / "compass_replay" / "runs" / result["run_id"]).iterdir()} == fingerprint
     assert rp_cli.main(["run", "--mode", "FULL_REPLAY"]) == 2                    # 有効化なしの FULL は policy error
     capsys.readouterr()
+
+
+# ================================================================== fixed-snapshot re-run / validation module
+def _ingest_extra(prod: Path, name: str = "doc99.pdf", date_index: int = 5) -> None:
+    """run の合間に live intake が 1 件進んだ状況を作る（replay は production を書かない）。"""
+    store = CorpusStore(corpus_root(prod))
+    texts = {name: research_pages(date_index)}
+    try:
+        ingest_path(store, make_pdf(prod / "src" / name, name), config=CCFG, extractor=LiveFakeExtractor(texts, CCFG.extractor_version),
+                    now=NOW, source_type=SOURCE_HISTORICAL_IMPORT)
+    finally:
+        store.close()
+
+
+def test_fixed_snapshot_rerun_reproduces_run_digest_despite_live_intake(prod, tmp_path):
+    from src.intelligence.replay.runner import INPUT_LIVE_CAPTURE, INPUT_RETAINED_SNAPSHOT
+
+    pol = policy_for(tmp_path)
+    r1 = ReplayRunner(prod, replay_policy=pol, retain_temp=True)
+    a = r1.run()
+    _ingest_extra(prod)                                                     # live universe moves on
+    b = ReplayRunner(prod, replay_policy=pol).run()
+    r3 = ReplayRunner(prod, replay_policy=pol, input_snapshot=r1.temp_root)
+    c = r3.run()
+    store = ReplayStore(replay_root(prod))
+    ma, mb, mc = [store.read_json(x["run_id"], MANIFEST_FILE) for x in (a, b, c)]
+    assert ma["input_source"]["kind"] == INPUT_LIVE_CAPTURE and mb["input_source"]["kind"] == INPUT_LIVE_CAPTURE
+    assert mc["input_source"] == {"kind": INPUT_RETAINED_SNAPSHOT, "source_run_id": a["run_id"]}
+    assert ma["input_manifest_digest"] != mb["input_manifest_digest"]       # live re-capture saw the new document
+    assert mc["input_manifest_digest"] == ma["input_manifest_digest"]
+    assert mc["context_manifest_digest"] == ma["context_manifest_digest"]
+    assert c["run_digest"] == a["run_digest"] != b["run_digest"]
+    assert [s["snapshot_digest"] for s in store.read_jsonl(c["run_id"], "snapshots.jsonl")] == \
+        [s["snapshot_digest"] for s in store.read_jsonl(a["run_id"], "snapshots.jsonl")]
+    assert not r3.temp_root.exists() and r1.temp_root.exists()              # re-run temp cleaned, retained kept
+    assert r1.cleanup_temp() and not r1.temp_root.exists()
+
+
+def test_full_replay_from_retained_snapshot_matches_default_rows_at_shared_positions(prod, tmp_path):
+    import dataclasses
+
+    pol = policy_for(tmp_path)
+    r1 = ReplayRunner(prod, replay_policy=pol, retain_temp=True)
+    a = r1.run()
+    full = ReplayRunner(prod, replay_policy=dataclasses.replace(pol, full_replay_enabled=True), mode=MODE_FULL,
+                        input_snapshot=r1.temp_root).run()
+    store = ReplayStore(replay_root(prod))
+    skip = ("run_id", "snapshot_mode")
+    ra = {(r["position"], r["pattern_id"]): {k: v for k, v in r.items() if k not in skip}
+          for r in store.read_jsonl(a["run_id"], TIMELINES_FILE)}
+    rf = {(r["position"], r["pattern_id"]): {k: v for k, v in r.items() if k not in skip}
+          for r in store.read_jsonl(full["run_id"], TIMELINES_FILE)}
+    assert set(ra) < set(rf) and all(ra[k] == rf[k] for k in ra)
+    r1.cleanup_temp()
+
+
+def test_rerun_from_missing_or_foreign_snapshot_fails_closed(prod, tmp_path):
+    pol = policy_for(tmp_path)
+    with pytest.raises(ReplaySnapshotCaptureError):
+        ReplayRunner(prod, replay_policy=pol, input_snapshot=tmp_path / "nowhere").run()
+    foreign = tmp_path / "foreign"
+    (foreign / "corpus" / "index").mkdir(parents=True)
+    (foreign / "corpus" / "index" / "corpus.sqlite3").write_bytes(b"")
+    with pytest.raises(ReplaySnapshotCaptureError):                         # marker が無い = replay 所有ではない
+        ReplayRunner(prod, replay_policy=pol, input_snapshot=foreign).run()
+    assert not (prod / "compass_replay").exists()
+
+
+def test_cli_retain_from_run_and_enable_full_replay(prod, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(rp_cli, "resolve_root", lambda override="": prod)
+    monkeypatch.setattr(rp_cli, "load_replay_policy", lambda: policy_for(tmp_path))
+    assert rp_cli.main(["run", "--retain-temp"]) == 0
+    first = json.loads(capsys.readouterr().out)
+    assert first["temp_retained"] is True and first["input_source"]["kind"] == "PRODUCTION_LIVE_CAPTURE"
+    assert rp_cli.main(["run", "--from-run", first["run_id"], "--mode", "FULL_REPLAY", "--enable-full-replay"]) == 0
+    full = json.loads(capsys.readouterr().out)
+    assert full["input_source"] == {"kind": "RETAINED_SNAPSHOT", "source_run_id": first["run_id"]}
+    assert full["final_position"] == full["snapshots"] == N_DOCS - 1
+    assert load_replay_policy().full_replay_enabled is False                 # config.yaml は触っていない
+    assert rp_cli.main(["run", "--from-run", "crp_does_not_exist"]) == 3
+    capsys.readouterr()
+    manifest = ReplayStore(replay_root(prod)).read_json(full["run_id"], MANIFEST_FILE)
+    assert manifest["replay_policy"]["digest"] == policy_for(tmp_path).digest()  # 有効化フラグは digest 外
+
+
+VALIDATION_MARKERS = ("HEAD", "POLICY", "BASELINE", "DEFAULT_RUN1", "DEFAULT_RUN2", "DETERMINISM", "FULL_REPLAY",
+                      "CALIBRATION", "APPROVE_STRESS", "REJECT_STRESS", "QUEUE_REPLAY", "REBUILD_EQUIVALENCE",
+                      "HANDOFF", "SAFETY", "VALIDATION_OK")
+
+
+def _validation_argv(prod: Path) -> list:
+    e, r = EVAL_POLICY, REC_POLICY
+    from src.intelligence.shadow_review.config import load_shadow_review_policy
+
+    return ["--data-root", str(prod), "--skip-git", "--expect-evaluation", e.digest(), "--expect-recommendation", r.digest(),
+            "--expect-shadow-review", load_shadow_review_policy().digest(), "--expect-replay", ReplayPolicy().digest()]
+
+
+def test_validation_module_dress_rehearsal_all_markers_ascii_and_clean(prod, tmp_path, monkeypatch, capsys):
+    from src.intelligence.replay import validation as V
+
+    monkeypatch.setattr(V, "load_replay_policy", lambda: policy_for(tmp_path))
+    assert V.main(_validation_argv(prod)) == 0
+    out = capsys.readouterr().out
+    for m in VALIDATION_MARKERS:
+        assert f"::P394_{m}::" in out, m
+    assert "::P394_FAIL::" not in out and out.isascii()
+    assert ".pdf" not in out and str(prod) not in out and "doc0" not in out       # 文書名・path を出さない
+    assert "SAME_INPUT_UNIVERSE=true" in out and "DETERMINISM_PROOF=FIXED_SNAPSHOT_X2_PASS+LIVE_X2_PASS" in out
+    assert "CROSS_MODE_CONSISTENCY_WITH_DEFAULT_RUN=True" in out and "REBUILD_EQUIVALENCE_OVERALL=PASS" in out
+    assert "replay_runs_added=4" in out and "replay_temp_leftovers_from_this_validation=[]" in out
+    assert not list((tmp_path / "ws" / "compass_replay_runs").glob("crp_*"))
+    assert not (prod / "compass_decisions").exists() and not (prod / "compass_shadow_review").exists()
+
+
+def test_validation_module_reports_live_universe_change_without_false_nondeterminism(prod, tmp_path, monkeypatch, capsys):
+    from src.intelligence.replay import validation as V
+
+    monkeypatch.setattr(V, "load_replay_policy", lambda: policy_for(tmp_path))
+    real = V.RealDataValidation._run
+
+    def with_intake(self, label, **kw):
+        bundle = real(self, label, **kw)
+        if label == "run1":
+            _ingest_extra(prod)                                             # run1 と run2 の間に intake
+        return bundle
+
+    monkeypatch.setattr(V.RealDataValidation, "_run", with_intake)
+    assert V.main(_validation_argv(prod)) == 0
+    out = capsys.readouterr().out
+    assert "SAME_INPUT_UNIVERSE=false" in out and "LIVE_RUN_DIGEST_MATCH=NOT_COMPARABLE" in out
+    assert "FIXED_SNAPSHOT_RUN_DIGEST_MATCH=True" in out and "DETERMINISM_PROOF=FIXED_SNAPSHOT_X2_PASS\n" in out
+    assert "intake_activity_observed=True" in out and "corpus_growth_documents=1" in out
+    assert "::P394_VALIDATION_OK::" in out
+
+
+def test_validation_module_fails_closed_on_digest_mismatch_and_replay_error(prod, tmp_path, monkeypatch, capsys):
+    from src.intelligence.replay import validation as V
+
+    monkeypatch.setattr(V, "load_replay_policy", lambda: policy_for(tmp_path))
+    argv = _validation_argv(prod)
+    argv[argv.index("--expect-replay") + 1] = "0000000000000000"
+    assert V.main(argv) == 4
+    out = capsys.readouterr().out
+    assert "::P394_FAIL::" in out and "section=POLICY" in out and "::P394_DEFAULT_RUN1::" not in out
+    assert not (prod / "compass_replay").exists()                            # 何も走っていない
+
+    from src.intelligence.replay import runner as runner_mod
+
+    def boom(*a, **k):
+        raise ReplayLeakageDetected("synthetic leakage")
+
+    monkeypatch.setattr(runner_mod, "capture_corpus_snapshot", boom)
+    assert V.main(_validation_argv(prod)) == 3
+    out = capsys.readouterr().out
+    assert "replay_error=ReplayLeakageDetected" in out and "::P394_BASELINE::" in out
+    assert not list((tmp_path / "ws" / "compass_replay_runs").glob("crp_*"))  # 失敗 run の temp も残さない
+
+
+def test_validation_sections_print_stress_and_handoff_items(prod, tmp_path, capsys):
+    from src.intelligence.replay import validation as V
+
+    v = V.RealDataValidation(prod, REPO_ROOT, policy=policy_for(tmp_path), skip_git=True)
+    rows = [row("p", 5, "KEEP_REVIEWING"), row("p", 10, "APPROVE_RECOMMENDED", cons="HIGH", section=SECTION_MAIN, rank=1),
+            row("q", 5, "REVIEW_RECOMMENDED"), row("q", 10, "REJECT_RECOMMENDED", cons="LOW", support=8)]
+    metrics = all_pattern_metrics(rows, ReplayPolicy(), 10)
+    summary = {"pattern_metrics": metrics, "stability_calibration_state": "PROVISIONAL_CALIBRATION_ONLY",
+               "final_distribution": {"by_recommendation": {"APPROVE_RECOMMENDED": 1, "REJECT_RECOMMENDED": 1}},
+               "stability_distribution": {}, "approve_stress": approve_stress(rows, metrics, 10),
+               "reject_stress": reject_stress(rows, metrics),
+               "formal_review_input": formal_review_input(rows, metrics, {}),
+               "queue_over_time": [{"position": 10, "enabled": True, "main_count": 1}],
+               "current_top8_retrospective": [{"queue_rank": 1, "pattern_id": "p"}]}
+    v.runs["full"] = {"summary": summary, "rows": rows}
+    v.calibration(); v.approve_stress(); v.reject_stress(); v.queue_replay(); v.handoff()
+    out = capsys.readouterr().out
+    assert out.isascii() and "current_approve_candidates=1" in out and "current_reject_candidates=1" in out
+    assert '"first_approve_position":10' in out and '"first_reject_position":10' in out
+    assert "driver_distribution=" in out and "adverse_overflow_all_reject=True" in out
+    assert 'by_recommendation={"APPROVE_RECOMMENDED":1,"REJECT_RECOMMENDED":1}' in out
+    assert '"production_decision_state":"NONE"' in out and "formal_states_written_by_replay=0" in out

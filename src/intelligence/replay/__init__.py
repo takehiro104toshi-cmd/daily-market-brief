@@ -24,5 +24,6 @@ NOT_PREDICTIVE / NOT_FORMAL_APPROVAL / HUMAN_FEEDBACK_ONLY / IMMUTABLE_INPUT_UNI
     stress.py     APPROVE / REJECT stress・formal_review_input（production 参照は read-only）
     store.py      compass_replay/ 出力（derived・atomic）
     runner.py     orchestration
-    cli.py        run / summary / show / list-runs / validate-policy
+    cli.py        run [--retain-temp --from-run --enable-full-replay] / summary / show / list-runs / validate-policy
+    validation.py Windows 実機 1 操作の real-data validation（::P394_*:: marker、fail closed）
 """
