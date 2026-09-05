@@ -13,6 +13,7 @@
     store.py       derived 出力（compass_formal_review/、atomic、rebuildable）
     service.py     build / decide（唯一の formal write path: guard → DecisionService.validate → decide）
     cli.py         build / list / show / decide / status / reopen-check / validate-policy（batch なし）
+    validation.py  Windows 実機 1 操作の real-data packet validation（::P395_*:: marker、全 candidate dry-run、fail closed）
 
 APPROVE_RECOMMENDED ≠ APPROVED、REJECT_RECOMMENDED ≠ REJECTED、APPROVED ≠ DNA promotion（常に NOT_PROMOTED）。
 """

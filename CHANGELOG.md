@@ -4,6 +4,21 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.48.1 (2026-09-06) — Add Phase 3.9.5 real-data packet validation driver（Windows 1 操作・dry-run only）
+
+### 追加
+
+- `src/intelligence/formal_review/validation.py`【新規】: HEAD / 6 層 policy digest / 安全 baseline / real build /
+  determinism（live 再 build + 固定入力 2 回組み立て）/ queue 安全要約 / replay 互換 / freshness（changed block 名のみ）/
+  sibling 集計 / 全 primary candidate の dry-run sweep（C3 acknowledgement を packet から導出、想定外 guard 結果は fail）/
+  symmetry / reopen-check / metadata 制約 / 変更なし証明を `::P395_*::` marker で出力。formal Decision は書かない。
+  console に人間の Shadow Review reason 本文・原文・path を出さない。
+- `tests/intelligence/test_formal_review.py` 8 件追加（dress rehearsal・privacy・no mutation、policy 不一致で build 前 fail、
+  gate 未到達の想定外 guard で fail、replay 欠落は legitimate、corpus-only growth で dry-run 有効、intake なしの stale は fail、
+  replay age / C3 集計、CLI）。
+
+Phase 3.8 / 3.9.1 / 3.9.2 / 3.9.3 / 3.9.4 / formal review policy（`cca7b43627b9a355`）は不変。real Decision は書いていない。
+
 ## v4.48 (2026-09-06) — Add Phase 3.9.5 First Formal DNA Review（human-bound evidence packet + fail-closed guard）
 
 **NOT_AUTOMATIC_APPROVAL / NOT_DNA_PROMOTION / EVIDENCE_PACKET_BOUND / HUMAN_ONE_AT_A_TIME**

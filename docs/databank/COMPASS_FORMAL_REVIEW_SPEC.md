@@ -140,6 +140,15 @@ CLI: `build` / `list` / `show <pattern_id>` / `decide <pattern_id> --packet --ac
 metrics は運用値のみ（candidates / by recommendation / context / pending / reviewed / outcomes / blocked / acknowledged /
 reopen eligible / median age / replay age）。accuracy・precision・hit rate・forecast 系はない。
 
+## 12.1 real-data packet validation（`validation.py`）
+
+`python -m src.intelligence.formal_review.validation --require-commit <sha> --expect-<layer> <digest> ...` は
+Windows 実機の 1 操作用 driver。HEAD / 6 層 policy / baseline / build / determinism（live 再 build と固定入力
+2 回組み立て）/ queue 要約 / replay 互換 / freshness / sibling 集計 / **全 primary candidate の dry-run**
+（recommendation に従う action、C3 acknowledgement を packet から導出）/ symmetry / reopen-check / metadata /
+safety を `::P395_*::` marker で出力し、材料となる失敗で `::P395_FAIL::` と非 0 exit。formal Decision は書かない。
+console には人間の Shadow Review reason 本文・原文・ファイル名・path を出さない。
+
 ## 13. Phase 3.9.5 の閉じ方
 
 実装完了 ≠ Phase close。実装 → local QA → 監督者実装レビュー → Windows real-data packet build → 全 candidate の

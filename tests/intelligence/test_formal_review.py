@@ -914,3 +914,120 @@ def test_cli_commands_read_only_and_decide_exit_codes(bench, monkeypatch, capsys
     assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", pk, "--action", "approve", "--reason", REASON_OK,
                         "--actor", "taro", "--acknowledge-sibling", "pB"]) == 0
     assert len(bench.decisions()) == rows_before + 1
+
+
+# ================================================================== validation driver (Windows packet validation)
+from src.intelligence.formal_review import validation as V  # noqa: E402
+
+EXPECTED_DIGESTS = {"decision": DECISION_POLICY.digest(), "evaluation": "1a8443098f64d679", "recommendation": "0a979d8421a01d08",
+                    "shadow_review": "e6f5094cacef6fec", "replay": "197db7c73eb0db77", "formal_review": "cca7b43627b9a355"}
+MARKERS = ["HEAD", "POLICY", "BASELINE", "BUILD", "DETERMINISM", "QUEUE", "REPLAY", "FRESHNESS", "SIBLINGS", "DRY_RUN",
+           "SYMMETRY", "REOPEN", "METADATA", "SAFETY", "VALIDATION_OK"]
+
+
+def _validate(bench, capsys, **kw):
+    params = {"expected_digests": EXPECTED_DIGESTS, "skip_git": True, "corpus_state_resolver": bench.corpus_state, "clock": bench.clock}
+    params.update(kw)
+    v = V.RealDataPacketValidation(bench.root, REPO_ROOT, **params)
+    code = v.run_all()
+    out = capsys.readouterr().out
+    return code, out, v
+
+
+def test_validation_driver_dress_rehearsal_markers_privacy_and_no_mutation(bench, capsys):
+    bench.shadow("pA", AGREE, reason="human reason text that must never reach the console output")
+    bench.shadow("pR", DISAGREE, reason="another private human reason for the disagreement record")
+    before_tree = _tree_digest(bench.root, exclude="compass_formal_review")
+    code, out, v = _validate(bench, capsys)
+    assert code == 0, out[-2000:]
+    order = [m for m in MARKERS if f"::P395_{m}::" in out]
+    assert order == MARKERS and "::P395_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)                                        # ASCII only
+    assert "never reach the console" not in out and "private human reason" not in out
+    assert "reason_text" not in out and str(bench.root) not in out
+    assert "dry_run_pass=5" in out and "real_decisions_written=0" in out and "C3_acknowledgement_passed=2" in out
+    assert "SAME_EVIDENCE_UNIVERSE=true" in out and "FIXED_INPUTS_DETERMINISM=PASS" in out and "LIVE_REBUILD_DETERMINISM=PASS" in out
+    assert "reject_against_recommendation=" in out and "REJECT_AGAINST_RECOMMENDATION_BLOCKED" in out
+    assert "approve_against_recommendation=" in out and "APPROVE_AGAINST_RECOMMENDATION_BLOCKED" in out
+    assert "metadata_required_keys_present=True" in out and "promotion_status=NOT_PROMOTED" in out
+    assert len(bench.decisions()) == 0
+    assert _tree_digest(bench.root, exclude="compass_formal_review") == before_tree   # formal_review 以外は不変
+    # packet 内には reason 本文があってよいが console には出ない
+    assert bench.packet("pA")["shadow_history"]["outcome_history"][0]["reason"].startswith("human reason")
+
+
+def test_validation_driver_fails_closed_on_policy_digest_mismatch_before_build(bench, capsys):
+    v = V.RealDataPacketValidation(bench.root, REPO_ROOT, expected_digests={**EXPECTED_DIGESTS, "formal_review": "0000000000000000"},
+                                   skip_git=True, corpus_state_resolver=bench.corpus_state, clock=bench.clock)
+    code = v.run_all()
+    out = capsys.readouterr().out
+    assert code == 4 and "::P395_FAIL::" in out and "section=POLICY" in out and "::P395_BUILD::" not in out
+    assert not bench.service().store.exists()
+
+
+def test_validation_driver_fails_on_unexpected_guard_result(bench, capsys):
+    bench.eligible = 99                                                                # live gate below CORPUS_100
+    code, out, _ = _validate(bench, capsys)
+    assert code == 4 and "section=DRY_RUN" in out and "FORMAL_GATE_NOT_REACHED" in out
+
+
+def test_validation_driver_reports_replay_evidence_required_as_legitimate(tmp_path, capsys):
+    b = Bench(tmp_path, with_replay=False)
+    code, out, _ = _validate(b, capsys)
+    assert code == 0 and "REPLAY_EVIDENCE_REQUIRED" in out and "dry_run_pass=0" in out
+    assert '"legitimate":true' in out and "replay_incompatible_candidates=5" in out
+
+
+def test_validation_driver_corpus_only_growth_keeps_dry_run_valid(bench, capsys):
+    class Growing:
+        def __init__(self, bench):
+            self.bench, self.calls = bench, 0
+
+        def __call__(self):
+            self.calls += 1
+            if self.calls > 3:                                                          # build 後に eligible が増える
+                self.bench.eligible = 141
+            return self.bench.corpus_state()
+
+    code, out, _ = _validate(bench, capsys, corpus_state_resolver=Growing(bench))
+    assert code == 0 and "dry_run_pass=5" in out
+    assert "corpus_eligible_before_after=[139,141]" in out
+
+
+def test_validation_driver_stale_during_sweep_is_legitimate_only_with_intake(bench, capsys, monkeypatch):
+    bench.build()
+    real_decide = FormalReviewService.decide
+    state = {"done": False}
+
+    def mutate_then_decide(self, request, *, dry_run):
+        if not state["done"]:                                                           # 最初の dry-run 直前に evidence が変わる
+            state["done"] = True
+            bench.evals["pR"]["axis_metrics"][A_TIME]["span_days"] = 200
+            bench.write_evaluations()
+        return real_decide(self, request, dry_run=dry_run)
+
+    monkeypatch.setattr(FormalReviewService, "decide", mutate_then_decide)
+    code, out, _ = _validate(bench, capsys)                                              # intake なし → stale は unexpected
+    assert code == 4 and "PACKET_EVIDENCE_DIGEST_CHANGED" in out and "section=DRY_RUN" in out
+
+
+def test_validation_driver_replay_age_warning_and_c3_are_reported(tmp_path, capsys):
+    b = Bench(tmp_path, replay_captured=134)
+    code, out, _ = _validate(b, capsys)
+    assert code == 0 and "W_REPLAY_EVIDENCE_AGE" in out and "C3_acknowledgement_required=2" in out
+    assert "replay_evidence_age_eligible_docs=5" in out
+
+
+def test_validation_cli_main_arguments_and_exit_code(bench, monkeypatch, capsys):
+    monkeypatch.setattr(V, "RealDataPacketValidation", lambda root, repo, **kw: _Injected(root, repo, bench, **kw))
+    code = V.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+                   "--expect-evaluation", "1a8443098f64d679"])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395_VALIDATION_OK::" in out and "formal_review_expected=cca7b43627b9a355" in out
+    monkeypatch.setattr(V, "RealDataPacketValidation", lambda root, repo, **kw: _Injected(root, repo, bench, **kw))
+    assert V.main(["--data-root", str(bench.root), "--skip-git", "--expect-replay", "badbadbadbadbad0"]) == 4
+
+
+class _Injected(V.RealDataPacketValidation):
+    def __init__(self, root, repo, bench, **kw):
+        super().__init__(root, repo, corpus_state_resolver=bench.corpus_state, clock=bench.clock, **kw)
