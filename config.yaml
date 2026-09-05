@@ -1072,3 +1072,37 @@ compass_replay:
     stable_min_persistence: 15
     mostly_stable_ratio: "0.8"
     oscillating_min_reversals: 2
+
+# ------------------------------------------------------------------
+# Phase 3.9.5 First Formal DNA Review（human-bound evidence packet + fail-closed guard）
+# 値を変えるときは policy_version を必ず上げる（同 version で digest が変わると build を拒否）。
+# APPROVE_RECOMMENDED ≠ APPROVED / REJECT_RECOMMENDED ≠ REJECTED / APPROVED ≠ PROMOTED_TO_DNA。
+compass_formal_review:
+  policy_version: "1.0.0"
+  packet_schema_version: "1.0.0"
+  recommendation_symmetry: true              # APPROVED は APPROVE_RECOMMENDED のみ・REJECTED は REJECT_RECOMMENDED のみ（凍結）
+  sibling_guard:
+    mode: "C1_HARD_BLOCK_C3_ACKNOWLEDGE"     # C1: 反対方向 sibling が APPROVED なら block（override なし）/ C3: 未決 APPROVE_RECOMMENDED は明示 acknowledgement
+    relation: "EVIDENCE_OUTLOOK_NARROW_SIBLING"   # Phase 3.9.2 contradiction key と同じ。STATE/THEME_OUTLOOK へ広げない（v1）
+  replay_evidence:
+    required_for: ["APPROVED", "REJECTED"]  # current-compatible な replay evidence が無ければ hard block
+    age_warning_eligible_docs: 5             # current eligible − captured eligible >= 5 で W_REPLAY_EVIDENCE_AGE（警告のみ）
+  freshness:
+    anchor: "packet_evidence_digest"         # 人間が見た証拠そのものの digest。material_digest は機械側の追跡用に併存
+    stale_on_corpus_growth: false            # corpus 増加だけでは stale にしない（証拠 field が不変なら packet は有効）
+    require_recommendation_match: true
+  reason:
+    min_chars: {APPROVED: 20, REJECTED: 20, KEEP_REVIEWING: 10, REOPENED_FOR_REVIEW: 20, SUPERSEDED: 20, RETIRED: 20}
+    categories: ["MORE_DOCUMENTS", "MORE_REGIMES", "LONGER_SPAN", "BETTER_QUALITY"]   # KEEP_REVIEWING の任意 category
+  duplicate_disposition: "KEEP_REVIEWING_WITH_METADATA"   # 新 state は作らない（disposition=DUPLICATE_OR_OVERLAPPING + related_pattern_id）
+  batch_actions_allowed: false               # 1 invocation = 1 pattern。batch APPROVED / REJECTED / KEEP_REVIEWING / REOPEN なし
+  promotion_boundary: "NOT_PROMOTED"         # 全 formal decision は NOT_PROMOTED。DNA promotion は別 gate
+  ordering:
+    stability_rank: ["STABLE", "MOSTLY_STABLE", "RECENT_TRANSITION", "INSUFFICIENT_HISTORY", "OSCILLATING"]
+    reject: ["first_reject_position", "reject_persistence_ratio_desc", "eligible_support_desc", "pattern_id"]
+    approve: ["stability_rank", "first_approve_position", "eligible_support_desc", "span_days_desc", "pattern_id"]
+    reopen: ["first_reject_position", "pattern_id"]
+  warnings:
+    recent_transition: true
+    oscillating: true
+    insufficient_history: true

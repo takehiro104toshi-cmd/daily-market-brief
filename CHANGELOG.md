@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.48 (2026-09-06) — Add Phase 3.9.5 First Formal DNA Review（human-bound evidence packet + fail-closed guard）
+
+**NOT_AUTOMATIC_APPROVAL / NOT_DNA_PROMOTION / EVIDENCE_PACKET_BOUND / HUMAN_ONE_AT_A_TIME**
+
+### 追加
+
+- `src/intelligence/formal_review/`【新規 package、1 機能 = 1 ファイル】: 現在の APPROVE_RECOMMENDED / REJECT_RECOMMENDED
+  を動的に選出し（`population.py`）、EVIDENCE_OUTLOOK narrow sibling group（`groups.py`）、証拠 packet と
+  `packet_evidence_digest`（`packet.py`）、警告（`warnings.py`）、凍結 ordering（`ordering.py`）、REOPEN 適格
+  （`reopen.py`）、22 段の fail-closed guard と metadata binder（`guard.py`）、運用 metrics（`metrics.py`）、
+  derived 出力（`store.py`）、build / decide（`service.py`）、CLI（`cli.py`）。
+  formal Decision の書き込みは `FormalReviewGuard → DecisionRequest → DecisionService.validate → decide` のみ。
+  recommendation symmetry（APPROVED は APPROVE_RECOMMENDED のみ / REJECTED は REJECT_RECOMMENDED のみ）、
+  sibling C1 hard block・C3 acknowledgement、replay evidence 必須（APPROVED / REJECTED）、reason 最小文字数、
+  重複は KEEP_REVIEWING + metadata、promotion は常に NOT_PROMOTED、batch なし、dry-run は何も書かない。
+- `config.yaml` `compass_formal_review`（1.0.0、digest `cca7b43627b9a355`、凍結値は validate で固定）。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md`。
+- `tests/intelligence/test_formal_review.py`（population / packet / digest / stale / symmetry / sibling / replay /
+  ordering / reason / reopen / write path / idempotency / promotion / DNA / CLI / 凍結層 digest）。
+
+Phase 3.8 / 3.9.1 / 3.9.2 / 3.9.3 / 3.9.4 の semantics と digest は不変（evaluation `1a8443098f64d679` /
+recommendation `0a979d8421a01d08` / shadow_review `e6f5094cacef6fec` / replay 1.1.0 `197db7c73eb0db77`）。
+real Decision は書いていない（first real human review は監督者の明示 GO 後）。Phase 4 は未着手。
+
 ## v4.47 (2026-09-05) — Improve Phase 3.9.4 replay 実行 metadata・Fix 較正凍結（policy 1.1.0）
 
 Windows 実データ FULL_REPLAY（eligible 139 / patterns 463）の監督者レビュー PASS を受けた finalization。
