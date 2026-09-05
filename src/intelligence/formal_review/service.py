@@ -274,7 +274,10 @@ class FormalReviewService:
                        "decision_records": len(inputs.decision_records),
                        "replay_run_id": (inputs.replay or {}).get("run_id", ""),
                        "replay_run_digest": (inputs.replay or {}).get("run_digest", ""),
-                       "replay_captured_eligible": (inputs.replay or {}).get("captured_eligible")},
+                       "replay_captured_eligible": (inputs.replay or {}).get("captured_eligible"),
+                       # 選ばれた run が記録している policy digest（現行 replay policy と違えば evidence は非互換）
+                       "replay_run_policy_digests": dict((inputs.replay or {}).get("policy_digests") or {}),
+                       "replay_run_replay_policy": dict((inputs.replay or {}).get("replay_policy") or {})},
             "population": population.as_dict(),
             "packets": {pid: {"packet_id": p["identity"]["packet_id"], "packet_evidence_digest": p["freshness"]["packet_evidence_digest"],
                               "material_digest": p["freshness"]["material_digest"]} for pid, p in sorted(packets.items())},

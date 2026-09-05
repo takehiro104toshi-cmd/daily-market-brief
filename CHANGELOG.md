@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.48.2 (2026-09-06) — Fix Windows path 区切りに依存していた formal review test / Improve replay run policy の可視化
+
+### 修正
+
+- `tests/intelligence/test_formal_review.py`: `_tree_digest` の key を `Path.relative_to().as_posix()` に統一し、
+  「変更 file は論理 directory compass_formal_review 配下のみ」の判定を区切り文字非依存（PurePosixPath / PureWindowsPath）
+  にした。Windows 実機で `compass_formal_review\build_manifest.json` が `startswith("compass_formal_review/")` に
+  一致せず落ちていた test portability 欠陥（runtime の欠陥ではない）。backslash 形式を Linux 上でも検証する
+  parametrized regression を追加。production の storage path は変更しない。
+- 同 test に、旧 replay policy の run しか無い状態（`POLICY_DIGEST_MISMATCH:replay`）から現行 policy の新 run が
+  latest になると互換性と dry-run が回復する regression（Windows follow-up の再現）を追加。
+
+### 改善
+
+- `src/intelligence/formal_review/service.py`: build_manifest の inputs に、選ばれた replay run が記録している
+  policy digest（`replay_run_policy_digests` / `replay_run_replay_policy`）を記録。
+- `src/intelligence/formal_review/validation.py`: BUILD 節で選ばれた replay run id・その policy digest・現行 replay policy を
+  出力（実機で `POLICY_DIGEST_MISMATCH:replay` の原因 run を特定できる）。
+
+policy 6 層・凍結層は不変。real Decision は書いていない。
+
 ## v4.48.1 (2026-09-06) — Add Phase 3.9.5 real-data packet validation driver（Windows 1 操作・dry-run only）
 
 ### 追加

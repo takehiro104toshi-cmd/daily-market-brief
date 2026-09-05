@@ -286,12 +286,21 @@ def _ids(rows):
 
 
 def _tree_digest(root: Path, exclude: str = ""):
+    """root 配下の file → sha256。key は OS に依らない POSIX 形式（Windows の backslash を key に持ち込まない）。"""
     import hashlib
     out = {}
     for p in sorted(root.rglob("*")):
         if p.is_file() and (not exclude or exclude not in p.relative_to(root).parts):
-            out[str(p.relative_to(root))] = hashlib.sha256(p.read_bytes()).hexdigest()
+            out[p.relative_to(root).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
     return out
+
+
+def _under_logical_dir(key: str, top: str) -> bool:
+    """相対 path 文字列が論理 directory `top` 直下にあるか。POSIX / Windows どちらの区切りでも同じ答えになる。"""
+    from pathlib import PurePosixPath, PureWindowsPath
+
+    parts = PureWindowsPath(key).parts if "\\" in key else PurePosixPath(key).parts
+    return len(parts) >= 2 and parts[0] == top
 
 
 # ================================================================== 1-5 population
@@ -889,8 +898,23 @@ def test_build_writes_only_derived_formal_review_files(bench):
     bench.build()
     after = _tree_digest(bench.root)
     changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
-    assert changed and all(k.startswith("compass_formal_review/") for k in changed)
+    assert changed and all(_under_logical_dir(k, "compass_formal_review") for k in changed), sorted(changed)
     assert {"compass_formal_review/build_manifest.json", "compass_formal_review/queue.json", "compass_formal_review/summary.json"} <= changed
+    assert all("\\" not in k for k in changed)                                     # key は常に POSIX 形式
+
+
+@pytest.mark.parametrize("key,expected", [
+    ("compass_formal_review/queue.json", True),
+    ("compass_formal_review\\build_manifest.json", True),                          # Windows 区切り（Linux 上でも判定できる）
+    ("compass_formal_review\\packets\\cpt_x.json", True),
+    ("compass_formal_review/packets/cpt_x.json", True),
+    ("compass_decisions\\decisions.jsonl", False),
+    ("compass_decisions/decisions.jsonl", False),
+    ("other\\compass_formal_review\\x.json", False),
+    ("compass_formal_review", False),
+])
+def test_logical_dir_check_is_separator_independent(key, expected):
+    assert _under_logical_dir(key, "compass_formal_review") is expected
 
 
 # ================================================================== CLI
@@ -1031,3 +1055,24 @@ def test_validation_cli_main_arguments_and_exit_code(bench, monkeypatch, capsys)
 class _Injected(V.RealDataPacketValidation):
     def __init__(self, root, repo, bench, **kw):
         super().__init__(root, repo, corpus_state_resolver=bench.corpus_state, clock=bench.clock, **kw)
+
+
+def test_fresh_compatible_replay_run_recovers_compatibility_and_dry_runs(bench):
+    """Windows follow-up の再現: 旧 replay policy の run しか無い → 非互換 → 現行 policy の新 run が latest になると互換。"""
+    bench.replay_policy_digests = {"evaluation": EVAL_POLICY.digest(), "recommendation": REC_POLICY.digest(),
+                                   "shadow_review": SHADOW_POLICY.digest(), "replay": "d205c3763d07111b"}   # 旧 1.0.0 digest
+    bench.write_replay(); bench.build()
+    stale = bench.packet("pA")["replay"]
+    assert stale["current_compatible"] is False and stale["compatibility_reasons"] == ["POLICY_DIGEST_MISMATCH:replay"]
+    with pytest.raises(ReplayEvidenceRequired):
+        bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+    manifest = bench.service().store.manifest()["inputs"]
+    assert manifest["replay_run_policy_digests"]["replay"] == "d205c3763d07111b"
+    # 現行 policy（1.1.0 / 197db7c73eb0db77）で最小の MILESTONE_AND_TRANSITION 相当の新 run を書く → latest.json が更新される
+    bench.replay_policy_digests = None
+    bench.write_replay(); bench.build()
+    fresh = bench.packet("pA")["replay"]
+    assert fresh["current_compatible"] is True and fresh["compatibility_reasons"] == []
+    assert bench.service().store.manifest()["inputs"]["replay_run_policy_digests"]["replay"] == REPLAY_POLICY.digest()
+    assert bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))["validation"]["ok"]
+    assert len(bench.decisions()) == 0

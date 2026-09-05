@@ -249,7 +249,11 @@ class RealDataPacketValidation:
         _emit("queue_section_counts", {k: len(v) for k, v in sections.items()})
         _emit("formal_review_policy", (manifest.get("policies") or {}).get("formal_review"))
         inputs = manifest.get("inputs") or {}
+        _emit("replay_run_id_used", inputs.get("replay_run_id"))
         _emit("replay_run_digest_used", inputs.get("replay_run_digest"))
+        _emit("replay_run_policy_digests", inputs.get("replay_run_policy_digests"))
+        _emit("replay_run_replay_policy", inputs.get("replay_run_replay_policy"))
+        _emit("replay_policy_current", (manifest.get("policies") or {}).get("replay"))
         _emit("replay_captured_eligible", inputs.get("replay_captured_eligible"))
         _emit("replay_evidence_age_eligible_docs", (summary.get("metrics") or {}).get("replay_evidence_age_eligible_docs"))
         _emit("packets_built", len(self.packets))
