@@ -11,7 +11,7 @@ NOT_PREDICTIVE / NOT_FORMAL_APPROVAL / HUMAN_FEEDBACK_ONLY / IMMUTABLE_INPUT_UNI
 
 1機能=1ファイル:
     errors.py     fail-closed 例外
-    config.py     compass_replay policy（versioned + digest・stability 閾値は PROVISIONAL）
+    config.py     compass_replay policy（versioned + digest・stability 閾値は v1.1.0 で CALIBRATED_CORPUS_139_V1 として凍結）
     snapshot.py   corpus の一貫 SQLite backup / Context の immutable export / drift 観測
     manifest.py   入力宇宙の確定（identity・除外・digest・改変検出）
     view.py       prefix 外アクセスを例外で拒む CorpusStore 互換 view

@@ -19,7 +19,7 @@ from ..corpus.store import CorpusStore, corpus_root
 from ..corpus_research.config import ResearchConfig, load_research_config
 from ..evaluation.config import EvaluationPolicy, RecommendationPolicy, load_policies
 from ..shadow_review.config import ShadowReviewPolicy, load_shadow_review_policy
-from .config import MODE_MILESTONE_AND_TRANSITION, MODE_TRANSITION, ReplayPolicy, load_replay_policy
+from .config import MODE_FULL, MODE_MILESTONE_AND_TRANSITION, MODE_TRANSITION, ReplayPolicy, load_replay_policy
 from .errors import (
     ReplayAnalyzerVersionMissing,
     ReplayError,
@@ -53,6 +53,18 @@ from .view import ReplayCorpusView
 OWNER_MARKER = "REPLAY_OWNED_TEMP"
 INPUT_LIVE_CAPTURE = "PRODUCTION_LIVE_CAPTURE"
 INPUT_RETAINED_SNAPSHOT = "RETAINED_SNAPSHOT"
+
+# 実行戦略（semantic な replay_mode とは別の実行 metadata。run_digest には入らない）
+EXECUTION_TRANSITION_REFINEMENT = "TRANSITION_REFINEMENT"   # 粗い pass + 遷移区間を checkpoint 復元で 1 件刻み
+EXECUTION_FULL_SINGLE_PASS = "FULL_SINGLE_PASS"             # FULL_REPLAY: 1 文書ずつの単一 pass
+EXECUTION_COARSE_ONLY = "COARSE_ONLY"                       # MILESTONE_REPLAY / refine_transitions=false
+PLAN_COVERAGE_COMPLETE = "COMPLETE"
+PLAN_COVERAGE_PARTIAL = "PARTIAL"
+# FULL fallback を採らない理由（実測: run_incremental 1 回 ≫ checkpoint 復元 1 回。単一 pass へ切り替えると
+# 内側の coarse position ごとに run_incremental が 1 回増え、評価する position 集合は変わらない）
+FULL_FALLBACK_REASON = ("NOT_CHOSEN: exact refinement already evaluates only the planned positions; a single forward "
+                        "pass would add one run_incremental call per interior coarse position and save only the "
+                        "cheaper checkpoint restores")
 
 
 def workspace_base(policy: ReplayPolicy) -> Path:
@@ -217,7 +229,7 @@ class ReplayRunner:
                     step += 1
                     driver.advance(pending, step)
                     pending = []
-                    if refine:
+                    if refine and k != positions[-1]:      # 最終 coarse position は復元されないので checkpoint 不要（exact）
                         driver.checkpoint(k)
                     snap, rows = evaluator.evaluate(ordering.prefix_for_eligible(k), step)
                     snapshots[k], rows_by_pos[k] = snap, rows
@@ -227,13 +239,31 @@ class ReplayRunner:
             timings["forward_seconds"] = round(time.perf_counter() - t0, 3)
 
             # 4) transition refinement（checkpoint 復元 → 1 eligible 文書刻み）-------
+            #    実行計画は粗い pass の結果から exact に決まる（閾値なし）。計画が最初の coarse position 以降の
+            #    全 eligible position を覆う場合も、評価する position 集合は同じなので実行経路は変えない
+            #    （FULL_FALLBACK_REASON）。計画と実コストは execution metadata として記録する。
             refined_intervals: List[Dict[str, int]] = []
+            coarse = sorted(snapshots)
+            plan = [(a, b) for a, b in zip(coarse, coarse[1:])
+                    if refine and b - a > 1 and state_signature(rows_by_pos[a]) != state_signature(rows_by_pos[b])]
+            planned_interior = sum(b - a - 1 for a, b in plan)
+            span_from_first = (coarse[-1] - coarse[0] + 1) if coarse else 0
+            coverage_complete = bool(coarse) and len(coarse) + planned_interior == span_from_first
+            execution: Dict[str, Any] = {
+                "strategy": (EXECUTION_FULL_SINGLE_PASS if self.mode == MODE_FULL
+                             else EXECUTION_TRANSITION_REFINEMENT if refine else EXECUTION_COARSE_ONLY),
+                "requested_replay_mode": self.mode,
+                "coarse_positions": len(coarse), "coarse_intervals": max(0, len(coarse) - 1),
+                "refinement_intervals_planned": len(plan), "planned_interior_positions": planned_interior,
+                "planned_snapshot_total": len(coarse) + planned_interior,
+                "eligible_positions_from_first_coarse": span_from_first,
+                "planned_coverage": (PLAN_COVERAGE_COMPLETE if coverage_complete else PLAN_COVERAGE_PARTIAL) if refine else "N/A",
+                "full_fallback": {"applicable": bool(refine and coverage_complete), "chosen": False,
+                                  "reason": FULL_FALLBACK_REASON},
+            }
             if refine:
                 t0 = time.perf_counter()
-                coarse = sorted(snapshots)
-                for a, b in zip(coarse, coarse[1:]):
-                    if b - a <= 1 or state_signature(rows_by_pos[a]) == state_signature(rows_by_pos[b]):
-                        continue
+                for a, b in plan:
                     driver.restore(a)
                     prefix_a = ordering.index_for_eligible(a)
                     for k in range(a + 1, b):
@@ -263,6 +293,7 @@ class ReplayRunner:
                     for r in sorted((x for x in final_rows if x["queue_section"] == SECTION_MAIN),
                                     key=lambda x: int(x["queue_rank"] or 0))]
             run_digest = self._run_digest(manifest, context, snapshot_docs)
+            execution["work"] = {**driver.counters, "evaluations": len(snapshot_docs)}
 
             # 6) drift check（観測は記録・捕捉済み入力の改変は fail closed）------------
             live_end = live_corpus_observation(prod_corpus)
@@ -281,15 +312,17 @@ class ReplayRunner:
             manifest_doc = self._manifest_doc(run_id, run_created_at, manifest, ordering, corpus_info.as_dict(),
                                               context.as_dict(), live_start, live_end, drift, positions, milestones)
             manifest_doc["input_source"] = input_source
+            manifest_doc["execution"] = execution
             summary = self._summary(run_id, run_created_at, run_digest, manifest, context, ordering, snapshot_docs,
                                     all_rows, metrics, equivalence, refined_intervals, top8, refs, timings, drift)
+            summary["execution"] = execution
             ReplayStore(self.output_root).write_run(run_id, manifest=manifest_doc, snapshots=snapshot_docs,
                                                     timelines=all_rows, events=events, summary=summary)
             result = {"run_id": run_id, "run_digest": run_digest, "output_root": str(self.output_root),
                       "input_source": input_source,
                       "snapshots": len(snapshot_docs), "timeline_rows": len(all_rows), "events": len(events),
                       "patterns": len(metrics), "final_position": final_position, "mutation": "NONE (production)",
-                      "timings": timings, "temp_retained": self.retain_temp}
+                      "timings": timings, "temp_retained": self.retain_temp, "execution": execution}
             return result
         except ReplayError:
             self.retain_temp = True                 # 失敗時は診断のため保持（削除しない）

@@ -120,6 +120,34 @@ def build_production(root: Path, n: int = N_DOCS, partial_indexes=(N_DOCS - 1,),
     return prod
 
 
+def build_varied_production(root: Path, n: int = N_DOCS, seed: int = 394) -> Path:
+    """方向性が文書ごとに変わる corpus。pattern が多く、ほぼ全ての coarse 区間で状態が変わる（Windows 実データの形）。"""
+    import random
+
+    rng = random.Random(seed)
+    prod = Path(root) / "prod"
+    store = CorpusStore(corpus_root(prod))
+    texts = {}
+    extractor = LiveFakeExtractor(texts, CCFG.extractor_version)
+
+    def changes() -> str:
+        return " ".join(f"{rng.choice('+-+-+')}{rng.choice([0.02, 0.08, 0.35, 0.9, 1.6, 2.4]):.2f}%" for _ in range(10))
+
+    try:
+        for i in range(n):
+            d, day, _ = DATES[i % len(DATES)]
+            p1 = _tcr.page1(date_jp=d, day=day, changes=changes()).replace(_tcr.OLD_BODY, _tcr.NEW_BODY)
+            name = f"doc{i:02d}.pdf"
+            texts[name] = [p1, _tcr.page2(fx=bool(rng.getrandbits(1))), _tcr.page3(), _tcr.page4(), _tcr.page5()]
+            ingest_path(store, make_pdf(prod / "src" / name, name), config=CCFG, extractor=extractor,
+                        now=NOW, source_type=SOURCE_HISTORICAL_IMPORT)
+    finally:
+        store.close()
+    add_context_rows(prod, [_context_row("ctx_a", SESSION, "2026-06-17T20:00:00+00:00"),
+                            _context_row("ctx_b", DATES[1][2], "2026-06-18T20:00:00+00:00")])
+    return prod
+
+
 def policy_for(tmp: Path, **overrides) -> ReplayPolicy:
     return ReplayPolicy(temp_workspace=str(Path(tmp) / "ws"), **overrides)
 
@@ -171,10 +199,23 @@ def prod(base_prod, tmp_path) -> Path:
     return dest
 
 
+@pytest.fixture(scope="module")
+def base_varied(tmp_path_factory) -> Path:
+    return build_varied_production(tmp_path_factory.mktemp("varied"))
+
+
+@pytest.fixture()
+def varied(base_varied, tmp_path) -> Path:
+    dest = tmp_path / "prod"
+    shutil.copytree(base_varied, dest)
+    return dest
+
+
 # ================================================================== policy
 def test_policy_digest_deterministic_and_config_matches_default():
     assert load_replay_policy().digest() == ReplayPolicy().digest() == ReplayPolicy().digest()
-    assert load_replay_policy().stability_calibration_state == "PROVISIONAL_CALIBRATION_ONLY"
+    assert load_replay_policy().stability_calibration_state == "CALIBRATED_CORPUS_139_V1"
+    assert load_replay_policy().policy_version == "1.1.0"
 
 
 def test_policy_fail_closed_rules():
@@ -192,7 +233,7 @@ def test_policy_fail_closed_rules():
 
 def test_same_version_changed_replay_policy_fails_closed(prod, tmp_path):
     run_replay(prod, tmp_path)
-    drifted = replay_policy_from_mapping({"policy_version": "1.0.0", "transition_resolution": 3,
+    drifted = replay_policy_from_mapping({"transition_resolution": 3,                       # 現 version（1.1.0）のまま内容だけ変更
                                           "temp_workspace": str(tmp_path / "ws2")})
     with pytest.raises(ReplayPolicyError):
         ReplayRunner(prod, replay_policy=drifted, clock=CLOCK).run()
@@ -475,7 +516,9 @@ def test_provisional_classification_marked_and_units_are_eligible_documents():
     base = {"recommendation_reversal_count": 0, "eligible_documents_in_current_state": 20,
             "history_eligible_documents": 40, "state_persistence_ratio": "1.0000"}
     c = classify(base, pol)
-    assert c["stability_class"] == STABLE and c["provisional"] is True and c["unit"] == "eligible_documents"
+    assert c["stability_class"] == STABLE and c["provisional"] is False and c["unit"] == "eligible_documents"
+    provisional = ReplayPolicy(policy_version="1.0.0", stability_calibration_state="PROVISIONAL_CALIBRATION_ONLY")
+    assert classify(base, provisional)["provisional"] is True                 # provisional 状態は今も明示される
     assert classify({**base, "recommendation_reversal_count": 2}, pol)["stability_class"] == OSCILLATING
     assert classify({**base, "history_eligible_documents": 5}, pol)["stability_class"] == INSUFFICIENT_HISTORY
     assert classify({**base, "eligible_documents_in_current_state": 0}, pol)["stability_class"] == RECENT_TRANSITION
@@ -531,7 +574,7 @@ def test_stress_sections_and_handoff_from_synthetic_rows():
     assert rj["count"] == 1 and rj["items"][0]["first_material_contradiction_position"] == 60
     assert rj["items"][0]["was_review_before_reject"] is True and rj["items"][0]["first_reject_position"] == 80
     fri = formal_review_input(rows, metrics, {"a": {"decision_state": ""}, "b": {"decision_state": ""}})
-    assert fri["count"] == 2 and all(i["provisional"] for i in fri["items"])
+    assert fri["count"] == 2 and not any(i["provisional"] for i in fri["items"])   # v1.1.0: 凍結済み
     assert any("never converts to APPROVED" in b for b in fri["boundaries"])
 
 
@@ -918,3 +961,126 @@ def test_validation_sections_print_stress_and_handoff_items(prod, tmp_path, caps
     assert "driver_distribution=" in out and "adverse_overflow_all_reject=True" in out
     assert 'by_recommendation={"APPROVE_RECOMMENDED":1,"REJECT_RECOMMENDED":1}' in out
     assert '"production_decision_state":"NONE"' in out and "formal_states_written_by_replay=0" in out
+
+
+# ================================================================== finalization: execution strategy / stability freeze
+GOLDEN_DEFAULT_RUN_DIGEST = "a4569a55b17fde7c"     # `prod` fixture, MILESTONE_AND_TRANSITION, policy v1.1.0（実行最適化前後で不変）
+
+
+def _exec(out):
+    return out["summary"]["execution"]
+
+
+def test_complete_transition_coverage_is_planned_exactly_and_full_fallback_not_chosen(varied, tmp_path):
+    out = run_replay(varied, tmp_path)
+    ex = _exec(out)
+    first, last = ex["coarse_positions"], out["summary"]["final_position"]
+    assert ex["strategy"] == "TRANSITION_REFINEMENT" and ex["requested_replay_mode"] == MODE_MILESTONE_AND_TRANSITION
+    assert ex["planned_coverage"] == "COMPLETE"                                # 全 coarse 区間に遷移がある = Windows 実データの形
+    assert ex["refinement_intervals_planned"] == ex["coarse_intervals"] >= 2
+    coarse_start = min(out["summary"]["positions"])
+    assert out["summary"]["positions"] == list(range(coarse_start, last + 1))  # 最初の coarse position 以降を全て評価
+    assert ex["planned_snapshot_total"] == out["summary"]["snapshots"] == len(out["summary"]["positions"])
+    assert ex["full_fallback"] == {"applicable": True, "chosen": False, "reason": ex["full_fallback"]["reason"]}
+    assert ex["full_fallback"]["reason"].startswith("NOT_CHOSEN")
+    assert ex["work"]["run_incremental_calls"] == out["summary"]["snapshots"] == ex["work"]["evaluations"]
+    assert ex["work"]["restores"] == ex["refinement_intervals_planned"]
+    assert ex["work"]["checkpoints"] == ex["coarse_positions"] - 1           # 最終 coarse position は checkpoint しない
+    assert out["manifest"]["execution"] == ex and out["result"]["execution"] == ex
+
+
+def test_sparse_transition_planning_keeps_partial_refinement(prod, tmp_path):
+    out = run_replay(prod, tmp_path)
+    ex = _exec(out)
+    assert ex["strategy"] == "TRANSITION_REFINEMENT" and ex["planned_coverage"] == "PARTIAL"
+    assert ex["refinement_intervals_planned"] < ex["coarse_intervals"]
+    assert ex["full_fallback"]["applicable"] is False and ex["full_fallback"]["chosen"] is False
+    assert ex["work"]["restores"] == ex["refinement_intervals_planned"] == len(out["summary"]["refined_intervals"])
+
+
+def test_reused_research_digest_equals_recomputed_store_digest(varied, tmp_path, monkeypatch):
+    from src.intelligence.replay.research import ReplayResearchDriver
+
+    real = ReplayResearchDriver.research_digest
+    seen = []
+
+    def checking(self):
+        reused = real(self)
+        recomputed = self.store.digest(self.rconfig.version_key, self.rconfig.pattern_version, self.rconfig.similarity_version)
+        seen.append(reused == recomputed)
+        return reused
+
+    monkeypatch.setattr(ReplayResearchDriver, "research_digest", checking)
+    out = run_replay(varied, tmp_path)
+    assert seen and all(seen) and len(seen) == out["summary"]["snapshots"]   # 復元後の 1 件刻み区間でも一致
+
+
+def test_transition_output_equals_full_replay_rows_under_complete_coverage(varied, tmp_path):
+    default = run_replay(varied, tmp_path / "d")
+    full = run_replay(varied, tmp_path / "f", mode=MODE_FULL, full_replay_enabled=True)
+    skip = ("run_id", "snapshot_mode")
+    rd = {(r["position"], r["pattern_id"]): {k: v for k, v in r.items() if k not in skip} for r in default["rows"]}
+    rf = {(r["position"], r["pattern_id"]): {k: v for k, v in r.items() if k not in skip} for r in full["rows"]}
+    assert set(rd) <= set(rf) and all(rd[k] == rf[k] for k in rd)
+    sd = {s["position"]: s["research_digest"] for s in default["snapshots"]}
+    sf = {s["position"]: s["research_digest"] for s in full["snapshots"]}
+    assert all(sf[p] == d for p, d in sd.items())                              # research 状態は経路（batch / 1 件刻み）に依存しない
+    assert all(r["snapshot_mode"] == MODE_MILESTONE_AND_TRANSITION for r in default["rows"])
+    assert default["manifest"]["replay_mode"] == MODE_MILESTONE_AND_TRANSITION
+    assert _exec(full)["strategy"] == "FULL_SINGLE_PASS" and _exec(full)["work"]["checkpoints"] == 0 == _exec(full)["work"]["restores"]
+    assert full["summary"]["snapshots"] == full["summary"]["final_position"]
+
+
+def test_semantic_run_digest_is_stable_and_excludes_execution_metadata(prod, tmp_path):
+    out = run_replay(prod, tmp_path)
+    assert out["result"]["run_digest"] == GOLDEN_DEFAULT_RUN_DIGEST
+    assert "execution" not in out["rows"][0] and all("execution" not in s for s in out["snapshots"])
+    assert set(_exec(out)) >= {"strategy", "requested_replay_mode", "planned_coverage", "full_fallback", "work"}
+
+
+def test_milestone_rebuild_equivalence_unchanged_by_checkpoint_skip(varied, tmp_path):
+    out = run_replay(varied, tmp_path)
+    eq = {e["position"]: e["equal"] for e in out["summary"]["rebuild_equivalence"]}
+    assert eq == {10: True, out["summary"]["final_position"]: True}
+
+
+def test_stability_thresholds_frozen_to_approved_v1_values():
+    pol = load_replay_policy()
+    assert (pol.stable_min_persistence, str(pol.mostly_stable_ratio), pol.oscillating_min_reversals) == (15, "0.8", 2)
+    assert pol.stability_unit == "eligible_documents" and pol.stability_calibration_state == "CALIBRATED_CORPUS_139_V1"
+    assert pol.policy_version == "1.1.0" and pol.digest() == "197db7c73eb0db77"
+    with pytest.raises(ReplayPolicyError):
+        replay_policy_from_mapping({"stability": {"calibration_state": "FROZEN_BY_ACCIDENT"}})
+
+
+def test_calibrated_policy_version_bump_is_accepted_and_same_version_change_fails_closed(prod, tmp_path):
+    provisional = ReplayPolicy(policy_version="1.0.0", stability_calibration_state="PROVISIONAL_CALIBRATION_ONLY",
+                               temp_workspace=str(tmp_path / "ws0"))
+    assert provisional.digest() == "d205c3763d07111b"                           # 旧 v1.0.0 digest（Windows 実機で検証済み）
+    ReplayRunner(prod, replay_policy=provisional, clock=CLOCK).run()
+    out = run_replay(prod, tmp_path)                                           # 1.0.0 → 1.1.0 は version bump なので許可
+    assert out["manifest"]["replay_policy"] == {"version": "1.1.0", "digest": "197db7c73eb0db77"}
+    with pytest.raises(ReplayPolicyError):                                     # 1.1.0 のまま内容を変えるのは拒否
+        ReplayRunner(prod, replay_policy=ReplayPolicy(stable_min_persistence=16, temp_workspace=str(tmp_path / "ws2")),
+                     clock=CLOCK).run()
+
+
+def test_frozen_layer_policy_digests_unchanged():
+    from src.intelligence.shadow_review.config import load_shadow_review_policy
+
+    assert EVAL_POLICY.digest() == "1a8443098f64d679"
+    assert REC_POLICY.digest() == "0a979d8421a01d08"
+    assert load_shadow_review_policy().digest() == "e6f5094cacef6fec"
+
+
+def test_varied_fixture_run_writes_no_decision_review_event_or_dna(varied, tmp_path):
+    from src.intelligence.decision.store import decisions_root
+    from src.intelligence.shadow_review.events import shadow_review_root
+
+    dna = [REPO_ROOT / "src" / "intelligence" / "compass" / "market_principles.py",
+           REPO_ROOT / "knowledge" / "compass_dna" / "market_rules.yaml"]
+    before = [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna]
+    run_replay(varied, tmp_path)
+    assert [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna] == before
+    assert not decisions_root(varied).exists() and not shadow_review_root(varied).exists()
+

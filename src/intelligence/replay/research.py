@@ -37,6 +37,11 @@ class ReplayResearchDriver:
         self._store: Optional[ResearchStore] = None
         self._engine: Optional[ResearchEngine] = None
         self.runs = 0
+        # run_incremental が step 6 で計算した derived digest。snapshot の research_digest はこれを再利用し、
+        # 同じ derived view を position ごとに再 canonicalize しない（値は store.digest() と同一・test で固定）。
+        self.last_digest: str = ""
+        self.counters: Dict[str, int] = {"run_incremental_calls": 0, "documents_analyzed": 0,
+                                         "checkpoints": 0, "restores": 0, "rebuilds": 0}
 
     # ------------------------------------------------------------- engine lifecycle
     def _reset_engine(self) -> None:
@@ -66,6 +71,9 @@ class ReplayResearchDriver:
         self.view.allow(document_ids)
         report = self.engine.run_incremental(self.fixed_now(step))
         self.runs += 1
+        self.counters["run_incremental_calls"] += 1
+        self.counters["documents_analyzed"] += len(document_ids)
+        self.last_digest = str(report.digest or "")
         if report.errors:
             raise ReplayIncompleteSnapshot(f"research run reported errors: {sorted(report.errors)[:5]}")
         structures = self.store.current_structures(self.rconfig.version_key)
@@ -82,6 +90,8 @@ class ReplayResearchDriver:
             shutil.rmtree(target)
         shutil.copytree(self.research_dir, target)
         (target / "ALLOWED.txt").write_text("\n".join(sorted(self.view.allowed)), encoding="utf-8")
+        (target / "DIGEST.txt").write_text(self.last_digest, encoding="utf-8")
+        self.counters["checkpoints"] += 1
         return target
 
     def restore(self, position: int) -> None:
@@ -92,9 +102,24 @@ class ReplayResearchDriver:
         shutil.rmtree(self.research_dir)
         shutil.copytree(source, self.research_dir)
         (self.research_dir / "ALLOWED.txt").unlink(missing_ok=True)
+        (self.research_dir / "DIGEST.txt").unlink(missing_ok=True)
         allowed = [line for line in allowed_file.read_text(encoding="utf-8").splitlines() if line]
         self.view.restrict(allowed)
+        digest_file = source / "DIGEST.txt"
+        self.last_digest = digest_file.read_text(encoding="utf-8").strip() if digest_file.is_file() else ""
+        self.counters["restores"] += 1
         self._reset_engine()                          # 旧 in-memory cache を捨てる
+
+    def research_digest(self) -> str:
+        """現在の research 状態の derived digest（`ResearchStore.digest` と同値）。
+
+        run_incremental が返した digest を再利用する。checkpoint 復元直後など値が無いときだけ再計算する。
+        """
+        if self.last_digest:
+            return self.last_digest
+        self.last_digest = self.store.digest(self.rconfig.version_key, self.rconfig.pattern_version,
+                                             self.rconfig.similarity_version)
+        return self.last_digest
 
     # ------------------------------------------------------------- equivalence
     def verify_rebuild_equivalence(self, position: int, rebuild_dir: Path, step: int) -> Dict[str, object]:
@@ -103,6 +128,7 @@ class ReplayResearchDriver:
         if rebuild_dir.exists():
             shutil.rmtree(rebuild_dir)
         rebuilt, report = self.engine.run_full_rebuild(rebuild_dir, self.fixed_now(step))
+        self.counters["rebuilds"] += 1
         if report.errors:
             raise ReplayIncompleteSnapshot(f"full rebuild at position {position} reported errors")
         result = self.engine.equivalence(rebuilt)

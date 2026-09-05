@@ -4,6 +4,40 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.47 (2026-09-05) — Improve Phase 3.9.4 replay 実行 metadata・Fix 較正凍結（policy 1.1.0）
+
+Windows 実データ FULL_REPLAY（eligible 139 / patterns 463）の監督者レビュー PASS を受けた finalization。
+
+### 改善
+
+- `src/intelligence/replay/runner.py`: 精密化計画を粗い pass の結果から exact に算出し、`execution` metadata
+  （`strategy` / `planned_coverage` COMPLETE|PARTIAL / `full_fallback` / `work` counter）を manifest・summary・
+  result に別建てで記録（`run_digest` 不変）。最終 coarse position の checkpoint（復元されない）を省略。
+  FULL fallback は実測（run_incremental 1 回 ≫ checkpoint 復元 1 回、評価 position 集合は不変）により
+  **採らない**ことを決定し、理由を metadata と SPEC §4.1 に明記。
+- `src/intelligence/replay/research.py` / `evaluate.py`: snapshot の `research_digest` に `run_incremental`
+  が返した digest を再利用（`ResearchStore.digest` と同値、test で固定）。work counter を追加。
+
+### 修正
+
+- stability 較正の凍結: `config.yaml` `compass_replay.policy_version` 1.0.0 → 1.1.0、
+  `stability.calibration_state` PROVISIONAL_CALIBRATION_ONLY → **CALIBRATED_CORPUS_139_V1**。
+  閾値の値（15 / 0.8 / 2・単位 eligible_documents）は不変。replay policy digest d205c3763d07111b → 197db7c73eb0db77。
+  metrics / formal_review_input の `provisional` は false。較正根拠は `docs/databank/COMPASS_REPLAY_SPEC.md` §9.1。
+- `validation.py`: calibration note を policy 状態から出力（PROVISIONAL 固定文言を除去）。
+
+### 追加
+
+- `tests/intelligence/test_replay.py` 10 件追加（62 件）: 全区間遷移 corpus で計画 COMPLETE と fallback 不採用、
+  疎な遷移で PARTIAL、digest 再利用の同値性、transition 出力 = FULL 行・research digest、semantic run_digest の
+  golden 値と execution 除外、milestone 等価性、凍結閾値、version bump 許可 / 同 version 変更拒否、
+  凍結層 digest 3 種、Decision / review event / DNA 非書き込み。
+
+Phase 3.8 / 3.9.2 / 3.9.3 / Decision / DNA は未変更（evaluation `1a8443098f64d679` / recommendation
+`0a979d8421a01d08` / shadow_review `e6f5094cacef6fec`）。Phase 3.9.5 は未着手。
+Phase 3.8 engine step 7 の performance-only 修正（similarity list の hoisting、synthetic で replay 2.1 倍高速、
+digest 完全一致）は提案のみ（監督者承認待ち・未適用）。
+
 ## v4.46.1 (2026-09-05) — Add Phase 3.9.4 real-data validation（fixed-snapshot 再 run / FULL 運用 override）
 
 ### 追加

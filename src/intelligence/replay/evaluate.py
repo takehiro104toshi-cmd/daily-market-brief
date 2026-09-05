@@ -177,9 +177,7 @@ class SnapshotEvaluator:
         snapshot_doc = {**snapshot, "evaluated": len(rows), "by_recommendation": _counts([r["recommendation"] for r in rows]),
                         "by_lifecycle": _counts([r["lifecycle_status"] for r in rows]),
                         "by_type": _counts([r["pattern_type"] for r in rows]),
-                        "research_digest": self.driver.store.digest(self.driver.rconfig.version_key,
-                                                                     self.driver.rconfig.pattern_version,
-                                                                     self.driver.rconfig.similarity_version),
+                        "research_digest": self.driver.research_digest(),
                         "queue": queue_summary, "snapshot_digest": rows_digest(rows),
                         "leakage_audit": "PASSED", "identity_audit": "PASSED"}
         return snapshot_doc, rows

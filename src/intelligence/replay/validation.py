@@ -483,7 +483,7 @@ class RealDataValidation:
         s = self.runs["full"]["summary"]
         metrics = list((s.get("pattern_metrics") or {}).values())
         _emit("calibration_state", s.get("stability_calibration_state"))
-        _emit("thresholds_provisional", {"stable_min_persistence": self.policy.stable_min_persistence,
+        _emit("thresholds", {"stable_min_persistence": self.policy.stable_min_persistence,
                                          "mostly_stable_ratio": str(self.policy.mostly_stable_ratio),
                                          "oscillating_min_reversals": self.policy.oscillating_min_reversals,
                                          "unit": self.policy.stability_unit})
@@ -497,7 +497,7 @@ class RealDataValidation:
         _emit("CURRENT_REJECT_RECOMMENDED",
               _calibration_block([m for m in metrics if m.get("current_recommendation") == REJECT_RECOMMENDED]))
         _emit("stability_distribution", s.get("stability_distribution"))
-        _emit("calibration_note", "PROVISIONAL_CALIBRATION_ONLY; thresholds are frozen by the Supervisor, not here")
+        _emit("calibration_note", f"{self.policy.stability_calibration_state}; thresholds are frozen by the Supervisor, not by validation")
 
     def approve_stress(self) -> None:
         _marker("APPROVE_STRESS")

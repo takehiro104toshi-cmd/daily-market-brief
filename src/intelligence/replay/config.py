@@ -1,7 +1,8 @@
 """Replay policy（Phase 3.9.4）— config.yaml `compass_replay`。versioned + content digest・fail closed。
 
 digest 規約は他 Phase と同じ「canonical JSON の sha256 先頭 16 桁」。
-stability 閾値は **PROVISIONAL_CALIBRATION_ONLY**（語彙は凍結・値は実 FULL_REPLAY で較正してから凍結）。
+stability 閾値は v1.0.0 では **PROVISIONAL_CALIBRATION_ONLY**（語彙は凍結・値は実 FULL_REPLAY で較正してから凍結）、
+v1.1.0 で **CALIBRATED_CORPUS_139_V1** として凍結（値は不変。較正根拠は docs/databank/COMPASS_REPLAY_SPEC.md §9）。
 """
 from __future__ import annotations
 
@@ -28,7 +29,10 @@ ORDER_INGESTION = "INGESTION"
 ORDERINGS: Tuple[str, ...] = (ORDER_CHRONOLOGICAL, ORDER_INGESTION)
 
 CALIBRATION_PROVISIONAL = "PROVISIONAL_CALIBRATION_ONLY"
-CALIBRATION_STATES: Tuple[str, ...] = (CALIBRATION_PROVISIONAL, "SUPERVISOR_APPROVED")
+# v1 凍結（監督者決定・2026-09-05）: 実 FULL_REPLAY（eligible 139 / patterns 463 / reversal 0=462, 1=1, 2+=0 /
+# 現 APPROVE 10 件・REJECT 6 件とも persistence 1.0・reversal 0）を根拠に provisional 値をそのまま凍結。
+CALIBRATION_CORPUS_139_V1 = "CALIBRATED_CORPUS_139_V1"
+CALIBRATION_STATES: Tuple[str, ...] = (CALIBRATION_PROVISIONAL, CALIBRATION_CORPUS_139_V1, "SUPERVISOR_APPROVED")
 
 STABILITY_UNIT = "eligible_documents"
 
@@ -50,7 +54,7 @@ def _digest(payload: Mapping[str, Any]) -> str:
 
 @dataclass(frozen=True)
 class ReplayPolicy:
-    policy_version: str = "1.0.0"
+    policy_version: str = "1.1.0"               # 1.0.0 = provisional 較正 / 1.1.0 = v1 凍結（閾値の値は不変）
     default_mode: str = MODE_MILESTONE_AND_TRANSITION
     default_ordering: str = ORDER_CHRONOLOGICAL
     milestone_points: Tuple[int, ...] = (10, 30, 50, 100, 200)
@@ -64,7 +68,7 @@ class ReplayPolicy:
     temp_workspace: str = ""
     retain_debug_runs: bool = False
     fail_on_input_drift: bool = True
-    stability_calibration_state: str = CALIBRATION_PROVISIONAL
+    stability_calibration_state: str = CALIBRATION_CORPUS_139_V1
     stability_unit: str = STABILITY_UNIT
     stable_min_persistence: int = 15
     mostly_stable_ratio: Decimal = Decimal("0.8")

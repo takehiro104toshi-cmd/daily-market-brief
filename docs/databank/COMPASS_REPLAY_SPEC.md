@@ -63,6 +63,34 @@ position を進めない。duplicate / 非 usable は除外し manifest に理�
 milestone 位置では incremental research state と `run_full_rebuild` の結果を `equivalence()` で照合し、
 不一致は `ReplayRebuildMismatch` で fail closed。
 
+### 4.1 実行戦略（execution metadata・semantic mode とは別）
+
+`replay_mode` は利用者が要求した **semantic** な mode で、評価される position 集合と全出力を決める。
+どう実行したかは manifest / summary / result の `execution` に別建てで記録し、`run_digest` には入れない。
+
+| field | 意味 |
+|---|---|
+| `strategy` | `TRANSITION_REFINEMENT`（粗い pass + 遷移区間を checkpoint 復元で 1 件刻み）/ `FULL_SINGLE_PASS`（FULL_REPLAY）/ `COARSE_ONLY` |
+| `planned_coverage` | 粗い pass の結果から exact に決まる精密化計画が、最初の coarse position 以降の全 eligible position を覆うなら `COMPLETE`、それ以外 `PARTIAL`（閾値なし） |
+| `refinement_intervals_planned` / `planned_interior_positions` / `planned_snapshot_total` | 計画の内訳 |
+| `full_fallback` | `applicable`（COMPLETE か）/ `chosen`（常に false）/ `reason` |
+| `work` | `run_incremental_calls` / `documents_analyzed` / `checkpoints` / `restores` / `rebuilds` / `evaluations` |
+
+**FULL fallback を採らない理由（実測）**: replay の実行コストは `run_incremental` の呼び出し回数でほぼ決まり
+（1 回の固定コストが batch サイズに依存せず、synthetic 122 eligible で約 1.1 s、Windows 実データ 139 eligible で
+約 3.5〜4 s）、その回数は semantic に評価すべき position 数に固定される。精密化区間が全区間に及ぶ場合、
+粗い pass + 復元 + 1 件刻み = |positions| 回に対し、単一 pass への切り替えは内側の coarse position ごとに
+1 回ずつ余計な `run_incremental` を要し、節約できるのは復元（copytree・数十 ms〜数百 ms）だけである。
+したがって「計画が全 position を覆う」ことは検出して記録するが、実行経路は変えない。
+最終 coarse position の checkpoint（復元されない）だけは省く。研究状態の digest は `run_incremental` が
+返した値を再利用し（`ResearchStore.digest` と同値・test で固定）、position ごとの再 canonicalize を避ける。
+
+Windows 実 FULL_REPLAY で観測された「transition mode が 135 / 139 position を評価した」事象は、463 pattern の
+うちどれかが 5 文書ごとに状態を変えるためであり、**semantic な被覆の結果**であって実行の欠陥ではない
+（同一 position 集合に対する結果は FULL と一致: CROSS_MODE_CONSISTENCY = true）。
+run_incremental の固定コストの主因は Phase 3.8 engine step 7 の per-document similarity list 再構築
+（O(N³)）で、これは Phase 3.8 側の performance-only 修正候補として監督者へ提案する（replay からは変更しない）。
+
 ## 5. 同一性と漏洩ガード
 
 - replay identity = `pattern_id`（Phase 3.8 の内容 hash）。同 run 内で同じ `pattern_id` の
@@ -115,7 +143,7 @@ FIRST_SURFACED_IN_MAIN`（それぞれ 1 pattern につき 1 回）、
 `RECOMMENDATION_CHANGED / LIFECYCLE_CHANGED / CONSISTENCY_CHANGED`（隣接 snapshot 間）。
 score・cross_regime・quality の変化はイベントにしない。
 
-## 9. 安定性指標と分類（PROVISIONAL）
+## 9. 安定性指標と分類（v1 凍結: CALIBRATED_CORPUS_139_V1）
 
 指標: recommendation_transition_count / recommendation_reversal_count / first_*_position・date /
 documents_to_* / time_to_*_days / eligible_documents_in_current_state / state・approve・reject
@@ -123,10 +151,26 @@ persistence_ratio / worst_consistency_observed / consistency_ever_low / position
 positions_with_time_high / main_appearance_count / first_surfaced_in_main_position。
 accuracy / precision / hit rate / forecast quality を名乗る指標は存在しない。
 
-分類（語彙は凍結、閾値は `PROVISIONAL_CALIBRATION_ONLY`、単位は eligible 文書数であり snapshot 数ではない）:
+分類（語彙・閾値ともに凍結、単位は eligible 文書数であり snapshot 数ではない）:
 `INSUFFICIENT_HISTORY → OSCILLATING（reversal ≥ 2） → STABLE（現状態の持続 ≥ 15） →
 MOSTLY_STABLE（persistence ratio ≥ 0.8） → RECENT_TRANSITION`。
-全 metrics に `provisional: true` と閾値を同梱する。実 FULL_REPLAY による較正後に監督者が凍結する。
+
+### 9.1 較正根拠（監督者決定 2026-09-05・policy 1.0.0 → 1.1.0）
+
+provisional 値（15 / 0.8 / 2）を **値を変えずに** v1 として凍結した。根拠は Windows 実データの FULL_REPLAY:
+
+| 観測 | 値 |
+|---|---|
+| captured eligible / documents / patterns | 139 / 141 / 463 |
+| recommendation reversal 0 / 1 / 2+ | 462（99.8%）/ 1（0.2%）/ 0 |
+| provisional class | STABLE 407 / MOSTLY_STABLE 1 / OSCILLATING 0 / RECENT_TRANSITION 10 / INSUFFICIENT_HISTORY 45 |
+| 現 APPROVE_RECOMMENDED | 10 件・approve_persistence_ratio 1.0・reversal 0（STABLE 5 / RECENT_TRANSITION 5）、first approve 78〜136、6 / 10 が CORPUS_100 以降 |
+| 現 REJECT_RECOMMENDED | 6 件・reject_persistence_ratio 1.0・reversal 0・recovery 0、first reject 33〜125 |
+
+0 OSCILLATING は妥当な経験的結果であり、OSCILLATING を作るために閾値を緩めない。
+`calibration_state` の変更は policy digest を変えるため policy_version を 1.1.0 へ上げた
+（同 version での内容変更は `ReplayPolicyError`）。metrics の `provisional` は false になる。
+実 pattern ID は policy / config に一切書かない。
 
 ## 10. APPROVE / REJECT stress
 
@@ -158,6 +202,8 @@ write 可能 API（`DecisionService` 等）は replay package から import し�
 - run 中の live corpus 増加は無視して manifest に件数だけ記録。捕捉済み文書の identity 変化や
   捕捉範囲内の Context 変化は `ReplayInputMutated`。
 - 同じ policy_version で digest が違う run が既に保存されていれば `ReplayPolicyError`。
+  version を上げた run（1.0.0 → 1.1.0）は許可され、旧 run は旧 digest のまま保存される。
+- `execution` metadata（実行戦略・計画・work counter・timings）は run_digest に入らない。
 
 ## 14. 失敗クラス
 

@@ -1051,7 +1051,7 @@ compass_shadow_review:
 # 凍結規則（3.8 / 3.9.2 / 3.9.3）を過去 prefix に適用して遷移と持続性を再構成する。
 # 値を変えるときは policy_version を必ず上げる（同じ version で内容が変わると run を拒否する）。
 compass_replay:
-  policy_version: "1.0.0"
+  policy_version: "1.1.0"                    # 1.0.0 → 1.1.0: stability calibration_state を凍結（閾値の値は不変）
   default_mode: "MILESTONE_AND_TRANSITION"   # FULL_REPLAY は既定にしない（明示指定のみ）
   default_ordering: "CHRONOLOGICAL"          # document_date, date_sequence, document_id。INGESTION は明示指定
   milestone_points: [10, 30, 50, 100, 200]
@@ -1065,8 +1065,9 @@ compass_replay:
   temp_workspace: ""                         # 空 = システム temp。<temp>/compass_replay_runs/<run_id>/
   retain_debug_runs: false
   fail_on_input_drift: true                  # 捕捉済み入力の改変は fail closed（新規 intake は無視して記録）
-  stability:                                 # 語彙は凍結・閾値は PROVISIONAL（実 FULL_REPLAY で較正してから凍結）
-    calibration_state: "PROVISIONAL_CALIBRATION_ONLY"
+  stability:                                 # v1 凍結（監督者決定 2026-09-05）。根拠: 実 FULL_REPLAY eligible 139 / patterns 463 /
+                                             # reversal 0=462 1=1 2+=0 / 現 APPROVE 10・REJECT 6 とも persistence 1.0・reversal 0
+    calibration_state: "CALIBRATED_CORPUS_139_V1"
     unit: "eligible_documents"               # snapshot 数ではなく eligible 文書数で数える
     stable_min_persistence: 15
     mostly_stable_ratio: "0.8"

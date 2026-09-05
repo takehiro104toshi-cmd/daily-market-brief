@@ -1,7 +1,7 @@
 """Stability metrics と provisional 分類（Phase 3.9.4）。
 
 指標は「規則の判定がどれだけ一貫していたか」であり accuracy ではない（名称に accuracy / precision /
-hit / forecast を使わない）。分類の語彙は凍結、閾値は PROVISIONAL_CALIBRATION_ONLY。
+hit / forecast を使わない）。分類の語彙は凍結、閾値は policy の calibration_state に従う（v1.1.0 で凍結済み）。
 単位は eligible 文書数（snapshot 数ではない）。
 """
 from __future__ import annotations
@@ -96,7 +96,7 @@ def pattern_metrics(history: List[Mapping[str, Any]], policy: ReplayPolicy, fina
 
 
 def classify(metrics: Mapping[str, Any], policy: ReplayPolicy) -> Dict[str, Any]:
-    """PROVISIONAL: 語彙は凍結、閾値は較正前。単位は eligible 文書数。"""
+    """語彙は凍結、閾値は policy 値（provisional 状態では provisional=True を付す）。単位は eligible 文書数。"""
     reversals = int(metrics["recommendation_reversal_count"])
     in_state = int(metrics["eligible_documents_in_current_state"])
     history = int(metrics["history_eligible_documents"])
