@@ -12,7 +12,8 @@
     metrics.py     運用 metrics（predictive 系なし）
     store.py       derived 出力（compass_formal_review/、atomic、rebuildable）
     service.py     build / decide（唯一の formal write path: guard → DecisionService.validate → decide）
-    cli.py         build / list / show / decide / status / reopen-check / validate-policy（batch なし）
+    session.py     人間 1 人が 1 candidate を読むための決定的提示（10 節 brief・事実文・設問・2 段階 command）
+    cli.py         build / list / show / session / brief / decide / status / reopen-check / validate-policy（batch なし）
     validation.py  Windows 実機 1 操作の real-data packet validation（::P395_*:: marker、全 candidate dry-run、fail closed）
 
 APPROVE_RECOMMENDED ≠ APPROVED、REJECT_RECOMMENDED ≠ REJECTED、APPROVED ≠ DNA promotion（常に NOT_PROMOTED）。

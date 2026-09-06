@@ -1,8 +1,10 @@
 """Formal review CLI（Phase 3.9.5）— `python -m src.intelligence.formal_review.cli <command>`。
 
-build（derived のみ書く）/ list / show / status / reopen-check は formal Decision を書かない。
+build（derived のみ書く）/ list / show / session / brief / status / reopen-check は formal Decision を書かない。
 decide は 1 pattern だけ・packet_id 必須。--dry-run は guard と DecisionService.validate を実行して何も書かない。
-exit: 0 ok / 1 validation failed / 2 policy / 3 formal review guard / 4 store corrupt。batch command は存在しない。
+real write は 2 段階: stage 1 = --dry-run、stage 2 = 同じ action を `--confirm "CONFIRM <STATE> <pattern_id>"` 付きで再実行。
+confirmation token が無い / 一致しない real write は guard へ届く前に拒否する（既定の action は存在しない）。
+exit: 0 ok / 1 validation failed / 2 policy / 3 formal review guard・confirmation / 4 store corrupt。batch command は存在しない。
 """
 from __future__ import annotations
 
@@ -17,6 +19,7 @@ from ..shadow_review.events import ShadowReviewStoreCorrupt
 from .config import ACTIONS, FormalReviewPolicy, load_formal_review_policy
 from .errors import FormalReviewError, FormalReviewPolicyError
 from .service import FormalDecisionRequest, FormalReviewService
+from .session import candidate_step, confirmation_token, session_plan
 
 EXIT_OK, EXIT_VALIDATION, EXIT_POLICY, EXIT_GUARD, EXIT_CORRUPT = 0, 1, 2, 3, 4
 
@@ -39,6 +42,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     sub.add_parser("list", help="ordered queue (read-only)")
     p_show = sub.add_parser("show", help="one packet (read-only)")
     p_show.add_argument("pattern_id")
+    p_session = sub.add_parser("session", help="ordered human review session plan for every queued candidate (read-only)")
+    p_session.add_argument("--actor", default="<human-actor-id>")
+    p_brief = sub.add_parser("brief", help="one candidate's human review presentation (read-only; no reason text)")
+    p_brief.add_argument("pattern_id")
+    p_brief.add_argument("--actor", default="<human-actor-id>")
     p_dec = sub.add_parser("decide", help="ONE formal human decision bound to a packet (MUTATING unless --dry-run)")
     p_dec.add_argument("pattern_id", help="exactly one pattern id")
     p_dec.add_argument("--packet", required=True, dest="packet_id")
@@ -50,7 +58,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_dec.add_argument("--replacement-pattern", default="")
     p_dec.add_argument("--reason-category", default="")
     p_dec.add_argument("--disposition", default="", help="DUPLICATE_OR_OVERLAPPING (KEEP_REVIEWING only)")
-    p_dec.add_argument("--dry-run", action="store_true")
+    p_dec.add_argument("--dry-run", action="store_true", help="stage 1: run every guard check and validate, write nothing")
+    p_dec.add_argument("--confirm", default="", dest="confirm",
+                       help="stage 2: exact token `CONFIRM <STATE> <pattern_id>` required for a real write")
     sub.add_parser("status", help="operational metrics (read-only)")
     sub.add_parser("reopen-check", help="REOPEN_ELIGIBLE status of REJECTED patterns (read-only; never writes)")
     sub.add_parser("validate-policy", help="validate compass_formal_review and print its digest")
@@ -80,6 +90,21 @@ def main(argv: Optional[List[str]] = None) -> int:
             packet = service.store.packet(args.pattern_id)
             _dump(packet or {"pattern_id": args.pattern_id, "found": False})
             return EXIT_OK if packet else EXIT_VALIDATION
+        if args.command == "session":
+            queue = service.store.queue()
+            packets = {pid: p for pid in service.store.packet_ids() for p in [service.store.packet(pid)] if p}
+            _dump({**session_plan(queue, packets, actor=args.actor), "mutation": "NONE"})
+            return EXIT_OK
+        if args.command == "brief":
+            packet = service.store.packet(args.pattern_id)
+            if not packet:
+                _dump({"pattern_id": args.pattern_id, "found": False})
+                return EXIT_VALIDATION
+            row = next((r for rows in (service.store.queue().get("sections") or {}).values() for r in rows
+                        if r.get("pattern_id") == args.pattern_id), {})
+            _dump({**candidate_step(packet, queue_rank=row.get("queue_rank"), section=row.get("section", ""),
+                                    actor=args.actor), "mutation": "NONE"})
+            return EXIT_OK
         if args.command == "status":
             summary = service.store.summary()
             _dump({"metrics": summary.get("metrics"), "population": summary.get("population"),
@@ -93,6 +118,13 @@ def main(argv: Optional[List[str]] = None) -> int:
                                         reason=args.reason, actor=args.actor, acknowledge_siblings=tuple(args.acknowledge),
                                         related_pattern_id=args.related_pattern, replacement_pattern_id=args.replacement_pattern,
                                         reason_category=args.reason_category, disposition=args.disposition)
+        if not args.dry_run:                       # stage 2: 明示 confirmation が無ければ guard へ届く前に止める
+            expected = confirmation_token(request.decision_type, args.pattern_id)
+            if str(args.confirm) != expected:
+                _dump({"error": "CONFIRMATION_REQUIRED", "mutation": "NONE",
+                       "detail": "a real formal decision needs stage 1 (--dry-run) and then the exact confirmation token",
+                       "expected_confirm": expected, "received_confirm": str(args.confirm)})
+                return EXIT_GUARD
         result = service.decide(request, dry_run=bool(args.dry_run))
         _dump(result)
         return EXIT_OK if result["validation"]["ok"] else EXIT_VALIDATION

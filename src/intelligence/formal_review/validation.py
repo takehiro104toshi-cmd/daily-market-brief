@@ -35,7 +35,7 @@ from ..shadow_review.events import EVENTS_FILE as REVIEW_EVENTS_FILE, ShadowRevi
 from ..shadow_review.models import find_forbidden_keys
 from .config import APPROVED, KEEP_REVIEWING, REJECTED, FormalReviewPolicy
 from .errors import FormalReviewError
-from .groups import build_groups, opposite_members
+from .groups import blocking_approved_siblings, build_groups, opposite_members, pending_approve_acknowledgements
 from .guard import evidence_diff
 from .ordering import SECTION_APPROVE, SECTION_REJECT, SECTION_REOPEN
 from .packet import digest16
@@ -367,8 +367,7 @@ class RealDataPacketValidation:
         _emit("stale_candidates", len(self.primary) - fresh_count)
 
     def _acknowledgements(self, packet: Mapping[str, Any]) -> List[str]:
-        return sorted(m["pattern_id"] for m in opposite_members(dict(packet.get("group") or {}))
-                      if m.get("recommendation") == APPROVE_RECOMMENDED and m.get("decision_state", "") in ("", KEEP_REVIEWING, "REOPENED_FOR_REVIEW"))
+        return pending_approve_acknowledgements(dict(packet.get("group") or {}))
 
     def siblings_section(self) -> None:
         _marker("SIBLINGS")
@@ -382,7 +381,7 @@ class RealDataPacketValidation:
             opp = opposite_members(dict(packet.get("group") or {}))
             opposite += 1 if opp else 0
             if packet["recommendation"]["recommendation"] == APPROVE_RECOMMENDED:
-                c1 += 1 if any(m.get("decision_state") == APPROVED for m in opp) else 0
+                c1 += 1 if blocking_approved_siblings(dict(packet.get("group") or {})) else 0
                 c3 += 1 if self._acknowledgements(packet) else 0
         _emit("groups_with_multiple_members", multi)
         _emit("candidates_with_opposite_siblings", opposite)

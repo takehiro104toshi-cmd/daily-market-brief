@@ -751,7 +751,7 @@ def test_cli_has_no_batch_command_and_decide_takes_one_pattern(bench, monkeypatc
     monkeypatch.setattr(argparse._SubParsersAction, "add_parser", spy)
     monkeypatch.setattr(fr_cli, "FormalReviewService", lambda root, **kw: bench.service(**kw))
     assert fr_cli.main(["--data-root", str(bench.root), "validate-policy"]) == 0
-    assert parser_cmds == {"build", "list", "show", "decide", "status", "reopen-check", "validate-policy"}
+    assert parser_cmds == {"build", "list", "show", "session", "brief", "decide", "status", "reopen-check", "validate-policy"}
     assert not any("batch" in c for c in parser_cmds)
     bench.build()
     with pytest.raises(SystemExit):                                                    # 2 つ目の positional は受け付けない
@@ -936,7 +936,10 @@ def test_cli_commands_read_only_and_decide_exit_codes(bench, monkeypatch, capsys
     assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", "frp_wrong", "--action", "approve", "--reason", REASON_OK,
                         "--actor", "taro", "--acknowledge-sibling", "pB"]) == 3
     assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", pk, "--action", "approve", "--reason", REASON_OK,
-                        "--actor", "taro", "--acknowledge-sibling", "pB"]) == 0
+                        "--actor", "taro", "--acknowledge-sibling", "pB"]) == 3          # stage 2 の confirmation が無い
+    assert len(bench.decisions()) == rows_before
+    assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", pk, "--action", "approve", "--reason", REASON_OK,
+                        "--actor", "taro", "--acknowledge-sibling", "pB", "--confirm", "CONFIRM APPROVED pA"]) == 0
     assert len(bench.decisions()) == rows_before + 1
 
 
@@ -1076,3 +1079,133 @@ def test_fresh_compatible_replay_run_recovers_compatibility_and_dry_runs(bench):
     assert bench.service().store.manifest()["inputs"]["replay_run_policy_digests"]["replay"] == REPLAY_POLICY.digest()
     assert bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))["validation"]["ok"]
     assert len(bench.decisions()) == 0
+
+
+# ================================================================== first human review session preparation
+from src.intelligence.formal_review import session as SESSION  # noqa: E402
+
+BRIEF_SECTIONS = ("1_identity", "2_recommendation", "3_evidence", "4_replay", "5_dna_relation", "6_contradiction",
+                  "7_group_context", "8_human_history", "9_decision_state", "10_warnings")
+
+
+def test_candidate_brief_covers_every_required_section(bench):
+    bench.build()
+    brief = SESSION.candidate_brief(bench.packet("pA"), queue_rank=3, section=SECTION_APPROVE)
+    assert all(k in brief for k in BRIEF_SECTIONS)
+    assert brief["1_identity"]["pattern_id"] == "pA" and brief["1_identity"]["queue_rank"] == 3
+    assert brief["2_recommendation"]["machine_recommendation"] == APPROVE_RECOMMENDED
+    assert set(brief["3_evidence"]["axis_states"]) == set(AXES) and brief["3_evidence"]["reference_score_note"] == "NON_DECISIONAL_REFERENCE_ONLY"
+    assert brief["4_replay"]["stability_class"] == "STABLE" and brief["4_replay"]["first_recommendation_position"] == 78
+    assert brief["5_dna_relation"]["classification"] and brief["9_decision_state"]["allowed_actions"] == [APPROVED, KEEP_REVIEWING]
+    assert brief["7_group_context"]["C3_status"] == "ACKNOWLEDGEMENT_REQUIRED" and brief["7_group_context"]["C3_acknowledgement_required_for"] == ["pB"]
+    assert find_forbidden_keys(brief) == []
+
+
+def test_brief_never_exposes_human_reason_text(bench):
+    secret = "private human reason text that must never appear in the session presentation"
+    bench.shadow("pA", AGREE, reason=secret)
+    bench.build()
+    step = SESSION.candidate_step(bench.packet("pA"), queue_rank=3, section=SECTION_APPROVE)
+    assert secret not in json.dumps(step, ensure_ascii=False)
+    assert step["brief"]["8_human_history"]["shadow_review_event_count"] == 1
+    assert step["brief"]["8_human_history"]["current_outcome"] == AGREE
+    assert bench.packet("pA")["shadow_history"]["outcome_history"][0]["reason"] == secret   # packet 側には残る
+
+
+def test_explanations_are_factual_deterministic_and_free_of_advisory_language(bench):
+    bench.build()
+    for pid in ("pA", "pR"):
+        first, second = SESSION.explanation(bench.packet(pid)), SESSION.explanation(bench.packet(pid))
+        assert first == second and first
+        SESSION.assert_no_advisory_language(first)
+        blob = " ".join(first)
+        assert "Human formal decision required" in blob and "evidence only" in blob
+    approve = " ".join(SESSION.explanation(bench.packet("pA")))
+    assert "Recommendation became APPROVE at eligible position 78" in approve and "0 reversals" in approve
+    reject = " ".join(SESSION.explanation(bench.packet("pR")))
+    assert "Recommendation became REJECT at eligible position 33" in reject
+    assert "repeated supporting-document directional contradiction" in reject and "has not recovered" in reject
+    with pytest.raises(ValueError):
+        SESSION.assert_no_advisory_language(["this one should be approved"])
+
+
+def test_review_questions_match_the_candidate_direction(bench):
+    bench.build()
+    approve_ids = [q["id"] for q in SESSION.review_questions(bench.packet("pA"))]
+    reject_ids = [q["id"] for q in SESSION.review_questions(bench.packet("pR"))]
+    assert approve_ids == ["A1", "A2", "A3", "A4", "A5", "A6"] and reject_ids == ["R1", "R2", "R3", "R4", "R5", "R6"]
+    assert "APPROVED or KEEP_REVIEWING" in SESSION.review_questions(bench.packet("pA"))[4]["question"]
+    assert "REJECTED or KEEP_REVIEWING" in SESSION.review_questions(bench.packet("pR"))[4]["question"]
+
+
+def test_session_plan_follows_the_frozen_queue_order_and_excludes_context(bench):
+    bench.build()
+    store = bench.service().store
+    packets = {pid: store.packet(pid) for pid in store.packet_ids()}
+    plan = SESSION.session_plan(store.queue(), packets)
+    assert [s["brief"]["1_identity"]["pattern_id"] for s in plan["steps"]] == ["pR", "pT", "pA", "pK", "pB"]
+    assert [s["section"] for s in plan["steps"]][:2] == [SECTION_REJECT, SECTION_REJECT]
+    assert [s["step"] for s in plan["steps"]] == [1, 2, 3, 4, 5] and plan["total_steps"] == 5
+    assert [c["pattern_id"] for c in plan["context_patterns"]] == ["pC"]
+    assert any("ONE_PATTERN_AT_A_TIME" in r for r in plan["rules"]) and any("TWO_STAGE" in r for r in plan["rules"])
+    assert SESSION.session_plan(store.queue(), packets) == plan                       # 決定的
+
+
+def test_session_commands_are_two_stage_and_carry_required_acknowledgements(bench):
+    bench.build()
+    commands = {c["decision_type"]: c for c in SESSION.decision_commands(bench.packet("pA"), actor="taro")}
+    assert set(commands) == {APPROVED, KEEP_REVIEWING}
+    approve = commands[APPROVED]
+    assert approve["stage_1_dry_run"].endswith("--dry-run") and "--confirm" not in approve["stage_1_dry_run"]
+    assert approve["confirmation_token"] == "CONFIRM APPROVED pA" and approve["confirmation_token"] in approve["stage_2_real_write"]
+    assert approve["acknowledge_siblings_required"] == ["pB"] and "--acknowledge-sibling pB" in approve["stage_2_real_write"]
+    assert commands[KEEP_REVIEWING]["acknowledge_siblings_required"] == []
+
+
+def test_sibling_predictors_agree_with_the_guard(bench):
+    bench.build()
+    packet = bench.packet("pA")
+    assert SESSION.sibling_status(packet)["C3_acknowledgement_required_for"] == ["pB"]
+    with pytest.raises(SiblingAcknowledgementRequired):                                # guard が権威
+        bench.decide("pA", "approve", REASON_OK, dry_run=True)
+    assert bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))["validation"]["ok"]
+    bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    bench.build()
+    status = SESSION.sibling_status(bench.packet("pB"))
+    assert status["C1_blocking_approved_siblings"] == ["pA"] and status["C1_status"] == "APPROVED_BLOCKED_BY_OPPOSITE_SIBLING"
+    with pytest.raises(SiblingConflictBlocked):
+        bench.decide("pB", "approve", REASON_OK, dry_run=True)
+
+
+def test_cli_session_and_brief_are_read_only(bench, monkeypatch, capsys):
+    monkeypatch.setattr(fr_cli, "FormalReviewService", lambda root, **kw: bench.service(**kw))
+    bench.build()
+    before = _tree_digest(bench.root)
+    assert fr_cli.main(["--data-root", str(bench.root), "session"]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["total_steps"] == 5 and plan["mutation"] == "NONE"
+    assert fr_cli.main(["--data-root", str(bench.root), "brief", "pA"]) == 0
+    step = json.loads(capsys.readouterr().out)
+    assert step["brief"]["1_identity"]["pattern_id"] == "pA" and step["review_questions"][0]["id"] == "A1"
+    assert fr_cli.main(["--data-root", str(bench.root), "brief", "nope"]) == 1
+    capsys.readouterr()
+    assert _tree_digest(bench.root) == before and len(bench.decisions()) == 0
+
+
+def test_cli_real_write_requires_the_exact_confirmation_token(bench, monkeypatch, capsys):
+    monkeypatch.setattr(fr_cli, "FormalReviewService", lambda root, **kw: bench.service(**kw))
+    bench.build()
+    root = str(bench.root)
+    pk = bench.packet("pR")["identity"]["packet_id"]
+    base = ["--data-root", root, "decide", "pR", "--packet", pk, "--action", "reject", "--reason", REASON_REJECT, "--actor", "taro"]
+    assert fr_cli.main(base + ["--dry-run"]) == 0                                      # stage 1 は token 不要
+    assert len(bench.decisions()) == 0
+    assert fr_cli.main(base) == 3                                                      # token なし
+    assert fr_cli.main(base + ["--confirm", "CONFIRM REJECTED pA"]) == 3               # 別 pattern の token
+    assert fr_cli.main(base + ["--confirm", "CONFIRM APPROVED pR"]) == 3               # 別 state の token
+    assert fr_cli.main(base + ["--confirm", "confirm rejected pR"]) == 3               # 大文字小文字も一致必須
+    assert len(bench.decisions()) == 0
+    capsys.readouterr()
+    assert fr_cli.main(base + ["--confirm", "CONFIRM REJECTED pR"]) == 0
+    assert len(bench.decisions()) == 1 and bench.decisions()[0].decision_type == REJECTED
+    assert bench.decisions()[0].promotion_status == "NOT_PROMOTED"

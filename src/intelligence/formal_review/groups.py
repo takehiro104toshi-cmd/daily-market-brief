@@ -87,6 +87,24 @@ def opposite_members(context: Mapping[str, Any]) -> List[Dict[str, Any]]:
     return [dict(m) for m in context.get("members") or [] if m.get("relationship") == REL_OPPOSITE]
 
 
+# --- guard 予測子（guard.py が権威。session / validation はこれで同じ結論を先に示すだけ）---
+UNDECIDED_HEADS: Tuple[str, ...] = ("", "KEEP_REVIEWING", "REOPENED_FOR_REVIEW")
+APPROVED_STATE = "APPROVED"
+APPROVE_RECOMMENDED_STATE = "APPROVE_RECOMMENDED"
+
+
+def blocking_approved_siblings(context: Mapping[str, Any]) -> List[str]:
+    """C1: 既に formal APPROVED の反対方向 sibling（override 不可・APPROVED を hard block する）。"""
+    return sorted(str(m["pattern_id"]) for m in opposite_members(context) if m.get("decision_state") == APPROVED_STATE)
+
+
+def pending_approve_acknowledgements(context: Mapping[str, Any]) -> List[str]:
+    """C3: APPROVED を書く前に明示 acknowledgement が要る、未決の反対方向 APPROVE_RECOMMENDED sibling。"""
+    return sorted(str(m["pattern_id"]) for m in opposite_members(context)
+                  if m.get("recommendation") == APPROVE_RECOMMENDED_STATE
+                  and str(m.get("decision_state", "")) in UNDECIDED_HEADS)
+
+
 def _int(value: Any) -> Optional[int]:
     try:
         return int(value) if value is not None and value != "" else None

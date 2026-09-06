@@ -154,3 +154,57 @@ console には人間の Shadow Review reason 本文・原文・ファイル名�
 実装完了 ≠ Phase close。実装 → local QA → 監督者実装レビュー → Windows real-data packet build → 全 candidate の
 `decide --dry-run` → 監督者 process review → 明示的 HUMAN-DECISION GO → first real human formal review → 最終 audit
 → CLOSED。実装・packet validation の間に real Decision は書かない。
+
+## 14. Windows real-data validation record（監査証跡・履歴事実）
+
+以下は Phase 3.9.5 の human review gate を READY と判定した時点の実機検証記録である。**この節は履歴の
+事実であり、semantics・policy digest・packet schema・guard 挙動のいずれも定義しない**（それらは §1〜§13）。
+
+| 項目 | 値 |
+|---|---|
+| 検証日時（UTC） | 2026-09-05T18:50Z（build）／ 監督者判定 2026-09-06 |
+| 検証 commit | `b73af512937421b01b1e91bdd809d46216a555bc` |
+| corpus | documents 141 / eligible 139 / CORPUS_100 到達 |
+| primary candidate | 16（APPROVE_RECOMMENDED 10 / REJECT_RECOMMENDED 6） |
+| REOPEN_ELIGIBLE | 0 |
+| context pattern | 8（decided 0・NOT_READY 除外 10） |
+| 選択された replay run | `crp_2530396a5a3b8fb7` |
+| replay run digest | `74d5b037498fc0de` |
+| replay policy | 1.1.0 / `197db7c73eb0db77`（captured eligible 139・evidence age 0） |
+| replay 互換性 | 16 / 16 |
+| packet freshness | 16 / 16 fresh（changed block 0） |
+| formal dry-run | 16 / 16 DRY_RUN_PASS |
+| **書き込まれた formal Decision** | **0** |
+| Shadow Review event 変更 | 0 |
+| DNA 変更 | 0（blob identity 一致） |
+| PDF 変更 | 0（inventory 一致・open せず） |
+| research / evaluation / shadow derived store 変更 | 0 |
+| determinism | live rebuild PASS / fixed inputs PASS |
+| formal review test（Windows） | 75 passed |
+| full pytest（Windows） | 2062 passed / 1 skipped |
+| 唯一の skip | Linux 専用 tank shard が無い環境での明示 `skipif`。Phase 3.9.5 とは無関係 |
+| 検証時点の human review | **未開始**（first human formal review session はこの記録の後） |
+
+補足（いずれも履歴事実）:
+
+- 当初の実機 run では全 16 candidate が `POLICY_DIGEST_MISMATCH:replay` を返した。原因は、選択された
+  replay run が replay policy 1.0.0 期のものだったこと（evidence の内容ではなく policy version 束縛）。
+  現行 policy 1.1.0 で **既定 mode（MILESTONE_AND_TRANSITION / CHRONOLOGICAL）を 1 回**実行しただけで
+  16 / 16 が互換になった。FULL_REPLAY の再実行は不要だった。
+- その既定 run は、先行 FULL_REPLAY と同一の formal-review 関連値（APPROVE first position 78 / 91 / 93 / 96 /
+  117 / 125 / 128 / 129 / 136 / 136、REJECT first position 33 / 68 / 82 / 82 / 114 / 125、persistence 1.0、
+  reversal 0、STABLE 5 / RECENT_TRANSITION 5）を再現した。
+- sibling: group with multiple members 21 / opposite sibling を持つ candidate 1 / C1 block 0 / C3 要求 0。
+  唯一 opposite sibling を持つのは REJECT candidate であり、C1・C3 は APPROVED にのみ適用されるため、
+  この母集団では実データ上いずれも発火していない（synthetic test でのみ実証済み）。
+
+## 15. First human formal review session（手順は `COMPASS_FIRST_FORMAL_REVIEW_SESSION.md`）
+
+`session.py` は packet の事実だけを人間向けの 10 節 brief・事実文・設問・2 段階 command へ変換する
+読み取り専用 module（narrative 生成なし・助言表現は語彙として禁止し test で検査・人間の Shadow Review
+reason 本文は提示に載せない）。CLI は `session`（凍結順の全 step）と `brief <pattern_id>`（1 件）を提供する。
+
+real write は 2 段階に固定する。stage 1 は `decide … --dry-run`（guard 全 22 段と
+`DecisionService.validate` を実行し何も書かない）、stage 2 は同じ action を
+`--confirm "CONFIRM <STATE> <pattern_id>"` 付きで再実行する。token が無い / 一致しない real write は
+guard へ届く前に拒否され（exit 3）、既定 action は存在しない。batch command は無く、1 invocation = 1 pattern。

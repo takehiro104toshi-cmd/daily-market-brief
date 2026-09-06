@@ -4,6 +4,37 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.48.3 (2026-09-06) — Add Phase 3.9.5 Windows 検証の監査証跡 / first human review session の準備（2 段階 confirmation）
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §14「Windows real-data validation record」（履歴事実のみ。
+  commit `b73af51` / corpus 141・eligible 139 / candidate 16（APPROVE 10・REJECT 6）/ context 8 /
+  replay run `crp_2530396a5a3b8fb7`・digest `74d5b037498fc0de`・policy 1.1.0 / 互換 16-16 / freshness 16-16 /
+  dry-run 16-16 / **書き込まれた formal Decision 0** / DNA・PDF・Shadow Review 不変 / Windows test 75 passed・
+  full 2062 passed 1 explicit skip / 検証時点で human review 未開始）と §15（session 概要）。
+  semantics・policy digest・packet schema・guard 挙動はいずれも変更しない。
+- `docs/databank/COMPASS_FIRST_FORMAL_REVIEW_SESSION.md`【新規】: 1 件ずつの人間 review 手順書
+  （目的・凍結順・10 節提示・説明文の規則・APPROVE / REJECT 設問・2 段階実行・decision 直後の監査・要約形式）。
+- `src/intelligence/formal_review/session.py`【新規】: packet の事実だけを人間向けへ変換する読み取り専用 module
+  （10 節 brief・決定的な事実文・設問 A1-A6 / R1-R6・2 段階 command・C1 / C3 予測）。助言表現は語彙として禁止し
+  test で機械検査、人間の Shadow Review reason 本文は提示に載せない。
+- `src/intelligence/formal_review/cli.py`: `session`（凍結順の全 step）と `brief <pattern_id>`（1 件）を追加。
+  いずれも read-only。
+- `src/intelligence/formal_review/groups.py`: C1 / C3 の共有予測子（`blocking_approved_siblings` /
+  `pending_approve_acknowledgements`）。`validation.py` もこれを使い、guard との判断が分岐しないようにした。
+
+### 改善
+
+- real write を 2 段階に固定: stage 1 = `decide … --dry-run`、stage 2 = 同じ action を
+  `--confirm "CONFIRM <STATE> <pattern_id>"` 付きで再実行。token が無い / 一致しない real write は guard へ
+  届く前に exit 3 で拒否される（既定 action なし・batch なし・1 invocation = 1 pattern は不変）。
+- `tests/intelligence/test_formal_review.py` 9 件追加（84 件）: brief の全節・reason 本文の非露出・事実文の
+  決定性と禁止語彙・設問の方向一致・session plan の凍結順・2 段階 command と acknowledgement・予測子と guard の
+  一致・`session` / `brief` の read-only・confirmation token の厳密一致。
+
+policy 6 層の digest・packet schema・guard 挙動は不変。real Decision は 1 行も書いていない。
+
 ## v4.48.2 (2026-09-06) — Fix Windows path 区切りに依存していた formal review test / Improve replay run policy の可視化
 
 ### 修正
