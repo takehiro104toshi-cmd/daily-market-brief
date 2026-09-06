@@ -8,11 +8,11 @@
 **日経平均の直近値は65,020.94円（前日比 +806.46 (+1.26%)）。**
 
 ## 2. 岡三ストラテジスト視点　★★★★★
-**AI Hardware Rallied While Adobe and Palantir Sank. Which Side Is Right?** ★★★☆☆
+**Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models** ★★★☆☆
 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 恩恵: 該当なし ／ 悪影響: 該当なし
 
-**Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models** ★★★☆☆
+**Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal** ★★★☆☆
 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 恩恵: 該当なし ／ 悪影響: 該当なし
 
@@ -32,7 +32,7 @@
 ### 🌍 Today's Future Signals ★★★★★
 今日世界で何が変化したかを、3分で最初に把握するブロックです。
 
-今日もっとも重要な変化: **AI**（Momentum 100/100・急加速）— 本日34件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
+今日もっとも重要な変化: **AI**（Momentum 100/100・急加速）— 本日32件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
 **AI** ★★★★★（急成長期 ／ 継続性: 高い）
 **為替** ★★★☆☆（成長初期 ／ 継続性: 中程度）
 **サイバーセキュリティ** ★★☆☆☆（黎明期 ／ 継続性: 中程度）
@@ -51,7 +51,7 @@ Catalyst［AI分析］: causal_rulesが示す押し上げ要因: AI関連の設�
 ### 🏭 Industry Intelligence ★★★★☆
 業界単位でどこに追い風が吹いているかを整理するブロックです。
 
-注目業界: AI（関連見出し34件）
+注目業界: AI（関連見出し32件）
 国家戦略メモ［AI分析］: 日本（AI分析: AI、半導体、防衛、GX、電力、人口減少、高齢化などの分野に政策関心が向かいやすいと考えられます。）
 
 ### 📈 Stock Intelligence ★★★★★
@@ -64,8 +64,8 @@ Stock Intelligence（ソニーグループ／6758.T）: 関連テーマ5件・�
 ### 📅 Long-term Strategy ★★★★☆
 半年〜10年の時間軸で、どのテーマをどの時間軸で見るべきかを整理するブロックです。
 
-半年: AI、サイバーセキュリティ、金融、金利、為替、広告、住宅
-1年: AI、サイバーセキュリティ、金融、金利、為替、広告、住宅
+半年: AI、サイバーセキュリティ、金融、金利、為替、広告
+1年: AI、サイバーセキュリティ、金融、金利、為替、広告
 3年: AI、半導体、電力、防衛、資源
 5年: AI、半導体、電力、防衛、資源
 10年: AI、半導体、電力、防衛、資源
