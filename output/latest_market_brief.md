@@ -40,9 +40,8 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気40%・普通20%・弱気40%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Traders Flock to Bullish Chinese Stock Bets for AI Alternative
-■注目テーマ3つ: AI／円高／利上げ
-…
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Investors turn to Chinese stocks as alternative to crowded AI trades
+■注目テーマ3つ: AI／円…
 
 ---
 ## 1. 今日の結論　★★★★★
@@ -68,7 +67,7 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「Traders Flock to Bullish Chinese Stock Bets for AI Alternative」（Bloomberg Markets(見出し)）　★★★★★
+### 3. 「Investors turn to Chinese stocks as alternative to crowded AI trades」（Investing.com News）　★★★★★
 - **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
@@ -98,7 +97,17 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. Traders Flock to Bullish Chinese Stock Bets for AI Alternative　★★★☆☆
+### 3. Investors turn to Chinese stocks as alternative to crowded AI trades　★★★☆☆
+- **ニュース:** 「Investors turn to Chinese stocks as alternative to crowded AI trades」（Investing.com News）
+- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
+- **重要テーマ:** AI
+- **関連セクター:** 情報通信・生成AI
+- **恩恵銘柄:** 該当なし
+- **悪影響銘柄:** 該当なし
+- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
+- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
+
+### 4. Traders Flock to Bullish Chinese Stock Bets for AI Alternative　★★★☆☆
 - **ニュース:** 「Traders Flock to Bullish Chinese Stock Bets for AI Alternative」（Bloomberg Markets(見出し)）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
@@ -108,18 +117,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. Many truckers don't feel like the rest of America about AI data centers as business booms　★★★☆☆
+### 5. Many truckers don't feel like the rest of America about AI data centers as business booms　★★★☆☆
 - **ニュース:** 「Many truckers don't feel like the rest of America about AI data centers as business booms」（CNBC Top News）
-- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
-- **重要テーマ:** AI
-- **関連セクター:** 情報通信・生成AI
-- **恩恵銘柄:** 該当なし
-- **悪影響銘柄:** 該当なし
-- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
-- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
-
-### 5. Meet the CISO: A new front line star in the AI cybersecurity war　★★★☆☆
-- **ニュース:** 「Meet the CISO: A new front line star in the AI cybersecurity war」（CNBC Top News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -150,11 +149,11 @@
 > 今日世界で何が変化したかを、3分で最初に把握するブロックです。
 
 #### 今日もっとも重要な変化
-**AI**（Momentum 100/100・急加速）— 本日32件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
+**AI**（Momentum 100/100・急加速）— 本日33件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
 
 #### 世界のメガトレンド
 - **AI** ★★★★★（フェーズ: 急成長期 ／ 継続性: 高い）
-  本日の関連見出し: 32件／AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
+  本日の関連見出し: 33件／AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
 - **半導体** ★★★☆☆（フェーズ: 成熟期 ／ 継続性: 高い）
   本日の関連見出し: 0件／AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
 - **電力** ★★★☆☆（フェーズ: 成熟期 ／ 継続性: 高い）
@@ -229,7 +228,7 @@
   本日の関連見出し: 0件／インバウンド需要の拡大は旅行・宿泊・小売など関連業種への追い風となりやすいが、本watchlistには直接該当する銘柄がありません
 
 #### Theme Momentum Score
-- **AI**: 100/100（急加速）— 本日32件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
+- **AI**: 100/100（急加速）— 本日33件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
   関連セクター: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI ／ 関連銘柄: 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC、など
 - **半導体**: 45/100（加速）— 既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
   関連セクター: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI ／ 関連銘柄: 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC、など
@@ -331,7 +330,7 @@
   普及状況: AI分析: 継続的な話題化が確認されており、活用の広がりが意識されやすい局面と考えられます。
   競争環境: AI分析: 東京エレクトロン、ニデック、ソニーグループなど、関連銘柄として意識される企業を中心とした競争環境にあると考えられます。 ／ 参入障壁: AI分析: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AIなど関連業種の設備・技術・供給網が参入障壁になりやすいと考えられます。
   主なリスク: AI分析: 話題化・期待の高まりを背景に、材料出尽くしや期待先行によるボラティリティに注意が必要と考えられます。
-  判断根拠: durable_themes該当、causal_rules一致、本日の関連見出し32件、サプライチェーン波及（恩恵銘柄）の確認
+  判断根拠: durable_themes該当、causal_rules一致、本日の関連見出し33件、サプライチェーン波及（恩恵銘柄）の確認
 - **半導体**［AI分析］（現在フェーズ: 成熟期）
   市場ステージ: AI分析: 現在のフェーズは「成熟期」と推定されます。AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
   普及状況: AI分析: 構造的なテーマに位置づけられますが、本日時点で活用状況を示す具体的な材料は確認できていません。
@@ -871,7 +870,7 @@
 > 業界単位でどこに追い風が吹いているかを整理するブロックです。
 
 #### 次に来る業界（本日のモメンタム順）
-1. **AI**（関連見出し32件）— AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
+1. **AI**（関連見出し33件）— AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
 2. **為替**（関連見出し2件）— 円安方向への動きは輸出関連の採算改善期待につながりやすい
 3. **サイバーセキュリティ**（関連見出し1件）— 本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
 4. **金融**（関連見出し1件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
@@ -1584,7 +1583,7 @@
 > 既存シグナル（Theme Momentum・Lifecycle・Catalyst・Risk・Confidence・causal_rules・theme_relations）のみから機械的に組み立てた長期投資仮説です。AIによる新たな未来予測・目標株価・売買推奨・期待リターンは一切生成しません。Confidence（分析根拠の充実度）の高い順に表示します。
 
 ##### AI（Confidence 90%・Momentum 100/100）
-- **現在何が起きているか:** 本日32件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
+- **現在何が起きているか:** 本日33件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
 - **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい」が実現する場合、「AI」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
 - **恩恵を受ける業界:** 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI
 - **恩恵企業:** 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC
@@ -2180,7 +2179,7 @@ NYダウ下落
 | ドル指数（DXY） | 99.16 | +0.16% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 91.48 | +0.20% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,476.60 | -0.34% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 79,916.99 | +0.31% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 79,673.24 | +0.00% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2209,56 +2208,56 @@ NYダウ下落
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [Traders Flock to Bullish Chinese Stock Bets for AI Alternative](https://www.bloomberg.com/news/articles/2026-09-06/traders-flock-to-bullish-chinese-stock-bets-for-ai-alternative)
+### 3位 ★★★★★ [Investors turn to Chinese stocks as alternative to crowded AI trades](https://www.investing.com/news/stock-market-news/investors-turn-to-chinese-stocks-as-alternative-to-crowded-ai-trades-4890253)
+- 出典（事実）: Investing.com News
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 4位 ★★★★★ [Traders Flock to Bullish Chinese Stock Bets for AI Alternative](https://www.bloomberg.com/news/articles/2026-09-06/traders-flock-to-bullish-chinese-stock-bets-for-ai-alternative)
 - 出典（事実）: Bloomberg Markets(見出し)
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [Many truckers don't feel like the rest of America about AI data centers as business booms](https://www.cnbc.com/2026/09/05/ai-data-centers-cost-economy.html)
+### 5位 ★★★★★ [Many truckers don't feel like the rest of America about AI data centers as business booms](https://www.cnbc.com/2026/09/05/ai-data-centers-cost-economy.html)
 - 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 5位 ★★★★★ [Meet the CISO: A new front line star in the AI cybersecurity war](https://www.cnbc.com/2026/09/05/ai-cybersecurity-ciso-executive.html)
+### 6位 ★★★★★ [Meet the CISO: A new front line star in the AI cybersecurity war](https://www.cnbc.com/2026/09/05/ai-cybersecurity-ciso-executive.html)
 - 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 6位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
+### 7位 ★★★★★ [Will AI help you do your job or replace you?](https://bbc.co.uk/news/articles/cn7nllr4vd6o?at_campaign=rss&at_medium=RSS)
 - 出典（事実）: Data Tank: BBC News — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの主要因クラスタ（複数記事が集まる重要イベント）に該当しています。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 7位 ★★★★★ [米就業者 市場予想に反し減少 利上げ観測後退で円高ドル安進む](http://www3.nhk.or.jp/news/html/20260807/k10015199701000.html)
+### 8位 ★★★★★ [米就業者 市場予想に反し減少 利上げ観測後退で円高ドル安進む](http://www3.nhk.or.jp/news/html/20260807/k10015199701000.html)
 - 出典（事実）: NHKニュース 経済
 - 理由（AI分析）: テーマ「円高」に関連する、業種「金融」に関連する、「金融政策」の因果チェーンに該当するため、重要度が高いと判断しました。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 為替
 - 影響業種（AI分析）: 金融
 - 営業トーク: 「「金融」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 8位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
+### 9位 ★★★★★ [The Fed rang the alarm about Anthropic's Mythos AI model — but had to go months without it](https://cnbc.com/2026/07/21/fed-mythos-ai-cybersecurity-banks-project-glasswing.html)
 - 出典（事実）: Data Tank: CNBC — Markets
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 9位 ★★★★★ [OpenAI says AI models went rogue during testing, triggering 'unprecedented' breach at startup](https://channelnewsasia.com/business/openai-says-ai-models-went-rogue-during-testing-triggering-unprecedented-breach-startup-6269186)
-- 出典（事実）: Data Tank: Channel News Asia — Business
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 10位 ★★★★★ [Can AI replace Expedia? Its CEO says travel is more complicated than that](https://channelnewsasia.com/experiences/expedia-ceo-ai-travel-booking-ariane-gorin-6265106)
+### 10位 ★★★★★ [OpenAI says AI models went rogue during testing, triggering 'unprecedented' breach at startup](https://channelnewsasia.com/business/openai-says-ai-models-went-rogue-during-testing-triggering-unprecedented-breach-startup-6269186)
 - 出典（事実）: Data Tank: Channel News Asia — Business
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。
 - 影響市場（AI分析）: 市場全体
@@ -2426,7 +2425,7 @@ NYダウ下落
 ### 第1位: KLA（KLAC）　★★★★★
 直近値: 185.60 / 前日比: +12.66 (+7.32%)（事実）
 
-- **短期（AI分析）:** 前日比+12.66 (+7.32%)。 関連見出し: 「Stock Market Today: Dow Sinks Amid Rate Fears; Sandisk, KLA Lead Nasdaq-100 As Utilities Gain」（Yahoo Finance US）
+- **短期（AI分析）:** 前日比+12.66 (+7.32%)。 本日、個別の関連見出しは確認されませんでした。
 - **中期（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。
 - **長期（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
 
@@ -2489,7 +2488,7 @@ NYダウ下落
 ### 第10位: Alphabet（GOOGL）　★★★★☆
 直近値: 338.46 / 前日比: -3.80 (-1.11%)（事実）
 
-- **短期（AI分析）:** 前日比-3.80 (-1.11%)。 本日、個別の関連見出しは確認されませんでした。
+- **短期（AI分析）:** 前日比-3.80 (-1.11%)。 関連見出し: 「Entergy Says Google’s Arkansas Solar Payments Could Total $2.1 Billion. Is Power Becoming Alphabet’s New Bottleneck?」（Yahoo Finance US）
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
@@ -2538,7 +2537,7 @@ NYダウ下落
 直近値: 185.60 / 前日比: +12.66 (+7.32%)（事実）
 
 - **理由（AI分析）:** 前日比+12.66 (+7.32%)と値動きが大きく、本日の注目銘柄として選定しました。
-- **注目材料（AI分析）:** 「Stock Market Today: Dow Sinks Amid Rate Fears; Sandisk, KLA Lead Nasdaq-100 As Utilities Gain」（Yahoo Finance US）
+- **注目材料（AI分析）:** 個別の関連見出しは確認されていません（取得不可または該当なし）。
 - **短期見通し（AI分析）:** 業種動向からの短期見通しは、本日時点では判断材料が不足しています。
 
 ### 第2位: Tesla（TSLA）　★★★★★
@@ -2599,17 +2598,17 @@ NYダウ下落
 |---|---|---|
 | Apple（AAPL） | ★★★★★ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
 | Microsoft（MSFT） | ★★★★★ | 「Microsoft has 3 secret weapons that could drive its stock 50% higher, analyst says」など関連ニュースあり。 |
-| NVIDIA（NVDA） | ★★★☆☆ | 前日比上昇、個別の材料は確認されませんでした。 |
+| NVIDIA（NVDA） | ★★★☆☆ | 「AWS Plans 2 Million More NVIDIA GPUs. Is This Better News for AMZN’s Cloud Growth or NVDA’s Backlog?」など関連ニュースあり。 |
 | Tesla（TSLA） | ★★★★★ | 前日比下落、個別の材料は確認されませんでした。 |
 | Amazon（AMZN） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
-| Alphabet（GOOGL） | ★★★★☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
+| Alphabet（GOOGL） | ★★★★☆ | 「Entergy Says Google’s Arkansas Solar Payments Could Total $2.1 Billion. Is Power Becoming Alphabet’s New Bottleneck?」など関連ニュースあり。 |
 | Meta Platforms（META） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Palantir（PLTR） | ★★★★★ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Arm Holdings（ARM） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
 | TSMC（TSM） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
 | ASML（ASML） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
 | Lam Research（LRCX） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
-| KLA（KLAC） | ★★★★★ | 「Stock Market Today: Dow Sinks Amid Rate Fears; Sandisk, KLA Lead Nasdaq-100 As Utilities Gain」など関連ニュースあり。 |
+| KLA（KLAC） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
 
 ---
 ## 19. 保有・監視銘柄分析　★★★★☆
@@ -2791,7 +2790,7 @@ NYダウ下落
 ### NVIDIA（NVDA）
 直近値: 230.36 / 前日比: +1.91 (+0.84%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+1.91 (+0.84%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比+1.91 (+0.84%)。 関連見出し: 「AWS Plans 2 Million More NVIDIA GPUs. Is This Better News for AMZN’s Cloud Growth or NVDA’s Backlog?」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-11-17）
 - **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-11-17）
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
@@ -2818,7 +2817,7 @@ NYダウ下落
 ### Alphabet（GOOGL）
 直近値: 338.46 / 前日比: -3.80 (-1.11%)（事実）
 
-- **今日の材料（AI分析）:** 前日比-3.80 (-1.11%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比-3.80 (-1.11%)。 関連見出し: 「Entergy Says Google’s Arkansas Solar Payments Could Total $2.1 Billion. Is Power Becoming Alphabet’s New Bottleneck?」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-28）
 - **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-28）
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2881,7 +2880,7 @@ NYダウ下落
 ### KLA（KLAC）
 直近値: 185.60 / 前日比: +12.66 (+7.32%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+12.66 (+7.32%)。 関連見出し: 「Stock Market Today: Dow Sinks Amid Rate Fears; Sandisk, KLA Lead Nasdaq-100 As Utilities Gain」（Yahoo Finance US）
+- **今日の材料（AI分析）:** 前日比+12.66 (+7.32%)。 本日、個別の関連見出しは確認されませんでした。
 - **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-10-28）
 - **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-10-28）
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
@@ -2962,9 +2961,9 @@ NYダウ下落
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「関東・東海1都6県 線状降水帯恐れ」（Yahoo!ニュース トピックス）
-- 「衛星監視網100基超に増強 国検討」（Yahoo!ニュース トピックス）
-- 「子どもの肥満 貧困と深い関係」（Yahoo!ニュース トピックス）
+- 「東海・関東 災害級大雨の恐れ」（Yahoo!ニュース トピックス）
+- 「国民民主党の代表選 玉木氏が3選」（Yahoo!ニュース トピックス）
+- 「ケーキ店火災 同級生ら会合中か」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3188,9 +3187,9 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 
 ### ニュース見出し
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594376?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594343?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594354?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594359?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594424?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594416?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594399?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594392?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6594403?source=rss)
@@ -3203,14 +3202,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-06/indonesia-halts-jakarta-lampung-flights-on-volcanic-eruptions)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-06/nz-s-national-vows-to-ease-deposit-rules-for-first-home-buyers)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-06/hk-s-chan-says-more-central-asia-state-firms-set-to-list-in-city)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-06/traders-flock-to-bullish-chinese-stock-bets-for-ai-alternative)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-06/australia-spring-property-season-begins-sharply-lower-than-2025)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-05/brazilian-court-suspends-permits-halts-sigma-lithium-s-mine)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-05/trump-renames-lake-ontario-canada-responds-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-04/lutnick-to-review-pentagon-deals-involving-cerberus-companies)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-05/bloomberg-this-weekend-09-05-2026-video)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-05/jobs-surge-raises-odds-of-september-fed-hike-video)
 - [CNBC Top News](https://www.cnbc.com/2026/09/05/trump-warsh-fed-september-rate-hike.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/05/trump-venezuela-oil-north-america-blue-energy-partners-nabep.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/05/lebron-james-polymarket-partnership.html)
@@ -3251,14 +3250,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/economy-news/citi-shares-its-3month-uranium-outlook-here-are-the-price-targets-4890263)
+- [Investing.com News](https://www.investing.com/news/economy-news/usiran-tanker-war-escalates-as-hormuz-disruption-deepens-4890259)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/sec-seeks-court-order-forcing-iss-to-hand-over-client-voting-data-4890258)
+- [Investing.com News](https://www.investing.com/news/company-news/pulmovant-to-present-phase-2-mosliciguat-study-results-tuesday-93CH-4890257)
+- [Investing.com News](https://www.investing.com/news/company-news/roivant-to-present-phase-2-pulmonary-hypertension-study-results-93CH-4890256)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/investors-turn-to-chinese-stocks-as-alternative-to-crowded-ai-trades-4890253)
 - [Investing.com News](https://www.investing.com/news/economy-news/how-widespread-is-the-adoption-of-robots-among-swiss-companies-4890251)
 - [Investing.com News](https://www.investing.com/news/economy-news/ukraine-weighs-new-tax-revenue-source-to-help-fund-war-effort--wsj-4890250)
-- [Investing.com News](https://www.investing.com/news/economy-news/billions-in-iranian-funds-are-passing-through-us-banks-despite-sanctions--wsj-4890248)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/why-some-investors-say-volkswagen-is-simply-not-fixable-4890247)
-- [Investing.com News](https://www.investing.com/news/earnings/imperial-petroleum-earnings-missed-revenue-fell-short-of-estimates-4890246)
-- [Investing.com News](https://www.investing.com/news/economy-news/europes-satellite-launch-ambitions-take-off-as-german-rocket-reaches-orbit-4890245)
-- [Investing.com News](https://www.investing.com/news/forex-news/is-the-latest-rebound-in-the-japanese-yen-real-4890244)
-- [Investing.com News](https://www.investing.com/news/commodities-news/us-strikes-three-iranian-oil-tankers-after-irgc-attack-on-american-naval-ships-central-command-says-4890210)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-85-sec-proposes-rescission-political-contribution-rule-investment-advisers)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-84-sec-investor-advisory-committee-host-sept-10-meeting)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-83-sec-announces-agenda-panelists-roundtable-preparations-24-hour-trading)
@@ -3300,22 +3299,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/fincen-crypto-overseas-scam-centers-analysis?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/crypto-biz-bitcoin-miners-strategy-strive-bitmine-stablecoins?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/qufi-launches-post-quantum-verification-platform-with-bitcoin-testnet-proof?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/volkswagen-targets-10-margin-2030-210157136.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/options/articles/daily-etf-flows-ucbg-top-210011527.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/etf-league-tables-hefty-outflow-210005264.html)
-- [Yahoo Finance US](https://www.investors.com/market-trend/stock-market-today/dow-jones-sp500-nasdaq-august-jobs-report-lululemon-lulu/?src=A00220&yptr=yahoo)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/evercore-turns-bullish-duolingo-stock-204434139.html)
-- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/fought-fires-40-years-social-210439375.html)
-- [Yahoo Finance US](https://www.investors.com/news/technology/novartis-stock-ionis-stock-pelacarsen-lpa-blocker/?src=A00220&yptr=yahoo)
-- [Yahoo Finance US](https://finance.yahoo.com/personal-finance/banking/article/money-saving-apps-230925997.html)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594405?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594393?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594394?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594408?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594409?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594399?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594402?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594410?source=rss)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/aws-plans-2-million-more-230419284.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/options/articles/esop-stock-grew-80-000-230528054.html)
+- [Yahoo Finance US](https://finance.yahoo.com/energy/articles/entergy-says-google-arkansas-solar-230127052.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/corning-leads-3-oversold-tech-230002933.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/jim-cramer-discussed-big-excitement-225936569.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/jim-cramer-thinks-struggling-stock-225833944.html)
+- [Yahoo Finance US](https://finance.yahoo.com/real-estate/articles/doesnt-want-data-center-400-230007673.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/marvell-raised-outlook-fell-google-225856871.html)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594412?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594419?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594420?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594403?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594424?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594425?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594426?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6594421?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
