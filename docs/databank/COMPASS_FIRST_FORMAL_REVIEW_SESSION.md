@@ -155,3 +155,19 @@ promotion status。加えて Decision hash chain 妥当・DNA 不変・PDF 不�
 この session の完了だけでは close しない。closure には最終 Decision audit、chain 妥当性、全 decision の
 packet binding、全 APPROVED が NOT_PROMOTED、DNA 不変、監督者の最終判定が要る。
 DNA promotion は別 gate であり、この Phase では一切行わない。
+
+## 10. session 実績（運用記録・履歴事実）
+
+| 回 | 日付(UTC) | 対象 | 機械推奨 | 人間の formal state | decision_id | sequence | 書き込み |
+|---|---|---|---|---|---|---|---|
+| 1 | 2026-09-07 | `cpt_4d2f4477a946c17e`（EVIDENCE_WHY） | REJECT_RECOMMENDED | **REJECTED** | `cdc_884ab4cafff2dbf3` | 1 | 1 行（0 → 1） |
+
+1 回目の詳細な監査証跡（packet 束縛・digest・replay run・record hash・無変更証明・formal reason 本文）は
+`COMPASS_FORMAL_REVIEW_SPEC.md` §18 に一元記録する。本表には理由本文を複製しない。
+
+進行中: reviewed 1 / APPROVED 0 / REJECTED 1 / KEEP_REVIEWING 0。残りは毎回 fresh build で再導出する
+（既決 pattern は primary queue から外れるため、書き込み前の順位をそのまま持ち越さない）。
+
+次の 1 件は `next_candidate.py`（`COMPASS_FORMAL_REVIEW_SPEC.md` §19）で読み取り専用に提示する。
+Decision chain の妥当性と既決 pattern の primary queue 除外を先に検査し、そのあとで現在の rank 1 を
+1 件だけ出す。§9 のとおり、この記録が増えても Phase 3.9.5 は自動的には close しない。

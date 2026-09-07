@@ -1631,3 +1631,157 @@ class _InjectedExecutor(EXEC.CandidateOneExecutor):
     def __init__(self, root, repo, **kw):
         super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
                          clock=type(self).bench.clock, **kw)
+
+
+# ================================================================== 109-117 next candidate read-only review（next_candidate.py）
+from src.intelligence.formal_review import next_candidate as NEXT  # noqa: E402
+from src.intelligence.formal_review.store import FormalReviewStore  # noqa: E402
+
+NEXT_MARKERS = ["HEAD", "POLICY", "DECISION_CHAIN", "BASELINE", "FRESH_BUILD", "QUEUE_EXCLUSION", "NEXT_CANDIDATE",
+                "DRY_RUN", "SAFETY", "NEXT_REVIEW_OK", "END"]
+
+
+def _decided_bench(tmp_path, **kw):
+    """凍結 candidate #1 が既に REJECTED になっている bench（pT が次の rank 1 になる）。"""
+    b = _frozen_bench(tmp_path, **kw)
+    b.build()
+    b.decide(FROZEN, "reject", REASON_REJECT)
+    return b
+
+
+def _next(b, capsys, **kw):
+    params = {"expected_digests": EXPECTED_DIGESTS, "skip_git": True, "corpus_state_resolver": b.corpus_state,
+              "clock": b.clock}
+    params.update(kw)
+    code = NEXT.NextCandidateReview(b.root, REPO_ROOT, **params).run_all()
+    return code, capsys.readouterr().out
+
+
+def test_next_candidate_presents_the_new_rank_one_and_writes_nothing(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    b.shadow("pT", DISAGREE, reason="private human shadow reason the review must never print")
+    before = _tree_digest(b.root, exclude="compass_formal_review")
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN])
+    assert code == 0, out[-2000:]
+    assert [m for m in NEXT_MARKERS if f"::P395N_{m}::" in out] == NEXT_MARKERS and "::P395N_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)
+    assert "private human shadow reason" not in out and str(b.root) not in out
+    assert "pattern_id=pT" in out and "candidates_shown=1" in out and "queue_rank=1" in out
+    assert "candidates_presented=1" in out and "real_decisions_written_by_this_run=0" in out
+    assert "human_selected_action=PENDING" in out and "human_reason=PENDING" in out
+    assert out.splitlines().count("result=DRY_RUN_PASS") == 2                      # machine action と keep-reviewing
+    assert "real_decisions_written=0" in out and len(b.decisions()) == 1
+    assert _tree_digest(b.root, exclude="compass_formal_review") == before
+
+
+def test_next_candidate_excludes_the_decided_pattern_from_the_primary_queue(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN])
+    assert code == 0
+    assert "decided_patterns_in_primary_queue=[]" in out and "queue_exclusion_check=PASSED" in out
+    assert '"decision_state":"REJECTED"' in out and '"in_primary_queue":false' in out
+    sections = _sections(b)
+    assert FROZEN not in _ids(sections[SECTION_REJECT]) + _ids(sections[SECTION_APPROVE]) + _ids(sections[SECTION_REOPEN])
+    assert FROZEN in [row["pattern_id"] for row in b.service().store.queue()["decided"]]
+    assert b.packet(FROZEN)["decision"]["current_state"] == REJECTED
+
+
+def test_next_candidate_reaudits_the_existing_decision_row(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    row = b.decisions()[0].as_dict()
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN],
+                      reaudit={"pattern": FROZEN, "decision": row["decision_id"], "state": REJECTED,
+                               "record_hash": row["record_hash"]})
+    assert code == 0 and "reaudit=PASSED" in out and "decision_hash_chain=VALID" in out
+    assert not [line for line in out.splitlines() if line.startswith("reaudit_") and line.endswith("=FAILED")]
+    for name in ("DECISION_ID", "DECISION_TYPE", "RECORD_HASH_MATCHES_EXPECTED", "RECORD_HASH_RECOMPUTES",
+                 "PROMOTION_STATUS_NOT_PROMOTED", "PACKET_BINDING_PRESENT", "MATERIAL_DIGEST_BINDING_PRESENT",
+                 "SIX_POLICY_LAYERS_BOUND", "REPLAY_BINDING_PRESENT", "HUMAN_REASON_PRESENT"):
+        assert f"reaudit_{name}=OK" in out, name
+    assert "decision_rows=1" in out and "sequences=[1]" in out and "head_sequence=1" in out
+
+
+@pytest.mark.parametrize("field,value", [("record_hash", "0" * 64), ("decision", "cdc_wrong"), ("state", APPROVED)])
+def test_next_candidate_reaudit_fails_closed_on_a_wrong_expectation(tmp_path, capsys, field, value):
+    b = _decided_bench(tmp_path)
+    row = b.decisions()[0].as_dict()
+    expect = {"pattern": FROZEN, "decision": row["decision_id"], "state": REJECTED, "record_hash": row["record_hash"]}
+    expect[field] = value
+    capsys.readouterr()
+    code, out = _next(b, capsys, reaudit=expect)
+    assert code == 4 and "reason=EXISTING_DECISION_ROW_REAUDIT_FAILED" in out and "stage=DECISION_CHAIN" in out
+    assert "::P395N_FRESH_BUILD::" not in out and len(b.decisions()) == 1
+
+
+def test_next_candidate_requires_at_least_one_decision_row(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    code, out = _next(b, capsys)
+    assert code == 4 and "reason=DECISION_STORE_EMPTY" in out and "stage=DECISION_CHAIN" in out
+    assert "::P395N_NEXT_CANDIDATE::" not in out and len(b.decisions()) == 0
+
+
+def test_next_candidate_fails_closed_when_a_decided_pattern_is_still_primary(tmp_path, capsys, monkeypatch):
+    b = _decided_bench(tmp_path)
+    real_queue = FormalReviewStore.queue
+
+    def leaking(self):
+        queue = real_queue(self)
+        rows = list(queue["sections"][SECTION_REJECT])
+        rows.append({**rows[0], "pattern_id": FROZEN, "queue_rank": 99})       # 既決 pattern が primary に残った状態
+        return {**queue, "sections": {**queue["sections"], SECTION_REJECT: rows}}
+
+    monkeypatch.setattr(FormalReviewStore, "queue", leaking)
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN])
+    assert code == 4 and f"reason={NEXT.DECIDED_IN_PRIMARY}" in out and "stage=QUEUE_EXCLUSION" in out
+    assert "::P395N_NEXT_CANDIDATE::" not in out and "::P395N_DRY_RUN::" not in out
+    assert len(b.decisions()) == 1
+
+
+def test_next_candidate_requires_expected_decided_patterns_to_be_decided(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=["pC"])                          # context-only、未決
+    assert code == 4 and "reason=EXPECTED_DECIDED_PATTERN_NOT_IN_DECIDED_CONTEXT" in out
+    assert "stage=QUEUE_EXCLUSION" in out and len(b.decisions()) == 1
+
+
+def test_next_candidate_has_no_write_path_static():
+    text = (PKG / "next_candidate.py").read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "decide"]                                      # decide を直接呼ばない
+    assert "dry_run=False" not in text and "--confirm" not in text and "FormalDecisionRequest" not in text
+    assert "confirmation_token" not in text and "CONFIRM " not in text
+
+
+def test_next_candidate_cli_main_wires_arguments(tmp_path, monkeypatch, capsys):
+    b = _decided_bench(tmp_path)
+    row = b.decisions()[0].as_dict()
+    _InjectedNext.bench = b
+    monkeypatch.setattr(NEXT, "NextCandidateReview", _InjectedNext)
+    capsys.readouterr()
+    code = NEXT.main(["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+                      "--expect-decided", FROZEN, "--reaudit-pattern", FROZEN,
+                      "--reaudit-decision", row["decision_id"], "--reaudit-state", REJECTED,
+                      "--reaudit-record-hash", row["record_hash"]])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395N_END::" in out and "reaudit=PASSED" in out and "pattern_id=pT" in out
+    assert len(b.decisions()) == 1
+    _InjectedNext.bench = b
+    monkeypatch.setattr(NEXT, "NextCandidateReview", _InjectedNext)
+    assert NEXT.main(["--data-root", str(b.root), "--skip-git", "--expect-replay", "badbadbadbadbad0"]) == 4
+    assert "stage=POLICY" in capsys.readouterr().out and len(b.decisions()) == 1
+
+
+class _InjectedNext(NEXT.NextCandidateReview):
+    """corpus state と clock を bench から注入する review（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)

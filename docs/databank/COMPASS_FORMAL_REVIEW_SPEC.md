@@ -251,3 +251,73 @@ promotion_status / sequence / chain root / record hash 再計算 / packet_id / p
 material_digest / 6 層 policy digest / replay 束縛 / 人間 reason の完全一致 / idempotency key）を検査する。
 書き込み経路は既存のまま（`FormalReviewGuard → DecisionRequest → DecisionService.validate → decide →
 DecisionStore.append`）であり、この module は policy・packet schema・guard semantics を一切変更しない。
+
+## 18. Candidate #1 real-write audit record（監査証跡・履歴事実）
+
+本節は **Phase 3.9.5 で初めて書かれた実 human formal Decision の記録**である。履歴の事実であり、
+semantics・policy digest・packet schema・guard 挙動のいずれも定義しない（それらは §1〜§13）。
+
+| 項目 | 値 |
+|---|---|
+| 実行日（UTC） | 2026-09-07 |
+| 実行 commit | `f48d934`（`pilot_execute.py` 導入時点） |
+| 実行 driver | `src/intelligence/formal_review/pilot_execute.py`（凍結 1 候補・real write 1 回） |
+| pattern_id | `cpt_4d2f4477a946c17e` |
+| pattern_type | EVIDENCE_WHY |
+| machine recommendation | REJECT_RECOMMENDED |
+| **human formal decision** | **REJECTED** |
+| decision_id | `cdc_884ab4cafff2dbf3` |
+| sequence | 1 |
+| actor_type / review_mode | HUMAN / FORMAL |
+| promotion_status | NOT_PROMOTED |
+| packet_id | `frp_52ac7d90c182f3de` |
+| packet_evidence_digest | `4b1bc098c84cd313` |
+| material_digest | `b7025083c160de43` |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de` |
+| record hash | `ed8a0c6497c6e1e82c7e28670c5c75cb33cbb1c0895fb9491858652b9d0006c0` |
+| Decision hash chain | VALID |
+| Decision rows | 0 → 1 |
+| 束縛監査 | 16 項目すべて OK（state / pattern / actor / actor_type / review_mode / promotion / sequence / chain root / record hash 再計算 / packet_id / packet_evidence_digest / material_digest / 6 層 policy digest / replay 束縛 / 人間 reason 完全一致 / idempotency key） |
+| Shadow Review event 変更 | 0 |
+| DNA 変更 | 0（blob identity 一致） |
+| PDF 変更 | 0（inventory 一致・open せず） |
+| derived store 変更 | なし（`derived_changed=[]`） |
+| tracked worktree | 不変 |
+| 処理した candidate | 1 件のみ（candidate #2 は未処理） |
+| policy digest | 6 層とも凍結値のまま（`decision 0c54ec01e2a251d9` / `evaluation 1a8443098f64d679` / `recommendation 0a979d8421a01d08` / `shadow_review e6f5094cacef6fec` / `replay 197db7c73eb0db77` / `formal_review cca7b43627b9a355`） |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN**（candidate #1 pilot のみ CLOSED） |
+
+human formal decision reason（formal Decision の理由本文。本節にのみ記録し、他所へ複製しない）:
+
+> Supporting evidence remains directionally contradictory across a long observation span; the contradiction is
+> repeated and active, with no recovery or reversal in replay.
+
+補足（履歴事実）:
+
+- 実行 envelope は当初 7,799 文字の inline `python -c` として準備されたが、cmd.exe の行長上限に近すぎたため
+  監督者判断で専用 module へ移設し、`git pull --ff-only` を用いる 742 文字の 1 操作に置き換えた（§17）。
+  Decision semantics は移設前後で同一。
+- 書き込み経路は既存のまま（`FormalReviewGuard → DecisionRequest → DecisionService.validate → decide →
+  DecisionStore.append`）。この Decision により `cpt_4d2f4477a946c17e` は primary queue から外れ、
+  queue の decided context に `REJECTED` として現れる（§19 の QUEUE_EXCLUSION がこれを検査する）。
+
+## 19. next candidate read-only review（`next_candidate.py`）
+
+`python -X utf8 -m src.intelligence.formal_review.next_candidate --require-commit <sha> --expect-<layer> <digest>
+ [--expect-decided <pattern_id>] [--reaudit-pattern / --reaudit-decision / --reaudit-state / --reaudit-record-hash]`
+は、**Decision が 1 件以上ある状態から次の 1 件を提示する汎用の読み取り専用 driver**。candidate 固有の値を
+持たず、書き込み経路も持たない（`decide` を直接呼ばず、confirmation の口も無い。AST test で静的に検査）。
+
+pilot.py の section を composition で再利用し、本 module 固有の検査は 2 つ:
+
+- **DECISION_CHAIN**: Decision row ≥ 1 / sequence 連番 / head sequence 一致 / 各行の `record_hash` 再計算一致と
+  chain 連結 / 全行 HUMAN・FORMAL・NOT_PROMOTED・packet 束縛あり。任意で既存 1 行の再監査
+  （decision_id・decision_type・record hash・packet 束縛・material digest・6 層 policy・replay 束縛・reason 在席）。
+- **QUEUE_EXCLUSION**: 既決 pattern が primary queue（REJECT / APPROVE / REOPEN section）に残っていないこと。
+  残っていれば `DECIDED_PATTERN_STILL_IN_PRIMARY_QUEUE` で fail closed し、次候補の提示へ進まない。
+  `--expect-decided` を渡した pattern は queue の decided context にも在席していることを要求する。
+
+その後は fresh build から現在の queue rank 1 を自力で特定して 1 件だけ提示し（historical な次候補を hardcode
+しない）、10 節 brief・事実文・設問 → 機械整合 action の dry-run → KEEP_REVIEWING の dry-run → 人間判断は
+PENDING → stage 1 / stage 2 command → 変更なし証明、を `::P395N_*::` marker で出力する（再利用した pilot
+section は `::P395C_*::` も出す）。失敗は `::P395N_FAIL:: stage= reason=`、exit 0 / 3 / 4 / 5。

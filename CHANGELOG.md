@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.49 (2026-09-07) — Add candidate #1 real-write audit trail / next candidate read-only review
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §18「Candidate #1 real-write audit record」（履歴事実のみ。
+  実行 commit `f48d934` / pattern `cpt_4d2f4477a946c17e`（EVIDENCE_WHY）/ machine REJECT_RECOMMENDED /
+  **human formal decision REJECTED** / decision_id `cdc_884ab4cafff2dbf3` / sequence 1 / HUMAN・FORMAL /
+  NOT_PROMOTED / packet `frp_52ac7d90c182f3de` / evidence digest `4b1bc098c84cd313` /
+  material digest `b7025083c160de43` / replay run `crp_2530396a5a3b8fb7`・`74d5b037498fc0de` /
+  hash chain VALID / Decision rows 0 → 1 / 束縛監査 16 項目 OK / Shadow Review・DNA・PDF・derived 不変 /
+  処理 candidate 1 件 / 書き込み後も Phase 3.9.5 は OPEN）と §19。
+- `docs/databank/COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §10「session 実績」。
+- `src/intelligence/formal_review/next_candidate.py`【新規】: Decision が 1 件以上ある状態から
+  **次の 1 件だけ**を提示する汎用の読み取り専用 driver。candidate 固有値も書き込み経路も持たない
+  （`decide` を直接呼ばず confirmation の口も無い。AST test で検査）。pilot.py の section を composition で
+  再利用し、固有の検査は DECISION_CHAIN（row ≥ 1・sequence 連番・record hash 再計算・chain 連結・
+  全行 HUMAN / FORMAL / NOT_PROMOTED、任意で既存 1 行の再監査）と QUEUE_EXCLUSION（既決 pattern が
+  primary queue に残っていれば `DECIDED_PATTERN_STILL_IN_PRIMARY_QUEUE` で fail closed）の 2 つ。
+  次候補は fresh build の rank 1 を自力で特定し、historical な次候補を hardcode しない。
+- `tests/intelligence/test_formal_review.py` に read-only review 検証 9 関数（展開後 11 件）を追加し 129 件。
+
+Decision は 1 行も追加していない（本 driver は書き込み経路を持たない）。policy 6 層の digest・packet schema・
+`FormalReviewGuard` / `DecisionService` / `DecisionStore` の semantics は不変。
+
 ## v4.48.5 (2026-09-07) — Add Phase 3.9.5 candidate #1 execution wrapper（凍結 1 候補・real write 1 回）
 
 ### 追加
