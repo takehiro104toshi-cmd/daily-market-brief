@@ -1332,3 +1332,302 @@ def test_pilot_cli_main_wires_arguments(bench, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert code == 0 and "::P395C_PILOT_OK::" in out and "QUEUE_HEAD_CHANGED=true" in out
     assert len(bench.decisions()) == 0
+
+
+# ================================================================== 94-108 candidate #1 execution wrapper（pilot_execute.py）
+from src.intelligence.formal_review import pilot_execute as EXEC  # noqa: E402
+from src.intelligence.replay.store import replay_root as _replay_root  # noqa: E402
+
+EXEC_MARKERS = ["ARGUMENTS", "HEAD", "POLICY", "BASELINE", "FRESH_BUILD", "EVIDENCE_RECHECK", "STAGE1_DRY_RUN",
+                "STAGE2_CONFIRM", "STAGE2_WRITE", "DECISION_AUDIT", "SAFETY", "PILOT_DECISION_OK", "END"]
+FROZEN = EXEC.FROZEN_PATTERN_ID
+
+
+def _frozen_bench(tmp_path, **kw):
+    """rank 1 の REJECT candidate を凍結 candidate #1 の id に付け替えた bench（pT は candidate #2 として残す）。"""
+    b = Bench(tmp_path, **kw)
+    for holder in (b.components, b.lifecycles, b.records, b.evals, b.dna, b.metrics):
+        if "pR" in holder:
+            holder[FROZEN] = holder.pop("pR")
+    b.records[FROZEN] = {**b.records[FROZEN], "pattern_id": FROZEN, "pattern_record_id": "cpr_" + FROZEN}
+    b.evals[FROZEN] = {**b.evals[FROZEN], "pattern_id": FROZEN}
+    b.dna[FROZEN] = {**b.dna[FROZEN], "pattern_id": FROZEN, "comparison_id": "crd_" + FROZEN}
+    b.metrics[FROZEN] = {**b.metrics[FROZEN], "pattern_id": FROZEN}
+    b.write_all()
+    return b
+
+
+def _solo_frozen_bench(tmp_path, *, approve=False):
+    """候補が凍結 candidate #1 だけの bench（rank 1 は必ず凍結 id になる）。"""
+    b = _frozen_bench(tmp_path)
+    for pid in [p for p in list(b.components) if p != FROZEN]:
+        for holder in (b.components, b.lifecycles, b.records, b.evals, b.dna, b.metrics):
+            holder.pop(pid, None)
+    if approve:
+        b.evals[FROZEN] = approve_eval(FROZEN)
+        b.metrics[FROZEN] = metrics_for(FROZEN, APPROVE_RECOMMENDED)
+    b.write_all()
+    return b
+
+
+def _execute(b, capsys, **kw):
+    params = {"pattern_id": FROZEN, "action": EXEC.FROZEN_ACTION, "actor": EXEC.FROZEN_ACTOR,
+              "confirm": EXEC.FROZEN_CONFIRM, "expected_digests": EXPECTED_DIGESTS, "skip_git": True,
+              "corpus_state_resolver": b.corpus_state, "clock": b.clock}
+    params.update(kw)
+    code = EXEC.CandidateOneExecutor(b.root, REPO_ROOT, **params).run_all()
+    return code, capsys.readouterr().out
+
+
+def test_execute_writes_exactly_one_rejected_decision(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    b.shadow(FROZEN, DISAGREE, reason="private human shadow reason the executor must never print")
+    code, out = _execute(b, capsys)
+    assert code == 0, out[-2000:]
+    assert [m for m in EXEC_MARKERS if f"::P395D_{m}::" in out] == EXEC_MARKERS and "::P395D_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)
+    assert "private human shadow reason" not in out and str(b.root) not in out
+    for other in ("pT", "pA", "pK", "pB", "pC"):                                  # candidate #2 以降は触れない
+        assert other not in out, other
+    assert "candidates_processed=1" in out and "real_decisions_written=1" in out and "authorised_writes=1" in out
+    assert "write_attempt=1" in out and "result=DRY_RUN_PASS" in out
+    rows = b.decisions()
+    assert len(rows) == 1
+    row = rows[0].as_dict()
+    assert row["pattern_id"] == FROZEN and row["decision_type"] == REJECTED and row["actor"] == EXEC.FROZEN_ACTOR
+    assert row["actor_type"] == ACTOR_HUMAN and row["review_mode"] == "FORMAL" and row["sequence"] == 1
+    assert row["promotion_status"] == "NOT_PROMOTED" and row["reason"] == EXEC.FROZEN_REASON
+
+
+def test_execute_post_write_binding_audit_matches_the_reviewed_packet(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    code, out = _execute(b, capsys)
+    assert code == 0
+    assert not [line for line in out.splitlines() if line.startswith("audit_") and line.endswith("=FAILED")]
+    for name in ("PACKET_ID_BOUND", "PACKET_EVIDENCE_DIGEST_BOUND", "MATERIAL_DIGEST_BOUND", "SIX_POLICY_LAYERS_BOUND",
+                 "REPLAY_BINDING_PRESENT", "RECORD_HASH_RECOMPUTES", "EXACT_HUMAN_REASON_STORED", "CHAIN_ROOT"):
+        assert f"audit_{name}=OK" in out, name
+    assert "decision_hash_chain=VALID" in out and "reason_matches_frozen_human_reason=True" in out
+    packet = b.packet(FROZEN)
+    md = b.decisions()[0].as_dict()["metadata"]
+    assert md["packet_id"] == packet["identity"]["packet_id"]
+    assert md["packet_evidence_digest"] == packet["freshness"]["packet_evidence_digest"]
+    assert md["material_digest"] == packet["freshness"]["material_digest"]
+    for layer, digest in packet["freshness"]["policy_digests"].items():
+        assert f"{layer}:{digest}" in md["policy_digests"], layer
+
+
+@pytest.mark.parametrize("override,reason", [
+    ({"pattern_id": "pT"}, "PATTERN_NOT_THIS_PILOT"),
+    ({"pattern_id": "pA"}, "PATTERN_NOT_THIS_PILOT"),
+    ({"action": "approve"}, "ACTION_NOT_THIS_PILOT"),
+    ({"action": "keep-reviewing"}, "ACTION_NOT_THIS_PILOT"),
+    ({"actor": "someone_else"}, "ACTOR_NOT_THIS_PILOT"),
+    ({"reason": "Rejected because the evidence looks contradictory to me."}, "REASON_NOT_THE_FROZEN_HUMAN_REASON"),
+    ({"confirm": "CONFIRM REJECT cpt_4d2f4477a946c17e"}, "CONFIRMATION_MISMATCH"),
+    ({"confirm": "confirm rejected cpt_4d2f4477a946c17e"}, "CONFIRMATION_MISMATCH"),
+    ({"confirm": ""}, "CONFIRMATION_MISMATCH"),
+])
+def test_execute_refuses_anything_but_the_frozen_single_candidate_decision(tmp_path, capsys, override, reason):
+    b = _frozen_bench(tmp_path)
+    code, out = _execute(b, capsys, **override)
+    assert code == 4 and f"reason={reason}" in out and "stage=ARGUMENTS" in out
+    assert "::P395D_HEAD::" not in out and "::P395D_STAGE2_WRITE::" not in out
+    assert not b.service().store.exists() and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_decision_store_is_not_empty(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    b.build()
+    b.decide("pT", "reject", REASON_REJECT)
+    capsys.readouterr()
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=DECISION_STORE_NOT_EMPTY" in out and "stage=BASELINE" in out
+    assert "::P395D_STAGE1_DRY_RUN::" not in out and "::P395D_STAGE2_WRITE::" not in out
+    assert len(b.decisions()) == 1 and b.decisions()[0].pattern_id == "pT"
+
+
+def test_execute_stops_on_policy_digest_mismatch_before_any_build(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    code, out = _execute(b, capsys, expected_digests={**EXPECTED_DIGESTS, "replay": "0000000000000000"})
+    assert code == 4 and "stage=POLICY" in out and "::P395D_FRESH_BUILD::" not in out
+    assert not b.service().store.exists() and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_queue_head_changed(tmp_path, capsys):
+    b = Bench(tmp_path)                                                            # rank 1 は pR（凍結 id ではない）
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=CANDIDATE_HEAD_CHANGED" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE1_DRY_RUN::" not in out and "::P395D_STAGE2_WRITE::" not in out
+    assert len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_recommendation_changed(tmp_path, capsys):
+    b = _solo_frozen_bench(tmp_path, approve=True)
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=RECOMMENDATION_CHANGED" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_reject_evidence_changed(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    summary = _replay_root(b.root) / "runs" / "crp_test" / "summary.json"
+    data = json.loads(summary.read_text(encoding="utf-8"))
+    for item in data["reject_stress"]["items"]:
+        item["contradiction_recovery_positions"] = [120]
+    summary.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=HUMAN_REVIEW_EVIDENCE_CHANGED_RECOVERY" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_replay_evidence_is_incompatible(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    b.replay_policy_digests = {"evaluation": EVAL_POLICY.digest(), "recommendation": REC_POLICY.digest(),
+                               "shadow_review": SHADOW_POLICY.digest(), "replay": "d205c3763d07111b"}   # 旧 1.0.0
+    b.write_replay()
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=REPLAY_NOT_COMPATIBLE" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_there_is_no_replay_evidence_at_all(tmp_path, capsys):
+    b = _frozen_bench(tmp_path, with_replay=False)
+    code, out = _execute(b, capsys)
+    assert code == 4 and "stage=EVIDENCE_RECHECK" in out and "::P395D_STAGE1_DRY_RUN::" not in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_stage_one_failure_prevents_stage_two(tmp_path, capsys, monkeypatch):
+    b = _frozen_bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def refusing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            out = real(self, request, dry_run=True)
+            return {**out, "validation": {"ok": False, "errors": [{"code": "SIMULATED_VALIDATION_FAILURE"}]}}
+        raise AssertionError("stage 2 must not run after a failed stage 1")
+
+    monkeypatch.setattr(FormalReviewService, "decide", refusing)
+    code, out = _execute(b, capsys)
+    assert code == 4 and "stage=STAGE1_DRY_RUN" in out and "SIMULATED_VALIDATION_FAILURE" in out
+    assert seen == [True] and "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_write_exception_without_a_row_reports_no_retry(tmp_path, capsys, monkeypatch):
+    b = _frozen_bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def failing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            return real(self, request, dry_run=True)
+        raise RuntimeError("simulated transport failure before append")
+
+    monkeypatch.setattr(FormalReviewService, "decide", failing)
+    code, out = _execute(b, capsys)
+    assert code == 4 and f"reason={EXEC.WRITE_FAILED_NO_ROW}" in out and "retry_policy=NO_AUTOMATIC_RETRY" in out
+    assert seen == [True, False] and "matching_rows_found=0" in out                # production write は 1 回だけ
+    assert "write_attempts=1" in out and len(b.decisions()) == 0
+
+
+def test_succeeded_write_with_a_lost_response_is_audited_and_never_retried(tmp_path, capsys, monkeypatch):
+    b = _frozen_bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def lossy(self, request, *, dry_run):
+        seen.append(dry_run)
+        out = real(self, request, dry_run=dry_run)
+        if not dry_run:
+            raise RuntimeError("append succeeded but the response was lost")
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "decide", lossy)
+    code, out = _execute(b, capsys)
+    assert code == 0, out[-2000:]
+    assert f"write_response={EXEC.WRITE_RESPONSE_FAILED}" in out and "retry_policy=NO_AUTOMATIC_RETRY" in out
+    assert "matching_rows_found=1" in out and seen == [True, False]                # 2 回目の write を試みない
+    assert "::P395D_PILOT_DECISION_OK::" in out and "real_decisions_written=1" in out
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == REJECTED and rows[0].pattern_id == FROZEN
+
+
+def test_execute_refuses_a_second_write_attempt(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    executor = EXEC.CandidateOneExecutor(b.root, REPO_ROOT, pattern_id=FROZEN, action=EXEC.FROZEN_ACTION,
+                                         actor=EXEC.FROZEN_ACTOR, confirm=EXEC.FROZEN_CONFIRM, skip_git=True,
+                                         corpus_state_resolver=b.corpus_state, clock=b.clock)
+    executor.write_attempts = 1
+    with pytest.raises(EXEC.ExecuteFailure) as excinfo:
+        executor.stage2_write()
+    capsys.readouterr()
+    assert excinfo.value.reason == "SECOND_WRITE_ATTEMPT_REFUSED" and len(b.decisions()) == 0
+
+
+def test_execute_touches_no_dna_pdf_or_shadow_review_state(tmp_path, capsys):
+    import hashlib
+
+    dna = [REPO_ROOT / "knowledge" / "compass_dna" / "market_rules.yaml",
+           REPO_ROOT / "src" / "intelligence" / "compass" / "market_principles.py"]
+    before_dna = [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna]
+    b = _frozen_bench(tmp_path)
+    b.shadow(FROZEN, DISAGREE, reason="shadow history is evidence only")
+    before = _tree_digest(b.root, exclude="compass_formal_review")
+    code, out = _execute(b, capsys)
+    assert code == 0
+    after = _tree_digest(b.root, exclude="compass_formal_review")
+    changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
+    droot = decisions_root(b.root).relative_to(b.root).as_posix()
+    assert changed and all(k.startswith(droot + "/") for k in changed), changed
+    assert [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna] == before_dna
+    for line in ("shadow_review_events_unchanged=True", "dna_blobs_unchanged=True", "pdf_inventory_unchanged=True",
+                 "promotion_status_written=NOT_PROMOTED"):
+        assert line in out, line
+
+
+def test_execute_module_makes_exactly_one_production_write_call_static():
+    text = (PKG / "pilot_execute.py").read_text(encoding="utf-8")
+    calls = [n for n in ast.walk(ast.parse(text)) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "decide"]
+    flags = [k.value.value for call in calls for k in call.keywords if k.arg == "dry_run"]
+    assert len(calls) == 2 and sorted(flags, key=str) == [False, True]              # dry-run 1 回 + real write 1 回だけ
+    assert text.count("dry_run=False") == 1
+    assert FROZEN in text and text.count("FormalDecisionRequest(") == 1        # decision request は 1 つだけ
+    assert "nargs" not in text and 'action="append"' not in text              # 複数 pattern を受ける口が無い
+    request = next(n for n in ast.walk(ast.parse(text)) if isinstance(n, ast.Call)
+                   and getattr(n.func, "id", "") == "FormalDecisionRequest")
+    bound = {k.arg: ast.unparse(k.value) for k in request.keywords}
+    assert bound["pattern_id"] == "FROZEN_PATTERN_ID" and bound["action"] == "FROZEN_ACTION"
+    assert bound["actor"] == "FROZEN_ACTOR" and bound["reason"] == "FROZEN_REASON"
+
+
+def test_execute_cli_main_wires_arguments_and_refuses_other_actions(tmp_path, monkeypatch, capsys):
+    refused = _frozen_bench(tmp_path / "refused")
+    _InjectedExecutor.bench = refused
+    monkeypatch.setattr(EXEC, "CandidateOneExecutor", _InjectedExecutor)
+    argv = ["--data-root", str(refused.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+            "--pattern", FROZEN, "--actor", EXEC.FROZEN_ACTOR, "--confirm", EXEC.FROZEN_CONFIRM]
+    assert EXEC.main(argv + ["--action", "approve"]) == 4
+    assert "reason=ACTION_NOT_THIS_PILOT" in capsys.readouterr().out and len(refused.decisions()) == 0
+    accepted = _frozen_bench(tmp_path / "accepted")
+    _InjectedExecutor.bench = accepted
+    code = EXEC.main(["--data-root", str(accepted.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+                      "--pattern", FROZEN, "--action", "reject", "--actor", EXEC.FROZEN_ACTOR,
+                      "--confirm", EXEC.FROZEN_CONFIRM])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395D_END::" in out and "real_decisions_written=1" in out
+    assert len(accepted.decisions()) == 1
+
+
+class _InjectedExecutor(EXEC.CandidateOneExecutor):
+    """corpus state と clock を bench から注入する executor（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)

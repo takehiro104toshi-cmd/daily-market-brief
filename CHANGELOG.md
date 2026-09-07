@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.48.5 (2026-09-07) — Add Phase 3.9.5 candidate #1 execution wrapper（凍結 1 候補・real write 1 回）
+
+### 追加
+
+- `src/intelligence/formal_review/pilot_execute.py`【新規】: 監督者が凍結した candidate #1 の human decision
+  （`REJECTED` / actor `P395_HUMAN_SUPERVISED_REVIEW` / 人間 reason / confirmation token）だけを実行する
+  単一候補 executor。pilot.py の読み取り専用 section（HEAD / policy / baseline / build / candidate / freshness）を
+  composition で再利用し、reject 根拠の再確認 → stage 1 dry-run → 完全一致 confirmation → **real write 1 回** →
+  書き込み直後の Decision 監査 → safety 監査 を `::P395D_*::` marker で出力する。
+  凍結値以外の pattern / action / actor / reason / token はすべて `stage=ARGUMENTS` で拒否する（batch executor ではない）。
+  production write は生涯 1 回だけ試行し、例外時は自動再試行せず DecisionStore を読み取り専用で確認して
+  `POSSIBLE_WRITE_SUCCEEDED_RESPONSE_FAILED`（一致 row あり・監査へ）または `WRITE_FAILED_NO_ROW` を報告する。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §17、`tests/intelligence/test_formal_review.py` に executor 検証 17 関数（parametrize 展開後 25 件）を追加し 118 件。
+
+### 改善
+
+- Windows 実行 envelope: 巨大な inline `python -c` を廃止し、短い module 呼び出し 1 本にした
+  （cmd.exe の行長上限に対する余裕を確保）。`git pull --ff-only` を使う。
+
+Decision semantics は不変。policy 6 層の digest・packet schema・`FormalReviewGuard` / `DecisionService` の挙動は変更なし。
+本 commit 時点で real Decision は 1 行も書いていない。
+
 ## v4.48.4 (2026-09-06) — Add Phase 3.9.5 candidate #1 pilot driver（rank 1 のみ・dry-run only）
 
 ### 追加

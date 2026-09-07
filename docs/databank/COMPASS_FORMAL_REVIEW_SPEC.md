@@ -223,3 +223,31 @@ real Decision を書けない。candidate #2 以降は表示しない。`REPLAY_
 pilot を BLOCKED にし、guard は弱めない。`SIBLING_CONFLICT_BLOCKED` と `SIBLING_ACKNOWLEDGEMENT_REQUIRED` は
 人間判断が要るだけの正当な結果として記録し、pilot は継続する。
 
+
+## 17. candidate #1 execution wrapper（`pilot_execute.py`）
+
+`python -X utf8 -m src.intelligence.formal_review.pilot_execute --require-commit <sha> --expect-<layer> <digest>
+ --pattern <id> --action <action> --actor <id> --confirm "<token>"` は、監督者が凍結した **candidate #1 の
+human decision 1 件だけ**を実行する executor。汎用の batch executor ではなく、凍結値以外の pattern / action /
+actor / reason / confirmation token をすべて `stage=ARGUMENTS` で拒否する。
+
+pilot.py の読み取り専用 section（HEAD / policy / baseline / build / candidate / freshness）を composition で
+再利用し、順序は `ARGUMENTS → HEAD → POLICY → BASELINE（Decision 0 行）→ FRESH_BUILD → EVIDENCE_RECHECK →
+STAGE1_DRY_RUN → STAGE2_CONFIRM → STAGE2_WRITE → DECISION_AUDIT → SAFETY → PILOT_DECISION_OK → END`。
+出力は `::P395D_*::` marker、失敗は `::P395D_FAIL:: stage= reason=` と非 0 exit
+（0 ok / 3 FormalReviewError / 4 実行失敗 / 5 想定外）。
+
+EVIDENCE_RECHECK は queue rank 1 が凍結 id であること、recommendation が凍結値であること、packet freshness、
+replay 互換、formal gate 到達、Decision head が NONE、および reject 根拠（`document_contradiction` /
+`document_contradiction_repeated` / `contradiction_active` / `reject_driver` /
+`contradiction_recovery_positions` 空 / `reversal_count` 0 / `REJECTED` が allowed action）を要求する。
+根拠が変わっていれば `HUMAN_REVIEW_EVIDENCE_CHANGED_*` で停止する。
+
+production write は生涯 1 回だけ試行する（2 回目は `SECOND_WRITE_ATTEMPT_REFUSED`）。例外時は**自動再試行せず**、
+DecisionStore を読み取り専用で確認し、packet_id まで一致する row が 1 件あれば
+`POSSIBLE_WRITE_SUCCEEDED_RESPONSE_FAILED` として既存 row を監査し、無ければ `WRITE_FAILED_NO_ROW` で停止する。
+DECISION_AUDIT は 1 行であること・16 項目の束縛（state / pattern / actor / actor_type / review_mode /
+promotion_status / sequence / chain root / record hash 再計算 / packet_id / packet_evidence_digest /
+material_digest / 6 層 policy digest / replay 束縛 / 人間 reason の完全一致 / idempotency key）を検査する。
+書き込み経路は既存のまま（`FormalReviewGuard → DecisionRequest → DecisionService.validate → decide →
+DecisionStore.append`）であり、この module は policy・packet schema・guard semantics を一切変更しない。
