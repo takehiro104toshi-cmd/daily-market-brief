@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.50 (2026-09-07) — Add generic formal review execution session（1 invocation = 1 candidate = 1 write）
+
+### 追加
+
+- `src/intelligence/formal_review/execute.py`【新規】: Phase 3.9.5 の残りの formal Decision をすべて 1 本で扱う
+  汎用 execution session。candidate 固有の凍結値を持たず（静的検査あり）、orchestration only として
+  `ARGUMENTS → HEAD → POLICY → DECISION_CHAIN → BASELINE → FRESH_BUILD → TARGET → PACKET_FRESHNESS →
+  EXPECTED_FACTS → GROUP_CONTEXT → STAGE1_DRY_RUN → STAGE2_CONFIRM → STAGE2_WRITE → DECISION_AUDIT → SAFETY`
+  を `::P395X_*::` marker で実行する。期待状態（`--expect-rows-before` / `--expect-current-state` /
+  `--expect-machine-recommendation` / `--require-queue-rank` / `--expect-fact`（凍結 allowlist の型付き比較のみ）/
+  `--expect-group-state-digest` / `--expect-group-material-digest`）はすべて呼び出し側が束縛する。
+  Stage 1 と Stage 2 は同一 packet、real write は生涯 1 回、例外時は自動再試行せず
+  `POSSIBLE_WRITE_SUCCEEDED_RESPONSE_FAILED` / `WRITE_FAILED_NO_ROW` / `AMBIGUOUS_WRITE_RESULT` を報告する。
+  post-write 監査は global chain と pattern 固有 head の両方を実測比較する（空と仮定しない）。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §20（20.1〜20.8）。
+- `tests/intelligence/test_formal_review.py` に execution session 検証 20 関数（展開後 26 件）を追加し 155 件。
+
+### 改善
+
+- 以後の候補ごとに専用 executor を作らない方針を実装で固定（`pilot_execute.py` は candidate #1 の監査履歴として保持）。
+
+Decision は 1 行も追加していない（candidate #2 は**未書き込み**）。policy 6 層の digest・packet schema・
+`FormalReviewGuard` / `DecisionService` / `DecisionStore` / population semantics は不変。
+KEEP_REVIEWING の queue 残留（progression）は本変更では意図的に未解決。
+
 ## v4.49 (2026-09-07) — Add candidate #1 real-write audit trail / next candidate read-only review
 
 ### 追加

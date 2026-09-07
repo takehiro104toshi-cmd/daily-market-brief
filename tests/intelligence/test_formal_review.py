@@ -1785,3 +1785,378 @@ class _InjectedNext(NEXT.NextCandidateReview):
     def __init__(self, root, repo, **kw):
         super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
                          clock=type(self).bench.clock, **kw)
+
+
+# ================================================================== 118-142 generic execution session（execute.py）
+from src.intelligence.formal_review import execute as EXECUTE  # noqa: E402
+
+SESSION_MARKERS = ["ARGUMENTS", "HEAD", "POLICY", "DECISION_CHAIN", "BASELINE", "FRESH_BUILD", "TARGET",
+                   "PACKET_FRESHNESS", "EXPECTED_FACTS", "GROUP_CONTEXT", "STAGE1_DRY_RUN", "STAGE2_CONFIRM",
+                   "STAGE2_WRITE", "DECISION_AUDIT", "SAFETY", "EXECUTION_OK", "END"]
+HUMAN_ACTOR = "P395_HUMAN_SUPERVISED_REVIEW"
+REASON_SIBLING = ("The candidate evidence itself remains directionally consistent, while the active contradiction "
+                  "comes from unresolved opposite-direction sibling patterns that have not yet received formal decisions.")
+
+
+def _session_kwargs(b, pattern, action, rows_before, **kw):
+    params = {"pattern_id": pattern, "action": action, "actor": HUMAN_ACTOR, "reason": REASON_OK,
+              "confirm": EXECUTE.confirmation_token(ACTIONS[action], pattern), "expect_rows_before": rows_before,
+              "expect_current_state": "NONE", "expected_digests": EXPECTED_DIGESTS, "skip_git": True,
+              "corpus_state_resolver": b.corpus_state, "clock": b.clock}
+    params.update(kw)
+    return params
+
+
+def _run_session(b, capsys, pattern, action, rows_before, **kw):
+    code = EXECUTE.FormalExecutionSession(b.root, REPO_ROOT, **_session_kwargs(b, pattern, action, rows_before, **kw)).run_all()
+    return code, capsys.readouterr().out
+
+
+def _seeded(tmp_path):
+    """凍結 candidate #1 相当が既に REJECTED（rows=1）の bench。"""
+    b = _frozen_bench(tmp_path)
+    b.build()
+    b.decide(FROZEN, "reject", REASON_REJECT, actor=HUMAN_ACTOR)
+    return b
+
+
+def test_execution_session_writes_one_reject(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, require_queue_rank=1,
+                             expect_recommendation=REJECT_RECOMMENDED)
+    assert code == 0, out[-2000:]
+    assert [m for m in SESSION_MARKERS if f"::P395X_{m}::" in out] == SESSION_MARKERS and "::P395X_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out) and REASON_REJECT not in out          # reason 本文は出さない
+    assert "reason_chars=" in out and "reason_digest=" in out
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == REJECTED and rows[0].pattern_id == "pR"
+    assert rows[0].actor == HUMAN_ACTOR and rows[0].promotion_status == "NOT_PROMOTED"
+
+
+def test_execution_session_writes_one_approve_with_sibling_acknowledgement(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pA", "approve", 0, expect_recommendation=APPROVE_RECOMMENDED,
+                             acknowledge_siblings=("pB",))
+    assert code == 0, out[-2000:]
+    assert 'acknowledge_siblings=["pB"]' in out and "audit_DECISION_TYPE=OK" in out
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == APPROVED and rows[0].promotion_status == "NOT_PROMOTED"
+
+
+def test_execution_session_writes_one_keep_reviewing(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pT", "keep-reviewing", 0, reason=REASON_SIBLING,
+                             expect_recommendation=REJECT_RECOMMENDED)
+    assert code == 0, out[-2000:]
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == KEEP_REVIEWING and rows[0].reason == REASON_SIBLING
+
+
+@pytest.mark.parametrize("override,stage,reason", [
+    ({"pattern_id": "pN"}, "TARGET", "TARGET_NOT_IN_PRIMARY_QUEUE"),
+    ({"require_queue_rank": 2}, "TARGET", "CANDIDATE_HEAD_CHANGED"),
+    ({"expect_recommendation": APPROVE_RECOMMENDED}, "TARGET", "RECOMMENDATION_CHANGED"),
+    ({"expect_current_state": KEEP_REVIEWING}, "TARGET", "CURRENT_STATE_MISMATCH"),
+    ({"expect_rows_before": 3}, "DECISION_CHAIN", "DECISION_ROWS_BEFORE_MISMATCH"),
+])
+def test_execution_session_stops_before_write_on_a_bound_expectation_mismatch(tmp_path, capsys, override, stage, reason):
+    b = Bench(tmp_path)
+    kw = {"reason": REASON_REJECT, "require_queue_rank": 1, "expect_recommendation": REJECT_RECOMMENDED}
+    kw.update(override)
+    pattern = kw.pop("pattern_id", "pR")
+    rows_before = kw.pop("expect_rows_before", 0)
+    code, out = _run_session(b, capsys, pattern, "reject", rows_before, **kw)
+    assert code == 4 and f"stage={stage}" in out and reason in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_stops_on_a_stale_packet(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real_current = FormalReviewService.current_packet
+
+    def drifted(self, pattern_id, inputs=None):
+        packet = real_current(self, pattern_id, inputs)
+        packet["consistency"] = {**packet["consistency"], "direction_class": "DRIFTED_AFTER_REVIEW"}
+        packet["freshness"] = {**packet["freshness"], "packet_evidence_digest": "0" * 16}
+        return packet
+
+    monkeypatch.setattr(FormalReviewService, "current_packet", drifted)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 4 and "stage=FRESHNESS" in out and "stale" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_stops_when_replay_evidence_is_incompatible(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.replay_policy_digests = {"evaluation": EVAL_POLICY.digest(), "recommendation": REC_POLICY.digest(),
+                               "shadow_review": SHADOW_POLICY.digest(), "replay": "d205c3763d07111b"}   # 旧 1.0.0
+    b.write_replay()
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 3 and "REPLAY_EVIDENCE_REQUIRED" in out and "stage=FORMAL_REVIEW_GUARD" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_stops_on_an_expected_fact_mismatch(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT,
+                             expect_facts={"document_contradiction": True, "reversal_count": 7})
+    assert code == 4 and "stage=EXPECTED_FACTS" in out and "HUMAN_REVIEW_EVIDENCE_CHANGED:reversal_count" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_accepts_matching_expected_facts(tmp_path, capsys):
+    b = Bench(tmp_path)
+    facts = {"document_contradiction": True, "document_contradiction_repeated": True, "contradiction_active": True,
+             "reject_driver": "SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION", "reversal_count": 0, "recovery_count": 0,
+             "replay_current_compatible": True, "formal_review_gate_reached": True}
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, expect_facts=facts)
+    assert code == 0 and "fact_mismatches=[]" in out and "expected_facts_check=PASSED" in out
+    assert len(b.decisions()) == 1
+
+
+def test_execution_session_stops_when_the_group_context_materially_changed(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.build()
+    reviewed = b.packet("pA")["group"]["group_state_digest"]
+    reviewed_material = EXECUTE.group_material_digest(EXECUTE.material_group_view(b.packet("pA")))
+    b.decide("pB", "keep-reviewing", REASON_KEEP, actor=HUMAN_ACTOR)              # sibling の formal state が変わる
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pA", "approve", 1, expect_group_state_digest=reviewed,
+                             expect_group_material_digest=reviewed_material, acknowledge_siblings=("pB",))
+    assert code == 4 and "stage=GROUP_CONTEXT" in out and EXECUTE.GROUP_CONTEXT_CHANGED in out
+    assert "group_material_matches_reviewed=False" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 1
+
+
+def test_execution_session_stops_when_the_group_digest_changed_without_a_material_baseline(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pA", "approve", 0, expect_group_state_digest="0000000000000000",
+                             acknowledge_siblings=("pB",))
+    assert code == 4 and "stage=GROUP_CONTEXT" in out and "group_material_baseline=NOT_SUPPLIED" in out
+    assert len(b.decisions()) == 0
+
+
+def test_execution_session_allows_an_equivalent_group_regeneration(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.build()
+    material = EXECUTE.group_material_digest(EXECUTE.material_group_view(b.packet("pA")))
+    code, out = _run_session(b, capsys, "pA", "approve", 0, expect_group_state_digest="0000000000000000",
+                             expect_group_material_digest=material, acknowledge_siblings=("pB",))
+    assert code == 0 and "group_context=EQUIVALENT_REPRESENTATION_REGENERATED" in out
+    assert "group_state_digest_changed=True" in out and len(b.decisions()) == 1
+
+
+def test_execution_session_reports_group_context_unchanged(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.build()
+    reviewed = b.packet("pR")["group"]["group_state_digest"]
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, expect_group_state_digest=reviewed)
+    assert code == 0 and "group_context=GROUP_CONTEXT_UNCHANGED" in out and len(b.decisions()) == 1
+
+
+def test_execution_session_dry_run_failure_prevents_the_real_write(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def refusing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            return {**real(self, request, dry_run=True),
+                    "validation": {"ok": False, "errors": [{"code": "SIMULATED_VALIDATION_FAILURE"}]}}
+        raise AssertionError("stage 2 must not run after a failed stage 1")
+
+    monkeypatch.setattr(FormalReviewService, "decide", refusing)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 4 and "stage=STAGE1_DRY_RUN" in out and "SIMULATED_VALIDATION_FAILURE" in out
+    assert seen == [True] and "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_refuses_a_confirmation_mismatch(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, confirm="CONFIRM REJECT pR")
+    assert code == 4 and "stage=ARGUMENTS" in out and "reason=CONFIRMATION_MISMATCH" in out
+    assert "::P395X_HEAD::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_write_exception_without_a_row_never_retries(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def failing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            return real(self, request, dry_run=True)
+        raise RuntimeError("simulated transport failure before append")
+
+    monkeypatch.setattr(FormalReviewService, "decide", failing)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 4 and f"reason={EXECUTE.WRITE_FAILED_NO_ROW}" in out and "retry_policy=NO_AUTOMATIC_RETRY" in out
+    assert seen == [True, False] and "write_attempts=1" in out and len(b.decisions()) == 0
+
+
+def test_execution_session_audits_a_succeeded_write_with_a_lost_response(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def lossy(self, request, *, dry_run):
+        seen.append(dry_run)
+        out = real(self, request, dry_run=dry_run)
+        if not dry_run:
+            raise RuntimeError("append succeeded but the response was lost")
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "decide", lossy)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 0 and f"write_response={EXECUTE.WRITE_RESPONSE_FAILED}" in out
+    assert "matching_new_rows_found=1" in out and seen == [True, False] and len(b.decisions()) == 1
+
+
+def test_execution_session_reports_ambiguous_write_results_without_retrying(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    session = EXECUTE.FormalExecutionSession(b.root, REPO_ROOT, **_session_kwargs(b, "pR", "reject", 0, reason=REASON_REJECT))
+    real = FormalReviewService.decide
+    seen = []
+
+    def lossy(self, request, *, dry_run):
+        seen.append(dry_run)
+        out = real(self, request, dry_run=dry_run)
+        if not dry_run:
+            raise RuntimeError("response lost")
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "decide", lossy)
+    real_rows = EXECUTE.FormalExecutionSession.rows
+
+    def doubled(self):
+        rows = real_rows(self)
+        return rows + [{**rows[-1], "decision_id": "cdc_duplicate"}] if rows else rows
+
+    monkeypatch.setattr(EXECUTE.FormalExecutionSession, "rows", doubled)
+    code = session.run_all()
+    out = capsys.readouterr().out
+    assert code == 4 and f"reason={EXECUTE.AMBIGUOUS_WRITE}" in out and "matching_new_rows_found=2" in out
+    assert seen == [True, False] and "write_attempts=1" in out
+
+
+def test_execution_session_audits_the_global_chain_and_the_pattern_head(tmp_path, capsys):
+    b = _seeded(tmp_path)
+    first = b.decisions()[0].as_dict()
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pT", "keep-reviewing", 1, reason=REASON_SIBLING,
+                             expect_recommendation=REJECT_RECOMMENDED)
+    assert code == 0, out[-2000:]
+    assert not [line for line in out.splitlines() if line.startswith("audit_") and line.endswith("=FAILED")]
+    rows = [r.as_dict() for r in b.decisions()]
+    assert len(rows) == 2 and rows[1]["sequence"] == 2
+    assert rows[1]["previous_record_hash"] == first["record_hash"]                # global append-only chain
+    assert rows[1]["previous_decision_id"] == "" and rows[1]["previous_state"] == ""   # この pattern では初回
+    assert "audit_PREVIOUS_RECORD_HASH_IS_GLOBAL_TAIL=OK" in out and "audit_SEQUENCE_IS_NEXT=OK" in out
+    # 同じ pattern への 2 度目（KEEP_REVIEWING → KEEP_REVIEWING）は pattern head を previous として引き継ぐ
+    capsys.readouterr()
+    code2, out2 = _run_session(b, capsys, "pT", "keep-reviewing", 2, reason=REASON_KEEP,
+                               expect_current_state=KEEP_REVIEWING)
+    assert code2 == 0, out2[-2000:]
+    rows = [r.as_dict() for r in b.decisions()]
+    assert len(rows) == 3 and rows[2]["previous_state"] == KEEP_REVIEWING
+    assert rows[2]["previous_decision_id"] == rows[1]["decision_id"]
+    assert "audit_PREVIOUS_STATE_IS_PATTERN_HEAD=OK" in out2 and "audit_PREVIOUS_DECISION_ID_IS_PATTERN_HEAD=OK" in out2
+
+
+def test_execution_session_touches_no_dna_pdf_or_shadow_state(tmp_path, capsys):
+    import hashlib as _h
+
+    dna = [REPO_ROOT / "knowledge" / "compass_dna" / "market_rules.yaml",
+           REPO_ROOT / "src" / "intelligence" / "compass" / "market_principles.py"]
+    before_dna = [_h.sha256(p.read_bytes()).hexdigest() for p in dna]
+    b = Bench(tmp_path)
+    b.shadow("pR", DISAGREE, reason="shadow history is evidence only")
+    before = _tree_digest(b.root, exclude="compass_formal_review")
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 0
+    changed = {k for k in set(before) | set(_tree_digest(b.root, exclude="compass_formal_review"))
+               if before.get(k) != _tree_digest(b.root, exclude="compass_formal_review").get(k)}
+    droot = decisions_root(b.root).relative_to(b.root).as_posix()
+    assert changed and all(k.startswith(droot + "/") for k in changed), changed
+    assert [_h.sha256(p.read_bytes()).hexdigest() for p in dna] == before_dna
+    for line in ("shadow_review_events_unchanged=True", "dna_blobs_unchanged=True", "pdf_inventory_unchanged=True",
+                 "promotion_status_written=NOT_PROMOTED", "real_decisions_written_by_this_operation=1",
+                 "candidates_processed=1"):
+        assert line in out, line
+
+
+def test_execution_session_candidate_two_shaped_rehearsal_and_accidental_rerun(tmp_path, capsys):
+    """rows 1 / state NONE から KEEP_REVIEWING を 1 行だけ書き、同じ実行の再走が write 前に失敗することを示す。"""
+    b = _seeded(tmp_path)
+    b.build()
+    # candidate #2 と同じ「束縛の形」を合成 pattern の実値で表現する（値そのものは合成 fixture のもの）
+    facts = {"document_contradiction": True, "document_contradiction_repeated": True,
+             "narrow_sibling_contradiction": False, "narrow_sibling_repeated": False, "contradiction_active": True,
+             "reject_driver": "SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION", "reversal_count": 0, "recovery_count": 0,
+             "opposite_sibling_count": 0, "replay_current_compatible": True, "formal_review_gate_reached": True}
+    reviewed_group = b.packet("pT")["group"]["group_state_digest"]
+    capsys.readouterr()
+    kw = dict(reason=REASON_SIBLING, expect_recommendation=REJECT_RECOMMENDED, require_queue_rank=1,
+              expect_facts=facts, expect_group_state_digest=reviewed_group)
+    code, out = _run_session(b, capsys, "pT", "keep-reviewing", 1, **kw)
+    assert code == 0, out[-2000:]
+    rows = [r.as_dict() for r in b.decisions()]
+    assert len(rows) == 2 and rows[1]["decision_type"] == KEEP_REVIEWING and rows[1]["sequence"] == 2
+    assert rows[1]["reason"] == REASON_SIBLING and rows[1]["actor"] == HUMAN_ACTOR
+    assert "decision_hash_chain=VALID" in out
+    code2, out2 = _run_session(b, capsys, "pT", "keep-reviewing", 1, **kw)          # 事故による再走
+    assert code2 == 4 and "DECISION_ROWS_BEFORE_MISMATCH:2!=1" in out2
+    assert "::P395X_STAGE2_WRITE::" not in out2 and len(b.decisions()) == 2
+    code3, out3 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw)          # 行数だけ直しても state で止まる
+    assert code3 == 4 and "CURRENT_STATE_MISMATCH:KEEP_REVIEWING!=NONE" in out3
+    assert "::P395X_STAGE2_WRITE::" not in out3 and len(b.decisions()) == 2
+
+
+def test_execution_session_has_no_candidate_specific_constants_and_no_batch_interface():
+    text = (PKG / "execute.py").read_text(encoding="utf-8")
+    assert "cpt_" not in text and "frp_" not in text and "cdc_" not in text        # candidate 固有の凍結値なし
+    assert "directionally" not in text and "P395_HUMAN" not in text                # 人間 reason / actor の凍結なし
+    tree = ast.parse(text)
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "decide"]
+    flags = [k.value.value for call in calls for k in call.keywords if k.arg == "dry_run"]
+    assert len(calls) == 2 and sorted(flags, key=str) == [False, True]
+    assert text.count("dry_run=False") == 1 and text.count("FormalDecisionRequest(") == 1
+    assert "while " not in text and "subprocess" not in text and "retry(" not in text
+    assert "load_formal_review_policy" not in text and "write_text" not in text     # policy / config を書かない
+    pattern_arg = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                   and getattr(n.func, "attr", "") == "add_argument"
+                   and any(isinstance(a, ast.Constant) and a.value == "--pattern" for a in n.args)]
+    assert len(pattern_arg) == 1
+    assert not [k for k in pattern_arg[0].keywords if k.arg in ("nargs", "action")]  # 複数 pattern を受けない
+
+
+def test_execution_session_cli_main_wires_arguments_and_rejects_unknown_facts(tmp_path, monkeypatch, capsys):
+    b = Bench(tmp_path / "ok")
+    _InjectedSession.bench = b
+    monkeypatch.setattr(EXECUTE, "FormalExecutionSession", _InjectedSession)
+    base = ["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+            "--pattern", "pR", "--action", "reject", "--actor", HUMAN_ACTOR, "--reason", REASON_REJECT,
+            "--confirm", "CONFIRM REJECTED pR", "--expect-rows-before", "0", "--expect-current-state", "NONE",
+            "--expect-machine-recommendation", REJECT_RECOMMENDED, "--require-queue-rank", "1"]
+    assert EXECUTE.main(base + ["--expect-fact", "os.system=1"]) == 4
+    assert "UNKNOWN_EXPECTED_FACT" in capsys.readouterr().out and len(b.decisions()) == 0
+    _InjectedSession.bench = b
+    monkeypatch.setattr(EXECUTE, "FormalExecutionSession", _InjectedSession)
+    assert EXECUTE.main(base + ["--expect-fact", "reversal_count=0", "--expect-fact", "contradiction_active=true"]) == 0
+    out = capsys.readouterr().out
+    assert "::P395X_END::" in out and "real_decisions_written_by_this_operation=1" in out and len(b.decisions()) == 1
+
+
+class _InjectedSession(EXECUTE.FormalExecutionSession):
+    """corpus state と clock を bench から注入する execution session（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)

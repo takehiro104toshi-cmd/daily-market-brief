@@ -321,3 +321,84 @@ pilot.py の section を composition で再利用し、本 module 固有の検�
 しない）、10 節 brief・事実文・設問 → 機械整合 action の dry-run → KEEP_REVIEWING の dry-run → 人間判断は
 PENDING → stage 1 / stage 2 command → 変更なし証明、を `::P395N_*::` marker で出力する（再利用した pilot
 section は `::P395C_*::` も出す）。失敗は `::P395N_FAIL:: stage= reason=`、exit 0 / 3 / 4 / 5。
+
+## 20. generic formal execution session（`execute.py`）
+
+`python -X utf8 -m src.intelligence.formal_review.execute --require-commit <sha> --expect-<layer> <digest>
+ --pattern <id> --action <approve|reject|keep-reviewing> --actor <id> --reason "<human reason>"
+ --confirm "CONFIRM <STATE> <id>" --expect-rows-before <N> --expect-current-state <STATE|NONE>
+ [--expect-machine-recommendation <REC>] [--require-queue-rank 1] [--expect-group-state-digest <digest>]
+ [--expect-group-material-digest <digest>] [--expect-fact key=value ...] [--acknowledge-sibling <id> ...]`
+
+Phase 3.9.5 の残りの formal Decision はすべてこの **1 本**で実行する。candidate 固有の凍結値は持たない
+（test が `cpt_` / `frp_` / `cdc_` / 人間 reason / actor の literal 不在を静的に検査）。candidate #1 専用の
+`pilot_execute.py`（§17）は最初の production write の監査履歴として残すが、以後は使わない。
+
+### 20.1 orchestration only
+
+Decision state model・遷移・population・recommendation・packet schema・policy・replay・group の semantics は
+一切変更しない。本 module は「呼び出し側が束縛したレビュー時点の期待状態」を検査してから、既存の
+authoritative write path（`FormalReviewGuard → DecisionRequest → DecisionService.validate → decide →
+DecisionStore.append`）をそのまま使うだけである。`FormalDecisionRequest` の生成は 1 箇所、`decide` の呼び出しは
+dry-run 1 箇所と real write 1 箇所のみ（AST test で固定）。batch / 複数 pattern の入口は持たない。
+
+### 20.2 順序と marker
+
+`ARGUMENTS → HEAD → POLICY → DECISION_CHAIN → BASELINE → FRESH_BUILD → TARGET → PACKET_FRESHNESS →
+EXPECTED_FACTS → GROUP_CONTEXT → STAGE1_DRY_RUN → STAGE2_CONFIRM → STAGE2_WRITE → DECISION_AUDIT → SAFETY → END`
+を `::P395X_*::` marker で出力する。失敗は `::P395X_FAIL:: stage= reason=` と非 0 exit（0 / 3 / 4 / 5）。
+人間 reason の本文は出力せず、文字数と digest だけを出す。
+
+### 20.3 caller-bound expectations（汎用のため hardcode しない）
+
+- `--expect-rows-before N`: 書き込み直前の Decision 行数。**generic な不変条件として 1 や 0 を固定しない。**
+- `--expect-current-state`: レビュー時点の formal head（`NONE` / `KEEP_REVIEWING` / `REOPENED_FOR_REVIEW` など）。
+  正当な再レビューでは `NONE` 以外になるため、呼び出し側が必ず束縛する。
+- `--expect-machine-recommendation` / `--require-queue-rank`: rank 1 以外が来たら `CANDIDATE_HEAD_CHANGED` で停止し、
+  新しい pattern を自動で代替しない。
+- `--expect-fact key=value`: 凍結 allowlist（`document_contradiction` / `document_contradiction_repeated` /
+  `narrow_sibling_contradiction` / `narrow_sibling_repeated` / `contradiction_active` / `direction_class` /
+  `dna_conflict_count` / `reject_driver` / `reversal_count` / `recovery_count` / `opposite_sibling_count` /
+  `sibling_member_count` / `eligible_support` / `formal_review_gate_reached` / `replay_current_compatible` /
+  `stability_class`）の型付き比較のみ。任意の object path も式評価も受け付けない。
+  不一致は `HUMAN_REVIEW_EVIDENCE_CHANGED:<keys>` で停止する。
+
+### 20.4 group context
+
+`--expect-group-state-digest` が一致すれば `GROUP_CONTEXT_UNCHANGED`。異なる場合は**黙って無視しない**:
+material view（`sibling_group_key` / `own_direction` / member id / opposite member id / member ごとの formal
+decision state / C1 / C3）の digest を `--expect-group-material-digest` と比較し、一致すれば
+`EQUIVALENT_REPRESENTATION_REGENERATED` として継続、不一致または baseline 未指定なら
+`HUMAN_REVIEW_EVIDENCE_CHANGED_GROUP_CONTEXT` で停止して人間の再レビューを要求する。
+
+### 20.5 same-packet / one-write / no-retry
+
+Stage 1 で解決した packet identity を保持し、Stage 1 と Stage 2 の間で rebuild しない。real write は
+`write_attempts == 0` を検査してから 1 回だけ試み、2 回目は `SECOND_WRITE_ATTEMPT_REFUSED`。例外時は
+**自動再試行せず** DecisionStore を読み取り専用で確認し、pattern / decision_type / packet_id が一致する
+新規行が 1 件なら `POSSIBLE_WRITE_SUCCEEDED_RESPONSE_FAILED`（その行を監査）、0 件なら `WRITE_FAILED_NO_ROW`、
+複数なら `AMBIGUOUS_WRITE_RESULT` で停止する。
+
+### 20.6 post-write audit（汎用）
+
+行数が `expect_rows_before + 1` ちょうどで、既存行が 1 行も変化していないこと。新規行について pattern /
+decision_type / actor / actor_type HUMAN / review_mode FORMAL / promotion_status NOT_PROMOTED /
+`sequence == 直前の global sequence + 1` / `previous_record_hash == 直前 global 行の record_hash` /
+`previous_decision_id`・`previous_state == その pattern の直前 head`（空だと仮定しない）/ reason 完全一致 /
+packet_id・packet_evidence_digest・material_digest・group_state_digest 一致 / 6 層 policy 束縛 / replay 束縛 /
+idempotency key = packet / record hash 再計算 / chain VALID。
+
+### 20.7 KEEP_REVIEWING duplicate hazard（既知の性質）
+
+`KEEP_REVIEWING → KEEP_REVIEWING` は凍結遷移表で**許可されている**。したがって packet 束縛の idempotency だけでは、
+rebuild 後の新しい packet による 2 本目の KEEP_REVIEWING 行を防げない。本 module は Decision semantics を変えて
+これを解こうとはしない。代わりに **呼び出し側が束縛した `--expect-rows-before` と `--expect-current-state` が
+書き込み直前に一致すること**を要求することで、事故による再走を write の前に止める
+（1 回目成功後は行数が +1 になり head も変わるため、同じ引数の再走は必ず失敗する）。
+
+### 20.8 queue progression は本変更では未解決
+
+KEEP_REVIEWING の head が primary queue に残り、順序 key が decision state に依存しないため同じ pattern が
+再び rank 1 になり得る。これは実在の設計・運用課題だが、**本変更では解決しない**（`population.py` 不変・
+cooldown なし・抑制なし・順序変更なし・rank 1 の自動スキップなし・reviewed packet digest による抑制なし）。
+既知の挙動として記録するにとどめ、candidate #2 の書き込みと監査の後に別途審議する。
