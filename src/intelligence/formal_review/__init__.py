@@ -15,6 +15,7 @@
     session.py     人間 1 人が 1 candidate を読むための決定的提示（10 節 brief・事実文・設問・2 段階 command）
     cli.py         build / list / show / session / brief / decide / status / reopen-check / validate-policy（batch なし）
     validation.py  Windows 実機 1 操作の real-data packet validation（::P395_*:: marker、全 candidate dry-run、fail closed）
+    pilot.py       候補 #1 だけの人間 review pilot（::P395C_*:: marker、rank 1 を自力で特定、dry-run only）
 
 APPROVE_RECOMMENDED ≠ APPROVED、REJECT_RECOMMENDED ≠ REJECTED、APPROVED ≠ DNA promotion（常に NOT_PROMOTED）。
 """

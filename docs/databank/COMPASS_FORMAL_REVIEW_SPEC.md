@@ -208,3 +208,18 @@ real write は 2 段階に固定する。stage 1 は `decide … --dry-run`（gu
 `DecisionService.validate` を実行し何も書かない）、stage 2 は同じ action を
 `--confirm "CONFIRM <STATE> <pattern_id>"` 付きで再実行する。token が無い / 一致しない real write は
 guard へ届く前に拒否され（exit 3）、既定 action は存在しない。batch command は無く、1 invocation = 1 pattern。
+
+## 16. candidate #1 pilot（`pilot.py`）
+
+`python -m src.intelligence.formal_review.pilot --require-commit <sha> --expect-<layer> <digest> [--historical-head <id>]`
+は、最初の human review を **queue rank 1 の 1 件だけ**で試すための読み取り専用 driver。HEAD / 6 層 policy /
+安全 baseline / fresh build（replay 互換の件数まで）/ **fresh build から rank 1 を自力で特定**（`--historical-head`
+は `QUEUE_HEAD_CHANGED` の比較にだけ使い、選択には使わない）/ freshness / 10 節 brief・事実文・設問 /
+機械整合 action の dry-run / KEEP_REVIEWING の dry-run / 人間判断の保留表示 / stage 1・stage 2 command /
+変更なし証明を `::P395C_*::` marker で出力する。
+
+この driver は `dry_run=True` 以外で `decide` を呼ばず（test が AST で検査）、`--confirm` の経路も持たないため
+real Decision を書けない。candidate #2 以降は表示しない。`REPLAY_EVIDENCE_REQUIRED` / stale / policy 不一致は
+pilot を BLOCKED にし、guard は弱めない。`SIBLING_CONFLICT_BLOCKED` と `SIBLING_ACKNOWLEDGEMENT_REQUIRED` は
+人間判断が要るだけの正当な結果として記録し、pilot は継続する。
+

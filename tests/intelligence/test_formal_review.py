@@ -1209,3 +1209,126 @@ def test_cli_real_write_requires_the_exact_confirmation_token(bench, monkeypatch
     assert fr_cli.main(base + ["--confirm", "CONFIRM REJECTED pR"]) == 0
     assert len(bench.decisions()) == 1 and bench.decisions()[0].decision_type == REJECTED
     assert bench.decisions()[0].promotion_status == "NOT_PROMOTED"
+
+
+# ================================================================== candidate #1 pilot driver
+from src.intelligence.formal_review import pilot as PILOT  # noqa: E402
+
+PILOT_MARKERS = ["HEAD", "POLICY", "BASELINE", "BUILD", "CANDIDATE", "FRESHNESS", "BRIEF", "EXPLANATION", "QUESTIONS",
+                 "DRY_RUN_MACHINE_ACTION", "DRY_RUN_KEEP_REVIEWING", "HUMAN_DECISION", "COMMANDS", "SAFETY", "PILOT_OK"]
+
+
+def _pilot(bench, capsys, **kw):
+    params = {"expected_digests": EXPECTED_DIGESTS, "skip_git": True, "corpus_state_resolver": bench.corpus_state,
+              "clock": bench.clock}
+    params.update(kw)
+    code = PILOT.CandidateOnePilot(bench.root, REPO_ROOT, **params).run_all()
+    return code, capsys.readouterr().out
+
+
+def test_pilot_presents_only_rank_one_and_writes_nothing(bench, capsys):
+    bench.shadow("pR", DISAGREE, reason="private human reason text the pilot must never print")
+    before = _tree_digest(bench.root, exclude="compass_formal_review")
+    code, out = _pilot(bench, capsys, historical_head="cpt_4d2f4477a946c17e")
+    assert code == 0, out[-1500:]
+    assert [m for m in PILOT_MARKERS if f"::P395C_{m}::" in out] == PILOT_MARKERS and "::P395C_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)
+    assert "pattern_id=pR" in out and "candidates_shown=1" in out and "queue_rank=1" in out
+    for other in ("pT", "pA", "pK", "pB", "pC"):                                  # candidate #2 以降は出さない
+        assert other not in out, other
+    assert "private human reason" not in out and str(bench.root) not in out
+    assert out.splitlines().count("result=DRY_RUN_PASS") == 2                      # machine action と keep-reviewing
+    assert "human_selected_action=PENDING" in out and "human_reason=PENDING" in out
+    assert "real_decisions_written=0" in out and "QUEUE_HEAD_CHANGED=true" in out
+    assert len(bench.decisions()) == 0
+    assert _tree_digest(bench.root, exclude="compass_formal_review") == before
+
+
+def test_pilot_never_calls_decide_outside_dry_run(bench, capsys):
+    tree = ast.parse((PKG / "pilot.py").read_text(encoding="utf-8"))
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "decide"]
+    assert calls, "the pilot must exercise the decide path"
+    for call in calls:                                                            # dry_run=True 以外では呼べない
+        flags = [k for k in call.keywords if k.arg == "dry_run"]
+        assert len(flags) == 1 and isinstance(flags[0].value, ast.Constant) and flags[0].value.value is True
+    assert "--confirm" not in (PKG / "pilot.py").read_text(encoding="utf-8")      # stage 2 の経路を持たない
+    _pilot(bench, capsys)
+    assert len(bench.decisions()) == 0
+
+
+def test_pilot_reports_queue_head_unchanged_when_it_matches(bench, capsys):
+    code, out = _pilot(bench, capsys, historical_head="pR")
+    assert code == 0 and "QUEUE_HEAD_CHANGED=false" in out and "historical_head_compared=pR" in out
+
+
+def test_pilot_fails_before_build_on_policy_mismatch(bench, capsys):
+    code, out = _pilot(bench, capsys, expected_digests={**EXPECTED_DIGESTS, "replay": "0000000000000000"})
+    assert code == 4 and "section=POLICY" in out and "::P395C_BUILD::" not in out
+    assert not bench.service().store.exists() and len(bench.decisions()) == 0
+
+
+def test_pilot_blocks_when_replay_evidence_is_missing(tmp_path, capsys):
+    b = Bench(tmp_path, with_replay=False)
+    code, out = _pilot(b, capsys)
+    assert code == 4 and "REPLAY_EVIDENCE_REQUIRED" in out and "section=DRY_RUN_MACHINE_ACTION" in out
+    assert "::P395C_PILOT_OK::" not in out and len(b.decisions()) == 0
+
+
+def test_pilot_blocks_on_a_stale_candidate_packet(bench, capsys, monkeypatch):
+    real_build = FormalReviewService.build
+
+    def build_then_change(self):
+        out = real_build(self)
+        bench.evals["pR"]["axis_metrics"][A_TIME]["span_days"] = 200               # build 後に証拠が変わる
+        bench.write_evaluations()
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "build", build_then_change)
+    code, out = _pilot(bench, capsys)
+    assert code == 4 and "section=FRESHNESS" in out and "fresh=False" in out
+    assert "changed_blocks=" in out and len(bench.decisions()) == 0
+
+
+def test_pilot_derives_c3_acknowledgement_automatically(bench, capsys):
+    for pid in ("pR", "pT", "pK"):                                                # rank 1 を APPROVE 候補 pA にする
+        bench.evals.pop(pid)
+    bench.write_evaluations()
+    code, out = _pilot(bench, capsys)
+    assert code == 0 and "pattern_id=pA" in out and 'acknowledge_siblings=["pB"]' in out
+    assert out.splitlines().count("result=DRY_RUN_PASS") == 2 and "machine_consistent_decision_type=APPROVED" in out
+    assert len(bench.decisions()) == 0
+
+
+def test_pilot_treats_c1_sibling_block_as_a_legitimate_guard_result(bench, capsys):
+    bench.build()
+    bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))         # 反対方向 sibling を先に APPROVED
+    for pid in ("pR", "pT", "pK"):
+        bench.evals.pop(pid)
+    bench.write_evaluations()
+    rows_before = len(bench.decisions())
+    code, out = _pilot(bench, capsys)
+    assert code == 0 and "pattern_id=pB" in out                                    # 残る唯一の候補
+    assert "result=SIBLING_CONFLICT_BLOCKED" in out and "technical_dry_run_result=SIBLING_CONFLICT_BLOCKED" in out
+    assert "::P395C_PILOT_OK::" in out and out.splitlines().count("result=DRY_RUN_PASS") == 1   # keep-reviewing は通る
+    assert len(bench.decisions()) == rows_before
+
+
+class _InjectedPilot(PILOT.CandidateOnePilot):
+    """corpus state と clock を bench から注入する pilot（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)
+
+
+def test_pilot_cli_main_wires_arguments(bench, monkeypatch, capsys):
+    _InjectedPilot.bench = bench
+    monkeypatch.setattr(PILOT, "CandidateOnePilot", _InjectedPilot)
+    code = PILOT.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+                       "--historical-head", "cpt_4d2f4477a946c17e", "--actor", "P395_HUMAN_PILOT_PREP"])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395C_PILOT_OK::" in out and "QUEUE_HEAD_CHANGED=true" in out
+    assert len(bench.decisions()) == 0

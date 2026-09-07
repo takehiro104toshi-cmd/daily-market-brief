@@ -4,6 +4,21 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.48.4 (2026-09-06) — Add Phase 3.9.5 candidate #1 pilot driver（rank 1 のみ・dry-run only）
+
+### 追加
+
+- `src/intelligence/formal_review/pilot.py`【新規】: 最初の human review を queue rank 1 の 1 件だけで試す
+  読み取り専用 driver。fresh build から rank 1 を自力で特定し（historical head は `QUEUE_HEAD_CHANGED` の
+  比較専用・選択には使わない）、freshness 検査 → 10 節 brief・事実文・設問 → 機械整合 action の dry-run →
+  KEEP_REVIEWING の dry-run → 人間判断は PENDING のまま表示 → stage 1 / stage 2 command → 変更なし証明を
+  `::P395C_*::` marker で出力する。`dry_run=True` 以外で `decide` を呼ばず `--confirm` 経路も持たないので
+  real Decision を書けない（AST test で検査）。candidate #2 以降は表示しない。
+  `REPLAY_EVIDENCE_REQUIRED` / stale / policy 不一致で BLOCKED、sibling C1 / C3 は正当な結果として継続。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §16、`tests/intelligence/test_formal_review.py` 9 件追加（93 件）。
+
+policy 6 層の digest・packet schema・guard 挙動は不変。real Decision は 1 行も書いていない。
+
 ## v4.48.3 (2026-09-06) — Add Phase 3.9.5 Windows 検証の監査証跡 / first human review session の準備（2 段階 confirmation）
 
 ### 追加
