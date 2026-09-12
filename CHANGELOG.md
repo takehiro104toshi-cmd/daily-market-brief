@@ -4,6 +4,24 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.51 (2026-09-12) — Add candidate #2 real-write audit trail（human KEEP_REVIEWING / machine REJECT_RECOMMENDED）
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §21「Candidate #2 real-write audit record」と §21.1 Decision ledger
+  （履歴事実のみ。実行 commit `8a29bed` / driver `execute.py` / pattern `cpt_8c96e2070cd4c702`（EVIDENCE_OUTLOOK）/
+  machine REJECT_RECOMMENDED / **human formal decision KEEP_REVIEWING**（意図的不同意）/ decision_id
+  `cdc_0a420b63cc1257ed` / sequence 2 / previous_record_hash = candidate #1 の record hash / HUMAN・FORMAL /
+  NOT_PROMOTED / packet `frp_b118d3272d4382c1` / evidence digest `387e2252004dbac9` / material digest
+  `8f410ca4e7da1e58` / group digest `037f307fe6fd2efb`（unchanged）/ replay run `crp_2530396a5a3b8fb7`・
+  `74d5b037498fc0de` / hash chain VALID / rows 1 → 2 / 束縛監査 19 項目 OK / expected facts 11 項目一致 /
+  Shadow Review・DNA・PDF・derived 不変 / 処理 candidate 1 件 / 書き込み後も Phase 3.9.5 は OPEN）。
+- `docs/databank/COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §10 に 2 回目の行と KEEP_REVIEWING の queue 残留注記。
+
+Decision semantics・policy 6 層 digest・packet schema・guard・queue semantics は不変。コード変更なし。
+この Decision は「機械が誤り」の記録ではなく、active contradiction が candidate 自身の supporting document ではなく
+未決の opposite-direction sibling に由来したため Human Final Review が継続レビューを選んだ不同意事例である。
+
 ## v4.50 (2026-09-07) — Add generic formal review execution session（1 invocation = 1 candidate = 1 write）
 
 ### 追加

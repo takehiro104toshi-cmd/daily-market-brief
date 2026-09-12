@@ -402,3 +402,74 @@ KEEP_REVIEWING の head が primary queue に残り、順序 key が decision st
 再び rank 1 になり得る。これは実在の設計・運用課題だが、**本変更では解決しない**（`population.py` 不変・
 cooldown なし・抑制なし・順序変更なし・rank 1 の自動スキップなし・reviewed packet digest による抑制なし）。
 既知の挙動として記録するにとどめ、candidate #2 の書き込みと監査の後に別途審議する。
+
+## 21. Candidate #2 real-write audit record（監査証跡・履歴事実）
+
+本節は **Phase 3.9.5 で 2 番目に書かれた実 human formal Decision の記録**であり、§18（candidate #1）とは
+別の事例として記録する。履歴の事実であり、semantics・policy digest・packet schema・guard 挙動のいずれも
+定義しない（それらは §1〜§13、実行 envelope は §20）。
+
+| 項目 | 値 |
+|---|---|
+| 実行日時（UTC） | 2026-09-12T01:18:10Z |
+| 実行 commit | `8a29bed`（`execute.py` 導入時点） |
+| 実行 driver | `src/intelligence/formal_review/execute.py`（汎用 execution session・§20） |
+| pattern_id | `cpt_8c96e2070cd4c702` |
+| pattern_type / lifecycle | EVIDENCE_OUTLOOK / STRONG_PATTERN_CANDIDATE |
+| fresh queue rank | 1（REJECT_RECOMMENDED section） |
+| **machine recommendation** | **REJECT_RECOMMENDED** |
+| **human formal decision** | **KEEP_REVIEWING**（意図的な不同意・凍結 symmetry の範囲内） |
+| decision_id | `cdc_0a420b63cc1257ed` |
+| sequence | 2 |
+| previous_record_hash | `ed8a0c64…0006c0`（= candidate #1 の record hash。global append-only chain を実測確認） |
+| previous_decision_id / previous_state | 空 / 空（この pattern では初回の Decision） |
+| actor_type / review_mode | HUMAN / FORMAL |
+| promotion_status | NOT_PROMOTED |
+| packet_id | `frp_b118d3272d4382c1`（read-only review 時と同一・fresh build で再解決） |
+| packet_evidence_digest | `387e2252004dbac9` |
+| material_digest | `8f410ca4e7da1e58` |
+| group_state_digest | `037f307fe6fd2efb`（`GROUP_CONTEXT_UNCHANGED`） |
+| group material digest（§20.4 の material view） | `e94e576ba2b8f005` |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de`（captured eligible 139・evidence age 0） |
+| record hash | `179146cd9e368ecc7b2b8e55ee14ab66f2b03da0003814ebc1aef66dca5843ca` |
+| Decision hash chain | VALID |
+| Decision rows | 1 → 2 |
+| 束縛監査 | 19 項目すべて OK（pattern / decision_type / actor / actor_type / review_mode / promotion / sequence 連番 / global tail / pattern head の previous_decision_id・previous_state / record hash 再計算 / reason 完全一致 / packet_id / packet_evidence_digest / material_digest / group_state_digest / 6 層 policy digest / replay 束縛 / idempotency key） |
+| Stage 1 dry-run | guard 18 checks / validation ok / mutation NONE / NOT_PROMOTED（Stage 2 と同一 packet） |
+| expected facts（11 項目） | すべて一致: `document_contradiction=false` / `document_contradiction_repeated=false` / `narrow_sibling_contradiction=true` / `narrow_sibling_repeated=true` / `contradiction_active=true` / `reject_driver=NARROW_SIBLING_CONTRADICTION` / `reversal_count=0` / `recovery_count=0` / `opposite_sibling_count=3` / `replay_current_compatible=true` / `formal_review_gate_reached=true` |
+| sibling group | `JAPAN_EQUITY,SECTOR|target=JAPAN_EQUITY`（own direction UP・member 8・opposite 3・全 member の formal state NONE・C1 / C3 は本 action に非適用） |
+| Shadow Review event 変更 | 0 |
+| DNA 変更 | 0（blob identity 一致） |
+| PDF 変更 | 0（inventory 141 件・digest 一致・open せず） |
+| derived store 変更 | なし（`derived_changed=[]`・intake 活動なし） |
+| tracked worktree | 不変 |
+| 処理した candidate | 1 件のみ |
+| 実行時間 | 18.6 秒 |
+| policy digest | 6 層とも凍結値のまま（`decision 0c54ec01e2a251d9` / `evaluation 1a8443098f64d679` / `recommendation 0a979d8421a01d08` / `shadow_review e6f5094cacef6fec` / `replay 197db7c73eb0db77` / `formal_review cca7b43627b9a355`） |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN** |
+
+human formal decision reason（formal Decision の理由本文。本節にのみ記録し、他所へ複製しない）:
+
+> The candidate evidence itself remains directionally consistent, while the active contradiction comes from
+> unresolved opposite-direction sibling patterns that have not yet received formal decisions.
+
+補足（履歴事実）:
+
+- これは Phase 3.9.5 で最初の **human / machine 不同意事例**である。機械が誤りだったという記録ではない。
+  candidate 自身の supporting document には矛盾がなく（`document_contradiction=false`、direction counts は
+  UP のみ）、active contradiction は同一 sibling group 内の**未決の opposite-direction sibling 3 件**に由来する
+  関係的なもの（`reject_driver=NARROW_SIBLING_CONTRADICTION`）だったため、Human Final Review は sibling の
+  formal decision が出るまで継続レビューを選んだ。
+- fresh build 時点の packet 束縛（packet_id / evidence digest / material digest / group digest）は read-only
+  review（§19）時点と同一であり、レビューから書き込みまでに証拠は変化していない。
+- 書き込み後の queue 挙動（§20.8）: `KEEP_REVIEWING` は終端ではなく primary queue に残るため、次の fresh build
+  でもこの pattern が rank 1 に現れ得る。本記録時点で queue progression は未解決のままである。
+
+## 21.1 Phase 3.9.5 Decision ledger（累積・履歴事実）
+
+| seq | pattern_id | machine | human | decision_id | record hash（先頭） | 記録 |
+|---|---|---|---|---|---|---|
+| 1 | `cpt_4d2f4477a946c17e` | REJECT_RECOMMENDED | REJECTED | `cdc_884ab4cafff2dbf3` | `ed8a0c64` | §18 |
+| 2 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING | `cdc_0a420b63cc1257ed` | `179146cd` | §21 |
+
+chain: seq 2 の `previous_record_hash` = seq 1 の record hash。全行 HUMAN / FORMAL / NOT_PROMOTED。

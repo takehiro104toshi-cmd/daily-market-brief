@@ -161,12 +161,16 @@ DNA promotion は別 gate であり、この Phase では一切行わない。
 | 回 | 日付(UTC) | 対象 | 機械推奨 | 人間の formal state | decision_id | sequence | 書き込み |
 |---|---|---|---|---|---|---|---|
 | 1 | 2026-09-07 | `cpt_4d2f4477a946c17e`（EVIDENCE_WHY） | REJECT_RECOMMENDED | **REJECTED** | `cdc_884ab4cafff2dbf3` | 1 | 1 行（0 → 1） |
+| 2 | 2026-09-12 | `cpt_8c96e2070cd4c702`（EVIDENCE_OUTLOOK） | REJECT_RECOMMENDED | **KEEP_REVIEWING**（不同意） | `cdc_0a420b63cc1257ed` | 2 | 1 行（1 → 2） |
 
-1 回目の詳細な監査証跡（packet 束縛・digest・replay run・record hash・無変更証明・formal reason 本文）は
-`COMPASS_FORMAL_REVIEW_SPEC.md` §18 に一元記録する。本表には理由本文を複製しない。
+各回の詳細な監査証跡（packet 束縛・digest・replay run・record hash・無変更証明・formal reason 本文）は
+`COMPASS_FORMAL_REVIEW_SPEC.md` §18（1 回目）/ §21（2 回目）に一元記録する。本表には理由本文を複製しない。
 
-進行中: reviewed 1 / APPROVED 0 / REJECTED 1 / KEEP_REVIEWING 0。残りは毎回 fresh build で再導出する
-（既決 pattern は primary queue から外れるため、書き込み前の順位をそのまま持ち越さない）。
+進行中: reviewed 2 / APPROVED 0 / REJECTED 1 / KEEP_REVIEWING 1。残りは毎回 fresh build で再導出する。
+既決（APPROVED / REJECTED）の pattern は primary queue から外れるが、**KEEP_REVIEWING は終端ではなく primary
+queue に残る**（順序 key は decision state に依存しない）ため、2 回目の pattern は次の fresh build でも rank 1 に
+現れ得る。この queue progression の扱いは未決定であり、監督者判断まで rank 1 を自動で読み飛ばさない。
+2 回目以降の実行は §20 の汎用 execution session（`execute.py`）で行う。
 
 次の 1 件は `next_candidate.py`（`COMPASS_FORMAL_REVIEW_SPEC.md` §19）で読み取り専用に提示する。
 Decision chain の妥当性と既決 pattern の primary queue 除外を先に検査し、そのあとで現在の rank 1 を
