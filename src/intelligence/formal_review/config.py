@@ -5,6 +5,9 @@
 - batch action なし / promotion は常に NOT_PROMOTED / 重複・重なりは KEEP_REVIEWING + metadata
 - sibling guard: EVIDENCE_OUTLOOK narrow sibling のみ（C1 hard block・C3 acknowledgement）
 - packet freshness anchor は packet_evidence_digest（corpus 増加だけでは stale にしない）
+- queue progression（1.1.0）: head が KEEP_REVIEWING で review-relevant evidence（M1 material / M2 group /
+  M3 replay review view / M4 DNA relation）が不変なら ranked primary から defer、変化で通常順序へ再入。
+  検証不能なら VISIBLE（抑止しない）。cooldown なし・新 Decision state なし・自動 Decision なし。
 """
 from __future__ import annotations
 
@@ -48,6 +51,20 @@ DISPOSITION_DUPLICATE = "DUPLICATE_OR_OVERLAPPING"
 PROMOTION_BOUNDARY = "NOT_PROMOTED"
 REASON_CATEGORIES: Tuple[str, ...] = ("MORE_DOCUMENTS", "MORE_REGIMES", "LONGER_SPAN", "BETTER_QUALITY")
 
+# ---- queue progression（formal_review 1.1.0・凍結。derived queue status であり Decision state ではない）
+PROGRESSION_TARGET_HEAD = KEEP_REVIEWING
+PROGRESSION_UNCHANGED_BEHAVIOR = "DEFER_FROM_RANKED_PRESENTATION"
+PROGRESSION_REENTRY_COMPONENTS: Tuple[str, ...] = ("M1_MATERIAL_DIGEST", "M2_GROUP_STATE_DIGEST",
+                                                   "M3_REPLAY_REVIEW_VIEW", "M4_DNA_RELATION")
+PROGRESSION_REPLAY_REVIEW_FIELDS: Tuple[str, ...] = ("stability_class", "reversal_count", "reject_driver",
+                                                     "recovery_count", "current_recommendation")
+PROGRESSION_DNA_RELATION_FIELDS: Tuple[str, ...] = ("dna_classification", "best_rule_id", "conflict_rule_ids")
+PROGRESSION_UNVERIFIABLE_BEHAVIOR = "VISIBLE_NOT_SUPPRESSED"
+PROGRESSION_REENTRY_ORDERING = "NORMAL"
+#: 歴史的 formal_review digest（1.0.0）。Candidate #1 / #2 の Decision row はこれに束縛されたまま（書き換えない）。
+#: policy digest には含めない（provenance の記録であって policy 挙動ではない）。
+SUPERSEDED_FORMAL_REVIEW_DIGESTS: Tuple[str, ...] = ("cca7b43627b9a355",)
+
 _SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 
 
@@ -58,7 +75,7 @@ def _digest(payload: Mapping[str, Any]) -> str:
 
 @dataclass(frozen=True)
 class FormalReviewPolicy:
-    policy_version: str = "1.0.0"
+    policy_version: str = "1.1.0"
     packet_schema_version: str = PACKET_SCHEMA_VERSION
     recommendation_symmetry: bool = True
     sibling_guard_mode: str = SIBLING_GUARD_MODE
@@ -80,6 +97,17 @@ class FormalReviewPolicy:
     warn_recent_transition: bool = True
     warn_oscillating: bool = True
     warn_insufficient_history: bool = True
+    # queue progression（1.1.0）
+    progression_target_head: str = PROGRESSION_TARGET_HEAD
+    progression_unchanged_behavior: str = PROGRESSION_UNCHANGED_BEHAVIOR
+    progression_reentry_components: Tuple[str, ...] = PROGRESSION_REENTRY_COMPONENTS
+    progression_replay_review_fields: Tuple[str, ...] = PROGRESSION_REPLAY_REVIEW_FIELDS
+    progression_dna_relation_fields: Tuple[str, ...] = PROGRESSION_DNA_RELATION_FIELDS
+    progression_unverifiable_behavior: str = PROGRESSION_UNVERIFIABLE_BEHAVIOR
+    progression_reentry_ordering: str = PROGRESSION_REENTRY_ORDERING
+    progression_cooldown_eligible_docs: int = 0          # cooldown なし（0 以外は拒否）
+    progression_new_decision_state: bool = False         # derived queue status のみ
+    progression_automatic_decision: bool = False         # progression は Decision を書かない
 
     def __post_init__(self) -> None:
         if self.min_reason_chars is None:
@@ -104,6 +132,18 @@ class FormalReviewPolicy:
                          "approve": list(self.approve_ordering), "reopen": list(self.reopen_ordering)},
             "warnings": {"recent_transition": self.warn_recent_transition, "oscillating": self.warn_oscillating,
                          "insufficient_history": self.warn_insufficient_history},
+            "progression": {
+                "target_head": self.progression_target_head,
+                "unchanged_behavior": self.progression_unchanged_behavior,
+                "reentry_components": list(self.progression_reentry_components),
+                "replay_review_fields": list(self.progression_replay_review_fields),
+                "dna_relation_fields": list(self.progression_dna_relation_fields),
+                "unverifiable_behavior": self.progression_unverifiable_behavior,
+                "reentry_ordering": self.progression_reentry_ordering,
+                "cooldown_eligible_docs": int(self.progression_cooldown_eligible_docs),
+                "new_decision_state": self.progression_new_decision_state,
+                "automatic_decision": self.progression_automatic_decision,
+            },
         }
 
     def digest(self) -> str:
@@ -146,6 +186,19 @@ class FormalReviewPolicy:
         if tuple(self.stability_rank) != STABILITY_RANK or tuple(self.reject_ordering) != REJECT_ORDERING \
                 or tuple(self.approve_ordering) != APPROVE_ORDERING or tuple(self.reopen_ordering) != REOPEN_ORDERING:
             raise FormalReviewPolicyError("ordering is frozen in v1")
+        if self.progression_target_head != PROGRESSION_TARGET_HEAD \
+                or self.progression_unchanged_behavior != PROGRESSION_UNCHANGED_BEHAVIOR \
+                or tuple(self.progression_reentry_components) != PROGRESSION_REENTRY_COMPONENTS \
+                or tuple(self.progression_replay_review_fields) != PROGRESSION_REPLAY_REVIEW_FIELDS \
+                or tuple(self.progression_dna_relation_fields) != PROGRESSION_DNA_RELATION_FIELDS \
+                or self.progression_unverifiable_behavior != PROGRESSION_UNVERIFIABLE_BEHAVIOR \
+                or self.progression_reentry_ordering != PROGRESSION_REENTRY_ORDERING:
+            raise FormalReviewPolicyError("queue progression is frozen in 1.1.0: KEEP_REVIEWING deferred only when M1-M4 are "
+                                          "unchanged, unverifiable stays visible, re-entry uses normal ordering")
+        if int(self.progression_cooldown_eligible_docs) != 0:
+            raise FormalReviewPolicyError("queue progression has no cooldown")
+        if self.progression_new_decision_state is not False or self.progression_automatic_decision is not False:
+            raise FormalReviewPolicyError("queue progression never adds a Decision state and never writes a Decision")
 
 
 def _flag(section: Mapping[str, Any], key: str, default: bool) -> bool:
@@ -164,6 +217,7 @@ def formal_review_policy_from_mapping(section: Optional[Mapping[str, Any]]) -> F
     reason = dict(s.get("reason") or {})
     ordering = dict(s.get("ordering") or {})
     warnings = dict(s.get("warnings") or {})
+    prog = dict(s.get("progression") or {})
     min_chars = dict(base.min_reason_chars)
     for k, v in dict(reason.get("min_chars") or {}).items():
         try:
@@ -174,6 +228,10 @@ def formal_review_policy_from_mapping(section: Optional[Mapping[str, Any]]) -> F
         age = int(rep.get("age_warning_eligible_docs", base.replay_evidence_age_warning_eligible_docs))
     except (TypeError, ValueError) as exc:
         raise FormalReviewPolicyError("replay_evidence.age_warning_eligible_docs must be an integer") from exc
+    try:
+        cooldown = int(prog.get("cooldown_eligible_docs", base.progression_cooldown_eligible_docs))
+    except (TypeError, ValueError) as exc:
+        raise FormalReviewPolicyError("progression.cooldown_eligible_docs must be an integer") from exc
     policy = FormalReviewPolicy(
         policy_version=str(s.get("policy_version", base.policy_version) or base.policy_version),
         packet_schema_version=str(s.get("packet_schema_version", base.packet_schema_version)),
@@ -197,6 +255,16 @@ def formal_review_policy_from_mapping(section: Optional[Mapping[str, Any]]) -> F
         warn_recent_transition=_flag(warnings, "recent_transition", base.warn_recent_transition),
         warn_oscillating=_flag(warnings, "oscillating", base.warn_oscillating),
         warn_insufficient_history=_flag(warnings, "insufficient_history", base.warn_insufficient_history),
+        progression_target_head=str(prog.get("target_head", base.progression_target_head)),
+        progression_unchanged_behavior=str(prog.get("unchanged_behavior", base.progression_unchanged_behavior)),
+        progression_reentry_components=tuple(str(x) for x in (prog.get("reentry_components") or base.progression_reentry_components)),
+        progression_replay_review_fields=tuple(str(x) for x in (prog.get("replay_review_fields") or base.progression_replay_review_fields)),
+        progression_dna_relation_fields=tuple(str(x) for x in (prog.get("dna_relation_fields") or base.progression_dna_relation_fields)),
+        progression_unverifiable_behavior=str(prog.get("unverifiable_behavior", base.progression_unverifiable_behavior)),
+        progression_reentry_ordering=str(prog.get("reentry_ordering", base.progression_reentry_ordering)),
+        progression_cooldown_eligible_docs=cooldown,
+        progression_new_decision_state=_flag(prog, "new_decision_state", base.progression_new_decision_state),
+        progression_automatic_decision=_flag(prog, "automatic_decision", base.progression_automatic_decision),
     )
     policy.validate()
     return policy

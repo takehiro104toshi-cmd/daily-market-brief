@@ -493,7 +493,7 @@ def test_policy_digest_change_is_stale(bench, layer):
     pk = bench.packet("pA")
     req = FormalDecisionRequest("pA", "approve", pk["identity"]["packet_id"], REASON_OK, "taro", acknowledge_siblings=("pB",))
     if layer == "formal_review":
-        svc = bench.service(policy=FormalReviewPolicy(policy_version="1.1.0", replay_evidence_age_warning_eligible_docs=6))
+        svc = bench.service(policy=FormalReviewPolicy(policy_version="1.2.0", replay_evidence_age_warning_eligible_docs=6))
     else:
         base = {"evaluation": EVAL_POLICY, "recommendation": REC_POLICY, "shadow_review": SHADOW_POLICY, "replay": REPLAY_POLICY}[layer]
         changed = dataclasses.replace(base, policy_version="9.9.9")
@@ -842,11 +842,13 @@ def test_decision_metadata_binding_and_constraints(bench):
 
 
 def test_policy_digest_deterministic_config_matches_and_same_version_drift_fails_closed(bench):
-    assert load_formal_review_policy().digest() == FormalReviewPolicy().digest() == "cca7b43627b9a355"
+    assert load_formal_review_policy().policy_version == FormalReviewPolicy().policy_version == "1.1.0"
+    assert load_formal_review_policy().digest() == FormalReviewPolicy().digest() == "d2fb015ca827dd15"
+    assert FormalReviewPolicy().digest() != "cca7b43627b9a355"                 # 1.0.0（Candidate #1/#2 の歴史的 binding）とは別
     bench.build()
     with pytest.raises(FormalReviewPolicyError):
         bench.build(policy=FormalReviewPolicy(replay_evidence_age_warning_eligible_docs=7))     # 同 version で内容変更
-    bench.build(policy=FormalReviewPolicy(policy_version="1.1.0", replay_evidence_age_warning_eligible_docs=7))  # bump は許可
+    bench.build(policy=FormalReviewPolicy(policy_version="1.2.0", replay_evidence_age_warning_eligible_docs=7))  # bump は許可
     for bad in ({"recommendation_symmetry": False}, {"batch_actions_allowed": True}, {"promotion_boundary": "DNA_CANDIDATE"},
                 {"freshness": {"stale_on_corpus_growth": True}}, {"reason": {"min_chars": {"APPROVED": 5}}},
                 {"ordering": {"reject": ["pattern_id"]}}, {"duplicate_disposition": "SUPERSEDED"}):
@@ -947,7 +949,7 @@ def test_cli_commands_read_only_and_decide_exit_codes(bench, monkeypatch, capsys
 from src.intelligence.formal_review import validation as V  # noqa: E402
 
 EXPECTED_DIGESTS = {"decision": DECISION_POLICY.digest(), "evaluation": "1a8443098f64d679", "recommendation": "0a979d8421a01d08",
-                    "shadow_review": "e6f5094cacef6fec", "replay": "197db7c73eb0db77", "formal_review": "cca7b43627b9a355"}
+                    "shadow_review": "e6f5094cacef6fec", "replay": "197db7c73eb0db77", "formal_review": "d2fb015ca827dd15"}
 MARKERS = ["HEAD", "POLICY", "BASELINE", "BUILD", "DETERMINISM", "QUEUE", "REPLAY", "FRESHNESS", "SIBLINGS", "DRY_RUN",
            "SYMMETRY", "REOPEN", "METADATA", "SAFETY", "VALIDATION_OK"]
 
@@ -1047,10 +1049,10 @@ def test_validation_driver_replay_age_warning_and_c3_are_reported(tmp_path, caps
 
 def test_validation_cli_main_arguments_and_exit_code(bench, monkeypatch, capsys):
     monkeypatch.setattr(V, "RealDataPacketValidation", lambda root, repo, **kw: _Injected(root, repo, bench, **kw))
-    code = V.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+    code = V.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
                    "--expect-evaluation", "1a8443098f64d679"])
     out = capsys.readouterr().out
-    assert code == 0 and "::P395_VALIDATION_OK::" in out and "formal_review_expected=cca7b43627b9a355" in out
+    assert code == 0 and "::P395_VALIDATION_OK::" in out and "formal_review_expected=d2fb015ca827dd15" in out
     monkeypatch.setattr(V, "RealDataPacketValidation", lambda root, repo, **kw: _Injected(root, repo, bench, **kw))
     assert V.main(["--data-root", str(bench.root), "--skip-git", "--expect-replay", "badbadbadbadbad0"]) == 4
 
@@ -1327,7 +1329,7 @@ class _InjectedPilot(PILOT.CandidateOnePilot):
 def test_pilot_cli_main_wires_arguments(bench, monkeypatch, capsys):
     _InjectedPilot.bench = bench
     monkeypatch.setattr(PILOT, "CandidateOnePilot", _InjectedPilot)
-    code = PILOT.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+    code = PILOT.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
                        "--historical-head", "cpt_4d2f4477a946c17e", "--actor", "P395_HUMAN_PILOT_PREP"])
     out = capsys.readouterr().out
     assert code == 0 and "::P395C_PILOT_OK::" in out and "QUEUE_HEAD_CHANGED=true" in out
@@ -1609,13 +1611,13 @@ def test_execute_cli_main_wires_arguments_and_refuses_other_actions(tmp_path, mo
     refused = _frozen_bench(tmp_path / "refused")
     _InjectedExecutor.bench = refused
     monkeypatch.setattr(EXEC, "CandidateOneExecutor", _InjectedExecutor)
-    argv = ["--data-root", str(refused.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+    argv = ["--data-root", str(refused.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
             "--pattern", FROZEN, "--actor", EXEC.FROZEN_ACTOR, "--confirm", EXEC.FROZEN_CONFIRM]
     assert EXEC.main(argv + ["--action", "approve"]) == 4
     assert "reason=ACTION_NOT_THIS_PILOT" in capsys.readouterr().out and len(refused.decisions()) == 0
     accepted = _frozen_bench(tmp_path / "accepted")
     _InjectedExecutor.bench = accepted
-    code = EXEC.main(["--data-root", str(accepted.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+    code = EXEC.main(["--data-root", str(accepted.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
                       "--pattern", FROZEN, "--action", "reject", "--actor", EXEC.FROZEN_ACTOR,
                       "--confirm", EXEC.FROZEN_CONFIRM])
     out = capsys.readouterr().out
@@ -1764,7 +1766,7 @@ def test_next_candidate_cli_main_wires_arguments(tmp_path, monkeypatch, capsys):
     _InjectedNext.bench = b
     monkeypatch.setattr(NEXT, "NextCandidateReview", _InjectedNext)
     capsys.readouterr()
-    code = NEXT.main(["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+    code = NEXT.main(["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
                       "--expect-decided", FROZEN, "--reaudit-pattern", FROZEN,
                       "--reaudit-decision", row["decision_id"], "--reaudit-state", REJECTED,
                       "--reaudit-record-hash", row["record_hash"]])
@@ -2057,9 +2059,14 @@ def test_execution_session_audits_the_global_chain_and_the_pattern_head(tmp_path
     assert "audit_PREVIOUS_RECORD_HASH_IS_GLOBAL_TAIL=OK" in out and "audit_SEQUENCE_IS_NEXT=OK" in out
     # 同じ pattern への 2 度目（KEEP_REVIEWING → KEEP_REVIEWING）は pattern head を previous として引き継ぐ
     capsys.readouterr()
+    code_refused, out_refused = _run_session(b, capsys, "pT", "keep-reviewing", 2, reason=REASON_KEEP,
+                                             expect_current_state=KEEP_REVIEWING)
+    assert code_refused == 4 and "reason=TARGET_DEFERRED_KEEP_REVIEWING" in out_refused   # 既定: deferred は target 不可
+    assert "::P395X_STAGE2_WRITE::" not in out_refused and len(b.decisions()) == 2
     code2, out2 = _run_session(b, capsys, "pT", "keep-reviewing", 2, reason=REASON_KEEP,
-                               expect_current_state=KEEP_REVIEWING)
+                               expect_current_state=KEEP_REVIEWING, allow_deferred=True)    # 明示 opt-in
     assert code2 == 0, out2[-2000:]
+    assert "deferred_target_allowed=True" in out2 and "section=deferred" in out2
     rows = [r.as_dict() for r in b.decisions()]
     assert len(rows) == 3 and rows[2]["previous_state"] == KEEP_REVIEWING
     assert rows[2]["previous_decision_id"] == rows[1]["decision_id"]
@@ -2111,9 +2118,19 @@ def test_execution_session_candidate_two_shaped_rehearsal_and_accidental_rerun(t
     code2, out2 = _run_session(b, capsys, "pT", "keep-reviewing", 1, **kw)          # 事故による再走
     assert code2 == 4 and "DECISION_ROWS_BEFORE_MISMATCH:2!=1" in out2
     assert "::P395X_STAGE2_WRITE::" not in out2 and len(b.decisions()) == 2
-    code3, out3 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw)          # 行数だけ直しても state で止まる
-    assert code3 == 4 and "CURRENT_STATE_MISMATCH:KEEP_REVIEWING!=NONE" in out3
+    code3, out3 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw)          # 行数だけ直しても write 前に止まる
+    assert code3 == 4 and "stage=TARGET" in out3                                    # KEEP_REVIEWING 不変 → deferred（既定は拒否）
+    assert "reason=TARGET_DEFERRED_KEEP_REVIEWING" in out3
     assert "::P395X_STAGE2_WRITE::" not in out3 and len(b.decisions()) == 2
+    kw_allowed = {**kw, "allow_deferred": True}                                       # opt-in しても束縛した期待値で止まる
+    code4, out4 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw_allowed)
+    assert code4 == 4 and "stage=TARGET" in out4                                     # deferred は rank を持たない → rank 束縛が先に落ちる
+    assert "reason=CANDIDATE_HEAD_CHANGED" in out4 or "CURRENT_STATE_MISMATCH:KEEP_REVIEWING!=NONE" in out4
+    assert "::P395X_STAGE2_WRITE::" not in out4 and len(b.decisions()) == 2
+    kw_state = {k: v for k, v in kw_allowed.items() if k != "require_queue_rank"}        # rank 束縛を外すと state で止まる
+    code5, out5 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw_state)
+    assert code5 == 4 and "CURRENT_STATE_MISMATCH:KEEP_REVIEWING!=NONE" in out5
+    assert "::P395X_STAGE2_WRITE::" not in out5 and len(b.decisions()) == 2
 
 
 def test_execution_session_has_no_candidate_specific_constants_and_no_batch_interface():
@@ -2139,7 +2156,7 @@ def test_execution_session_cli_main_wires_arguments_and_rejects_unknown_facts(tm
     b = Bench(tmp_path / "ok")
     _InjectedSession.bench = b
     monkeypatch.setattr(EXECUTE, "FormalExecutionSession", _InjectedSession)
-    base = ["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "cca7b43627b9a355",
+    base = ["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
             "--pattern", "pR", "--action", "reject", "--actor", HUMAN_ACTOR, "--reason", REASON_REJECT,
             "--confirm", "CONFIRM REJECTED pR", "--expect-rows-before", "0", "--expect-current-state", "NONE",
             "--expect-machine-recommendation", REJECT_RECOMMENDED, "--require-queue-rank", "1"]

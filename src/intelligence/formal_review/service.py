@@ -3,6 +3,10 @@
 
 唯一の mutating path: FormalReviewGuard → DecisionRequest → DecisionService.validate → DecisionService.decide
 → DecisionStore.append。service 自身も guard も DecisionStore に触れない。derived 出力は compass_formal_review/ のみ。
+
+queue progression（1.1.0）: population → packet 構築 → progression 分類（progression.py・read-only）→
+primary_for_queue → order_queue。head が KEEP_REVIEWING で review-relevant evidence が不変な candidate は
+ranked primary から外れ queue["deferred"] に載る（presentation suppression のみ。decide は引き続き可能）。
 """
 from __future__ import annotations
 
@@ -37,6 +41,13 @@ from .metrics import assert_operational_only, compute_metrics
 from .ordering import order_queue
 from .packet import build_packet, shadow_history_block
 from .population import select_population
+from .progression import (
+    QS_DEFERRED,
+    ProgressionResult,
+    classify_from_packet,
+    deferred_row,
+    progression_counts,
+)
 from .reopen import reopen_eligibility
 from .store import FormalReviewStore, formal_review_root
 from .warnings import compute_warnings
@@ -196,6 +207,26 @@ class FormalReviewService:
                 "metrics": metrics, "stress": dict(replay["stress"].get(pattern_id) or {}),
                 "current_compatible": not reasons, "compatibility_reasons": reasons}
 
+    # ------------------------------------------------------------- queue progression（read-only）
+    def _historical_replay_summary(self, run_id: str) -> Optional[Dict[str, Any]]:
+        """reviewed Decision に束縛された replay run の summary.json を読む（無い / 壊れている → None）。"""
+        try:
+            summary = ReplayStore(replay_root(self.root)).read_json(str(run_id), REPLAY_SUMMARY_FILE)
+        except (OSError, ValueError):
+            return None
+        return summary or None
+
+    def progression_for(self, pattern_id: str, packet: Mapping[str, Any], inputs: FormalReviewInputs) -> ProgressionResult:
+        return classify_from_packet(
+            packet=packet, head=inputs.decision_heads.get(pattern_id),
+            current_material_digest=str(inputs.material.get(pattern_id, "")),
+            dna_comparison=inputs.dna_comparisons.get(pattern_id) or {}, conflicts=inputs.conflicts.get(pattern_id) or [],
+            historical_replay_loader=self._historical_replay_summary, decision_records=inputs.decision_records)
+
+    def progression_map(self, pattern_ids: Sequence[str], packets: Mapping[str, Mapping[str, Any]],
+                        inputs: FormalReviewInputs) -> Dict[str, ProgressionResult]:
+        return {pid: self.progression_for(pid, packets[pid], inputs) for pid in pattern_ids if pid in packets}
+
     # ------------------------------------------------------------- packets
     def assemble_packet(self, pattern_id: str, inputs: FormalReviewInputs, groups: Mapping[str, Sequence[str]],
                         built_at: str) -> Dict[str, Any]:
@@ -249,7 +280,13 @@ class FormalReviewService:
         packets = {pid: self.assemble_packet(pid, inputs, groups, built_at)
                    for pid in sorted(set(population.primary) | set(population.reopen_eligible) | set(population.context)
                                      | set(population.decided))}
-        queue_sections = order_queue(packets, population.primary, population.reopen_eligible, self.policy)
+        # queue progression: KEEP_REVIEWING で不変な candidate だけ ranked primary から外す（packet は作る・decide は可能）
+        progression = self.progression_map(population.primary, packets, inputs)
+        deferred_ids = [pid for pid in population.primary if progression[pid].queue_status == QS_DEFERRED]
+        primary_for_queue = [pid for pid in population.primary if pid not in set(deferred_ids)]
+        queue_sections = order_queue(packets, primary_for_queue, population.reopen_eligible, self.policy)
+        deferred_rows = [deferred_row(packets[pid], progression[pid]) for pid in deferred_ids]
+        progression_rows = {pid: progression[pid].as_dict() for pid in sorted(progression)}
         context_rows = [{"pattern_id": pid, "recommendation": packets[pid]["recommendation"]["recommendation"],
                          "decision_state": packets[pid]["decision"]["current_state"],
                          "sibling_group_key": packets[pid]["group"]["sibling_group_key"], "role": "CONTEXT_ONLY"}
@@ -262,7 +299,8 @@ class FormalReviewService:
                         for pid in population.decided]
         metrics = compute_metrics(population=population.as_dict(), packets=packets, decision_states=inputs.decision_states,
                                   decision_records=inputs.decision_records, corpus_eligible=int(inputs.corpus.eligible),
-                                  replay_captured_eligible=int((inputs.replay or {}).get("captured_eligible", 0) or 0))
+                                  replay_captured_eligible=int((inputs.replay or {}).get("captured_eligible", 0) or 0),
+                                  progression=progression_counts(progression))
         assert_operational_only(metrics)
         policies = {name: {"version": v, "digest": d} for name, v, d in
                     ((k, self.policy_versions()[k], self.policy_digests()[k]) for k in self.policy_digests())}
@@ -279,16 +317,20 @@ class FormalReviewService:
                        "replay_run_policy_digests": dict((inputs.replay or {}).get("policy_digests") or {}),
                        "replay_run_replay_policy": dict((inputs.replay or {}).get("replay_policy") or {})},
             "population": population.as_dict(),
+            "progression": {"deferred": list(deferred_ids), "primary_for_queue": list(primary_for_queue),
+                            "statuses": {pid: progression[pid].queue_status for pid in sorted(progression)}},
             "packets": {pid: {"packet_id": p["identity"]["packet_id"], "packet_evidence_digest": p["freshness"]["packet_evidence_digest"],
                               "material_digest": p["freshness"]["material_digest"]} for pid, p in sorted(packets.items())},
             "boundaries": list(BOUNDARIES),
         }
         queue = {"built_at": built_at, "sections": queue_sections, "context": context_rows, "decided": decided_rows,
+                 "deferred": deferred_rows, "progression": progression_rows,
                  "section_order": list(queue_sections), "policies": policies, "boundaries": list(BOUNDARIES)}
         summary = {"built_at": built_at, "metrics": metrics, "population": population.as_dict(), "policies": policies,
                    "corpus_eligible": int(inputs.corpus.eligible), "boundaries": list(BOUNDARIES)}
         self.store.write_build(manifest=manifest, queue=queue, summary=summary, packets=packets)
         return {"built_at": built_at, "packets": len(packets), "primary": len(population.primary),
+                "primary_for_queue": len(primary_for_queue), "deferred": len(deferred_ids),
                 "context": len(population.context), "reopen_eligible": len(population.reopen_eligible),
                 "sections": {k: len(v) for k, v in queue_sections.items()}, "metrics": metrics,
                 "mutation": "DERIVED_ONLY (compass_formal_review/)"}
@@ -311,6 +353,7 @@ class FormalReviewService:
         queue = self.store.queue()
         listed = {row["pattern_id"] for rows in (queue.get("sections") or {}).values() for row in rows}
         listed |= {row["pattern_id"] for row in queue.get("decided") or []}      # APPROVED → supersede / retire、REJECTED → reopen 判定
+        listed |= {row["pattern_id"] for row in queue.get("deferred") or []}     # deferred KEEP_REVIEWING は提示だけ抑止・決定は可能
         if pattern_id not in listed:
             raise CandidateMissing(f"pattern {pattern_id} is context-only or not in the built queue; it cannot be decided here")
         inputs = self.load_inputs()                                   # 1-2: store corrupt → 例外で fail closed

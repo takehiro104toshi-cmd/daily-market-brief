@@ -473,3 +473,93 @@ human formal decision reason（formal Decision の理由本文。本節にのみ
 | 2 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING | `cdc_0a420b63cc1257ed` | `179146cd` | §21 |
 
 chain: seq 2 の `previous_record_hash` = seq 1 の record hash。全行 HUMAN / FORMAL / NOT_PROMOTED。
+
+## 22. Queue Progression v1（KEEP_REVIEWING の提示制御・formal_review policy 1.1.0・凍結）
+
+Phase 3.9.5 は OPEN のまま。§20.8 / §21 で未解決だった「KEEP_REVIEWING が primary queue に残り続け、次の
+fresh build でも rank 1 に現れ得る」問題を、監督者採択 **D — zero-new-storage hybrid progression model +
+queue post-filter（packet 構築後・`order_queue()` 前）** で解決する。実装 module は
+`src/intelligence/formal_review/progression.py`（**READ-ONLY**。Decision / Shadow / DNA / corpus / derived のどれにも
+書かない）。`FormalReviewService.build()` の流れは
+`population → packet 構築 → progression 分類 → primary_for_queue → order_queue` となる。
+
+### 22.1 Decision state と derived queue status の区別（最重要）
+
+| 概念 | 値 | 権威 | 変更可否 |
+|---|---|---|---|
+| **Decision state**（Phase 3.9.1・凍結） | KEEP_REVIEWING / APPROVED / REJECTED / REOPENED_FOR_REVIEW / SUPERSEDED / RETIRED | `compass_decisions/decisions.jsonl`（append-only・hash chain） | **本変更で 1 つも増減しない**。transition 表も不変 |
+| **derived queue status**（1.1.0・新設） | NOT_APPLICABLE / DEFERRED_UNCHANGED_KEEP_REVIEWING / REENTERED_KEEP_REVIEWING / PROGRESSION_UNVERIFIABLE | `compass_formal_review/queue.json`（derived・rebuildable） | build ごとに再計算。store も enum も持たない |
+
+KEEP_REVIEWING は **NON-TERMINAL のまま**。progression は「今すぐ ranked primary に見せるか」だけを決める
+**presentation suppression** であり、deferred の pattern も凍結 Decision model の下で合法に decide できる
+（`FormalReviewService.decide()` は queue["deferred"] の pattern を tracked candidate として解決する。
+`FormalReviewGuard` は弱めていない）。cooldown なし・ad hoc な rank skip なし・履歴の書き換えなし。
+
+### 22.2 review-relevant change（M1〜M4・凍結）
+
+baseline は **その pattern の最新 KEEP_REVIEWING Decision row だけ**（新 metadata は追加しない。zero-new-storage）。
+
+| 成分 | reviewed 側（Decision row） | current 側 | 変化 → |
+|---|---|---|---|
+| **M1 machine evidence** | `metadata.material_digest` | 現在の `material_digest`（Phase 3.9.3 凍結 semantics・拡張しない） | `M1_MATERIAL_DIGEST_CHANGED` |
+| **M2 group / sibling** | `metadata.group_state_digest` | 現在 packet の `group.group_state_digest` | `M2_GROUP_STATE_CHANGED`（+ member の formal Decision sequence が reviewed head より新しければ `SIBLING_DECIDED_SINCE_REVIEW`）。sibling evidence drift による過提示は許容 |
+| **M3 replay review view** | `metadata.replay_run_id` の run の summary から {stability_class, reversal_count, reject_driver, recovery_count, current_recommendation} | 現在の **current-compatible** replay の同 5 field | `M3_REPLAY_REVIEW_VIEW_CHANGED:<field>`。run id / digest だけの違いでは再入しない |
+| **M4 DNA relation** | Decision `evidence` snapshot の {dna_classification, dna_best_rule_id, conflict_rule_ids} | dna_comparisons 末尾 + conflicts（evidence snapshot と同じ導出） | `M4_DNA_RELATION_CHANGED:<field>` |
+
+### 22.3 非 material noise（単独では再入しない）
+
+generated timestamp / local path / packet_id の変化 / corpus 件数・milestone の増加 / evidence age / replay run id・
+run digest の変化 / 表現・順序だけの差 / 等価な再生成 / formal head が KEEP_REVIEWING になったこと自体。
+**`packet_evidence_digest` は trigger に使わない**（Decision / freshness block が write 後に変わるため構造的に不適）。
+
+### 22.4 fail closed = 見せる
+
+DEFERRED は **不変を積極的に確定できたときだけ**。baseline 欠落（material / group）・reviewed replay run の
+未束縛・不読・pattern 不在・現在 replay の不在・非互換・evidence snapshot の不完全（`pattern_found=false`、
+field 欠落、conflict 行があるのに rule id が無い）はすべて `PROGRESSION_UNVERIFIABLE` として
+**ranked primary に残す**（理由 code を `unverifiable_reasons` に出す）。Decision chain の破損は従来どおり
+DecisionStore が build を失敗させる。
+
+### 22.5 出力・監査面
+
+- `queue["deferred"]`（非 ranked・文脈のみ・`role=DEFERRED_NON_RANKED`）と `queue["progression"]`（primary 全 pattern の
+  status / 理由 code / reviewed・current digest / run id）。ranked section（REJECT → APPROVE → REOPEN）の
+  順序 semantics は不変。REVISIT section も再入優先も無い（再入は通常順序）。
+- metrics: `suppressed_keep_reviewing_count` / `reentered_keep_reviewing_count` / `progression_unverifiable_count`。
+- CLI `list` / `status`、`next_candidate.py`（`::P395N_PROGRESSION::`・`--expect-deferred`・deferred が ranked に
+  混ざれば `DEFERRED_PATTERN_IN_PRIMARY_QUEUE` で fail closed）、`validation.py`（determinism に deferred list と
+  progression map を含める）。`execute.py` は deferred target を既定で拒否（`TARGET_DEFERRED_KEEP_REVIEWING`）し、
+  `--allow-deferred` の明示 opt-in でのみ扱う。人間 reason 本文・PDF 名・原文・path は一切出さない。
+
+### 22.6 formal_review policy version bump（必須訂正）
+
+queue progression は「Human Formal Review candidate を提示するか defer するか」を決める **formal-review policy
+挙動**であるため、6 層のうち **formal_review だけ** を bump し、progression semantics を digest に含める。
+第 7 の policy 層は作らない。
+
+| layer | version | digest | 変更 |
+|---|---|---|---|
+| decision | 1.0.0 | `0c54ec01e2a251d9` | UNCHANGED |
+| evaluation | 1.0.0 | `1a8443098f64d679` | UNCHANGED |
+| recommendation | 1.0.0 | `0a979d8421a01d08` | UNCHANGED |
+| shadow_review | 1.0.0 | `e6f5094cacef6fec` | UNCHANGED |
+| replay | 1.1.0 | `197db7c73eb0db77` | UNCHANGED |
+| **formal_review** | **1.0.0 → 1.1.0** | **`cca7b43627b9a355` → `d2fb015ca827dd15`** | **CHANGED**（canonical policy serialization が計算） |
+
+### 22.7 歴史的 Decision との互換（migration なし）
+
+Candidate #1（`cdc_884ab4cafff2dbf3` / REJECTED）と Candidate #2（`cdc_0a420b63cc1257ed` / KEEP_REVIEWING）の row は
+**書き換えない**。両 row の `metadata.policy_digests` は 1.0.0 digest `cca7b43627b9a355` に束縛されたままで、これは
+正しい provenance である（`config.SUPERSEDED_FORMAL_REVIEW_DIGESTS` に記録。policy digest には含めない）。
+`next_candidate.py` の row 再監査は formal_review layer についてのみ「現行 digest または歴史的 digest」を認め、
+他 5 層は現行一致を要求する。Decision chain は migration 無しで VALID。progression の baseline は Candidate #2 の
+既存 metadata（material `8f410ca4e7da1e58` / group `037f307fe6fd2efb` / replay run `crp_2530396a5a3b8fb7`）と
+Decision evidence snapshot（DNA relation）をそのまま消費する。
+
+### 22.8 Candidate #2 の期待挙動（Windows 実データ・未実行）
+
+review-relevant change が無ければ `cpt_8c96e2070cd4c702` は formal_head `KEEP_REVIEWING` /
+queue_status `DEFERRED_UNCHANGED_KEEP_REVIEWING` / ranked primary に無し / queue["deferred"] に有り /
+`reentry_triggered=false`。Decision state・履歴は不変で新 Decision は書かれない。次の primary candidate が rank 1
+になり得るが、その review / Decision は本変更では**行わない**。Candidate #1 は REJECTED / reopen 挙動のみ
+（`reopen.py` 不変）。

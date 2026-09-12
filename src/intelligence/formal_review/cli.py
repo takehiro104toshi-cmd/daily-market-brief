@@ -80,10 +80,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             return EXIT_OK
         if args.command == "list":
             queue = service.store.queue()
+            progression = dict(queue.get("progression") or {})
             _dump({"sections": {k: [{f: r.get(f) for f in ("queue_rank", "pattern_id", "packet_id", "recommendation",
                                                             "decision_state", "stability_class", "allowed_next_actions",
                                                             "warnings")} for r in rows]
                                 for k, rows in (queue.get("sections") or {}).items()},
+                   "deferred": [{f: r.get(f) for f in ("pattern_id", "packet_id", "recommendation", "decision_state",
+                                                       "queue_status", "suppression_reason", "allowed_next_actions")}
+                                for r in queue.get("deferred") or []],
+                   "deferred_count": len(queue.get("deferred") or []),
+                   "progression": {pid: {f: p.get(f) for f in ("queue_status", "reentry_reasons", "unverifiable_reasons",
+                                                               "reentry_triggered", "sibling_decided_since_review")}
+                                   for pid, p in progression.items()},
                    "context": queue.get("context"), "built_at": queue.get("built_at"), "mutation": "NONE"})
             return EXIT_OK
         if args.command == "show":
@@ -107,7 +115,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             return EXIT_OK
         if args.command == "status":
             summary = service.store.summary()
+            queue = service.store.queue()
             _dump({"metrics": summary.get("metrics"), "population": summary.get("population"),
+                   "deferred_count": len(queue.get("deferred") or []),
+                   "progression_statuses": {pid: p.get("queue_status") for pid, p in (queue.get("progression") or {}).items()},
                    "built_at": summary.get("built_at"), "decision_rows": len(service.decision_store.records()),
                    "mutation": "NONE"})
             return EXIT_OK

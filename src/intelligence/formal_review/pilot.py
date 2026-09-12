@@ -188,6 +188,7 @@ class CandidateOnePilot:
         _emit("approve_candidates", (pop.get("by_recommendation") or {}).get(APPROVE_RECOMMENDED, 0))
         _emit("reject_candidates", (pop.get("by_recommendation") or {}).get(REJECT_RECOMMENDED, 0))
         _emit("context_patterns", len(pop.get("context") or []))
+        _emit("deferred_candidates", len(queue.get("deferred") or []))
         inputs = manifest.get("inputs") or {}
         _emit("replay_run_id", inputs.get("replay_run_id"))
         _emit("replay_run_digest", inputs.get("replay_run_digest"))

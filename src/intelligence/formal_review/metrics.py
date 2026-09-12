@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from statistics import median
-from typing import Any, Dict, List, Mapping, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from .config import DECISION_STATES
 
@@ -11,7 +11,8 @@ FORBIDDEN_METRIC_WORDS = ("accuracy", "precision", "recall", "hit_rate", "hit ra
 
 def compute_metrics(*, population: Mapping[str, Any], packets: Mapping[str, Mapping[str, Any]],
                     decision_states: Mapping[str, str], decision_records: Sequence[Mapping[str, Any]],
-                    corpus_eligible: int, replay_captured_eligible: int) -> Dict[str, Any]:
+                    corpus_eligible: int, replay_captured_eligible: int,
+                    progression: Optional[Mapping[str, int]] = None) -> Dict[str, Any]:
     primary = list(population.get("primary") or [])
     outcomes = {state: 0 for state in DECISION_STATES}
     for rec in decision_records:
@@ -45,6 +46,10 @@ def compute_metrics(*, population: Mapping[str, Any], packets: Mapping[str, Mapp
         "reopen_eligible_count": len(population.get("reopen_eligible") or []),
         "median_candidate_age_eligible_docs": int(median(ages)) if ages else None,
         "replay_evidence_age_eligible_docs": max(0, int(corpus_eligible) - int(replay_captured_eligible)) if replay_captured_eligible else None,
+        # queue progression（1.1.0）: 提示制御の運用件数（Decision state ではない）
+        "suppressed_keep_reviewing_count": int((progression or {}).get("suppressed_keep_reviewing_count", 0) or 0),
+        "reentered_keep_reviewing_count": int((progression or {}).get("reentered_keep_reviewing_count", 0) or 0),
+        "progression_unverifiable_count": int((progression or {}).get("progression_unverifiable_count", 0) or 0),
     }
 
 

@@ -1078,7 +1078,7 @@ compass_replay:
 # 値を変えるときは policy_version を必ず上げる（同 version で digest が変わると build を拒否）。
 # APPROVE_RECOMMENDED ≠ APPROVED / REJECT_RECOMMENDED ≠ REJECTED / APPROVED ≠ PROMOTED_TO_DNA。
 compass_formal_review:
-  policy_version: "1.0.0"
+  policy_version: "1.1.0"                    # 1.1.0: queue progression（KEEP_REVIEWING の defer / re-entry）を formal_review policy に含める
   packet_schema_version: "1.0.0"
   recommendation_symmetry: true              # APPROVED は APPROVE_RECOMMENDED のみ・REJECTED は REJECT_RECOMMENDED のみ（凍結）
   sibling_guard:
@@ -1106,3 +1106,14 @@ compass_formal_review:
     recent_transition: true
     oscillating: true
     insufficient_history: true
+  progression:                               # queue progression v1（derived queue status。Decision state ではない）
+    target_head: "KEEP_REVIEWING"            # 対象は formal head が KEEP_REVIEWING の primary candidate だけ
+    unchanged_behavior: "DEFER_FROM_RANKED_PRESENTATION"   # review-relevant evidence 不変 → ranked primary から外し queue.deferred へ
+    reentry_components: ["M1_MATERIAL_DIGEST", "M2_GROUP_STATE_DIGEST", "M3_REPLAY_REVIEW_VIEW", "M4_DNA_RELATION"]
+    replay_review_fields: ["stability_class", "reversal_count", "reject_driver", "recovery_count", "current_recommendation"]
+    dna_relation_fields: ["dna_classification", "best_rule_id", "conflict_rule_ids"]
+    unverifiable_behavior: "VISIBLE_NOT_SUPPRESSED"        # 検証不能なら抑止しない（fail closed = 見せる）
+    reentry_ordering: "NORMAL"               # 再入は通常の recommendation ordering（優先も REVISIT section も無い）
+    cooldown_eligible_docs: 0                # cooldown なし
+    new_decision_state: false                # 新 Decision state を作らない
+    automatic_decision: false                # progression は Decision を書かない

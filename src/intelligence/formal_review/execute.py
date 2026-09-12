@@ -11,6 +11,8 @@ group の各 semantics は一切変更せず、呼び出し側が束縛した「
 authoritative write path（`FormalReviewGuard → DecisionRequest → DecisionService.validate → decide →
 DecisionStore.append`）をそのまま使う。candidate 固有の凍結値は持たない（すべて引数）。
 
+deferred KEEP_REVIEWING（queue progression 1.1.0）は既定で target にできない（`TARGET_DEFERRED_KEEP_REVIEWING`）。
+意図的に扱う場合だけ `--allow-deferred` を明示する（通常の実行 semantics は変えない）。
 順序: ARGUMENTS → HEAD → POLICY → DECISION_CHAIN → BASELINE → FRESH_BUILD → TARGET → PACKET_FRESHNESS →
 EXPECTED_FACTS → GROUP_CONTEXT → STAGE1_DRY_RUN → STAGE2_CONFIRM → STAGE2_WRITE → DECISION_AUDIT → SAFETY → STOP。
 stage 1 と stage 2 は同一 packet（間で rebuild しない）。real write は生涯 1 回だけ試み、失敗しても自動再試行せず
@@ -49,6 +51,7 @@ WRITE_RESPONSE_FAILED = "POSSIBLE_WRITE_SUCCEEDED_RESPONSE_FAILED"
 WRITE_FAILED_NO_ROW = "WRITE_FAILED_NO_ROW"
 AMBIGUOUS_WRITE = "AMBIGUOUS_WRITE_RESULT"
 GROUP_CONTEXT_CHANGED = "HUMAN_REVIEW_EVIDENCE_CHANGED_GROUP_CONTEXT"
+TARGET_DEFERRED = "TARGET_DEFERRED_KEEP_REVIEWING"
 
 #: `--expect-fact` の allowlist。任意の object path / 式は受け付けない（型付きの取り出しだけ）。
 FACT_EXTRACTORS: Dict[str, Tuple[str, Callable[[Mapping[str, Any]], Any]]] = {
@@ -137,7 +140,7 @@ class FormalExecutionSession:
                  require_queue_rank: Optional[int] = None, expect_group_state_digest: str = "",
                  expect_group_material_digest: str = "",
                  expect_facts: Optional[Mapping[str, Any]] = None, acknowledge_siblings: Sequence[str] = (),
-                 require_commit: str = "",
+                 allow_deferred: bool = False, require_commit: str = "",
                  expected_digests: Optional[Mapping[str, str]] = None, skip_git: bool = False,
                  corpus_state_resolver: Optional[Any] = None, clock: Optional[Any] = None) -> None:
         self.pattern_id = str(pattern_id or "").strip()
@@ -153,6 +156,7 @@ class FormalExecutionSession:
         self.expect_group_material_digest = str(expect_group_material_digest or "").strip()
         self.expect_facts = dict(expect_facts or {})
         self.acknowledge_siblings = tuple(str(s).strip() for s in acknowledge_siblings if str(s).strip())
+        self.allow_deferred = bool(allow_deferred)
         kw: Dict[str, Any] = {"require_commit": require_commit, "expected_digests": expected_digests,
                               "actor": self.actor, "skip_git": skip_git}
         if corpus_state_resolver is not None:
@@ -204,6 +208,7 @@ class FormalExecutionSession:
         _emit("expect_group_state_digest", self.expect_group_state_digest or "NOT_BOUND")
         _emit("expect_facts", {k: self.expect_facts[k] for k in sorted(self.expect_facts)})
         _emit("acknowledge_siblings", list(self.acknowledge_siblings))
+        _emit("allow_deferred", self.allow_deferred)
         self.check("ARGUMENTS", bool(self.pattern_id) and "," not in self.pattern_id, "ONE_PATTERN_PER_INVOCATION")
         self.check("ARGUMENTS", bool(self.decision_type), f"UNKNOWN_ACTION:{self.action}")
         self.check("ARGUMENTS", bool(self.actor), "ACTOR_REQUIRED")
@@ -268,6 +273,12 @@ class FormalExecutionSession:
         sections = dict(queue.get("sections") or {})
         rows = [r for name in PRIMARY_SECTIONS for r in sections.get(name, [])]
         row = next((r for r in rows if str(r.get("pattern_id")) == self.pattern_id), None)
+        deferred = next((r for r in queue.get("deferred") or [] if str(r.get("pattern_id")) == self.pattern_id), None)
+        if row is None and deferred is not None:
+            _emit("target_queue_status", deferred.get("queue_status"))
+            self.check("TARGET", self.allow_deferred, TARGET_DEFERRED)           # 既定: deferred は target にしない
+            _emit("deferred_target_allowed", True)
+            row = {**deferred, "queue_rank": None, "section": "deferred"}
         self.check("TARGET", row is not None, "TARGET_NOT_IN_PRIMARY_QUEUE")
         self.pilot.row = dict(row)
         _emit("queue_rank", row.get("queue_rank"))
@@ -276,7 +287,7 @@ class FormalExecutionSession:
         _emit("pattern_type", row.get("pattern_type"))
         _emit("recommendation", row.get("recommendation"))
         if self.require_queue_rank is not None:
-            self.check("TARGET", int(row.get("queue_rank", 0)) == int(self.require_queue_rank), "CANDIDATE_HEAD_CHANGED")
+            self.check("TARGET", int(row.get("queue_rank") or 0) == int(self.require_queue_rank), "CANDIDATE_HEAD_CHANGED")
         if self.expect_recommendation:
             self.check("TARGET", str(row.get("recommendation")) == self.expect_recommendation, "RECOMMENDATION_CHANGED")
         packet = self.pilot.service().store.packet(self.pattern_id)
@@ -567,6 +578,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help="key=value from the frozen allowlist (repeatable)")
     parser.add_argument("--acknowledge-sibling", action="append", default=[], dest="acknowledge",
                         help="sibling pattern acknowledged for the frozen C3 rule (repeatable)")
+    parser.add_argument("--allow-deferred", action="store_true", dest="allow_deferred",
+                        help="explicit opt-in to target a deferred KEEP_REVIEWING pattern (default: refused)")
     parser.add_argument("--skip-git", action="store_true", help="skip repository identity checks (tests only)")
     args = parser.parse_args(argv)
     from .cli import resolve_root
@@ -585,7 +598,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         expect_current_state=args.expect_current_state, expect_recommendation=args.expect_machine_recommendation,
         require_queue_rank=args.require_queue_rank, expect_group_state_digest=args.expect_group_state_digest,
         expect_group_material_digest=args.expect_group_material_digest,
-        expect_facts=facts, acknowledge_siblings=tuple(args.acknowledge), require_commit=args.require_commit,
+        expect_facts=facts, acknowledge_siblings=tuple(args.acknowledge), allow_deferred=bool(args.allow_deferred),
+        require_commit=args.require_commit,
         skip_git=bool(args.skip_git),
         expected_digests={layer: getattr(args, f"expect_{layer}") for layer in POLICY_LAYERS})
     return session.run_all()

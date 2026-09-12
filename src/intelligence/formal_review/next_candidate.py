@@ -12,6 +12,9 @@ pilot.py の section を composition で再利用し、本 module 固有の読�
   および任意で既存 1 行の再監査（decision_id / pattern / state / record hash / packet 束縛 / 6 層 policy / replay 束縛）。
 - QUEUE_EXCLUSION: 既決 pattern が primary queue に残っていないこと（残っていれば
   `DECIDED_PATTERN_STILL_IN_PRIMARY_QUEUE` で fail closed）。`--expect-decided` は decided section での在席も要求する。
+- PROGRESSION（1.1.0）: deferred KEEP_REVIEWING が ranked primary に混ざっていないこと
+  （混ざれば `DEFERRED_PATTERN_IN_PRIMARY_QUEUE`）。`--expect-deferred` は queue["deferred"] での在席も要求する。
+  progression status / re-entry reason / unverifiable reason を pattern ごとに出す（reason 本文は無い）。
 
 その後は fresh build から **現在の queue rank 1 を自力で特定**して 1 件だけ提示し、機械整合 action と
 KEEP_REVIEWING の dry-run（技術的証明のみ）を行い、人間判断は PENDING のまま残す。
@@ -29,6 +32,7 @@ from ..decision.models import record_hash_for
 from ..decision.store import DecisionStoreCorrupt
 from ..evaluation.store import EvaluationStoreCorrupt
 from ..shadow_review.events import ShadowReviewStoreCorrupt
+from .config import SUPERSEDED_FORMAL_REVIEW_DIGESTS
 from .errors import FormalReviewError
 from .ordering import SECTION_APPROVE, SECTION_REJECT, SECTION_REOPEN
 from .pilot import CandidateOnePilot, PilotFailure, _emit as emit_pair
@@ -38,6 +42,7 @@ EXIT_OK, EXIT_FORMAL_REVIEW, EXIT_REVIEW, EXIT_UNEXPECTED = 0, 3, 4, 5
 
 PRIMARY_SECTIONS = (SECTION_REJECT, SECTION_APPROVE, SECTION_REOPEN)
 DECIDED_IN_PRIMARY = "DECIDED_PATTERN_STILL_IN_PRIMARY_QUEUE"
+DEFERRED_IN_PRIMARY = "DEFERRED_PATTERN_IN_PRIMARY_QUEUE"
 
 
 class ReviewFailure(Exception):
@@ -56,6 +61,7 @@ class NextCandidateReview:
 
     def __init__(self, data_root: Path, repo_root: Path, *, require_commit: str = "",
                  expected_digests: Optional[Dict[str, str]] = None, expect_decided: Sequence[str] = (),
+                 expect_deferred: Sequence[str] = (),
                  reaudit: Optional[Dict[str, str]] = None, skip_git: bool = False,
                  corpus_state_resolver: Optional[Any] = None, clock: Optional[Any] = None) -> None:
         kw: Dict[str, Any] = {"require_commit": require_commit, "expected_digests": expected_digests,
@@ -66,6 +72,7 @@ class NextCandidateReview:
             kw["clock"] = clock
         self.pilot = CandidateOnePilot(data_root, repo_root, **kw)
         self.expect_decided = [str(p).strip() for p in expect_decided if str(p).strip()]
+        self.expect_deferred = [str(p).strip() for p in expect_deferred if str(p).strip()]
         self.reaudit = {k: str(v or "") for k, v in dict(reaudit or {}).items()}
         self.t0 = time.perf_counter()
 
@@ -127,6 +134,12 @@ class NextCandidateReview:
         emit_pair("reaudit_metadata", metadata)
         policy_digests = str(metadata.get("policy_digests", ""))
         current = self.pilot.service().policy_digests()
+        bound = {part.split(":", 1)[0]: part.split(":", 1)[1] for part in policy_digests.split(";") if ":" in part}
+        # formal_review だけは歴史的 digest（1.0.0 = cca7b436…）に束縛された row を書き換えずに認める（provenance）。
+        formal_bound = bound.get("formal_review", "")
+        formal_ok = formal_bound == current["formal_review"] or formal_bound in SUPERSEDED_FORMAL_REVIEW_DIGESTS
+        emit_pair("reaudit_formal_review_binding",
+                  "CURRENT" if formal_bound == current["formal_review"] else f"HISTORICAL:{formal_bound}" if formal_ok else "UNKNOWN")
         results = [
             ("DECISION_ID", not self.reaudit.get("decision") or str(row.get("decision_id")) == self.reaudit["decision"]),
             ("DECISION_TYPE", not self.reaudit.get("state") or str(row.get("decision_type")) == self.reaudit["state"]),
@@ -137,7 +150,8 @@ class NextCandidateReview:
             ("PROMOTION_STATUS_NOT_PROMOTED", str(row.get("promotion_status")) == "NOT_PROMOTED"),
             ("PACKET_BINDING_PRESENT", bool(metadata.get("packet_id")) and bool(metadata.get("packet_evidence_digest"))),
             ("MATERIAL_DIGEST_BINDING_PRESENT", bool(metadata.get("material_digest"))),
-            ("SIX_POLICY_LAYERS_BOUND", all(f"{layer}:{current[layer]}" in policy_digests for layer in POLICY_LAYERS)),
+            ("SIX_POLICY_LAYERS_BOUND", all(f"{layer}:{current[layer]}" in policy_digests for layer in POLICY_LAYERS
+                                            if layer != "formal_review") and formal_ok),
             ("REPLAY_BINDING_PRESENT", bool(metadata.get("replay_run_id")) and bool(metadata.get("replay_run_digest"))),
             ("HUMAN_REASON_PRESENT", len(str(row.get("reason") or "").strip()) >= 20),
             ("IDEMPOTENCY_KEY_IS_PACKET", str(row.get("idempotency_key", "")) == str(metadata.get("packet_id", ""))),
@@ -166,6 +180,36 @@ class NextCandidateReview:
             self.check("QUEUE_EXCLUSION", bool(state), "EXPECTED_DECIDED_PATTERN_NOT_IN_DECIDED_CONTEXT")
         emit_pair("queue_exclusion_check", "PASSED")
 
+    def progression(self) -> None:
+        """deferred KEEP_REVIEWING は ranked primary に混ざらない・status と理由を pattern ごとに出す（reason 本文なし）。"""
+        _marker("PROGRESSION")
+        queue = self.pilot.service().store.queue()
+        sections = dict(queue.get("sections") or {})
+        primary = [row["pattern_id"] for name in PRIMARY_SECTIONS for row in sections.get(name, [])]
+        deferred = {str(row.get("pattern_id")): row for row in queue.get("deferred") or []}
+        progression = dict(queue.get("progression") or {})
+        emit_pair("deferred_count", len(deferred))
+        emit_pair("deferred_patterns", sorted(deferred))
+        for pid in sorted(progression):
+            p = progression[pid]
+            emit_pair("progression", {"pattern_id": pid, "formal_head": p.get("formal_head"),
+                                      "queue_status": p.get("queue_status"),
+                                      "reentry_reasons": list(p.get("reentry_reasons") or []),
+                                      "unverifiable_reasons": list(p.get("unverifiable_reasons") or []),
+                                      "sibling_decided_since_review": bool(p.get("sibling_decided_since_review")),
+                                      "in_ranked_primary": pid in primary, "in_deferred": pid in deferred})
+        leaked = sorted(set(primary) & set(deferred))
+        emit_pair("deferred_patterns_in_primary_queue", leaked)
+        self.check("PROGRESSION", not leaked, DEFERRED_IN_PRIMARY)
+        for pattern in self.expect_deferred:
+            row = deferred.get(pattern)
+            emit_pair("expected_deferred", {"pattern_id": pattern, "queue_status": (row or {}).get("queue_status", "ABSENT"),
+                                            "decision_state": (row or {}).get("decision_state", "ABSENT"),
+                                            "in_ranked_primary": pattern in primary, "in_deferred": row is not None})
+            self.check("PROGRESSION", pattern not in primary, DEFERRED_IN_PRIMARY)
+            self.check("PROGRESSION", row is not None, "EXPECTED_DEFERRED_PATTERN_NOT_IN_DEFERRED_QUEUE")
+        emit_pair("progression_check", "PASSED")
+
     # ------------------------------------------------------------- orchestration
     def run_all(self) -> int:
         try:
@@ -179,6 +223,7 @@ class NextCandidateReview:
             _marker("FRESH_BUILD")
             self.pilot.build()
             self.queue_exclusion()
+            self.progression()
             _marker("NEXT_CANDIDATE")
             self.pilot.candidate()
             self.pilot.freshness()
@@ -221,6 +266,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         parser.add_argument(f"--expect-{layer.replace('_', '-')}", default="", dest=f"expect_{layer}")
     parser.add_argument("--expect-decided", action="append", default=[], dest="expect_decided",
                         help="pattern that must be decided and absent from the primary queue")
+    parser.add_argument("--expect-deferred", action="append", default=[], dest="expect_deferred",
+                        help="KEEP_REVIEWING pattern that must be in queue.deferred and absent from ranked primary")
     parser.add_argument("--reaudit-pattern", default="", help="existing decided pattern to re-audit read-only")
     parser.add_argument("--reaudit-decision", default="")
     parser.add_argument("--reaudit-state", default="")
@@ -232,7 +279,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     review = NextCandidateReview(
         resolve_root(args.data_root), Path.cwd(), require_commit=args.require_commit, skip_git=bool(args.skip_git),
         expected_digests={layer: getattr(args, f"expect_{layer}") for layer in POLICY_LAYERS},
-        expect_decided=args.expect_decided,
+        expect_decided=args.expect_decided, expect_deferred=args.expect_deferred,
         reaudit={"pattern": args.reaudit_pattern, "decision": args.reaudit_decision, "state": args.reaudit_state,
                  "record_hash": args.reaudit_record_hash})
     return review.run_all()

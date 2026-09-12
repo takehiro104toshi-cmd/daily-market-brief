@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.52 (2026-09-12) — Add KEEP_REVIEWING queue progression（formal_review policy 1.1.0）
+
+### 追加
+
+- `src/intelligence/formal_review/progression.py`【新規】: Phase 3.9.5 Queue Progression v1（監督者採択 D =
+  zero-new-storage hybrid + queue post-filter）。KEEP_REVIEWING head の primary candidate について、reviewed
+  Decision row（material_digest / group_state_digest / replay_run_id / evidence snapshot）と現在を M1 machine
+  evidence / M2 group・sibling / M3 replay review view（stability_class・reversal_count・reject_driver・
+  recovery_count・current_recommendation）/ M4 DNA relation（dna_classification・best_rule_id・conflict_rule_ids）
+  で比較し、derived queue status `NOT_APPLICABLE` / `DEFERRED_UNCHANGED_KEEP_REVIEWING` /
+  `REENTERED_KEEP_REVIEWING` / `PROGRESSION_UNVERIFIABLE` を返す。READ-ONLY（Decision / Shadow / DNA / corpus
+  を書かない・store を持たない）。検証不能は抑止しない（fail closed = 見せる）。cooldown なし・新 Decision state
+  なし・履歴書き換えなし。
+- `FormalReviewService.build()`: population → packet → progression → primary_for_queue → order_queue。
+  `queue["deferred"]`（非 ranked）と `queue["progression"]`、manifest `progression`、metrics
+  `suppressed_keep_reviewing_count` / `reentered_keep_reviewing_count` / `progression_unverifiable_count` を追加。
+  `decide()` は deferred を tracked candidate として解決する（presentation suppression のみ・guard は不変）。
+- `compass_formal_review` policy **1.0.0 → 1.1.0**（`config.yaml` に `progression` block）。progression semantics を
+  formal_review digest に含める（第 7 層は作らない）: **`cca7b43627b9a355` → `d2fb015ca827dd15`**。他 5 層は不変。
+  歴史的 digest は `SUPERSEDED_FORMAL_REVIEW_DIGESTS` として記録（Candidate #1 / #2 の row は書き換えない）。
+- `next_candidate.py`: `::P395N_PROGRESSION::` section（deferred が ranked に混ざれば
+  `DEFERRED_PATTERN_IN_PRIMARY_QUEUE`）・`--expect-deferred`・row 再監査で formal_review layer の歴史的 digest を認める。
+- `execute.py`: `--allow-deferred`（既定は `TARGET_DEFERRED_KEEP_REVIEWING` で拒否・通常 semantics は不変）。
+- `cli.py` list / status、`validation.py`（determinism に deferred list と progression map）、`session.py`
+  `deferred_patterns`、`pilot.py` `deferred_candidates` に progression 情報を露出（reason 本文・path なし）。
+- `tests/intelligence/test_formal_review_progression.py`【新規】37 件（要件 1〜30 + metrics / CLI / next_candidate /
+  execute / validation / session）。既存 test は formal_review digest 期待値を 1.1.0 に更新し、deferred target の
+  既定拒否と `allow_deferred` opt-in に合わせて 2 件を調整（削除・弱体化なし）。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §22（Queue Progression v1 凍結設計・Decision state と derived
+  queue status の区別・policy bump・歴史的 Decision 互換・Candidate #2 期待挙動）。
+
+Phase 3.9.5 は OPEN のまま（Candidate #3 の review / Decision は行わない）。Windows 実データ検証は未実施。
+
 ## v4.51 (2026-09-12) — Add candidate #2 real-write audit trail（human KEEP_REVIEWING / machine REJECT_RECOMMENDED）
 
 ### 追加

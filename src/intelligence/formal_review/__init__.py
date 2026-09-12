@@ -8,6 +8,7 @@
     warnings.py    W_* warning code（表示と並び順のみ・新 gate なし）
     ordering.py    凍結 ordering（REJECT → APPROVE → REOPEN、section 非交互）
     reopen.py      REOPEN_ELIGIBLE（material_digest の変化のみ）
+    progression.py queue progression（1.1.0・read-only）: KEEP_REVIEWING の DEFERRED / REENTERED / UNVERIFIABLE 分類
     guard.py       FormalReviewGuard（22 段の fail-closed 検査・metadata binder）
     metrics.py     運用 metrics（predictive 系なし）
     store.py       derived 出力（compass_formal_review/、atomic、rebuildable）

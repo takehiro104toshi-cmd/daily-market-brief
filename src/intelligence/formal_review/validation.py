@@ -247,6 +247,10 @@ class RealDataPacketValidation:
         _emit("decided_patterns", len(pop.get("decided") or []))
         _emit("excluded_not_ready", pop.get("excluded_not_ready"))
         _emit("queue_section_counts", {k: len(v) for k, v in sections.items()})
+        _emit("deferred_count", len(self.queue.get("deferred") or []))
+        _emit("progression_statuses", {pid: p.get("queue_status") for pid, p in (self.queue.get("progression") or {}).items()})
+        _emit("progression_metrics", {k: (summary.get("metrics") or {}).get(k) for k in (
+            "suppressed_keep_reviewing_count", "reentered_keep_reviewing_count", "progression_unverifiable_count")})
         _emit("formal_review_policy", (manifest.get("policies") or {}).get("formal_review"))
         inputs = manifest.get("inputs") or {}
         _emit("replay_run_id_used", inputs.get("replay_run_id"))
@@ -277,7 +281,11 @@ class RealDataPacketValidation:
         _emit("build_check", "PASSED")
 
     def _semantic_queue_digest(self, queue: Mapping[str, Any]) -> str:
-        return digest16({k: [{f: r.get(f) for f in r if f != "warnings"} for r in rows] for k, rows in (queue.get("sections") or {}).items()})
+        """ranked sections + deferred list + progression map（1.1.0）。built_at は含まない。"""
+        return digest16({"sections": {k: [{f: r.get(f) for f in r if f != "warnings"} for r in rows]
+                                      for k, rows in (queue.get("sections") or {}).items()},
+                         "deferred": [{f: r.get(f) for f in r} for r in queue.get("deferred") or []],
+                         "progression": dict(queue.get("progression") or {})})
 
     def determinism_section(self) -> None:
         _marker("DETERMINISM")
@@ -293,8 +301,12 @@ class RealDataPacketValidation:
         second_digests = {pid: (p["freshness"]["packet_evidence_digest"], p["group"]["group_state_digest"]) for pid, p in packets_b.items()}
         universe_after = self._evidence_universe()
         same_universe = universe_before == universe_after
+        first_deferred = [r["pattern_id"] for r in self.queue.get("deferred") or []]
+        second_deferred = [r["pattern_id"] for r in queue_b.get("deferred") or []]
         _emit("SAME_EVIDENCE_UNIVERSE", "true" if same_universe else "false")
         _emit("candidate_set_match", first_ids == second_ids)
+        _emit("deferred_set_match", first_deferred == second_deferred)
+        _emit("progression_map_match", dict(self.queue.get("progression") or {}) == dict(queue_b.get("progression") or {}))
         _emit("packet_evidence_digests_match", first_digests == second_digests)
         _emit("queue_semantic_digest_first", first_q)
         _emit("queue_semantic_digest_second", self._semantic_queue_digest(queue_b))
@@ -329,6 +341,13 @@ class RealDataPacketValidation:
                           for c in self.queue.get("context") or []])
         _emit("decided", [{"pattern_id": d["pattern_id"], "decision_state": d["decision_state"], "allowed_actions": d["allowed_next_actions"]}
                           for d in self.queue.get("decided") or []])
+        _emit("deferred", [{"pattern_id": d["pattern_id"], "decision_state": d["decision_state"], "queue_status": d["queue_status"],
+                            "allowed_actions": d["allowed_next_actions"]} for d in self.queue.get("deferred") or []])
+        primary_ids = {r["pattern_id"] for name in (SECTION_REJECT, SECTION_APPROVE, SECTION_REOPEN)
+                       for r in (self.queue.get("sections") or {}).get(name, [])}
+        leaked = sorted(primary_ids & {d["pattern_id"] for d in self.queue.get("deferred") or []})
+        _emit("deferred_patterns_in_primary_queue", leaked)
+        self.check("QUEUE", not leaked, "deferred pattern leaked into a ranked primary section")
         _emit("queue_check", "PASSED")
 
     def replay_section(self) -> None:

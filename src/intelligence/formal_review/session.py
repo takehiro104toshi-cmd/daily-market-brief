@@ -329,6 +329,10 @@ def session_plan(queue: Mapping[str, Any], packets: Mapping[str, Mapping[str, An
             "section_order": order, "steps": steps,
             "context_patterns": [{"pattern_id": c.get("pattern_id"), "recommendation": c.get("recommendation"),
                                   "role": c.get("role")} for c in queue.get("context") or []],
-            "note": "context patterns are evidence for sibling reasoning and cannot be decided from this queue"}
+            "deferred_patterns": [{"pattern_id": d.get("pattern_id"), "recommendation": d.get("recommendation"),
+                                   "decision_state": d.get("decision_state"), "queue_status": d.get("queue_status"),
+                                   "role": d.get("role")} for d in queue.get("deferred") or []],
+            "note": "context patterns are evidence for sibling reasoning and cannot be decided from this queue; "
+                    "deferred KEEP_REVIEWING patterns are not ranked here but remain decidable"}
     assert_no_advisory_language(plan["rules"])
     return plan
