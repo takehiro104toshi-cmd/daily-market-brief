@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.52.3 (2026-09-13) — Add reviewed packet and reviewed history binding to the execution session
+
+### 追加
+
+- `src/intelligence/formal_review/execute.py`: real write を「人間がレビューしたその packet・その履歴」に束縛する
+  呼び出し側引数を追加。`--expect-row <sequence>:<pattern_id>:<record_hash>`（複数可・`DECISION_CHAIN` 段階で
+  fresh build より前に照合。書式不正は `EXPECT_ROW_MALFORMED`、欠落・pattern 相違・hash 相違は
+  `EXPECTED_ROW_CHANGED_OR_MISSING:<sequence>`）と、`--expect-packet-id` / `--expect-material-digest` /
+  `--expect-packet-evidence-digest`（`PACKET_FRESHNESS` 段階・Stage 1 dry-run の前に照合し、相違は
+  `HUMAN_REVIEW_PACKET_CHANGED:<field>`。複数相違は固定順の決定的な 1 行）。いずれも任意で、無指定時の挙動は不変。
+  chain integrity（自己整合）だけでは reviewed-history identity（人間が見た row か）を保証できないため、
+  再ハッシュ済みの改変履歴も `--expect-row` で捕まる。
+- `tests/intelligence/test_formal_review.py` に 9 関数（展開後 17 件）: 3 束縛それぞれの一致継続と不一致停止・
+  複数不一致の決定的報告・expect-row 2 行一致・書式不正 / 欠落 / pattern 相違 / hash 相違の build 前 fail closed・
+  再ハッシュ改変履歴の検出・Candidate 形（rows 2 / NONE / rank 1 / REJECT_RECOMMENDED / 全束縛）の Stage 1 通過と
+  1 行のみ書き込み・CLI 配線・6 層 digest 不変・candidate 固有定数なし。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §23（chain integrity と reviewed-history identity の区別・
+  reviewed packet 束縛・保持される実行安全性）。
+
+Decision 遷移・state model・population・ordering・progression・queue semantics・reopen・packet schema・
+recommendation・replay・DNA semantics・policy 6 層 digest は不変。新しい policy 層は作らない。
+Candidate #3 の real write は未実施（本変更は束縛の追加のみ）。
+
 ## v4.52.2 (2026-09-13) — Add rank-1 head binding and actor passthrough to next_candidate
 
 ### 追加

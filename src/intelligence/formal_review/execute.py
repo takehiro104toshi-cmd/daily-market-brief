@@ -4,13 +4,18 @@
  --pattern <id> --action <approve|reject|keep-reviewing> --actor <id> --reason "<human reason>"
  --confirm "CONFIRM <STATE> <id>" --expect-rows-before <N> --expect-current-state <STATE|NONE>
  --expect-machine-recommendation <REC> [--require-queue-rank 1] [--expect-group-state-digest <digest>]
- [--expect-group-material-digest <digest>] [--expect-fact key=value ...] [--acknowledge-sibling <id> ...]`
+ [--expect-group-material-digest <digest>] [--expect-fact key=value ...] [--acknowledge-sibling <id> ...]
+ [--expect-row <seq>:<pattern_id>:<record_hash> ...] [--expect-packet-id <id>] [--expect-material-digest <digest>]
+ [--expect-packet-evidence-digest <digest>]`
 
 **orchestration only**: Decision state model・遷移・population・recommendation・packet schema・policy・replay・
 group の各 semantics は一切変更せず、呼び出し側が束縛した「レビュー時点の期待状態」を検査してから、既存の
 authoritative write path（`FormalReviewGuard → DecisionRequest → DecisionService.validate → decide →
 DecisionStore.append`）をそのまま使う。candidate 固有の凍結値は持たない（すべて引数）。
 
+chain integrity（各 row が自己整合か）と reviewed-history identity（人間が見たその row か）は別物なので、
+`--expect-row` で後者を、`--expect-packet-id` / `--expect-material-digest` / `--expect-packet-evidence-digest` で
+「人間が review した packet そのもの」を束縛する（fresh build が内部整合でも別 packet なら write しない）。
 deferred KEEP_REVIEWING（queue progression 1.1.0）は既定で target にできない（`TARGET_DEFERRED_KEEP_REVIEWING`）。
 意図的に扱う場合だけ `--allow-deferred` を明示する（通常の実行 semantics は変えない）。
 順序: ARGUMENTS → HEAD → POLICY → DECISION_CHAIN → BASELINE → FRESH_BUILD → TARGET → PACKET_FRESHNESS →
@@ -51,6 +56,10 @@ WRITE_RESPONSE_FAILED = "POSSIBLE_WRITE_SUCCEEDED_RESPONSE_FAILED"
 WRITE_FAILED_NO_ROW = "WRITE_FAILED_NO_ROW"
 AMBIGUOUS_WRITE = "AMBIGUOUS_WRITE_RESULT"
 GROUP_CONTEXT_CHANGED = "HUMAN_REVIEW_EVIDENCE_CHANGED_GROUP_CONTEXT"
+PACKET_CHANGED = "HUMAN_REVIEW_PACKET_CHANGED"
+EXPECT_ROW_MALFORMED = "EXPECT_ROW_MALFORMED"
+EXPECTED_ROW_MISMATCH = "EXPECTED_ROW_CHANGED_OR_MISSING"
+PACKET_BINDING_FIELDS = ("packet_id", "material_digest", "packet_evidence_digest")   # 報告順（決定的）
 TARGET_DEFERRED = "TARGET_DEFERRED_KEEP_REVIEWING"
 
 #: `--expect-fact` の allowlist。任意の object path / 式は受け付けない（型付きの取り出しだけ）。
@@ -140,6 +149,8 @@ class FormalExecutionSession:
                  require_queue_rank: Optional[int] = None, expect_group_state_digest: str = "",
                  expect_group_material_digest: str = "",
                  expect_facts: Optional[Mapping[str, Any]] = None, acknowledge_siblings: Sequence[str] = (),
+                 expect_rows: Sequence[str] = (), expect_packet_id: str = "", expect_material_digest: str = "",
+                 expect_packet_evidence_digest: str = "",
                  allow_deferred: bool = False, require_commit: str = "",
                  expected_digests: Optional[Mapping[str, str]] = None, skip_git: bool = False,
                  corpus_state_resolver: Optional[Any] = None, clock: Optional[Any] = None) -> None:
@@ -156,6 +167,10 @@ class FormalExecutionSession:
         self.expect_group_material_digest = str(expect_group_material_digest or "").strip()
         self.expect_facts = dict(expect_facts or {})
         self.acknowledge_siblings = tuple(str(s).strip() for s in acknowledge_siblings if str(s).strip())
+        self.expect_rows = [str(r).strip() for r in expect_rows if str(r).strip()]
+        self.expect_packet = {"packet_id": str(expect_packet_id or "").strip(),
+                              "material_digest": str(expect_material_digest or "").strip(),
+                              "packet_evidence_digest": str(expect_packet_evidence_digest or "").strip()}
         self.allow_deferred = bool(allow_deferred)
         kw: Dict[str, Any] = {"require_commit": require_commit, "expected_digests": expected_digests,
                               "actor": self.actor, "skip_git": skip_git}
@@ -208,6 +223,8 @@ class FormalExecutionSession:
         _emit("expect_group_state_digest", self.expect_group_state_digest or "NOT_BOUND")
         _emit("expect_facts", {k: self.expect_facts[k] for k in sorted(self.expect_facts)})
         _emit("acknowledge_siblings", list(self.acknowledge_siblings))
+        _emit("expect_rows", list(self.expect_rows) or "NOT_BOUND")
+        _emit("expect_packet_binding", {k: self.expect_packet[k] or "NOT_BOUND" for k in PACKET_BINDING_FIELDS})
         _emit("allow_deferred", self.allow_deferred)
         self.check("ARGUMENTS", bool(self.pattern_id) and "," not in self.pattern_id, "ONE_PATTERN_PER_INVOCATION")
         self.check("ARGUMENTS", bool(self.decision_type), f"UNKNOWN_ACTION:{self.action}")
@@ -246,6 +263,15 @@ class FormalExecutionSession:
                   and str(row.get("promotion_status")) == "NOT_PROMOTED")
             self.check("DECISION_CHAIN", ok, f"ROW_{index}_INTEGRITY_FAILED")
             previous = str(row.get("record_hash", ""))
+        by_sequence = {int(r.get("sequence") or 0): r for r in rows}
+        for spec in self.expect_rows:            # <seq>:<pattern_id>:<record_hash>（人間が見た履歴そのものか）
+            parts = spec.split(":")
+            self.check("DECISION_CHAIN", len(parts) == 3 and parts[0].isdigit(), f"{EXPECT_ROW_MALFORMED}:{spec}")
+            expected_row = by_sequence.get(int(parts[0])) or {}
+            ok = str(expected_row.get("pattern_id")) == parts[1] and str(expected_row.get("record_hash")) == parts[2]
+            _emit(f"expected_row_{parts[0]}", {"pattern_id": parts[1], "record_hash_matches": ok,
+                                               "decision_type": expected_row.get("decision_type", "ABSENT")})
+            self.check("DECISION_CHAIN", ok, f"{EXPECTED_ROW_MISMATCH}:{parts[0]}")
         self.rows_before = rows
         mine = [r for r in rows if str(r.get("pattern_id")) == self.pattern_id]
         self.prior_head = dict(mine[-1]) if mine else {}
@@ -316,6 +342,14 @@ class FormalExecutionSession:
                          "group_state_digest": str((self.packet.get("group") or {}).get("group_state_digest", ""))}
         self.reviewed_policy_digests = dict(block.get("policy_digests") or {})
         _emit("reviewed_binding", self.reviewed)
+        bound = {k: self.expect_packet[k] for k in PACKET_BINDING_FIELDS if self.expect_packet[k]}
+        if not bound:                                                    # 束縛は任意（既定は従来どおり fresh 追従）
+            _emit("expected_packet_binding", "NOT_BOUND")
+            return
+        mismatched = [k for k in PACKET_BINDING_FIELDS if k in bound and self.reviewed[k] != bound[k]]
+        _emit("packet_binding_mismatches", mismatched)
+        self.check("PACKET_FRESHNESS", not mismatched, f"{PACKET_CHANGED}:{','.join(mismatched)}")
+        _emit("packet_binding_check", "PASSED")
 
     def expected_facts(self) -> None:
         _marker("EXPECTED_FACTS")
@@ -576,6 +610,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help="reviewed material group view digest; lets an equivalent regeneration pass")
     parser.add_argument("--expect-fact", action="append", default=[], dest="expect_fact",
                         help="key=value from the frozen allowlist (repeatable)")
+    parser.add_argument("--expect-row", action="append", default=[], dest="expect_row",
+                        help="<seq>:<pattern_id>:<record_hash> of a reviewed historical row that must be unchanged (repeatable)")
+    parser.add_argument("--expect-packet-id", default="", dest="expect_packet_id",
+                        help="packet id the human reviewed; a different fresh packet stops before the dry-run")
+    parser.add_argument("--expect-material-digest", default="", dest="expect_material_digest")
+    parser.add_argument("--expect-packet-evidence-digest", default="", dest="expect_packet_evidence_digest")
     parser.add_argument("--acknowledge-sibling", action="append", default=[], dest="acknowledge",
                         help="sibling pattern acknowledged for the frozen C3 rule (repeatable)")
     parser.add_argument("--allow-deferred", action="store_true", dest="allow_deferred",
@@ -598,7 +638,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         expect_current_state=args.expect_current_state, expect_recommendation=args.expect_machine_recommendation,
         require_queue_rank=args.require_queue_rank, expect_group_state_digest=args.expect_group_state_digest,
         expect_group_material_digest=args.expect_group_material_digest,
-        expect_facts=facts, acknowledge_siblings=tuple(args.acknowledge), allow_deferred=bool(args.allow_deferred),
+        expect_facts=facts, acknowledge_siblings=tuple(args.acknowledge), expect_rows=tuple(args.expect_row),
+        expect_packet_id=args.expect_packet_id, expect_material_digest=args.expect_material_digest,
+        expect_packet_evidence_digest=args.expect_packet_evidence_digest, allow_deferred=bool(args.allow_deferred),
         require_commit=args.require_commit,
         skip_git=bool(args.skip_git),
         expected_digests={layer: getattr(args, f"expect_{layer}") for layer in POLICY_LAYERS})

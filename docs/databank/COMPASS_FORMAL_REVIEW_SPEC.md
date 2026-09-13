@@ -585,3 +585,35 @@ questions・dry-run・command 提示のいずれよりも前に、fresh rank 1 �
 の actor を差し替えるだけで、省略時は pilot の既定 actor のまま、いずれも dry-run なので永続化は起きない。
 Candidate #3 の READ-ONLY review は `--expect-rank-1 cpt_30701289cfb0d151 --actor P395_HUMAN_REVIEW_PREP` を
 §22.9 の引数に加えた 1 回の操作で行い、Decision は書かない。
+
+## 23. real write の reviewed 束縛（v4.52.3・execute.py）
+
+### 23.1 chain integrity と reviewed-history identity は別物
+
+`DECISION_CHAIN` が従来から検査するのは **chain integrity**（row 数・sequence 連番・各 record_hash の再計算一致・
+`previous_record_hash` の連結・全 row `NOT_PROMOTED`）であり、これは「store が自己整合か」しか示さない。
+履歴 row の内容を書き換えて record_hash を再計算すれば、chain integrity は通ったままになる。
+**reviewed-history identity**（人間がレビュー時に見たその row か）は別の性質で、呼び出し側が期待値を束縛して
+初めて検証できる。`--expect-row <sequence>:<pattern_id>:<record_hash>`（複数可）が後者を担う。
+
+- 検証は `DECISION_CHAIN` 段階、fresh build・dry-run・write のいずれよりも前。
+- 書式不正は `EXPECT_ROW_MALFORMED:<spec>`、sequence 欠落・pattern 相違・record_hash 相違は
+  `EXPECTED_ROW_CHANGED_OR_MISSING:<sequence>` で fail closed。`next_candidate.py` §22.9 と同じ語彙。
+- 履歴 row は書き換えない。束縛は読み取り専用の照合のみ。
+
+### 23.2 human が review した packet そのものへの束縛
+
+`--expect-packet-id` / `--expect-material-digest` / `--expect-packet-evidence-digest` は、`FRESH_BUILD` → `TARGET` →
+`PACKET_FRESHNESS` が解決した現在の packet を、人間がレビューした packet と一致させる。検査は
+`PACKET_FRESHNESS` 段階、**Stage 1 dry-run の前**に行い、相違があれば
+`HUMAN_REVIEW_PACKET_CHANGED:<field>` で停止する（複数相違は `packet_id,material_digest,packet_evidence_digest` の
+固定順で連結した決定的な 1 行）。freshness だけでは不十分で、内部的に fresh でも別 packet は同じ人間判断の対象では
+ないため、rebuild 後の packet を黙って採用しない。3 つとも任意で、無指定なら従来どおり fresh 追従（`NOT_BOUND`）。
+
+### 23.3 保持される既存の実行安全性
+
+1 invocation = 1 candidate = real write 1 回・自動再試行なし・Stage 1 と Stage 2 で同一 packet・
+rows before / current state / machine recommendation / queue rank / 型付き expected fact allowlist /
+group digest / 6 層 policy digest の呼び出し側束縛・書き込み後の Decision 監査・global chain 監査・
+pattern 固有 prior head 監査・Shadow / DNA / PDF 安全性・`NOT_PROMOTED`・main 未マージ。
+candidate 固有の定数は持たない（すべて引数）。

@@ -2177,3 +2177,178 @@ class _InjectedSession(EXECUTE.FormalExecutionSession):
     def __init__(self, root, repo, **kw):
         super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
                          clock=type(self).bench.clock, **kw)
+
+
+# ============================== 143-160 reviewed-packet / reviewed-history binding（execute.py・v4.52.3）
+def _two_row_bench(tmp_path, **kw):
+    """rows=2（凍結 #1 REJECTED / pT KEEP_REVIEWING）で rank 1 が別の REJECT candidate（pR）の bench。"""
+    import copy
+    b = Bench(tmp_path, **kw)
+    for holder in (b.components, b.lifecycles, b.records, b.evals, b.dna, b.metrics):
+        if "pR" in holder:
+            holder[FROZEN] = copy.deepcopy(holder["pR"])
+    b.records[FROZEN] = {**b.records[FROZEN], "pattern_id": FROZEN, "pattern_record_id": "cpr_" + FROZEN}
+    b.evals[FROZEN] = {**b.evals[FROZEN], "pattern_id": FROZEN,
+                       "evaluation_id": str(b.evals[FROZEN].get("evaluation_id", "")) + "x"}
+    b.dna[FROZEN] = {**b.dna[FROZEN], "pattern_id": FROZEN, "comparison_id": "crd_" + FROZEN}
+    b.metrics[FROZEN] = {**b.metrics[FROZEN], "pattern_id": FROZEN}
+    b.write_all()
+    b.build()
+    b.decide(FROZEN, "reject", REASON_REJECT, actor=HUMAN_ACTOR)
+    b.decide("pT", "keep-reviewing", REASON_KEEP, actor=HUMAN_ACTOR)
+    b.build()
+    return b
+
+
+def _reviewed_packet_binding(b, pattern="pR"):
+    """人間が review した packet の 3 束縛（この bench の真値）。"""
+    packet = b.packet(pattern)
+    fresh = dict(packet.get("freshness") or {})
+    return {"expect_packet_id": str(packet["identity"]["packet_id"]),
+            "expect_material_digest": str(fresh.get("material_digest", "")),
+            "expect_packet_evidence_digest": str(fresh.get("packet_evidence_digest", ""))}
+
+
+def _row_specs(b):
+    return [f"{r.sequence}:{r.pattern_id}:{r.record_hash}" for r in b.decisions()]
+
+
+def _c3_kwargs(b):
+    return {"reason": REASON_REJECT, "require_queue_rank": 1, "expect_recommendation": REJECT_RECOMMENDED}
+
+
+@pytest.mark.parametrize("field", ["expect_packet_id", "expect_material_digest", "expect_packet_evidence_digest"])
+def test_execution_session_accepts_each_exact_reviewed_packet_binding(tmp_path, capsys, field):
+    b = _two_row_bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 2, **_c3_kwargs(b),
+                             **{field: _reviewed_packet_binding(b)[field]})
+    assert code == 0, out[-2000:]
+    assert "packet_binding_mismatches=[]" in out and "packet_binding_check=PASSED" in out
+    rows = b.decisions()
+    assert len(rows) == 3 and rows[-1].pattern_id == "pR" and rows[-1].decision_type == REJECTED
+
+
+@pytest.mark.parametrize("field,name", [
+    ("expect_packet_id", "packet_id"),
+    ("expect_material_digest", "material_digest"),
+    ("expect_packet_evidence_digest", "packet_evidence_digest"),
+])
+def test_execution_session_stops_before_the_dry_run_when_the_reviewed_packet_changed(tmp_path, capsys, field, name):
+    b = _two_row_bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 2, **_c3_kwargs(b), **{field: "frp_reviewed_elsewhere"})
+    assert code == 4 and "stage=PACKET_FRESHNESS" in out and f"reason={EXECUTE.PACKET_CHANGED}:{name}" in out
+    assert f'"{name}"' in out.split("packet_binding_mismatches=")[1].splitlines()[0]
+    assert "::P395X_STAGE1_DRY_RUN::" not in out and "::P395X_STAGE2_WRITE::" not in out
+    assert "write_attempts=0" in out and len(b.decisions()) == 2
+
+
+def test_execution_session_reports_every_changed_packet_binding_deterministically(tmp_path, capsys):
+    b = _two_row_bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 2, **_c3_kwargs(b), expect_packet_id="frp_other",
+                             expect_material_digest="0" * 16, expect_packet_evidence_digest="1" * 16)
+    assert code == 4 and "stage=PACKET_FRESHNESS" in out
+    assert f"reason={EXECUTE.PACKET_CHANGED}:packet_id,material_digest,packet_evidence_digest" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and "write_attempts=0" in out and len(b.decisions()) == 2
+
+
+def test_execution_session_accepts_the_exact_reviewed_history_rows(tmp_path, capsys):
+    b = _two_row_bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 2, **_c3_kwargs(b), expect_rows=_row_specs(b))
+    assert code == 0, out[-2000:]
+    assert out.count('"record_hash_matches":true') == 2
+    assert f'expected_row_1={{"decision_type":"{REJECTED}"' in out and "expected_row_2=" in out
+    assert len(b.decisions()) == 3
+
+
+@pytest.mark.parametrize("spec_index,make_spec,reason_suffix", [
+    (0, lambda specs: "not-a-row-spec", None),                                     # 書式不正
+    (0, lambda specs: "1:" + specs[0].split(":")[1], None),                        # 3 要素でない
+    (0, lambda specs: f"3:pT:{specs[1].split(':')[2]}", "3"),                      # 存在しない sequence
+    (0, lambda specs: f"1:pT:{specs[0].split(':')[2]}", "1"),                      # pattern が違う
+    (0, lambda specs: f"1:{FROZEN}:{'0' * 64}", "1"),                              # record hash が違う
+])
+def test_execution_session_fails_closed_before_build_on_a_bad_expected_row(tmp_path, capsys, spec_index,
+                                                                           make_spec, reason_suffix):
+    b = _two_row_bench(tmp_path)
+    spec = make_spec(_row_specs(b))
+    code, out = _run_session(b, capsys, "pR", "reject", 2, **_c3_kwargs(b), expect_rows=[spec])
+    expected = f"{EXECUTE.EXPECTED_ROW_MISMATCH}:{reason_suffix}" if reason_suffix else EXECUTE.EXPECT_ROW_MALFORMED
+    assert code == 4 and "stage=DECISION_CHAIN" in out and expected in out
+    assert "::P395X_FRESH_BUILD::" not in out and "::P395X_STAGE1_DRY_RUN::" not in out
+    assert "write_attempts=0" in out and len(b.decisions()) == 2
+
+
+def test_expected_row_catches_a_consistently_rehashed_history_change(tmp_path, capsys):
+    """chain integrity（自己整合）と reviewed-history identity（人間が見た row か）は別物。"""
+    from src.intelligence.decision.models import record_hash_for
+    b = _two_row_bench(tmp_path)
+    specs = _row_specs(b)
+    path = decisions_root(b.root) / "decisions.jsonl"
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    rows[1]["reason"] = "Altered after the human review, then rehashed so the chain still validates."
+    recomputed = dict(rows[1])
+    recomputed["record_hash"] = ""
+    rows[1]["record_hash"] = record_hash_for(recomputed)
+    path.write_text("".join(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n" for r in rows), encoding="utf-8")
+    assert len(b.decisions()) == 2                                     # 自己整合なので chain 検証は通る
+    code, out = _run_session(b, capsys, "pR", "reject", 2, **_c3_kwargs(b), expect_rows=specs)
+    assert code == 4 and "stage=DECISION_CHAIN" in out and f"{EXECUTE.EXPECTED_ROW_MISMATCH}:2" in out
+    assert "::P395X_FRESH_BUILD::" not in out and "write_attempts=0" in out and len(b.decisions()) == 2
+
+
+def test_candidate_shaped_full_binding_passes_stage_1_and_writes_exactly_one_row(tmp_path, capsys):
+    """Candidate #3 と同じ形（rows 2 / NONE / rank 1 / REJECT_RECOMMENDED / 全束縛）を synthetic root で通す。"""
+    b = _two_row_bench(tmp_path)
+    packet = b.packet("pR")
+    facts = {key: EXECUTE.FACT_EXTRACTORS[key][1](packet) for key in (
+        "document_contradiction", "document_contradiction_repeated", "narrow_sibling_contradiction",
+        "narrow_sibling_repeated", "contradiction_active", "reject_driver", "reversal_count", "recovery_count",
+        "opposite_sibling_count", "replay_current_compatible", "formal_review_gate_reached", "direction_class",
+        "eligible_support", "stability_class")}
+    code, out = _run_session(b, capsys, "pR", "reject", 2, **_c3_kwargs(b), expect_rows=_row_specs(b),
+                             expect_facts=facts,
+                             expect_group_state_digest=str((packet.get("group") or {}).get("group_state_digest", "")),
+                             **_reviewed_packet_binding(b))
+    assert code == 0, out[-2000:]
+    assert [m for m in SESSION_MARKERS if f"::P395X_{m}::" in out] == SESSION_MARKERS and "::P395X_FAIL::" not in out
+    assert "packet_binding_check=PASSED" in out and "fact_mismatches=[]" in out and "result=DRY_RUN_PASS" in out
+    assert "current_formal_state=NONE" in out and "queue_rank=1" in out and "write_attempt=1" in out
+    assert "real_decisions_written_by_this_operation=1" in out and "candidates_processed=1" in out
+    assert out.count("write_attempt=") == 1 and "audit_PACKET_ID_BOUND=OK" in out
+    rows = b.decisions()
+    assert len(rows) == 3 and rows[-1].sequence == 3 and rows[-1].decision_type == REJECTED
+    assert rows[-1].previous_record_hash == rows[1].record_hash and rows[-1].previous_decision_id == ""
+    assert rows[-1].previous_state == "" and rows[-1].actor_type == ACTOR_HUMAN
+    assert all(ord(ch) < 128 for ch in out) and REASON_REJECT not in out
+
+
+def test_execution_session_cli_wires_the_v4523_bindings(tmp_path, monkeypatch, capsys):
+    b = _two_row_bench(tmp_path)
+    binding = _reviewed_packet_binding(b)
+    specs = _row_specs(b)
+    _InjectedSession.bench = b
+    monkeypatch.setattr(EXECUTE, "FormalExecutionSession", _InjectedSession)
+    base = ["--data-root", str(b.root), "--skip-git", "--pattern", "pR", "--action", "reject",
+            "--actor", HUMAN_ACTOR, "--reason", REASON_REJECT, "--confirm", "CONFIRM REJECTED pR",
+            "--expect-rows-before", "2", "--expect-current-state", "NONE",
+            "--expect-machine-recommendation", REJECT_RECOMMENDED, "--require-queue-rank", "1",
+            "--expect-row", specs[0], "--expect-row", specs[1],
+            "--expect-material-digest", binding["expect_material_digest"],
+            "--expect-packet-evidence-digest", binding["expect_packet_evidence_digest"]]
+    capsys.readouterr()
+    assert EXECUTE.main(base + ["--expect-packet-id", "frp_reviewed_elsewhere"]) == 4
+    out = capsys.readouterr().out
+    assert f"reason={EXECUTE.PACKET_CHANGED}:packet_id" in out and len(b.decisions()) == 2
+    _InjectedSession.bench = b
+    monkeypatch.setattr(EXECUTE, "FormalExecutionSession", _InjectedSession)
+    assert EXECUTE.main(base + ["--expect-packet-id", binding["expect_packet_id"]]) == 0
+    out = capsys.readouterr().out
+    assert "::P395X_END::" in out and "packet_binding_check=PASSED" in out and len(b.decisions()) == 3
+
+
+def test_execute_keeps_the_six_digests_and_has_no_candidate_specific_constants(tmp_path):
+    text = (PKG / "execute.py").read_text(encoding="utf-8")
+    assert not [tok for tok in ("cpt_", "frp_", "cdc_", "crp_", "cpr_") if tok in text]
+    assert "CONFIRM REJECTED" not in text and "8fc381f70b6bcfd3" not in text
+    b = _two_row_bench(tmp_path)
+    assert b.service().policy_digests() == EXPECTED_DIGESTS
