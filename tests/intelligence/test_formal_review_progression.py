@@ -608,3 +608,104 @@ def test_next_candidate_cli_wires_identity_only_and_expect_row(kept, monkeypatch
     assert code == 0, out[-2000:]
     assert "identity_only=True" in out and "expected_row_1=" in out and '"pattern_id":"pR"' in out
     assert "::P395N_DRY_RUN::" not in out and "::P395N_END::" in out and len(kept.decisions()) == 1
+
+
+# ================================================================== rank-1 head binding + actor passthrough（v4.52.2）
+from src.intelligence.formal_review.pilot import PILOT_ACTOR  # noqa: E402
+
+REVIEW_ACTOR = "P395_HUMAN_REVIEW_PREP"
+NOT_PRINTED_ON_HEAD_CHANGE = ("::P395C_FRESHNESS::", "::P395C_BRIEF::", "::P395C_EXPLANATION::", "::P395C_QUESTIONS::",
+                              "::P395N_DRY_RUN::", "::P395C_DRY_RUN_MACHINE_ACTION::", "::P395C_DRY_RUN_KEEP_REVIEWING::",
+                              "::P395C_HUMAN_DECISION::", "::P395C_COMMANDS::", "brief_1_identity", "explanation=",
+                              "R1=", "A1=", "result=DRY_RUN_PASS", "stage_1_dry_run", "stage_2_real_write",
+                              "next_rank_1=", "::P395N_END::")
+
+
+def _spy_decide(monkeypatch):
+    seen = []
+    real = FormalReviewService.decide
+
+    def spy(self, request, *args, **kwargs):
+        seen.append(str(getattr(request, "actor", "")))
+        return real(self, request, *args, **kwargs)
+
+    monkeypatch.setattr(FormalReviewService, "decide", spy)
+    return seen
+
+
+def test_expect_rank_1_match_continues_the_normal_flow(kept, capsys):
+    code, out = _identity_review(kept, capsys, expect_rank_1="pR", expect_deferred=["pT"])
+    assert code == 0, out[-2000:]
+    assert "expected_rank_1=pR" in out and "fresh_rank_1=pR" in out and "::P395N_NEXT_CANDIDATE::" in out
+    assert "::P395C_BRIEF::" in out and "R1=" in out and out.splitlines().count("result=DRY_RUN_PASS") == 2
+    assert "::P395C_COMMANDS::" in out and "::P395N_END::" in out and len(kept.decisions()) == 1
+
+
+@pytest.mark.parametrize("identity_only", [False, True])
+def test_expect_rank_1_mismatch_fails_closed_before_brief_and_dry_runs(kept, capsys, monkeypatch, identity_only):
+    seen = _spy_decide(monkeypatch)
+    before = kept.decisions()
+    code, out = _identity_review(kept, capsys, expect_rank_1="pX", identity_only=identity_only)
+    assert code == 4 and "stage=NEXT_CANDIDATE" in out and f"reason={NEXT.CANDIDATE_HEAD_CHANGED}" in out
+    assert "expected_rank_1=pX" in out and "fresh_rank_1=pR" in out and "::P395N_NEXT_CANDIDATE::" in out
+    assert "::P395C_CANDIDATE::" in out and "::P395N_FAIL::" in out
+    for token in NOT_PRINTED_ON_HEAD_CHANGE:
+        assert token not in out, token
+    assert seen == [] and "real_decisions_written_by_this_run=0" in out
+    assert [r.as_dict() for r in kept.decisions()] == [r.as_dict() for r in before] and len(before) == 1
+    assert all(ord(ch) < 128 for ch in out) and str(kept.root) not in out
+
+
+def test_actor_passthrough_reaches_both_dry_runs(kept, capsys, monkeypatch):
+    seen = _spy_decide(monkeypatch)
+    code, out = _identity_review(kept, capsys, expect_rank_1="pR", actor=REVIEW_ACTOR)
+    assert code == 0, out[-2000:]
+    assert seen == [REVIEW_ACTOR, REVIEW_ACTOR] and out.splitlines().count("result=DRY_RUN_PASS") == 2
+    assert REVIEW_ACTOR not in out.replace(f"--actor {REVIEW_ACTOR}", "")   # actor は command 雛形以外に出ない
+    assert len(kept.decisions()) == 1
+
+
+def test_default_actor_unchanged_when_actor_omitted(kept, capsys, monkeypatch):
+    seen = _spy_decide(monkeypatch)
+    review = NEXT.NextCandidateReview(kept.root, REPO_ROOT, expected_digests=EXPECTED_DIGESTS, skip_git=True,
+                                      corpus_state_resolver=kept.corpus_state, clock=kept.clock, actor="  ")
+    assert review.pilot.actor == PILOT_ACTOR
+    capsys.readouterr()
+    code = review.run_all()
+    out = capsys.readouterr().out
+    assert code == 0, out[-2000:]
+    assert seen == [PILOT_ACTOR, PILOT_ACTOR] and len(kept.decisions()) == 1
+
+
+def test_next_candidate_cli_wires_expect_rank_1_and_actor(kept, monkeypatch, capsys):
+    row = kept.decisions()[0].as_dict()
+    seen = _spy_decide(monkeypatch)
+    injected = _tfr._InjectedNext
+    injected.bench = kept
+    monkeypatch.setattr(NEXT, "NextCandidateReview", injected)
+    capsys.readouterr()
+    args = ["--data-root", str(kept.root), "--skip-git", "--expect-formal-review", NEW_FORMAL_DIGEST,
+            "--expect-row", f"1:pT:{row['record_hash']}", "--expect-deferred", "pT"]
+    code = NEXT.main(args + ["--expect-rank-1", "pR", "--actor", REVIEW_ACTOR])
+    out = capsys.readouterr().out
+    assert code == 0, out[-2000:]
+    assert "expected_rank_1=pR" in out and "fresh_rank_1=pR" in out and seen == [REVIEW_ACTOR, REVIEW_ACTOR]
+    capsys.readouterr()
+    assert NEXT.main(args + ["--expect-rank-1", "pX"]) == 4
+    out = capsys.readouterr().out
+    assert f"reason={NEXT.CANDIDATE_HEAD_CHANGED}" in out and "::P395C_BRIEF::" not in out and len(kept.decisions()) == 1
+
+
+def test_policy_digests_unchanged_by_v4522(kept):
+    assert kept.service().policy_digests() == {
+        "decision": "0c54ec01e2a251d9", "evaluation": "1a8443098f64d679", "recommendation": "0a979d8421a01d08",
+        "shadow_review": "e6f5094cacef6fec", "replay": "197db7c73eb0db77", "formal_review": NEW_FORMAL_DIGEST}
+
+
+def test_v4522_introduces_no_write_path():
+    text = (PKG / "next_candidate.py").read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    calls = [n.func.attr for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)]
+    assert "decide" not in calls and "append_decision" not in calls and "write" not in calls
+    assert "DecisionStore(" not in text and "dry_run=False" not in text and "--confirm" not in text
+    assert "confirmation_token" not in text and "FormalDecisionRequest" not in text

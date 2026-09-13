@@ -3,7 +3,7 @@
 `python -X utf8 -m src.intelligence.formal_review.next_candidate --require-commit <sha> --expect-<layer> <digest>
  [--expect-decided <pattern_id>] [--expect-deferred <pattern_id>] [--expect-row <seq>:<pattern_id>:<record_hash>]
  [--reaudit-pattern <id> --reaudit-decision <id> --reaudit-state <state> --reaudit-record-hash <hash>]
- [--identity-only]`
+ [--identity-only] [--expect-rank-1 <pattern_id>] [--actor <actor_id>]`
 
 candidate #1 の real write 後に使う汎用の読み取り専用 driver。**書き込み経路を一切持たない**
 （confirmation token を受け取らず、real write の呼び出しも持たない。test が静的に検査する）。
@@ -20,6 +20,10 @@ pilot.py の section を composition で再利用し、本 module 固有の読�
   同じ pattern・同じ record_hash であること。違えば `EXPECTED_ROW_CHANGED_OR_MISSING:<seq>` で fail closed）。
 - `--identity-only` は rank 1 の identity（pattern_id / pattern_type / recommendation / decision_state）だけを出し、
   brief・dry-run・human boundary・command 提示を行わない（Windows READ-ONLY 確認用。SAFETY は常に実行する）。
+- `--expect-rank-1 <pattern_id>` は fresh build の rank 1 をその id に束縛する（違えば `CANDIDATE_HEAD_CHANGED` で
+  fail closed。freshness・brief・explanation・questions・dry-run・command 提示のいずれも行わない。
+  診断は CANDIDATE section の identity / derived metrics と `expected_rank_1` / `fresh_rank_1` に限る）。
+  `--actor` は dry-run の actor を差し替える（既定は pilot と同じ）。
 
 その後は fresh build から **現在の queue rank 1 を自力で特定**して 1 件だけ提示し、機械整合 action と
 KEEP_REVIEWING の dry-run（技術的証明のみ）を行い、人間判断は PENDING のまま残す。
@@ -50,6 +54,7 @@ DECIDED_IN_PRIMARY = "DECIDED_PATTERN_STILL_IN_PRIMARY_QUEUE"
 DEFERRED_IN_PRIMARY = "DEFERRED_PATTERN_IN_PRIMARY_QUEUE"
 EXPECTED_ROW_MISMATCH = "EXPECTED_ROW_CHANGED_OR_MISSING"
 EXPECT_ROW_MALFORMED = "EXPECT_ROW_MALFORMED"
+CANDIDATE_HEAD_CHANGED = "CANDIDATE_HEAD_CHANGED"
 
 
 class ReviewFailure(Exception):
@@ -69,10 +74,13 @@ class NextCandidateReview:
     def __init__(self, data_root: Path, repo_root: Path, *, require_commit: str = "",
                  expected_digests: Optional[Dict[str, str]] = None, expect_decided: Sequence[str] = (),
                  expect_deferred: Sequence[str] = (), expect_rows: Sequence[str] = (), identity_only: bool = False,
+                 expect_rank_1: str = "", actor: str = "",
                  reaudit: Optional[Dict[str, str]] = None, skip_git: bool = False,
                  corpus_state_resolver: Optional[Any] = None, clock: Optional[Any] = None) -> None:
         kw: Dict[str, Any] = {"require_commit": require_commit, "expected_digests": expected_digests,
                               "skip_git": skip_git}
+        if str(actor or "").strip():                                     # 省略時は pilot の既定 actor のまま
+            kw["actor"] = str(actor).strip()
         if corpus_state_resolver is not None:
             kw["corpus_state_resolver"] = corpus_state_resolver
         if clock is not None:
@@ -82,6 +90,7 @@ class NextCandidateReview:
         self.expect_deferred = [str(p).strip() for p in expect_deferred if str(p).strip()]
         self.expect_rows = [str(p).strip() for p in expect_rows if str(p).strip()]
         self.identity_only = bool(identity_only)
+        self.expect_rank_1 = str(expect_rank_1 or "").strip()
         self.reaudit = {k: str(v or "") for k, v in dict(reaudit or {}).items()}
         self.t0 = time.perf_counter()
 
@@ -244,6 +253,11 @@ class NextCandidateReview:
             self.progression()
             _marker("NEXT_CANDIDATE")
             self.pilot.candidate()
+            if self.expect_rank_1:                                   # head binding: 違う rank 1 は brief も dry-run も出さない
+                fresh = str(self.pilot.row.get("pattern_id", ""))
+                emit_pair("expected_rank_1", self.expect_rank_1)
+                emit_pair("fresh_rank_1", fresh)
+                self.check("NEXT_CANDIDATE", fresh == self.expect_rank_1, CANDIDATE_HEAD_CHANGED)
             self.pilot.freshness()
             if self.identity_only:                                   # identity だけ: brief も dry-run も command も出さない
                 emit_pair("identity_only", True)
@@ -297,6 +311,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help="<seq>:<pattern_id>:<record_hash> of an existing decision row that must be unchanged")
     parser.add_argument("--identity-only", action="store_true", dest="identity_only",
                         help="report only the rank 1 identity (no brief, no dry-run, no commands)")
+    parser.add_argument("--expect-rank-1", default="", dest="expect_rank_1",
+                        help="pattern id the fresh rank 1 must have; otherwise CANDIDATE_HEAD_CHANGED before any brief")
+    parser.add_argument("--actor", default="", help="actor id for the technical dry-runs (default: the pilot actor)")
     parser.add_argument("--reaudit-pattern", default="", help="existing decided pattern to re-audit read-only")
     parser.add_argument("--reaudit-decision", default="")
     parser.add_argument("--reaudit-state", default="")
@@ -309,7 +326,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         resolve_root(args.data_root), Path.cwd(), require_commit=args.require_commit, skip_git=bool(args.skip_git),
         expected_digests={layer: getattr(args, f"expect_{layer}") for layer in POLICY_LAYERS},
         expect_decided=args.expect_decided, expect_deferred=args.expect_deferred, expect_rows=args.expect_row,
-        identity_only=bool(args.identity_only),
+        identity_only=bool(args.identity_only), expect_rank_1=args.expect_rank_1, actor=args.actor,
         reaudit={"pattern": args.reaudit_pattern, "decision": args.reaudit_decision, "state": args.reaudit_state,
                  "record_hash": args.reaudit_record_hash})
     return review.run_all()

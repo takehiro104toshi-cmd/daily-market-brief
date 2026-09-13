@@ -574,3 +574,14 @@ recommendation / decision_state）だけを出し、brief・dry-run・human boun
 `--expect-row 1:<#1>:<hash1> --expect-row 2:<#2>:<hash2> --expect-decided <#1> --expect-deferred <#2> --identity-only`
 の 1 回で、2 行 chain 不変・candidate #1 decided・candidate #2 deferred・次 rank 1 identity を同時に検証する。
 新 Decision は書かれず、次 rank 1 の review / Decision は別途の監督者 GO を要する。
+
+### 22.10 READ-ONLY review の head binding（v4.52.2）
+
+`next_candidate.py --expect-rank-1 <pattern_id>` は fresh build と rank 1 選定の直後、freshness・brief・explanation・
+questions・dry-run・command 提示のいずれよりも前に、fresh rank 1 の pattern_id を期待 id と比較する。違えば
+`CANDIDATE_HEAD_CHANGED` で fail closed する。出るのは CANDIDATE section の identity / derived metrics と
+`expected_rank_1` / `fresh_rank_1` までで、brief・explanation・questions・dry-run・command は出ない
+（別 candidate を自動的に review しない）。`--actor <actor_id>` は技術的 dry-run（機械整合 action と KEEP_REVIEWING）
+の actor を差し替えるだけで、省略時は pilot の既定 actor のまま、いずれも dry-run なので永続化は起きない。
+Candidate #3 の READ-ONLY review は `--expect-rank-1 cpt_30701289cfb0d151 --actor P395_HUMAN_REVIEW_PREP` を
+§22.9 の引数に加えた 1 回の操作で行い、Decision は書かない。

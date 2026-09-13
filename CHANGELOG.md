@@ -4,6 +4,22 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.52.2 (2026-09-13) — Add rank-1 head binding and actor passthrough to next_candidate
+
+### 追加
+
+- `src/intelligence/formal_review/next_candidate.py`: `--expect-rank-1 <pattern_id>`（fresh build の rank 1 を
+  その id に束縛。違えば NEXT_CANDIDATE 段階で `CANDIDATE_HEAD_CHANGED` として fail closed し、freshness・brief・
+  explanation・questions・dry-run・command 提示のいずれも行わない。診断は `expected_rank_1` / `fresh_rank_1` のみ）と
+  `--actor <actor_id>`（技術的 dry-run の actor を差し替える。省略時は pilot 既定 `P395_HUMAN_PILOT_PREP` のまま。
+  dry-run のみで永続化なし）。Candidate #3 READ-ONLY Human Review を「別 candidate を誤って review しない」形で
+  1 回の Windows 操作にするため。
+- `tests/intelligence/test_formal_review_progression.py` に 7 関数（展開後 8 件）: 一致で通常 flow・不一致で
+  fail closed（brief / questions / dry-run / command 不出力・Decision 不変）・actor 到達・既定 actor 不変・CLI 配線・
+  policy 6 層 digest 不変・書き込み経路なし。
+
+policy digest・queue semantics・progression semantics・Decision state model は不変。Candidate #3 の Decision は書かない。
+
 ## v4.52.1 (2026-09-12) — Add identity-only read-only review option to next_candidate
 
 ### 追加
