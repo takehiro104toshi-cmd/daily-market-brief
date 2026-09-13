@@ -709,3 +709,136 @@ def test_v4522_introduces_no_write_path():
     assert "decide" not in calls and "append_decision" not in calls and "write" not in calls
     assert "DecisionStore(" not in text and "dry_run=False" not in text and "--confirm" not in text
     assert "confirmation_token" not in text and "FormalDecisionRequest" not in text
+
+
+# ================================================================== re-entry guard + M2 observability（v4.54）
+REENTERED_NOT_PRINTED = ("::P395C_BRIEF::", "::P395C_EXPLANATION::", "::P395C_QUESTIONS::", "::P395N_DRY_RUN::",
+                         "::P395C_DRY_RUN_MACHINE_ACTION::", "::P395C_COMMANDS::", "R1=", "result=DRY_RUN_PASS",
+                         "brief_1_identity", "::P395N_END::")
+
+
+def _add_opposite_sibling(b, pid="pE"):
+    """pR の narrow sibling group に反対方向 member を新設する（member の formal Decision は書かない）。"""
+    sib = {**_tfr.COMP_R, "outlook": ["dir=UP", "target=JAPAN_EQUITY"]}
+    b.components[pid] = sib
+    b.lifecycles[pid] = "STRONG_PATTERN_CANDIDATE"
+    b.records[pid] = {**b.records["pR"], "pattern_id": pid, "components": sib, "pattern_record_id": "cpr_" + pid}
+    b.evals[pid] = approve_eval(pid)
+    b.dna[pid] = {**b.dna["pR"], "pattern_id": pid, "comparison_id": "crd_" + pid}
+    b.metrics[pid] = metrics_for(pid, _tfr.APPROVE_RECOMMENDED, first=100)
+    b.write_all()
+    b.build()
+
+
+@pytest.fixture()
+def reentered(tmp_path):
+    """Candidate #2 と同型: REJECT_RECOMMENDED / formal head KEEP_REVIEWING / M2 のみで再入 / fresh rank 1。"""
+    b = Bench(tmp_path)
+    _keep(b, "pR")
+    b.build()
+    assert _prog(b, "pR")["queue_status"] == PROG.QS_DEFERRED
+    _add_opposite_sibling(b)
+    return b
+
+
+def test_reentered_fixture_is_candidate_2_shaped(reentered):
+    p = _prog(reentered, "pR")
+    assert p["formal_head"] == KEEP_REVIEWING and p["queue_status"] == PROG.QS_REENTERED
+    assert p["reentry_reasons"] == [PROG.R_M2_CHANGED] and p["changed_components"] == ["M2"]
+    assert p["sibling_decided_since_review"] is False                      # sibling の formal Decision ではない
+    assert p["reviewed_group_state_digest"] != p["current_group_state_digest"] != ""
+    assert _ranked_ids(reentered)[0] == "pR" and _deferred_ids(reentered) == []
+    assert reentered.packet("pR")["recommendation"]["recommendation"] == REJECT_RECOMMENDED
+
+
+def test_expected_queue_status_and_reason_match_continue_the_review(reentered, capsys):
+    code, out = _identity_review(reentered, capsys, expect_rank_1="pR",
+                                 expect_queue_status=PROG.QS_REENTERED,
+                                 expect_reentry_reasons=[PROG.R_M2_CHANGED])
+    assert code == 0, out[-2000:]
+    assert f"expected_queue_status={PROG.QS_REENTERED}" in out and "target_progression_check=PASSED" in out
+    assert '"queue_status":"REENTERED_KEEP_REVIEWING"' in out and "::P395C_BRIEF::" in out
+    assert out.splitlines().count("result=DRY_RUN_PASS") == 2 and "::P395N_END::" in out
+    assert len(reentered.decisions()) == 1
+
+
+def test_progression_prints_the_m2_digest_delta_and_changed_components(reentered, capsys):
+    code, out = _identity_review(reentered, capsys, identity_only=True, expect_rank_1="pR")
+    p = _prog(reentered, "pR")
+    assert code == 0, out[-2000:]
+    assert f'"reviewed_group_state_digest":"{p["reviewed_group_state_digest"]}"' in out
+    assert f'"current_group_state_digest":"{p["current_group_state_digest"]}"' in out
+    assert '"changed_components":["M2"]' in out and p["reviewed_group_state_digest"] != p["current_group_state_digest"]
+    assert len(reentered.decisions()) == 1
+
+
+def test_expected_queue_status_mismatch_fails_closed_before_the_brief(reentered, capsys):
+    code, out = _identity_review(reentered, capsys, expect_rank_1="pR",
+                                 expect_queue_status=PROG.QS_DEFERRED)
+    assert code == 4 and "stage=NEXT_CANDIDATE" in out and f"reason={NEXT.QUEUE_STATUS_CHANGED}" in out
+    assert f"expected_queue_status={PROG.QS_DEFERRED}" in out and '"queue_status":"REENTERED_KEEP_REVIEWING"' in out
+    for token in REENTERED_NOT_PRINTED:
+        assert token not in out, token
+    assert len(reentered.decisions()) == 1
+
+
+@pytest.mark.parametrize("expected,label", [
+    ([PROG.R_M1_CHANGED], "different"),
+    ([PROG.R_M2_CHANGED, PROG.R_M1_CHANGED], "extra"),
+    ([PROG.R_M2_CHANGED, PROG.R_M2_SIBLING_DECIDED], "wrong second"),
+])
+def test_expected_reentry_reason_set_mismatch_fails_closed(reentered, capsys, expected, label):
+    code, out = _identity_review(reentered, capsys, expect_rank_1="pR", expect_reentry_reasons=expected)
+    assert code == 4 and "stage=NEXT_CANDIDATE" in out and f"reason={NEXT.REENTRY_REASON_CHANGED}" in out
+    for token in REENTERED_NOT_PRINTED:
+        assert token not in out, token
+    assert len(reentered.decisions()) == 1
+
+
+def test_missing_expected_reentry_reason_fails_closed(tmp_path, capsys):
+    """target が M1 と M2 の両方で再入しているのに片方しか束縛しない場合も fail closed。"""
+    b = Bench(tmp_path)
+    _keep(b, "pR")
+    b.build()
+    b.evals["pR"]["axis_metrics"][A_STRENGTH]["eligible_support"] = 9         # M1 も動かす
+    b.evals["pR"]["axis_metrics"][A_QUALITY]["eligible_support"] = 9
+    b.write_evaluations()
+    _add_opposite_sibling(b)
+    assert set(_prog(b, "pR")["reentry_reasons"]) == {PROG.R_M1_CHANGED, PROG.R_M2_CHANGED}
+    code, out = _identity_review(b, capsys, expect_rank_1="pR", expect_reentry_reasons=[PROG.R_M2_CHANGED])
+    assert code == 4 and f"reason={NEXT.REENTRY_REASON_CHANGED}" in out and "stage=NEXT_CANDIDATE" in out
+    assert "::P395C_BRIEF::" not in out and len(b.decisions()) == 1
+
+
+def test_reentry_guard_is_inert_when_not_bound(reentered, capsys):
+    code, out = _identity_review(reentered, capsys, identity_only=True, expect_rank_1="pR")
+    assert code == 0 and "target_progression=" not in out and "expected_queue_status=" not in out
+    assert len(reentered.decisions()) == 1
+
+
+def test_reentry_guard_cli_wiring(reentered, monkeypatch, capsys):
+    injected = _tfr._InjectedNext
+    injected.bench = reentered
+    monkeypatch.setattr(NEXT, "NextCandidateReview", injected)
+    base = ["--data-root", str(reentered.root), "--skip-git", "--expect-formal-review", NEW_FORMAL_DIGEST,
+            "--expect-rank-1", "pR", "--identity-only", "--actor", "P395_HUMAN_REVIEW_PREP"]
+    capsys.readouterr()
+    assert NEXT.main(base + ["--expect-queue-status", PROG.QS_REENTERED,
+                             "--expect-reentry-reason", PROG.R_M2_CHANGED]) == 0
+    out = capsys.readouterr().out
+    assert "target_progression_check=PASSED" in out and '"changed_components":["M2"]' in out
+    injected.bench = reentered
+    monkeypatch.setattr(NEXT, "NextCandidateReview", injected)
+    assert NEXT.main(base + ["--expect-queue-status", PROG.QS_DEFERRED]) == 4
+    assert f"reason={NEXT.QUEUE_STATUS_CHANGED}" in capsys.readouterr().out and len(reentered.decisions()) == 1
+
+
+def test_reentry_guard_adds_no_write_path_and_keeps_the_digests(reentered):
+    text = (PKG / "next_candidate.py").read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    calls = [n.func.attr for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)]
+    assert "decide" not in calls and "append_decision" not in calls
+    assert "dry_run=False" not in text and "--confirm" not in text and "confirmation_token" not in text
+    assert reentered.service().policy_digests() == {
+        "decision": "0c54ec01e2a251d9", "evaluation": "1a8443098f64d679", "recommendation": "0a979d8421a01d08",
+        "shadow_review": "e6f5094cacef6fec", "replay": "197db7c73eb0db77", "formal_review": NEW_FORMAL_DIGEST}

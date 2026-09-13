@@ -677,3 +677,62 @@ replay recovery**。
   以後この pattern を扱う）。#2 の deferred KEEP_REVIEWING（§22）は変わらない。
 - 本節の値は実行環境（Windows 実データ）で得られた報告に基づく。監督者へ未報告の項目（実行日時・実行時間・
   guard check 件数・group material digest・lifecycle）は本表に記載しない。
+
+## 25. Re-entry guard と M2 observability（v4.54）
+
+### 25.1 Candidate #2 の M2 member delta は復元不能（履歴上の限界）
+
+Candidate #2（`cpt_8c96e2070cd4c702`）は formal head `KEEP_REVIEWING` のまま
+`REENTERED_KEEP_REVIEWING` / `M2_GROUP_STATE_CHANGED` で再入した。しかし **その再入を引き起こした
+member を特定することはできない**。理由は persistence の構造そのものにある。
+
+- Decision row の metadata（20 key / 500 chars 制約）は `group_state_digest`（16 hex）だけを持ち、member 一覧を持たない。
+- `group_state_digest` は `{pattern_id, own_direction, members[{pattern_id, direction, recommendation,
+  decision_state, material_digest, relationship}]}` の SHA-256 先頭 16 桁であり、一方向。digest から view は戻せない。
+- Decision の evidence snapshot は pattern 単位（support / axes / DNA）で group member を含まない。
+- packet は build ごとに上書きされるため、review 時点の packet `frp_b118d3272d4382c1` は現存しない。
+
+したがって以下は **PROGRESSION_DELTA_UNRESOLVED** として記録する（推測で埋めない・backfill しない・row 2 を書き換えない）。
+
+| 判定 | 内容 |
+|---|---|
+| 判明している | 旧 `group_state_digest` `037f307fe6fd2efb`（row 2 metadata）/ 新 digest（fresh build）/ `changed_components=["M2"]` |
+| 復元不能 | 旧 member id・旧 member ごとの recommendation / decision state / material digest・旧 direction relation・原因 member |
+| 決定的に除外: B | sibling の formal Decision が原因（`sibling_decided_since_review=false`。row 2 以降の Decision は row 3 のみ） |
+| 決定的に除外: D | 表現の再生成のみ（digest は semantic field のみを含むため、同値の再生成では変化しない） |
+| 残る因果クラス | **A**（新しい corpus 証拠で group membership が変化）または **C**（既存 sibling の recommendation / material 変化）。**どちらかを特定して主張しない** |
+
+再入 reason が M2 のみであることから、M1（candidate 自身の material 証拠）・M3（replay review view）・
+M4（DNA relation）は review 時点と同一である。これは frozen progression semantics からの決定的帰結であり、
+Human Review は「自分の証拠は不変・group 文脈だけが変わった」という前提で現在の証拠を見て判断してよい。
+
+### 25.2 re-entry guard（呼び出し側束縛・fail closed）
+
+`next_candidate.py` に target（fresh rank 1）レベルの束縛を追加した。
+
+- `--expect-queue-status <status>`: 違えば `QUEUE_STATUS_CHANGED`。
+- `--expect-reentry-reason <reason>`（複数可）: reason 集合が完全一致しなければ `REENTRY_REASON_CHANGED`
+  （値の相違・過剰・不足のいずれも失敗。比較は sorted set で決定的）。
+
+判定は queue / progression 計算と rank 1 束縛の直後、**freshness・brief・explanation・questions・dry-run・
+command 提示より前**。無指定なら従来どおり（束縛なし）。
+
+### 25.3 M2 observability（read-only）
+
+PROGRESSION section は各 pattern について `reviewed_group_state_digest` / `current_group_state_digest` /
+`changed_components` を出す。いずれも progression 成果物（`queue.json` の `progression`）に既にある値で、
+新しい semantics・policy・persistence ではない。target については `target_progression` 行にも同じ 3 値を出す。
+
+### 25.4 将来の reviewed group snapshot（設計メモのみ・未実装・別 gate）
+
+将来の M2 再入を完全に説明可能にするには、review 時点の group member view を保存する必要がある。
+本節は**設計メモであり、本 patch では実装しない**（write atomicity と audit persistence に触れるため別 design gate）。
+
+- forward-looking のみ。既存 Decision row の migration・書き換え・backfill は行わない。
+- append-only / immutable。formal Decision（decision_id）と packet_id に keyed。
+- 記録内容: group key・own direction・member ごとの pattern_id / direction / recommendation / decision_state /
+  material_digest / relationship（M2 semantic view を再構成できる最小十分集合）。
+- 自身の digest を持ち、Decision row 側の `group_state_digest` と一致することを検証できる。
+- partial write / crash 時の挙動を明示設計する（Decision append と snapshot write の順序と、片方だけ残った場合の
+  読み取り側の扱い）。snapshot の失敗が Decision の二重書き込みを誘発してはならない。
+- `ONE_CANDIDATE_ONE_WRITE`（1 invocation = 1 candidate = real write 1 回・再試行なし）を弱めない。

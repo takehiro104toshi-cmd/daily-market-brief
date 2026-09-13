@@ -3,7 +3,8 @@
 `python -X utf8 -m src.intelligence.formal_review.next_candidate --require-commit <sha> --expect-<layer> <digest>
  [--expect-decided <pattern_id>] [--expect-deferred <pattern_id>] [--expect-row <seq>:<pattern_id>:<record_hash>]
  [--reaudit-pattern <id> --reaudit-decision <id> --reaudit-state <state> --reaudit-record-hash <hash>]
- [--identity-only] [--expect-rank-1 <pattern_id>] [--actor <actor_id>]`
+ [--identity-only] [--expect-rank-1 <pattern_id>] [--actor <actor_id>]
+ [--expect-queue-status <status>] [--expect-reentry-reason <reason> ...]`
 
 candidate #1 の real write 後に使う汎用の読み取り専用 driver。**書き込み経路を一切持たない**
 （confirmation token を受け取らず、real write の呼び出しも持たない。test が静的に検査する）。
@@ -24,6 +25,12 @@ pilot.py の section を composition で再利用し、本 module 固有の読�
   fail closed。freshness・brief・explanation・questions・dry-run・command 提示のいずれも行わない。
   診断は CANDIDATE section の identity / derived metrics と `expected_rank_1` / `fresh_rank_1` に限る）。
   `--actor` は dry-run の actor を差し替える（既定は pilot と同じ）。
+- `--expect-queue-status` / `--expect-reentry-reason`（複数可）は **target（fresh rank 1）** の progression を
+  呼び出し側の期待へ束縛する。queue status が違えば `QUEUE_STATUS_CHANGED`、re-entry reason 集合が違えば
+  （値の相違・過剰・不足のいずれも）`REENTRY_REASON_CHANGED` で fail closed。判定は queue / progression 計算後・
+  freshness / brief / explanation / questions / dry-run / command 提示より前。
+- PROGRESSION section は各 pattern の `reviewed_group_state_digest` / `current_group_state_digest` /
+  `changed_components` も出す（read-only observability。progression 成果物に既にある値で、新しい semantics ではない）。
 
 その後は fresh build から **現在の queue rank 1 を自力で特定**して 1 件だけ提示し、機械整合 action と
 KEEP_REVIEWING の dry-run（技術的証明のみ）を行い、人間判断は PENDING のまま残す。
@@ -55,6 +62,8 @@ DEFERRED_IN_PRIMARY = "DEFERRED_PATTERN_IN_PRIMARY_QUEUE"
 EXPECTED_ROW_MISMATCH = "EXPECTED_ROW_CHANGED_OR_MISSING"
 EXPECT_ROW_MALFORMED = "EXPECT_ROW_MALFORMED"
 CANDIDATE_HEAD_CHANGED = "CANDIDATE_HEAD_CHANGED"
+QUEUE_STATUS_CHANGED = "QUEUE_STATUS_CHANGED"
+REENTRY_REASON_CHANGED = "REENTRY_REASON_CHANGED"
 
 
 class ReviewFailure(Exception):
@@ -75,6 +84,7 @@ class NextCandidateReview:
                  expected_digests: Optional[Dict[str, str]] = None, expect_decided: Sequence[str] = (),
                  expect_deferred: Sequence[str] = (), expect_rows: Sequence[str] = (), identity_only: bool = False,
                  expect_rank_1: str = "", actor: str = "",
+                 expect_queue_status: str = "", expect_reentry_reasons: Sequence[str] = (),
                  reaudit: Optional[Dict[str, str]] = None, skip_git: bool = False,
                  corpus_state_resolver: Optional[Any] = None, clock: Optional[Any] = None) -> None:
         kw: Dict[str, Any] = {"require_commit": require_commit, "expected_digests": expected_digests,
@@ -91,6 +101,9 @@ class NextCandidateReview:
         self.expect_rows = [str(p).strip() for p in expect_rows if str(p).strip()]
         self.identity_only = bool(identity_only)
         self.expect_rank_1 = str(expect_rank_1 or "").strip()
+        self.expect_queue_status = str(expect_queue_status or "").strip()
+        self.expect_reentry_reasons = [str(r).strip() for r in expect_reentry_reasons if str(r).strip()]
+        self.progression_map: Dict[str, Any] = {}
         self.reaudit = {k: str(v or "") for k, v in dict(reaudit or {}).items()}
         self.t0 = time.perf_counter()
 
@@ -215,6 +228,7 @@ class NextCandidateReview:
         primary = [row["pattern_id"] for name in PRIMARY_SECTIONS for row in sections.get(name, [])]
         deferred = {str(row.get("pattern_id")): row for row in queue.get("deferred") or []}
         progression = dict(queue.get("progression") or {})
+        self.progression_map = progression
         emit_pair("deferred_count", len(deferred))
         emit_pair("deferred_patterns", sorted(deferred))
         for pid in sorted(progression):
@@ -224,6 +238,9 @@ class NextCandidateReview:
                                       "reentry_reasons": list(p.get("reentry_reasons") or []),
                                       "unverifiable_reasons": list(p.get("unverifiable_reasons") or []),
                                       "sibling_decided_since_review": bool(p.get("sibling_decided_since_review")),
+                                      "changed_components": list(p.get("changed_components") or []),
+                                      "reviewed_group_state_digest": p.get("reviewed_group_state_digest", ""),
+                                      "current_group_state_digest": p.get("current_group_state_digest", ""),
                                       "in_ranked_primary": pid in primary, "in_deferred": pid in deferred})
         leaked = sorted(set(primary) & set(deferred))
         emit_pair("deferred_patterns_in_primary_queue", leaked)
@@ -236,6 +253,27 @@ class NextCandidateReview:
             self.check("PROGRESSION", pattern not in primary, DEFERRED_IN_PRIMARY)
             self.check("PROGRESSION", row is not None, "EXPECTED_DEFERRED_PATTERN_NOT_IN_DEFERRED_QUEUE")
         emit_pair("progression_check", "PASSED")
+
+    def target_progression(self) -> None:
+        """target（fresh rank 1）の queue status / re-entry reason を束縛する（brief より前・fail closed）。"""
+        if not (self.expect_queue_status or self.expect_reentry_reasons):
+            return
+        pid = str(self.pilot.row.get("pattern_id", ""))
+        entry = dict(self.progression_map.get(pid) or {})
+        status = str(entry.get("queue_status", "")) or "ABSENT"
+        reasons = sorted({str(r) for r in entry.get("reentry_reasons") or []})
+        emit_pair("target_progression", {"pattern_id": pid, "queue_status": status, "reentry_reasons": reasons,
+                                         "changed_components": list(entry.get("changed_components") or []),
+                                         "reviewed_group_state_digest": entry.get("reviewed_group_state_digest", ""),
+                                         "current_group_state_digest": entry.get("current_group_state_digest", "")})
+        if self.expect_queue_status:
+            emit_pair("expected_queue_status", self.expect_queue_status)
+            self.check("NEXT_CANDIDATE", status == self.expect_queue_status, QUEUE_STATUS_CHANGED)
+        if self.expect_reentry_reasons:
+            expected = sorted(set(self.expect_reentry_reasons))
+            emit_pair("expected_reentry_reasons", expected)
+            self.check("NEXT_CANDIDATE", reasons == expected, REENTRY_REASON_CHANGED)
+        emit_pair("target_progression_check", "PASSED")
 
     # ------------------------------------------------------------- orchestration
     def run_all(self) -> int:
@@ -258,6 +296,7 @@ class NextCandidateReview:
                 emit_pair("expected_rank_1", self.expect_rank_1)
                 emit_pair("fresh_rank_1", fresh)
                 self.check("NEXT_CANDIDATE", fresh == self.expect_rank_1, CANDIDATE_HEAD_CHANGED)
+            self.target_progression()
             self.pilot.freshness()
             if self.identity_only:                                   # identity だけ: brief も dry-run も command も出さない
                 emit_pair("identity_only", True)
@@ -314,6 +353,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--expect-rank-1", default="", dest="expect_rank_1",
                         help="pattern id the fresh rank 1 must have; otherwise CANDIDATE_HEAD_CHANGED before any brief")
     parser.add_argument("--actor", default="", help="actor id for the technical dry-runs (default: the pilot actor)")
+    parser.add_argument("--expect-queue-status", default="", dest="expect_queue_status",
+                        help="derived queue status the target must have; otherwise QUEUE_STATUS_CHANGED before any brief")
+    parser.add_argument("--expect-reentry-reason", action="append", default=[], dest="expect_reentry_reason",
+                        help="re-entry reason the target must have (repeatable; the set must match exactly)")
     parser.add_argument("--reaudit-pattern", default="", help="existing decided pattern to re-audit read-only")
     parser.add_argument("--reaudit-decision", default="")
     parser.add_argument("--reaudit-state", default="")
@@ -327,6 +370,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         expected_digests={layer: getattr(args, f"expect_{layer}") for layer in POLICY_LAYERS},
         expect_decided=args.expect_decided, expect_deferred=args.expect_deferred, expect_rows=args.expect_row,
         identity_only=bool(args.identity_only), expect_rank_1=args.expect_rank_1, actor=args.actor,
+        expect_queue_status=args.expect_queue_status, expect_reentry_reasons=tuple(args.expect_reentry_reason),
         reaudit={"pattern": args.reaudit_pattern, "decision": args.reaudit_decision, "state": args.reaudit_state,
                  "record_hash": args.reaudit_record_hash})
     return review.run_all()

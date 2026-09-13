@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.54 (2026-09-13) — Add re-entry guard and M2 observability to next_candidate
+
+### 追加
+
+- `src/intelligence/formal_review/next_candidate.py`: target（fresh rank 1）の progression を呼び出し側で束縛する
+  `--expect-queue-status <status>`（不一致は `QUEUE_STATUS_CHANGED`）と `--expect-reentry-reason <reason>`（複数可・
+  sorted set の完全一致。値の相違・過剰・不足のいずれも `REENTRY_REASON_CHANGED`）。判定は queue / progression 計算と
+  rank 1 束縛の直後、freshness・brief・explanation・questions・dry-run・command 提示より前に fail closed する。
+  無指定時の挙動は不変。
+- PROGRESSION section と `target_progression` 行に `reviewed_group_state_digest` / `current_group_state_digest` /
+  `changed_components` を出力（read-only observability。`queue.json` の progression に既にある値で、新しい semantics・
+  policy・persistence ではない）。
+- `tests/intelligence/test_formal_review_progression.py` に 9 関数（展開後 13 件）: Candidate #2 と同型の
+  REENTERED_KEEP_REVIEWING / M2 のみ / sibling 未決 / rank 1 fixture・status と reason 一致で継続・digest delta と
+  changed_components の出力・status 不一致で brief 前に fail closed・reason 集合の相違 / 過剰 / 不足で fail closed・
+  無指定時は inert・CLI 配線・書き込み経路なし・6 層 digest 不変。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §25（Candidate #2 の M2 member delta は復元不能＝
+  PROGRESSION_DELTA_UNRESOLVED / 除外できる因果クラス B・D / 残る A・C は特定しない / re-entry guard /
+  M2 observability / 将来の reviewed group snapshot の設計メモ（未実装・別 gate））。
+
+progression semantics・queue ordering・Decision transitions・Decision schema・Decision rows・service・population・
+ordering・replay・DNA・formal-review policy 値・policy 6 層 digest はいずれも不変。Decision row の書き換え・
+backfill は行わない。Candidate #2 の Decision は書かない。
+
 ## v4.53 (2026-09-13) — Add candidate #3 real-write audit record（human REJECTED / machine REJECT_RECOMMENDED）
 
 ### 追加
