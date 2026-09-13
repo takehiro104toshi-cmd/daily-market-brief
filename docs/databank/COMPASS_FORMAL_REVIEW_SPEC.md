@@ -471,8 +471,10 @@ human formal decision reason（formal Decision の理由本文。本節にのみ
 |---|---|---|---|---|---|---|
 | 1 | `cpt_4d2f4477a946c17e` | REJECT_RECOMMENDED | REJECTED | `cdc_884ab4cafff2dbf3` | `ed8a0c64` | §18 |
 | 2 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING | `cdc_0a420b63cc1257ed` | `179146cd` | §21 |
+| 3 | `cpt_30701289cfb0d151` | REJECT_RECOMMENDED | REJECTED | `cdc_087f4cf39db6ee97` | `36646cf9` | §24 |
 
-chain: seq 2 の `previous_record_hash` = seq 1 の record hash。全行 HUMAN / FORMAL / NOT_PROMOTED。
+chain: seq 2 の `previous_record_hash` = seq 1 の record hash、seq 3 の `previous_record_hash` = seq 2 の
+record hash。全行 HUMAN / FORMAL / NOT_PROMOTED。
 
 ## 22. Queue Progression v1（KEEP_REVIEWING の提示制御・formal_review policy 1.1.0・凍結）
 
@@ -617,3 +619,61 @@ rows before / current state / machine recommendation / queue rank / 型付き ex
 group digest / 6 層 policy digest の呼び出し側束縛・書き込み後の Decision 監査・global chain 監査・
 pattern 固有 prior head 監査・Shadow / DNA / PDF 安全性・`NOT_PROMOTED`・main 未マージ。
 candidate 固有の定数は持たない（すべて引数）。
+
+## 24. Candidate #3 real-write audit record（監査証跡・履歴事実）
+
+本節は **Phase 3.9.5 で 3 番目に書かれた実 human formal Decision の記録**であり、§18（candidate #1）・
+§21（candidate #2）とは別の事例として記録する。履歴の事実であり、semantics・policy digest・packet schema・
+guard 挙動のいずれも定義しない（それらは §1〜§13、実行 envelope は §20、reviewed 束縛は §23）。
+
+| 項目 | 値 |
+|---|---|
+| 実行 driver | `src/intelligence/formal_review/execute.py`（汎用 execution session・§20 + §23 の reviewed 束縛） |
+| 実行 commit（`--require-commit` 束縛） | `78e3545`（v4.52.3・reviewed packet / reviewed history 束縛の導入） |
+| pattern_id | `cpt_30701289cfb0d151` |
+| pattern_type | EVIDENCE_WHY |
+| fresh queue rank | 1（REJECT_RECOMMENDED section・`--require-queue-rank 1` で束縛） |
+| **machine recommendation** | **REJECT_RECOMMENDED** |
+| **human formal decision** | **REJECTED**（機械推奨と同方向） |
+| decision_id | `cdc_087f4cf39db6ee97` |
+| sequence | 3 |
+| previous_record_hash | `179146cd…5843ca`（= candidate #2 の record hash） |
+| previous_decision_id / previous_state | 空 / 空（この pattern では初回の Decision） |
+| actor / actor_type / review_mode | `P395_HUMAN_SUPERVISED_REVIEW` / HUMAN / FORMAL |
+| promotion_status | NOT_PROMOTED |
+| packet_id | `frp_fae93b89c646e012`（read-only review 時と同一・`--expect-packet-id` で束縛） |
+| packet_evidence_digest | `841d526dadadc886`（`--expect-packet-evidence-digest` で束縛） |
+| material_digest | `8fc381f70b6bcfd3`（`--expect-material-digest` で束縛） |
+| group_state_digest | `9ae6617da0fc96ef`（sibling group なし・`GROUP_CONTEXT_UNCHANGED`） |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de` |
+| stability_class | STABLE |
+| corpus eligible（packet / write 時点） | 139 / 139 |
+| idempotency_key | `frp_fae93b89c646e012`（= packet_id） |
+| record hash | `36646cf98a78a429edb6dc9dc26e3625f0443c4ff64aaa3da9540d0350a771dd` |
+| Decision rows | 2 → 3 |
+| 束縛した歴史行 | `--expect-row 1:cpt_4d2f4477a946c17e:ed8a0c64…0006c0` / `--expect-row 2:cpt_8c96e2070cd4c702:179146cd…5843ca` |
+| expected facts（14 項目） | `document_contradiction=true` / `document_contradiction_repeated=true` / `narrow_sibling_contradiction=false` / `narrow_sibling_repeated=false` / `contradiction_active=true` / `reject_driver=SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION` / `reversal_count=0` / `recovery_count=0` / `opposite_sibling_count=0` / `replay_current_compatible=true` / `formal_review_gate_reached=true` / `direction_class=NON_DIRECTIONAL` / `eligible_support=21` / `stability_class=STABLE` |
+| sibling group | なし（`sibling_group_key` 空・group_size 0・member 0・opposite 0・C1 / C3 は本 action に非適用） |
+| policy digest | 6 層とも凍結値（`decision 0c54ec01e2a251d9` / `evaluation 1a8443098f64d679` / `recommendation 0a979d8421a01d08` / `shadow_review e6f5094cacef6fec` / `replay 197db7c73eb0db77` / `formal_review d2fb015ca827dd15`） |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN** |
+
+human formal decision reason（formal Decision の理由本文。§18 / §21 と同じく本節にのみ記録し、他所へ複製しない）:
+
+> The supporting evidence remains directionally contradictory across a long observation span, and the
+> contradiction is repeated, active, and unrecovered despite persistent evidence over time.
+
+理由カテゴリ（他文書で参照してよい要約表現）: **repeated active supporting-document contradiction with no
+replay recovery**。
+
+補足（履歴事実）:
+
+- candidate #1（§18）と同じく human と machine が同方向の事例だが、reject driver が異なる。#3 は candidate 自身の
+  supporting document 間の**繰り返す方向矛盾**（`SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION`）が現在も active で、
+  replay 上の recovery が 0 件（`recovery_count=0` / `reversal_count=0` / stability STABLE）であることによる。
+  sibling 由来の関係的矛盾（#2）ではない。
+- 本書き込みは §23 の reviewed 束縛（reviewed packet 3 値 + 歴史行 2 行）を初めて使った Decision であり、
+  「人間がレビューしたその packet・その履歴」以外では write が起きない状態で実行された。
+- 書き込み後の queue 挙動: REJECTED は既決なので primary queue から外れる（`reopen.py` の REOPEN 判定のみが
+  以後この pattern を扱う）。#2 の deferred KEEP_REVIEWING（§22）は変わらない。
+- 本節の値は実行環境（Windows 実データ）で得られた報告に基づく。監督者へ未報告の項目（実行日時・実行時間・
+  guard check 件数・group material digest・lifecycle）は本表に記載しない。

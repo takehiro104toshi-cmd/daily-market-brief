@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.53 (2026-09-13) — Add candidate #3 real-write audit record（human REJECTED / machine REJECT_RECOMMENDED）
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §24「Candidate #3 real-write audit record」（履歴事実のみ。
+  実行 driver `execute.py` / 実行 commit 束縛 `78e3545` / pattern `cpt_30701289cfb0d151`（EVIDENCE_WHY）/
+  machine REJECT_RECOMMENDED / **human formal decision REJECTED**（同方向）/ decision_id `cdc_087f4cf39db6ee97` /
+  sequence 3 / previous_record_hash = candidate #2 の record hash / previous_decision_id・previous_state 空 /
+  actor `P395_HUMAN_SUPERVISED_REVIEW`・HUMAN・FORMAL / NOT_PROMOTED / packet `frp_fae93b89c646e012` /
+  evidence digest `841d526dadadc886` / material digest `8fc381f70b6bcfd3` / group digest `9ae6617da0fc96ef`
+  （sibling group なし）/ replay run `crp_2530396a5a3b8fb7`・`74d5b037498fc0de` / stability STABLE /
+  corpus eligible 139 / idempotency key = packet_id / record hash `36646cf9…a771dd` / rows 2 → 3 /
+  §23 の reviewed 束縛（packet 3 値 + 歴史行 2 行）を初めて使用 / expected facts 14 項目 /
+  policy 6 層は凍結値のまま / 書き込み後も Phase 3.9.5 は OPEN）。理由本文は §24 にのみ記録する。
+- §21.1 Decision ledger に seq 3 を追記し、`COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §10 に 3 回目の行を追加
+  （理由カテゴリ: repeated active supporting-document contradiction with no replay recovery）。
+
+Decision semantics・policy 6 層 digest・packet schema・guard・queue semantics・progression semantics は不変。
+コード変更なし（documentation only）。Candidate #4 の review・Decision は行わない。
+
 ## v4.52.3 (2026-09-13) — Add reviewed packet and reviewed history binding to the execution session
 
 ### 追加
