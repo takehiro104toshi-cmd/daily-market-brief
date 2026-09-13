@@ -552,3 +552,59 @@ def test_session_plan_lists_deferred_as_non_ranked_context(kept):
     plan = session_plan(store.queue(), {pid: store.packet(pid) for pid in store.packet_ids()})
     assert [s["brief"]["1_identity"]["pattern_id"] for s in plan["steps"]] == ["pR", "pA", "pK", "pB"]
     assert [d["pattern_id"] for d in plan["deferred_patterns"]] == ["pT"] and plan["deferred_patterns"][0]["queue_status"] == PROG.QS_DEFERRED
+
+
+# ================================================================== identity-only read-only review + expect-row（v4.52.1）
+def _identity_review(b, capsys, **kw):
+    capsys.readouterr()
+    params = {"expected_digests": EXPECTED_DIGESTS, "skip_git": True, "corpus_state_resolver": b.corpus_state,
+              "clock": b.clock}
+    params.update(kw)
+    code = NEXT.NextCandidateReview(b.root, REPO_ROOT, **params).run_all()
+    return code, capsys.readouterr().out
+
+
+def test_next_candidate_identity_only_reports_rank_one_without_brief_or_dry_run(kept, capsys):
+    """Windows READ-ONLY 確認の形: 2 行 chain 不変（expect-row）+ deferred + 次 rank 1 identity のみ。書き込み無し。"""
+    row = kept.decisions()[0].as_dict()
+    code, out = _identity_review(kept, capsys, identity_only=True, expect_deferred=["pT"],
+                                 expect_rows=[f"1:pT:{row['record_hash']}"])
+    assert code == 0, out[-2000:]
+    assert "identity_only=True" in out and "next_rank_1=" in out and '"pattern_id":"pR"' in out
+    for marker in ("DECISION_CHAIN", "PROGRESSION", "NEXT_CANDIDATE", "SAFETY", "NEXT_REVIEW_OK", "END"):
+        assert f"::P395N_{marker}::" in out
+    assert "::P395N_DRY_RUN::" not in out and "::P395C_BRIEF::" not in out and "::P395C_COMMANDS::" not in out
+    assert "::P395C_HUMAN_DECISION::" not in out and "result=DRY_RUN_PASS" not in out
+    assert "stage_2_real_write" not in out and "brief_freshness" not in out and "explanation=" not in out
+    assert "expected_row_1=" in out and '"record_hash_matches":true' in out and "decision_hash_chain=VALID" in out
+    assert '"queue_status":"DEFERRED_UNCHANGED_KEEP_REVIEWING"' in out and "progression_check=PASSED" in out
+    assert "candidates_presented=1" in out and "real_decisions_written_by_this_run=0" in out
+    assert all(ord(ch) < 128 for ch in out) and len(kept.decisions()) == 1
+
+
+@pytest.mark.parametrize("make_spec, reason", [
+    (lambda row: f"1:pT:{'0' * 64}", f"{NEXT.EXPECTED_ROW_MISMATCH}:1"),               # record hash が違う
+    (lambda row: f"1:pX:{row['record_hash']}", f"{NEXT.EXPECTED_ROW_MISMATCH}:1"),      # pattern が違う
+    (lambda row: f"2:pT:{row['record_hash']}", f"{NEXT.EXPECTED_ROW_MISMATCH}:2"),      # 存在しない sequence
+    (lambda row: "not-a-row-spec", NEXT.EXPECT_ROW_MALFORMED),                          # 書式不正
+])
+def test_next_candidate_expect_row_fails_closed_before_any_build(kept, capsys, make_spec, reason):
+    row = kept.decisions()[0].as_dict()
+    code, out = _identity_review(kept, capsys, identity_only=True, expect_rows=[make_spec(row)])
+    assert code == 4 and "stage=DECISION_CHAIN" in out and f"reason={reason}" in out
+    assert "::P395N_FRESH_BUILD::" not in out and "::P395N_NEXT_CANDIDATE::" not in out
+    assert len(kept.decisions()) == 1
+
+
+def test_next_candidate_cli_wires_identity_only_and_expect_row(kept, monkeypatch, capsys):
+    row = kept.decisions()[0].as_dict()
+    injected = _tfr._InjectedNext
+    injected.bench = kept
+    monkeypatch.setattr(NEXT, "NextCandidateReview", injected)
+    capsys.readouterr()
+    code = NEXT.main(["--data-root", str(kept.root), "--skip-git", "--expect-formal-review", NEW_FORMAL_DIGEST,
+                      "--expect-deferred", "pT", "--expect-row", f"1:pT:{row['record_hash']}", "--identity-only"])
+    out = capsys.readouterr().out
+    assert code == 0, out[-2000:]
+    assert "identity_only=True" in out and "expected_row_1=" in out and '"pattern_id":"pR"' in out
+    assert "::P395N_DRY_RUN::" not in out and "::P395N_END::" in out and len(kept.decisions()) == 1

@@ -563,3 +563,14 @@ queue_status `DEFERRED_UNCHANGED_KEEP_REVIEWING` / ranked primary に無し / qu
 `reentry_triggered=false`。Decision state・履歴は不変で新 Decision は書かれない。次の primary candidate が rank 1
 になり得るが、その review / Decision は本変更では**行わない**。Candidate #1 は REJECTED / reopen 挙動のみ
 （`reopen.py` 不変）。
+
+### 22.9 Windows READ-ONLY 確認の形（identity-only・v4.52.1）
+
+`next_candidate.py --identity-only` は fresh build 後に rank 1 の identity（pattern_id / pattern_type /
+recommendation / decision_state）だけを出し、brief・dry-run・human boundary・command 提示を行わない（SAFETY は常に
+実行し、書き込み経路は無い）。`--expect-row <seq>:<pattern_id>:<record_hash>`（複数可）は既存 Decision row の
+不変証明で、その sequence の row が同じ pattern・同じ record_hash でなければ `EXPECTED_ROW_CHANGED_OR_MISSING:<seq>`
+で DECISION_CHAIN 段階に fail closed する（fresh build の前）。Candidate #2 の確認は
+`--expect-row 1:<#1>:<hash1> --expect-row 2:<#2>:<hash2> --expect-decided <#1> --expect-deferred <#2> --identity-only`
+の 1 回で、2 行 chain 不変・candidate #1 decided・candidate #2 deferred・次 rank 1 identity を同時に検証する。
+新 Decision は書かれず、次 rank 1 の review / Decision は別途の監督者 GO を要する。

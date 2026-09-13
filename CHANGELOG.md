@@ -4,6 +4,21 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.52.1 (2026-09-12) — Add identity-only read-only review option to next_candidate
+
+### 追加
+
+- `src/intelligence/formal_review/next_candidate.py`: `--identity-only`（fresh build 後に rank 1 の identity
+  ＝ pattern_id / pattern_type / recommendation / decision_state だけを出し、brief・dry-run・human boundary・
+  command 提示を行わない。SAFETY は常に実行）と `--expect-row <seq>:<pattern_id>:<record_hash>`（複数可・既存
+  Decision row の不変証明。不一致・欠落は `EXPECTED_ROW_CHANGED_OR_MISSING:<seq>`、書式不正は
+  `EXPECT_ROW_MALFORMED` で DECISION_CHAIN 段階に fail closed）。Phase 3.9.5 の Windows READ-ONLY 確認
+  （2 行 chain 不変 + candidate #1 decided + candidate #2 deferred + 次 rank 1 identity のみ）を 1 回で行うため。
+  書き込み経路は引き続き無し（静的検査は不変）。既定挙動（brief / dry-run 提示）は不変。
+- `tests/intelligence/test_formal_review_progression.py` に 3 関数（展開後 6 件）を追加。
+
+policy 6 層 digest・packet schema・queue semantics・progression semantics は不変。Phase 3.9.5 は OPEN のまま。
+
 ## v4.52 (2026-09-12) — Add KEEP_REVIEWING queue progression（formal_review policy 1.1.0）
 
 ### 追加

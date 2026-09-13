@@ -1,8 +1,9 @@
 """Phase 3.9.5 next candidate read-only review（Decision が 1 件以上ある状態からの次の 1 件）。
 
 `python -X utf8 -m src.intelligence.formal_review.next_candidate --require-commit <sha> --expect-<layer> <digest>
- [--expect-decided <pattern_id>] [--reaudit-pattern <id> --reaudit-decision <id> --reaudit-state <state>
- --reaudit-record-hash <hash>]`
+ [--expect-decided <pattern_id>] [--expect-deferred <pattern_id>] [--expect-row <seq>:<pattern_id>:<record_hash>]
+ [--reaudit-pattern <id> --reaudit-decision <id> --reaudit-state <state> --reaudit-record-hash <hash>]
+ [--identity-only]`
 
 candidate #1 の real write 後に使う汎用の読み取り専用 driver。**書き込み経路を一切持たない**
 （confirmation token を受け取らず、real write の呼び出しも持たない。test が静的に検査する）。
@@ -15,6 +16,10 @@ pilot.py の section を composition で再利用し、本 module 固有の読�
 - PROGRESSION（1.1.0）: deferred KEEP_REVIEWING が ranked primary に混ざっていないこと
   （混ざれば `DEFERRED_PATTERN_IN_PRIMARY_QUEUE`）。`--expect-deferred` は queue["deferred"] での在席も要求する。
   progression status / re-entry reason / unverifiable reason を pattern ごとに出す（reason 本文は無い）。
+- `--expect-row <seq>:<pattern_id>:<record_hash>`（複数可）は既存 Decision row の不変証明（その sequence の row が
+  同じ pattern・同じ record_hash であること。違えば `EXPECTED_ROW_CHANGED_OR_MISSING:<seq>` で fail closed）。
+- `--identity-only` は rank 1 の identity（pattern_id / pattern_type / recommendation / decision_state）だけを出し、
+  brief・dry-run・human boundary・command 提示を行わない（Windows READ-ONLY 確認用。SAFETY は常に実行する）。
 
 その後は fresh build から **現在の queue rank 1 を自力で特定**して 1 件だけ提示し、機械整合 action と
 KEEP_REVIEWING の dry-run（技術的証明のみ）を行い、人間判断は PENDING のまま残す。
@@ -43,6 +48,8 @@ EXIT_OK, EXIT_FORMAL_REVIEW, EXIT_REVIEW, EXIT_UNEXPECTED = 0, 3, 4, 5
 PRIMARY_SECTIONS = (SECTION_REJECT, SECTION_APPROVE, SECTION_REOPEN)
 DECIDED_IN_PRIMARY = "DECIDED_PATTERN_STILL_IN_PRIMARY_QUEUE"
 DEFERRED_IN_PRIMARY = "DEFERRED_PATTERN_IN_PRIMARY_QUEUE"
+EXPECTED_ROW_MISMATCH = "EXPECTED_ROW_CHANGED_OR_MISSING"
+EXPECT_ROW_MALFORMED = "EXPECT_ROW_MALFORMED"
 
 
 class ReviewFailure(Exception):
@@ -61,7 +68,7 @@ class NextCandidateReview:
 
     def __init__(self, data_root: Path, repo_root: Path, *, require_commit: str = "",
                  expected_digests: Optional[Dict[str, str]] = None, expect_decided: Sequence[str] = (),
-                 expect_deferred: Sequence[str] = (),
+                 expect_deferred: Sequence[str] = (), expect_rows: Sequence[str] = (), identity_only: bool = False,
                  reaudit: Optional[Dict[str, str]] = None, skip_git: bool = False,
                  corpus_state_resolver: Optional[Any] = None, clock: Optional[Any] = None) -> None:
         kw: Dict[str, Any] = {"require_commit": require_commit, "expected_digests": expected_digests,
@@ -73,6 +80,8 @@ class NextCandidateReview:
         self.pilot = CandidateOnePilot(data_root, repo_root, **kw)
         self.expect_decided = [str(p).strip() for p in expect_decided if str(p).strip()]
         self.expect_deferred = [str(p).strip() for p in expect_deferred if str(p).strip()]
+        self.expect_rows = [str(p).strip() for p in expect_rows if str(p).strip()]
+        self.identity_only = bool(identity_only)
         self.reaudit = {k: str(v or "") for k, v in dict(reaudit or {}).items()}
         self.t0 = time.perf_counter()
 
@@ -113,6 +122,15 @@ class NextCandidateReview:
         emit_pair("decision_hash_chain", "VALID")
         emit_pair("all_rows_human_formal_not_promoted", True)
         emit_pair("decided_patterns", sorted({str(r.get("pattern_id")) for r in rows}))
+        by_sequence = {int(r.get("sequence") or 0): r for r in rows}
+        for spec in self.expect_rows:                                  # <seq>:<pattern_id>:<record_hash>（既存行の不変証明）
+            parts = spec.split(":")
+            self.check("DECISION_CHAIN", len(parts) == 3 and parts[0].isdigit(), f"{EXPECT_ROW_MALFORMED}:{spec}")
+            row = by_sequence.get(int(parts[0])) or {}
+            ok = str(row.get("pattern_id")) == parts[1] and str(row.get("record_hash")) == parts[2]
+            emit_pair(f"expected_row_{parts[0]}", {"pattern_id": parts[1], "record_hash_matches": ok,
+                                                    "decision_type": row.get("decision_type", "ABSENT")})
+            self.check("DECISION_CHAIN", ok, f"{EXPECTED_ROW_MISMATCH}:{parts[0]}")
         self._reaudit_row(rows)
 
     def _reaudit_row(self, rows: List[Dict[str, Any]]) -> None:
@@ -227,12 +245,19 @@ class NextCandidateReview:
             _marker("NEXT_CANDIDATE")
             self.pilot.candidate()
             self.pilot.freshness()
-            self.pilot.brief()
-            _marker("DRY_RUN")
-            self.pilot.machine_action_dry_run()
-            self.pilot.keep_reviewing_dry_run()
-            self.pilot.human_boundary()
-            self.pilot.commands()
+            if self.identity_only:                                   # identity だけ: brief も dry-run も command も出さない
+                emit_pair("identity_only", True)
+                emit_pair("next_rank_1", {"pattern_id": self.pilot.row.get("pattern_id"),
+                                          "pattern_type": self.pilot.row.get("pattern_type"),
+                                          "recommendation": self.pilot.row.get("recommendation"),
+                                          "decision_state": self.pilot.row.get("decision_state")})
+            else:
+                self.pilot.brief()
+                _marker("DRY_RUN")
+                self.pilot.machine_action_dry_run()
+                self.pilot.keep_reviewing_dry_run()
+                self.pilot.human_boundary()
+                self.pilot.commands()
             _marker("SAFETY")
             self.pilot.safety()
             _marker("NEXT_REVIEW_OK")
@@ -268,6 +293,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         help="pattern that must be decided and absent from the primary queue")
     parser.add_argument("--expect-deferred", action="append", default=[], dest="expect_deferred",
                         help="KEEP_REVIEWING pattern that must be in queue.deferred and absent from ranked primary")
+    parser.add_argument("--expect-row", action="append", default=[], dest="expect_row",
+                        help="<seq>:<pattern_id>:<record_hash> of an existing decision row that must be unchanged")
+    parser.add_argument("--identity-only", action="store_true", dest="identity_only",
+                        help="report only the rank 1 identity (no brief, no dry-run, no commands)")
     parser.add_argument("--reaudit-pattern", default="", help="existing decided pattern to re-audit read-only")
     parser.add_argument("--reaudit-decision", default="")
     parser.add_argument("--reaudit-state", default="")
@@ -279,7 +308,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     review = NextCandidateReview(
         resolve_root(args.data_root), Path.cwd(), require_commit=args.require_commit, skip_git=bool(args.skip_git),
         expected_digests={layer: getattr(args, f"expect_{layer}") for layer in POLICY_LAYERS},
-        expect_decided=args.expect_decided, expect_deferred=args.expect_deferred,
+        expect_decided=args.expect_decided, expect_deferred=args.expect_deferred, expect_rows=args.expect_row,
+        identity_only=bool(args.identity_only),
         reaudit={"pattern": args.reaudit_pattern, "decision": args.reaudit_decision, "state": args.reaudit_state,
                  "record_hash": args.reaudit_record_hash})
     return review.run_all()
