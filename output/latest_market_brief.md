@@ -108,8 +108,8 @@
 - **営業で話すポイント:** 「三菱UFJフィナンシャル・グループなどには追い風、ソフトバンクグループ、日本電信電話などには逆風が意識されやすい局面とお伝えできます。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性3 ／ 営業利用価値4 ／ 日本株影響度3 ／ 米国株影響度2 ／ 個別株へ展開できるか5 ／ テーマ株へ展開できるか5 ／ 今後数週間重要か3
 
-### 4. Q&A: Kirkland & Ellis on AI and its deal with Palantir　★★★☆☆
-- **ニュース:** 「Q&A: Kirkland & Ellis on AI and its deal with Palantir」（Yahoo Finance US）
+### 4. Marvell Is Winning Custom AI Business. TSMC May Be the Safer Way to Play It　★★★☆☆
+- **ニュース:** 「Marvell Is Winning Custom AI Business. TSMC May Be the Safer Way to Play It」（Yahoo Finance US）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -118,14 +118,14 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト3 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 5. OpenAI rules out IPO this year as Altman, Musk & Amodei warn AI is moving too fast　★★★☆☆
-- **ニュース:** 「OpenAI rules out IPO this year as Altman, Musk & Amodei warn AI is moving too fast」（CNBC Top News）
-- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
-- **重要テーマ:** AI
-- **関連セクター:** 情報通信・生成AI
+### 5. 中部電力 社長と会長が辞任見通し　★★★☆☆
+- **ニュース:** 「中部電力 社長と会長が辞任見通し」（Yahoo!ニュース 経済）
+- **岡三ストラテジストならどう見るか:** 「電力」というテーマの一環として、「電力・インフラ」関連への波及が意識されやすいニュースと考えられます。
+- **重要テーマ:** 電力
+- **関連セクター:** 電力・インフラ
 - **恩恵銘柄:** 該当なし
 - **悪影響銘柄:** 該当なし
-- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
+- **営業で話すポイント:** 「「電力・インフラ」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
 ---
@@ -150,15 +150,15 @@
 > 今日世界で何が変化したかを、3分で最初に把握するブロックです。
 
 #### 今日もっとも重要な変化
-**AI**（Momentum 100/100・急加速）— 本日34件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
+**AI**（Momentum 100/100・急加速）— 本日40件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
 
 #### 世界のメガトレンド
 - **AI** ★★★★★（フェーズ: 急成長期 ／ 継続性: 高い）
-  本日の関連見出し: 34件／AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
+  本日の関連見出し: 40件／AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
 - **半導体** ★★★☆☆（フェーズ: 成熟期 ／ 継続性: 高い）
   本日の関連見出し: 0件／AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
-- **電力** ★★★☆☆（フェーズ: 成熟期 ／ 継続性: 高い）
-  本日の関連見出し: 0件／本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
+- **電力** ★★★★☆（フェーズ: 成長初期 ／ 継続性: 高い）
+  本日の関連見出し: 1件／本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
 - **GX** ★☆☆☆☆（フェーズ: 減速期 ／ 継続性: 限定的）
   本日の関連見出し: 0件／本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
 - **DX** ★☆☆☆☆（フェーズ: 減速期 ／ 継続性: 限定的）
@@ -229,11 +229,11 @@
   本日の関連見出し: 0件／インバウンド需要の拡大は旅行・宿泊・小売など関連業種への追い風となりやすいが、本watchlistには直接該当する銘柄がありません
 
 #### Theme Momentum Score
-- **AI**: 100/100（急加速）— 本日34件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
+- **AI**: 100/100（急加速）— 本日40件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
   関連セクター: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI ／ 関連銘柄: 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC、など
 - **半導体**: 45/100（加速）— 既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
   関連セクター: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI ／ 関連銘柄: 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC、など
-- **電力**: 15/100（減速）— 継続性の高い構造的テーマに位置づけられています、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
+- **電力**: 31/100（横ばい）— 本日1件の関連見出しが確認されています、本日の重要ニュースにも関連しています、継続性の高い構造的テーマに位置づけられています、Future Intelligenceのテーマ評価は★★★★☆・成長初期です。
 - **GX**: 0/100（減速）— 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
 - **DX**: 0/100（減速）— 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
 - **防衛**: 45/100（加速）— 既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
@@ -331,19 +331,19 @@
   普及状況: AI分析: 継続的な話題化が確認されており、活用の広がりが意識されやすい局面と考えられます。
   競争環境: AI分析: 東京エレクトロン、ニデック、ソニーグループなど、関連銘柄として意識される企業を中心とした競争環境にあると考えられます。 ／ 参入障壁: AI分析: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AIなど関連業種の設備・技術・供給網が参入障壁になりやすいと考えられます。
   主なリスク: AI分析: 話題化・期待の高まりを背景に、材料出尽くしや期待先行によるボラティリティに注意が必要と考えられます。
-  判断根拠: durable_themes該当、causal_rules一致、本日の関連見出し34件、サプライチェーン波及（恩恵銘柄）の確認
+  判断根拠: durable_themes該当、causal_rules一致、本日の関連見出し40件、サプライチェーン波及（恩恵銘柄）の確認
 - **半導体**［AI分析］（現在フェーズ: 成熟期）
   市場ステージ: AI分析: 現在のフェーズは「成熟期」と推定されます。AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
   普及状況: AI分析: 構造的なテーマに位置づけられますが、本日時点で活用状況を示す具体的な材料は確認できていません。
   競争環境: AI分析: 東京エレクトロン、ニデック、ソニーグループなど、関連銘柄として意識される企業を中心とした競争環境にあると考えられます。 ／ 参入障壁: AI分析: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AIなど関連業種の設備・技術・供給網が参入障壁になりやすいと考えられます。
   主なリスク: AI分析: 構造的なテーマである一方、政策・規制動向や供給制約などの外部要因の影響を受けやすい可能性があります。
   判断根拠: durable_themes該当、causal_rules一致、サプライチェーン波及（恩恵銘柄）の確認
-- **電力**［AI分析］（現在フェーズ: 成熟期）
-  市場ステージ: AI分析: 現在のフェーズは「成熟期」と推定されます。本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
-  普及状況: AI分析: 構造的なテーマに位置づけられますが、本日時点で活用状況を示す具体的な材料は確認できていません。
+- **電力**［AI分析］（現在フェーズ: 成長初期）
+  市場ステージ: AI分析: 現在のフェーズは「成長初期」と推定されます。本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
+  普及状況: AI分析: 継続的な話題化が確認されており、活用の広がりが意識されやすい局面と考えられます。
   競争環境: 分析材料不足: 競争環境を推定できる関連銘柄情報が確認できていません。 ／ 参入障壁: 分析材料不足: 参入障壁を推定できる業種情報が確認できていません。
   主なリスク: AI分析: 構造的なテーマである一方、政策・規制動向や供給制約などの外部要因の影響を受けやすい可能性があります。
-  判断根拠: durable_themes該当
+  判断根拠: durable_themes該当、本日の関連見出し1件
 - **GX**［分析材料不足］（現在フェーズ: 分析材料不足）
   市場ステージ: 分析材料不足
   普及状況: 分析材料不足
@@ -557,13 +557,13 @@
   根拠: Momentum高、Early Signal該当、durable_theme、causal_rules一致、Sector Ranking該当、サプライチェーン解決、国家戦略メモ該当、資金フローシグナル該当
 
 ##### 電力
-- Momentum: 15/100（減速）
-- Lifecycle: 成熟期 ／ 継続性: 高い
+- Momentum: 31/100（横ばい）
+- Lifecycle: 成長初期 ／ 継続性: 高い
 - 関連テーマ: AI、GX、資源、核融合、EV、クラウド
 - Catalyst［AI分析］: 構造的テーマとしての継続性が意識され続けること／日本、中国、EUなどの政策的な重点分野として位置づけが強まること／市場シグナル上、資金が向かいやすい地合いが続くこと
-- Risk［AI分析］: 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと／テーマの成熟・鈍化に伴う材料出尽くし感／金利動向・規制動向など外部環境の変化
-- Confidence: 25%
-  根拠: durable_theme、国家戦略メモ該当、資金フローシグナル該当
+- Risk［AI分析］: 金利動向・規制動向など外部環境の変化
+- Confidence: 41%
+  根拠: ニュースあり、重要ニュース一致、durable_theme、国家戦略メモ該当、資金フローシグナル該当
 
 ##### GX
 - Momentum: 0/100（減速）
@@ -846,8 +846,8 @@
 - 関連テーマ: 建設、金利
 - Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 建設・住宅関連の投資拡大は、電気工事・設備工事を手掛ける企業の受注環境改善につながりやすい／電力・インフラへの設備投資・需要拡大が続くこと
 - Risk［AI分析］: 一過性の話題に留まり、構造的テーマとして定着しない可能性／テーマの成熟・鈍化に伴う材料出尽くし感／金利動向・規制動向など外部環境の変化
-- Confidence: 20%
-  根拠: causal_rules一致、サプライチェーン解決
+- Confidence: 25%
+  根拠: causal_rules一致、Sector Ranking該当、サプライチェーン解決
 
 ##### 建設
 - Momentum: 30/100（横ばい）
@@ -855,8 +855,8 @@
 - 関連テーマ: 住宅、電力
 - Catalyst［AI分析］: causal_rulesが示す押し上げ要因: 建設・住宅関連の投資拡大は、電気工事・設備工事を手掛ける企業の受注環境改善につながりやすい／電力・インフラへの設備投資・需要拡大が続くこと
 - Risk［AI分析］: 一過性の話題に留まり、構造的テーマとして定着しない可能性／テーマの成熟・鈍化に伴う材料出尽くし感／金利動向・規制動向など外部環境の変化
-- Confidence: 20%
-  根拠: causal_rules一致、サプライチェーン解決
+- Confidence: 25%
+  根拠: causal_rules一致、Sector Ranking該当、サプライチェーン解決
 
 ##### インバウンド
 - Momentum: 15/100（減速）
@@ -871,11 +871,11 @@
 > 業界単位でどこに追い風が吹いているかを整理するブロックです。
 
 #### 次に来る業界（本日のモメンタム順）
-1. **AI**（関連見出し34件）— AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
+1. **AI**（関連見出し40件）— AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
 2. **金利**（関連見出し2件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
 3. **為替**（関連見出し2件）— 円安方向への動きは輸出関連の採算改善期待につながりやすい
-4. **サイバーセキュリティ**（関連見出し1件）— 本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
-5. **広告**（関連見出し1件）— クラウド・スマートフォン関連需要の拡大は、プラットフォーム企業や半導体需要への波及につながりやすい
+4. **電力**（関連見出し1件）— 本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
+5. **サイバーセキュリティ**（関連見出し1件）— 本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
 
 #### サプライチェーン分析
 - AI → 半導体・電子部品 → 電機・電線・素材 → 電力・インフラ → 情報通信・生成AI → 東京エレクトロン → ニデック → ソニーグループ → NVIDIA → TSMC → など
@@ -902,7 +902,7 @@
 #### 国家戦略メモ
 > config.yamlへの手動登録があれば「登録情報」として最優先表示、無ければ既存シグナルからの「AI分析」（断定はしません）、判断材料が無い場合のみ「分析材料不足」と表示します。
 - **日本**［AI分析］（重点分野: AI、半導体、防衛、GX、電力、人口減少、高齢化）
-  政策方向: AI分析: AI、半導体、防衛、GX、電力、人口減少、高齢化などの分野に政策関心が向かいやすいと考えられます。特にAI、半導体、防衛、電力は継続性の高いテーマとして位置づけられます。本日はAIに関連する見出しが確認されています。
+  政策方向: AI分析: AI、半導体、防衛、GX、電力、人口減少、高齢化などの分野に政策関心が向かいやすいと考えられます。特にAI、半導体、防衛、電力は継続性の高いテーマとして位置づけられます。本日はAI、電力に関連する見出しが確認されています。
   規制・リスク: 分析材料不足: 規制動向を推定できる情報源が確認できていません。
   日本株への波及: AI分析: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI、重工業・防衛などの関連業種に波及しやすいと考えられます。
   判断根拠: national_focus_areasの重点分野対応付け、durable_themes該当テーマの存在、本日の関連見出し
@@ -912,12 +912,12 @@
   日本株への波及: AI分析: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI、重工業・防衛などの関連業種に波及しやすいと考えられます。
   判断根拠: national_focus_areasの重点分野対応付け、durable_themes該当テーマの存在、本日の関連見出し
 - **中国**［AI分析］（重点分野: 半導体、AI、ロボット、電力、資源）
-  政策方向: AI分析: 半導体、AI、ロボット、電力、資源などの分野に政策関心が向かいやすいと考えられます。特に半導体、AI、電力、資源は継続性の高いテーマとして位置づけられます。本日はAIに関連する見出しが確認されています。
+  政策方向: AI分析: 半導体、AI、ロボット、電力、資源などの分野に政策関心が向かいやすいと考えられます。特に半導体、AI、電力、資源は継続性の高いテーマとして位置づけられます。本日はAI、電力に関連する見出しが確認されています。
   規制・リスク: 分析材料不足: 規制動向を推定できる情報源が確認できていません。
   日本株への波及: AI分析: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI、資源・エネルギーなどの関連業種に波及しやすいと考えられます。
   判断根拠: national_focus_areasの重点分野対応付け、durable_themes該当テーマの存在、本日の関連見出し
 - **EU**［AI分析］（重点分野: GX、電力、サイバーセキュリティ、食料）
-  政策方向: AI分析: GX、電力、サイバーセキュリティ、食料などの分野に政策関心が向かいやすいと考えられます。特に電力は継続性の高いテーマとして位置づけられます。本日はサイバーセキュリティに関連する見出しが確認されています。
+  政策方向: AI分析: GX、電力、サイバーセキュリティ、食料などの分野に政策関心が向かいやすいと考えられます。特に電力は継続性の高いテーマとして位置づけられます。本日は電力、サイバーセキュリティに関連する見出しが確認されています。
   規制・リスク: 分析材料不足: 規制動向を推定できる情報源が確認できていません。
   日本株への波及: 分析材料不足: 波及先を推定できる関連業種情報が確認できていません。
   判断根拠: national_focus_areasの重点分野対応付け、durable_themes該当テーマの存在、本日の関連見出し
@@ -935,7 +935,7 @@
 #### Future Map（テーマ一覧）
 - ★★★★★ **AI**（急成長期）
 - ★★★☆☆ **半導体**（成熟期）
-- ★★★☆☆ **電力**（成熟期）
+- ★★★★☆ **電力**（成長初期）
 - ★☆☆☆☆ **GX**（減速期）
 - ★☆☆☆☆ **DX**（減速期）
 - ★★★☆☆ **防衛**（成熟期）
@@ -1574,8 +1574,8 @@
 > 半年〜10年の時間軸で、どのテーマをどの時間軸で見るべきかを整理するブロックです。
 
 #### 中長期テーマ
-- **半年:** AI、サイバーセキュリティ、金利、為替、広告
-- **1年:** AI、サイバーセキュリティ、金利、為替、広告
+- **半年:** AI、電力、サイバーセキュリティ、金利、為替、広告
+- **1年:** AI、電力、サイバーセキュリティ、金利、為替、広告
 - **3年:** AI、半導体、電力、防衛、資源
 - **5年:** AI、半導体、電力、防衛、資源
 - **10年:** AI、半導体、電力、防衛、資源
@@ -1584,7 +1584,7 @@
 > 既存シグナル（Theme Momentum・Lifecycle・Catalyst・Risk・Confidence・causal_rules・theme_relations）のみから機械的に組み立てた長期投資仮説です。AIによる新たな未来予測・目標株価・売買推奨・期待リターンは一切生成しません。Confidence（分析根拠の充実度）の高い順に表示します。
 
 ##### AI（Confidence 90%・Momentum 100/100）
-- **現在何が起きているか:** 本日34件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
+- **現在何が起きているか:** 本日40件の関連見出しが確認されています、本日のExecutive Summary（最重要ニュース）にも関連しています、既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★★★・急成長期です。
 - **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい」が実現する場合、「AI」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
 - **恩恵を受ける業界:** 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI
 - **恩恵企業:** 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC
@@ -1643,6 +1643,18 @@
 - **崩れる条件［AI分析］:** テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 資源 → causal_rulesが示す押し上げ要因: 原油価格の上昇は資源関連には追い風、輸送・製造コストの増加を通じて他業種には逆風となりやすい → 資源・エネルギーへの設備投資・需要拡大が続くこと → 電力・GX・半導体・EV・蓄電池への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
+##### 電力（Confidence 41%・Momentum 31/100）
+- **現在何が起きているか:** 本日1件の関連見出しが確認されています、本日の重要ニュースにも関連しています、継続性の高い構造的テーマに位置づけられています、Future Intelligenceのテーマ評価は★★★★☆・成長初期です。
+- **今後起こりそうな変化［AI分析］:** Catalyst「構造的テーマとしての継続性が意識され続けること」が実現する場合、「電力」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
+- **恩恵を受ける業界:** 分析材料不足
+- **恩恵企業:** 分析材料不足
+- **二次的恩恵企業（関連テーマ経由）:** 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC
+- **まだ注目されにくい企業（因果チェーン2段階先）:** トヨタ自動車、デンソー、Tesla、パナソニックHD、古河電工
+- **投資期間:** 半年・1年・3年・5年・10年
+- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、電力需給、政府政策（GX関連）、資源価格動向、EV需要動向
+- **崩れる条件［AI分析］:** 金利動向・規制動向など外部環境の変化
+- **投資仮説まとめ:** 電力 → 構造的テーマとしての継続性が意識され続けること → 日本、中国、EUなどの政策的な重点分野として位置づけが強まること → AI・GX・資源・核融合・EV・クラウドへの波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
+
 ##### 為替（Confidence 40%・Momentum 42/100）
 - **現在何が起きているか:** 本日2件の関連見出しが確認されています、既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成長初期です。
 - **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 円安方向への動きは輸出関連の採算改善期待につながりやすい」が実現する場合、「為替」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
@@ -1666,18 +1678,6 @@
 - **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化
 - **崩れる条件［AI分析］:** 一過性の話題に留まり、構造的テーマとして定着しない可能性、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 広告 → causal_rulesが示す押し上げ要因: クラウド・スマートフォン関連需要の拡大は、プラットフォーム企業や半導体需要への波及につながりやすい → 情報通信・生成AI、半導体・電子部品への設備投資・需要拡大が続くこと → SaaS・AIへの波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
-
-##### 電力（Confidence 25%・Momentum 15/100）
-- **現在何が起きているか:** 継続性の高い構造的テーマに位置づけられています、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
-- **今後起こりそうな変化［AI分析］:** Catalyst「構造的テーマとしての継続性が意識され続けること」が実現する場合、「電力」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
-- **恩恵を受ける業界:** 分析材料不足
-- **恩恵企業:** 分析材料不足
-- **二次的恩恵企業（関連テーマ経由）:** 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC
-- **まだ注目されにくい企業（因果チェーン2段階先）:** トヨタ自動車、デンソー、Tesla、パナソニックHD、古河電工
-- **投資期間:** 3年・5年・10年
-- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、電力需給、政府政策（GX関連）、資源価格動向、EV需要動向
-- **崩れる条件［AI分析］:** 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと、テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
-- **投資仮説まとめ:** 電力 → 構造的テーマとしての継続性が意識され続けること → 日本、中国、EUなどの政策的な重点分野として位置づけが強まること → AI・GX・資源・核融合・EV・クラウドへの波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
 ##### 物流（Confidence 25%・Momentum 30/100）
 - **現在何が起きているか:** 既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
@@ -1811,7 +1811,7 @@
 - **崩れる条件［AI分析］:** 一過性の話題に留まり、構造的テーマとして定着しない可能性、テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 決済 → causal_rulesが示す押し上げ要因: キャッシュレス決済の普及は、金融機関・プラットフォーム企業双方に事業機会をもたらしやすい → 金融、情報通信・生成AIへの設備投資・需要拡大が続くこと → 金融・SaaSへの波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
-##### 住宅（Confidence 20%・Momentum 30/100）
+##### 住宅（Confidence 25%・Momentum 30/100）
 - **現在何が起きているか:** 既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
 - **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 建設・住宅関連の投資拡大は、電気工事・設備工事を手掛ける企業の受注環境改善につながりやすい」が実現する場合、「住宅」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
 - **恩恵を受ける業界:** 電力・インフラ
@@ -1823,7 +1823,7 @@
 - **崩れる条件［AI分析］:** 一過性の話題に留まり、構造的テーマとして定着しない可能性、テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 住宅 → causal_rulesが示す押し上げ要因: 建設・住宅関連の投資拡大は、電気工事・設備工事を手掛ける企業の受注環境改善につながりやすい → 電力・インフラへの設備投資・需要拡大が続くこと → 建設・金利への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
-##### 建設（Confidence 20%・Momentum 30/100）
+##### 建設（Confidence 25%・Momentum 30/100）
 - **現在何が起きているか:** 既存の因果チェーン（causal_rules）にも該当します、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
 - **今後起こりそうな変化［AI分析］:** Catalyst「causal_rulesが示す押し上げ要因: 建設・住宅関連の投資拡大は、電気工事・設備工事を手掛ける企業の受注環境改善につながりやすい」が実現する場合、「建設」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
 - **恩恵を受ける業界:** 電力・インフラ
@@ -2088,6 +2088,7 @@
 - → **自動車** — 本日時点で目立った材料は確認されておらず、様子見が意識されやすい状況です。
 - → **資源・エネルギー** — 本日時点で目立った材料は確認されておらず、様子見が意識されやすい状況です。
 - → **情報通信・生成AI** — 本日時点で目立った材料は確認されておらず、様子見が意識されやすい状況です。
+- → **電力・インフラ** — 本日時点で目立った材料は確認されておらず、様子見が意識されやすい状況です。
 - ↓ **金融** — 逆風ニュースが1件と追い風（0件）を上回っており、弱含みが意識されやすい状況です。
 
 ---
@@ -2181,7 +2182,7 @@ NYダウ上昇
 | ドル指数（DXY） | 99.12 | +0.03% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 100.05 | -2.37% | ★★★ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,408.90 | +1.02% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 77,191.48 | +0.02% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 77,111.35 | -0.21% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2217,50 +2218,50 @@ NYダウ上昇
 - 影響業種（AI分析）: 金融
 - 営業トーク: 「「金融」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [Q&A: Kirkland & Ellis on AI and its deal with Palantir](https://finance.yahoo.com/technology/ai/articles/q-kirkland-ellis-ai-deal-210403638.html)
+### 4位 ★★★★★ [Marvell Is Winning Custom AI Business. TSMC May Be the Safer Way to Play It](https://finance.yahoo.com/technology/ai/articles/marvell-winning-custom-ai-business-230422179.html)
 - 出典（事実）: Yahoo Finance US
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Palantir」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「TSMC」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 5位 ★★★★★ [OpenAI rules out IPO this year as Altman, Musk & Amodei warn AI is moving too fast](https://www.cnbc.com/2026/09/12/anthropics-amodei-proposes-plan-to-slow-the-pace-of-advancing-ai-capabilities.html)
+### 5位 ★★★★★ [中部電力 社長と会長が辞任見通し](https://news.yahoo.co.jp/pickup/6595151?source=rss)
+- 出典（事実）: Yahoo!ニュース 経済
+- 理由（AI分析）: テーマ「電力」に関連する、業種「電力・インフラ」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 電力・インフラ
+- 営業トーク: 「「電力・インフラ」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 6位 ★★★★★ [OpenAI rules out IPO this year as Altman, Musk & Amodei warn AI is moving too fast](https://www.cnbc.com/2026/09/12/anthropics-amodei-proposes-plan-to-slow-the-pace-of-advancing-ai-capabilities.html)
 - 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 6位 ★★★★★ [Why OpenAI’s Sam Altman says an IPO isn’t in the cards this year](https://www.marketwatch.com/story/why-openais-sam-altman-says-an-ipo-isnt-in-the-cards-this-year-229de89c?mod=mw_rss_topstories)
+### 7位 ★★★★★ [Why OpenAI’s Sam Altman says an IPO isn’t in the cards this year](https://www.marketwatch.com/story/why-openais-sam-altman-says-an-ipo-isnt-in-the-cards-this-year-229de89c?mod=mw_rss_topstories)
 - 出典（事実）: MarketWatch Top Stories
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 7位 ★★★★★ [OpenAI IPO won't happen this year, says Sam Altman](https://www.coindesk.com/markets/2026/09/12/openai-ipo-won-t-happen-this-year-says-sam-altman)
+### 8位 ★★★★★ [OpenAI IPO won't happen this year, says Sam Altman](https://www.coindesk.com/markets/2026/09/12/openai-ipo-won-t-happen-this-year-says-sam-altman)
 - 出典（事実）: CoinDesk
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 8位 ★★★★★ [Anthropic CEO calls for AI race to slow down citing safety. Musk and OpenAI's Altman agrees](https://www.coindesk.com/tech/2026/09/12/anthropic-ceo-calls-for-ai-race-to-slow-down-musk-and-openai-s-altman-agrees)
+### 9位 ★★★★★ [Anthropic CEO calls for AI race to slow down citing safety. Musk and OpenAI's Altman agrees](https://www.coindesk.com/tech/2026/09/12/anthropic-ceo-calls-for-ai-race-to-slow-down-musk-and-openai-s-altman-agrees)
 - 出典（事実）: CoinDesk
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 9位 ★★★★★ [Elon Musk backs Anthropic’s call to slow down AI progress before rogue bots take over the entire internet](https://www.marketwatch.com/story/elon-musk-backs-anthropics-call-to-slow-down-ai-progress-before-rogue-bots-take-over-the-entire-internet-46f12d98?mod=mw_rss_topstories)
+### 10位 ★★★★★ [Elon Musk backs Anthropic’s call to slow down AI progress before rogue bots take over the entire internet](https://www.marketwatch.com/story/elon-musk-backs-anthropics-call-to-slow-down-ai-progress-before-rogue-bots-take-over-the-entire-internet-46f12d98?mod=mw_rss_topstories)
 - 出典（事実）: MarketWatch Top Stories
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 10位 ★★★★★ [Ditching bonds for bitcoin: How crypto can tackle the AI-heavy portfolio dilemma](https://www.coindesk.com/business/2026/09/12/ditching-bonds-for-bitcoin-how-crypto-can-tackle-the-ai-heavy-portfolio-dilemma)
-- 出典（事実）: CoinDesk
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
@@ -2287,9 +2288,9 @@ NYダウ上昇
 **関連見出し（事実）:**
 - [オープンAI 開発一時中断 AIみずからサイバー攻撃実行のおそれ](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html) — NHKニュース 経済
 - [OpenAI rules out IPO this year as Altman, Musk & Amodei warn AI is moving too fast](https://www.cnbc.com/2026/09/12/anthropics-amodei-proposes-plan-to-slow-the-pace-of-advancing-ai-capabilities.html) — CNBC Top News
+- [Sub-$100 smartphones becoming a rarity as AI memory prices soar](https://www.cnbc.com/2026/09/11/cheap-china-smartphones-rare-memory-ai-costs.html) — CNBC Top News
 - [Stocks Sink in Broad AI Rout Sparked by China's DeepSeek](https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main) — WSJ Markets
 - [DeepSeek Won't Sink U.S. AI Titans](https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main) — WSJ Markets
-- [Why OpenAI’s Sam Altman says an IPO isn’t in the cards this year](https://www.marketwatch.com/story/why-openais-sam-altman-says-an-ipo-isnt-in-the-cards-this-year-229de89c?mod=mw_rss_topstories) — MarketWatch Top Stories
 
 ### 第2位: 円高　★★★☆☆
 - **今強い理由（AI分析）:** 本日一部円高に関する報道が出ており、輸出関連企業の収益への懸念が意識されやすい状況です。
@@ -2311,7 +2312,16 @@ NYダウ上昇
 - [米利上げ予想高まる インフレ続く](https://news.yahoo.co.jp/pickup/6595097?source=rss) — Yahoo!ニュース 経済
 - [米就業者 市場予想に反し減少 利上げ観測後退で円高ドル安進む](http://www3.nhk.or.jp/news/html/20260807/k10015199701000.html) — NHKニュース 経済
 
-### 第4位: インフレ　★★★☆☆
+### 第4位: 電力　★★★☆☆
+- **今強い理由（AI分析）:** 本日一部電力関連の報道が出ており、データセンター向け電力需要の拡大などが意識されています。
+- **今後1週間（AI分析）:** 電力需給や設備投資に関する続報が材料になりやすい状況です。
+- **今後1か月（AI分析）:** データセンター投資の進捗次第で関連株への関心が続く可能性があります。
+- **今後3か月（AI分析）:** 電力インフラ増強という構造的テーマとして意識され続ける可能性があります。
+
+**関連見出し（事実）:**
+- [中部電力 社長と会長が辞任見通し](https://news.yahoo.co.jp/pickup/6595151?source=rss) — Yahoo!ニュース 経済
+
+### 第5位: インフレ　★★★☆☆
 - **今強い理由（AI分析）:** 本日一部インフレに関する報道が出ており、金融政策見通しへの影響が意識されています。
 - **今後1週間（AI分析）:** 物価指標の発表が相場全体のボラティリティ要因になりやすい状況です。
 - **今後1か月（AI分析）:** 中央銀行の政策スタンス次第でテーマの持続性が変わる可能性があります。
@@ -2370,6 +2380,18 @@ NYダウ上昇
 
 **営業トーク（AI分析）:** 「本日の自動車関連ニュースは強弱まちまちです」
 
+### 第5位: 電力・インフラ　★★★☆☆
+**追い風（事実）:**
+該当なし（取得不可または該当ニュースなし）。
+
+**逆風（事実）:**
+該当なし（取得不可または該当ニュースなし）。
+
+**関連銘柄（事実）:**
+きんでん（-131.00 (-1.90%)）、日立製作所（+17.00 (+0.33%)）
+
+**営業トーク（AI分析）:** 「本日の電力・インフラ関連ニュースは強弱まちまちです」
+
 ---
 ## 16. 個別株ランキング　★★★★☆
 **日本株TOP10:**
@@ -2420,8 +2442,8 @@ NYダウ上昇
 直近値: 6,756.00 / 前日比: -131.00 (-1.90%)（事実）
 
 - **短期（AI分析）:** 前日比-131.00 (-1.90%)。 本日、個別の関連見出しは確認されませんでした。
-- **中期（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。
-- **長期（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
+- **中期（AI分析）:** 業種「電力・インフラ」の見出しは強弱まちまちで、方向感がはっきりしません。
+- **長期（AI分析）:** 「電力・インフラ」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
 ### 第8位: ニデック（6594.T）　★★★★☆
 直近値: 2,691.00 / 前日比: -46.00 (-1.68%)（事実）
@@ -2477,28 +2499,28 @@ NYダウ上昇
 ### 第5位: Apple（AAPL）　★★★★☆
 直近値: 332.27 / 前日比: +5.70 (+1.75%)（事実）
 
-- **短期（AI分析）:** 前日比+5.70 (+1.75%)。 関連見出し: 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
+- **短期（AI分析）:** 前日比+5.70 (+1.75%)。 関連見出し: 「Apple, Microsoft, and Nvidia Top the List of Largest Companies by Market Cap. Here's the One I'm Buying Now.」（Yahoo Finance US）
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
 ### 第6位: TSMC（TSM）　★★★★☆
 直近値: 433.24 / 前日比: +5.21 (+1.22%)（事実）
 
-- **短期（AI分析）:** 前日比+5.21 (+1.22%)。 本日、個別の関連見出しは確認されませんでした。
+- **短期（AI分析）:** 前日比+5.21 (+1.22%)。 関連見出し: 「Marvell Is Winning Custom AI Business. TSMC May Be the Safer Way to Play It」（Yahoo Finance US）
 - **中期（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。
 - **長期（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
 
 ### 第7位: Palantir（PLTR）　★★★☆☆
 直近値: 167.23 / 前日比: +1.37 (+0.83%)（事実）
 
-- **短期（AI分析）:** 前日比+1.37 (+0.83%)。 関連見出し: 「Q&A: Kirkland & Ellis on AI and its deal with Palantir」（Yahoo Finance US）
+- **短期（AI分析）:** 前日比+1.37 (+0.83%)。 本日、個別の関連見出しは確認されませんでした。
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
 ### 第8位: Microsoft（MSFT）　★★★☆☆
 直近値: 495.63 / 前日比: +3.19 (+0.65%)（事実）
 
-- **短期（AI分析）:** 前日比+3.19 (+0.65%)。 関連見出し: 「Jim Cramer Praises Microsoft (MSFT) for Its Permian Power Plan with Chevron (CVX)」（Yahoo Finance US）
+- **短期（AI分析）:** 前日比+3.19 (+0.65%)。 関連見出し: 「Apple, Microsoft, and Nvidia Top the List of Largest Companies by Market Cap. Here's the One I'm Buying Now.」（Yahoo Finance US）
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
@@ -2589,7 +2611,7 @@ NYダウ上昇
 直近値: 332.27 / 前日比: +5.70 (+1.75%)（事実）
 
 - **理由（AI分析）:** 前日比+5.70 (+1.75%)と値動きが大きく、本日の注目銘柄として選定しました。
-- **注目材料（AI分析）:** 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
+- **注目材料（AI分析）:** 「Apple, Microsoft, and Nvidia Top the List of Largest Companies by Market Cap. Here's the One I'm Buying Now.」（Yahoo Finance US）
 - **短期見通し（AI分析）:** 業種「情報通信・生成AI」の材料が拮抗しており、短期的には方向感を欠く展開も考えられます。
 
 ---
@@ -2602,7 +2624,7 @@ NYダウ上昇
 | ソニーグループ（6758.T） | ★★★☆☆ | 前日比下落、個別の材料は確認されませんでした。 |
 | ソフトバンクグループ（9984.T） | ★★★★★ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | 三菱UFJフィナンシャル・グループ（8306.T） | ★★★☆☆ | 業種「金融」に逆風の動きがあります。 |
-| 日立製作所（6501.T） | ★★★☆☆ | 前日比上昇、個別の材料は確認されませんでした。 |
+| 日立製作所（6501.T） | ★★★☆☆ | 業種「電力・インフラ」は強弱まちまちです。 |
 | 東京エレクトロン（8035.T） | ★★★★★ | 前日比下落、個別の材料は確認されませんでした。 |
 | リクルートホールディングス（6098.T） | ★★★★★ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | 川崎重工業（7012.T） | ★★★★☆ | 前日比下落、個別の材料は確認されませんでした。 |
@@ -2613,23 +2635,23 @@ NYダウ上昇
 | パナソニックHD（6752.T） | ★★★★★ | 前日比下落、個別の材料は確認されませんでした。 |
 | 三菱ケミカルグループ（4188.T） | ★★★★★ | 前日比下落、個別の材料は確認されませんでした。 |
 | 旭化成（3407.T） | ★★★☆☆ | 前日比下落、個別の材料は確認されませんでした。 |
-| きんでん（1944.T） | ★★★★☆ | 前日比下落、個別の材料は確認されませんでした。 |
+| きんでん（1944.T） | ★★★★☆ | 業種「電力・インフラ」は強弱まちまちです。 |
 | 日本電信電話（9432.T） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 
 **米国株:**
 
 | 銘柄 | 評価 | 理由 |
 |---|---|---|
-| Apple（AAPL） | ★★★★☆ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
-| Microsoft（MSFT） | ★★★☆☆ | 「Jim Cramer Praises Microsoft (MSFT) for Its Permian Power Plan with Chevron (CVX)」など関連ニュースあり。 |
+| Apple（AAPL） | ★★★★☆ | 「Apple, Microsoft, and Nvidia Top the List of Largest Companies by Market Cap. Here's the One I'm Buying Now.」など関連ニュースあり。 |
+| Microsoft（MSFT） | ★★★☆☆ | 「Apple, Microsoft, and Nvidia Top the List of Largest Companies by Market Cap. Here's the One I'm Buying Now.」など関連ニュースあり。 |
 | NVIDIA（NVDA） | ★★★☆☆ | 前日比下落、個別の材料は確認されませんでした。 |
 | Tesla（TSLA） | ★★★☆☆ | 業種「自動車」は強弱まちまちです。 |
 | Amazon（AMZN） | ★★★★☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Alphabet（GOOGL） | ★★★★☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Meta Platforms（META） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
-| Palantir（PLTR） | ★★★☆☆ | 「Q&A: Kirkland & Ellis on AI and its deal with Palantir」など関連ニュースあり。 |
+| Palantir（PLTR） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Arm Holdings（ARM） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
-| TSMC（TSM） | ★★★★☆ | 前日比上昇、個別の材料は確認されませんでした。 |
+| TSMC（TSM） | ★★★★☆ | 「Marvell Is Winning Custom AI Business. TSMC May Be the Safer Way to Play It」など関連ニュースあり。 |
 | ASML（ASML） | ★★★☆☆ | 前日比上昇、個別の材料は確認されませんでした。 |
 | Lam Research（LRCX） | ★★★☆☆ | 前日比上昇、個別の材料は確認されませんでした。 |
 | KLA（KLAC） | ★★★★☆ | 前日比上昇、個別の材料は確認されませんでした。 |
@@ -2678,9 +2700,9 @@ NYダウ上昇
 直近値: 5,199.00 / 前日比: +17.00 (+0.33%)（事実）
 
 - **今日の材料（AI分析）:** 前日比+17.00 (+0.33%)。 本日、個別の関連見出しは確認されませんでした。
-- **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-10-29）
-- **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-10-29）
-- **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
+- **今後1週間（AI分析）:** 業種「電力・インフラ」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-29）
+- **今後1か月（AI分析）:** 「電力・インフラ」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-29）
+- **長期評価（AI分析）:** 「電力・インフラ」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 - **リスク（AI分析）:** 現時点で突出したリスク要因は確認されていませんが、相場全体の急変には留意が必要です。
 
 ### 東京エレクトロン（8035.T）
@@ -2777,9 +2799,9 @@ NYダウ上昇
 直近値: 6,756.00 / 前日比: -131.00 (-1.90%)（事実）
 
 - **今日の材料（AI分析）:** 前日比-131.00 (-1.90%)。 本日、個別の関連見出しは確認されませんでした。
-- **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-10-29）
-- **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-10-29）
-- **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
+- **今後1週間（AI分析）:** 業種「電力・インフラ」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-29）
+- **今後1か月（AI分析）:** 「電力・インフラ」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-29）
+- **長期評価（AI分析）:** 「電力・インフラ」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 - **リスク（AI分析）:** 現時点で突出したリスク要因は確認されていませんが、相場全体の急変には留意が必要です。
 
 ### 日本電信電話（9432.T）
@@ -2796,7 +2818,7 @@ NYダウ上昇
 ### Apple（AAPL）
 直近値: 332.27 / 前日比: +5.70 (+1.75%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+5.70 (+1.75%)。 関連見出し: 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
+- **今日の材料（AI分析）:** 前日比+5.70 (+1.75%)。 関連見出し: 「Apple, Microsoft, and Nvidia Top the List of Largest Companies by Market Cap. Here's the One I'm Buying Now.」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-29）
 - **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-29）
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2805,7 +2827,7 @@ NYダウ上昇
 ### Microsoft（MSFT）
 直近値: 495.63 / 前日比: +3.19 (+0.65%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+3.19 (+0.65%)。 関連見出し: 「Jim Cramer Praises Microsoft (MSFT) for Its Permian Power Plan with Chevron (CVX)」（Yahoo Finance US）
+- **今日の材料（AI分析）:** 前日比+3.19 (+0.65%)。 関連見出し: 「Apple, Microsoft, and Nvidia Top the List of Largest Companies by Market Cap. Here's the One I'm Buying Now.」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-28）
 - **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-10-28）
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2859,7 +2881,7 @@ NYダウ上昇
 ### Palantir（PLTR）
 直近値: 167.23 / 前日比: +1.37 (+0.83%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+1.37 (+0.83%)。 関連見出し: 「Q&A: Kirkland & Ellis on AI and its deal with Palantir」（Yahoo Finance US）
+- **今日の材料（AI分析）:** 前日比+1.37 (+0.83%)。 本日、個別の関連見出しは確認されませんでした。
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-11-02）
 - **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-11-02）
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2877,7 +2899,7 @@ NYダウ上昇
 ### TSMC（TSM）
 直近値: 433.24 / 前日比: +5.21 (+1.22%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+5.21 (+1.22%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比+5.21 (+1.22%)。 関連見出し: 「Marvell Is Winning Custom AI Business. TSMC May Be the Safer Way to Play It」（Yahoo Finance US）
 - **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-10-15）
 - **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-10-15）
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
@@ -2924,7 +2946,7 @@ NYダウ上昇
 **理由（AI分析）:** 業種「情報通信・生成AI」の関連銘柄として選出されていますが、本日時点では追い風・逆風が拮抗しており、慎重な見極めが必要です。
 
 ### 第4位: 日立製作所（6501.T）
-**理由（AI分析）:** 日立製作所は本日時点で明確な業種シグナルが確認されませんでしたが、ウォッチリスト銘柄として長期候補に含めています。
+**理由（AI分析）:** 業種「電力・インフラ」の関連銘柄として選出されていますが、本日時点では追い風・逆風が拮抗しており、慎重な見極めが必要です。
 
 ### 第5位: 東京エレクトロン（8035.T）
 **理由（AI分析）:** 東京エレクトロンは本日時点で明確な業種シグナルが確認されませんでしたが、ウォッチリスト銘柄として長期候補に含めています。
@@ -2985,9 +3007,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「相次ぐ災害 無料車貸し出し需要増」（Yahoo!ニュース トピックス）
-- 「北アイルランド巡り 米英に火種か」（Yahoo!ニュース トピックス）
-- 「警察を振り切ったバイク転倒 死亡」（Yahoo!ニュース トピックス）
+- 「中部電力 社長と会長が辞任見通し」（Yahoo!ニュース トピックス）
+- 「ジャワ海で船遭難か 120人を捜索」（Yahoo!ニュース トピックス）
+- 「作業中に配送品の下敷き 男性死亡」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3083,7 +3105,7 @@ NYダウは前日比+509.19 (+0.98%)で推移しています。『AI』関連の
 ## 27. 今日の会話ネタ　★★★☆☆
 1. 最近の株式市場は落ち着いた雰囲気のようですね（VIX指数 15.84）。
 2. 今、「AI」の話題がニュースでよく取り上げられていますね。
-3. 今日は「相次ぐ災害 無料車貸し出し需要増」というニュースが話題になっています。
+3. 今日は「中部電力 社長と会長が辞任見通し」というニュースが話題になっています。
 
 ---
 ## 28. 想定質問と回答例　★★★☆☆
@@ -3210,12 +3232,12 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo Finance](https://finance.yahoo.com/quote/KLAC)
 
 ### ニュース見出し
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595151?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595125?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595098?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595097?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595093?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595083?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595140?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595143?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595142?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595118?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6595126?source=rss)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html)
@@ -3226,6 +3248,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-12/rbi-said-to-reject-tata-sons-request-to-avoid-a-public-listing)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-13/korea-tests-global-investor-appetite-with-longer-trading-hours)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-12/spacex-to-get-weighting-boost-in-nasdaq-100-after-rebalance)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-12/bloomberg-this-weekend-09-12-2026-video)
@@ -3233,15 +3256,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-12/trump-s-foes-find-common-ground-at-modi-s-new-delhi-summit)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-12/iran-war-revives-lessons-of-iraq-for-fukuyama-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-12/energy-driven-inflation-complicates-fed-rate-call-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-12/number-of-vessels-redirected-in-us-blockade-on-iran-reaches-100)
 - [CNBC Top News](https://www.cnbc.com/2026/09/12/anthropics-amodei-proposes-plan-to-slow-the-pace-of-advancing-ai-capabilities.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/12/larry-ellison-nixes-plan-to-offload-up-to-7point5-billion-worth-of-oracle-stock-.html)
+- [CNBC Top News](https://www.cnbc.com/2026/09/12/india-china-modi-xi-brics-border.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/12/oils-roundtrip-back-to-100-why-china-could-determine-what-happens-next.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/12/inflation-is-outpacing-wage-growth-again-squeezing-americans-paychecks.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/12/iran-us-israel-war-india-brics.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/12/buffetts-confidence-in-troubled-decade-old-acquisition-finally-pays-off.html)
-- [CNBC Top News](https://www.cnbc.com/2026/09/12/brics-summit-xi-putin-modi-trump.html)
-- [CNBC Top News](https://www.cnbc.com/2026/09/12/gm-us-battery-development-ford-china-ties.html)
+- [CNBC Top News](https://www.cnbc.com/2026/09/11/cheap-china-smartphones-rare-memory-ai-costs.html)
 - [CNBC Markets](https://www.cnbc.com/2026/09/12/inflation-is-outpacing-wage-growth-again-squeezing-americans-paychecks.html)
 - [CNBC Markets](https://www.cnbc.com/2026/09/11/consumer-outlook-plunges-in-september-as-inflation-outlook-worsens.html)
 - [CNBC Markets](https://www.cnbc.com/2026/09/11/cdc-record-cyclosporiasis-outbreak-over.html)
@@ -3274,14 +3296,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/russian-air-strikes-injure-two-cause-fire-in-9storey-apartment-building-in-kyiv-officials-say-4897164)
-- [Investing.com News](https://www.investing.com/news/commodities-news/saudis-shut-down-oil-pipeline-as-houthis-tighten-grip-on-red-sea-shipping-4898593)
-- [Investing.com News](https://www.investing.com/news/commodities-news/ukraine-braces-for-harsh-winter-as-russian-attacks-hit-economy-4898677)
-- [Investing.com News](https://www.investing.com/news/economy-news/houthis-seize-red-sea-coast-as-saudi-pipeline-shutdown-deepens-oil-risks-4898630)
-- [Investing.com News](https://www.investing.com/news/economic-indicators/indias-modi-and-chinas-xi-push-business-links-border-peace-as-ties-revive-4898675)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/canadian-boycott-of-us-products-pushes-grocers-to-adapt-explore-new-supply-sources-4898644)
-- [Investing.com News](https://www.investing.com/news/economy-news/us-judge-rules-that-trump-plan-to-halvefema-workforce-violated-law-4898666)
-- [Investing.com News](https://www.investing.com/news/commodities-news/brics-agrees-on-joint-declaration-before-new-delhi-summit-sources-say-4898638)
+- [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-slips-to-77200-as-rate-pressure-clashes-with-diversification-case-4898694)
+- [Investing.com News](https://www.investing.com/news/economy-news/how-vulnerable-are-european-stocks-to-natural-gas-price-shocks-4898709)
+- [Investing.com News](https://www.investing.com/news/commodities-news/new-report-of-attack-on-strait-of-hormuz-shipping-fans-fears-of-threats-to-oil-supplies-4898701)
+- [Investing.com News](https://www.investing.com/news/economy-news/south-korea-expands-espionage-law-to-protect-chip-technology-4898708)
+- [Investing.com News](https://www.investing.com/news/economy-news/speculators-turn-net-long-on-yen-for-first-time-since-february-4898706)
+- [Investing.com News](https://www.investing.com/news/company-news/what-the-largest-chocolate-company-says-about-cocoa-bean-prices-4898704)
+- [Investing.com News](https://www.investing.com/news/economy-news/new-strait-of-hormuz-ship-attack-raises-oil-supply-fears-as-iran-war-widens-4898703)
+- [Investing.com News](https://www.investing.com/news/economy-news/ecbs-lagarde-says-eurozone-inflation-shock-will-last-longer-4898702)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-87-joint-readout-principals-meeting-us-uk-authorities-regarding-central-counterparty-resolution)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-86-sec-charges-founder-his-two-new-jersey-based-companies-alleged-16-million-ponzi-scheme)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-85-sec-proposes-rescission-political-contribution-rule-investment-advisers)
@@ -3323,22 +3345,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/hyperliquids-biggest-risk-is-regulation-says-ran-neuner?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/anchorage-digital-adds-institutional-access-to-frgmnts-fusd-stablecoin?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-spikes-toward-80k-as-us-cpi-data-delivers-new-22-year-high-in-bond-yields?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/172-old-bank-sees-400-173349444.html)
-- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/q-kirkland-ellis-ai-deal-210403638.html)
-- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/vertex-pharmaceuticals-incorporated-vrtx-crinetics-210358407.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/swks-stock-just-hit-52-210713976.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/options/articles/daily-etf-flows-avlv-notches-210008846.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/options/articles/much-jepq-collect-2-400-210215566.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/etf-league-tables-inflows-736m-210004620.html)
-- [Yahoo Finance US](https://finance.yahoo.com/technology/articles/jim-cramer-praises-microsoft-msft-205636631.html)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595125?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595130?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595121?source=rss)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/broadcom-custom-ai-chip-boom-231614780.html)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/google-15-billion-finland-ai-231224831.html)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/articles/intel-backed-startup-says-beat-232338040.html)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/tsm-record-month-confirms-amd-230905086.html)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/marvell-winning-custom-ai-business-230422179.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/apple-microsoft-nvidia-top-list-232000660.html)
+- [Yahoo Finance US](https://finance.yahoo.com/technology/ai/articles/ai-hbm-shortage-strengthens-micron-230133016.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/rtx-corporation-rtx-doubles-down-230008183.html)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595151?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595153?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595154?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595140?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595138?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595137?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595135?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595141?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595144?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595142?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595156?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595157?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
