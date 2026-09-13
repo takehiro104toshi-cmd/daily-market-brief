@@ -163,13 +163,15 @@ DNA promotion は別 gate であり、この Phase では一切行わない。
 | 1 | 2026-09-07 | `cpt_4d2f4477a946c17e`（EVIDENCE_WHY） | REJECT_RECOMMENDED | **REJECTED** | `cdc_884ab4cafff2dbf3` | 1 | 1 行（0 → 1） |
 | 2 | 2026-09-12 | `cpt_8c96e2070cd4c702`（EVIDENCE_OUTLOOK） | REJECT_RECOMMENDED | **KEEP_REVIEWING**（不同意） | `cdc_0a420b63cc1257ed` | 2 | 1 行（1 → 2） |
 | 3 | 2026-09-13 | `cpt_30701289cfb0d151`（EVIDENCE_WHY） | REJECT_RECOMMENDED | **REJECTED** | `cdc_087f4cf39db6ee97` | 3 | 1 行（2 → 3） |
+| 4 | 2026-09-13 | `cpt_8c96e2070cd4c702`（EVIDENCE_OUTLOOK・再入後 2 回目） | REJECT_RECOMMENDED | **KEEP_REVIEWING** | `cdc_43d36c7b6626eab7` | 4 | 1 行（3 → 4） |
 
 各回の詳細な監査証跡（packet 束縛・digest・replay run・record hash・無変更証明・formal reason 本文）は
-`COMPASS_FORMAL_REVIEW_SPEC.md` §18（1 回目）/ §21（2 回目）/ §24（3 回目）に一元記録する。
+`COMPASS_FORMAL_REVIEW_SPEC.md` §18（1 回目）/ §21（2 回目）/ §24（3 回目）/ §26（4 回目）に一元記録する。
 本表には理由本文を複製しない（3 回目の理由カテゴリは repeated active supporting-document contradiction with
-no replay recovery）。
+no replay recovery、4 回目は candidate's own evidence remained directionally consistent; contradiction remained
+confined to unresolved opposite-direction siblings）。
 
-進行中: reviewed 3 / APPROVED 0 / REJECTED 2 / KEEP_REVIEWING 1。残りは毎回 fresh build で再導出する。
+進行中: Decision 4 行 / 対象 pattern 3 件 / APPROVED 0 / REJECTED 2 / KEEP_REVIEWING 1（同一 pattern の 2 回目を含む）。残りは毎回 fresh build で再導出する。
 既決（APPROVED / REJECTED）の pattern は primary queue から外れるが、**KEEP_REVIEWING は終端ではなく primary
 queue に残る**（順序 key は decision state に依存しない）ため、2 回目の pattern は次の fresh build でも rank 1 に
 現れ得る。この queue progression の扱いは未決定であり、監督者判断まで rank 1 を自動で読み飛ばさない。

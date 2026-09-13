@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.55 (2026-09-13) — Add candidate #2 second KEEP_REVIEWING audit record（再入後の 2 回目）
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §26「Candidate #2 second KEEP_REVIEWING audit record」
+  （履歴事実のみ。driver `execute.py` / 実行 commit 束縛 `7868617` / pattern `cpt_8c96e2070cd4c702`（EVIDENCE_OUTLOOK）/
+  直前 formal state KEEP_REVIEWING / 再入 `REENTERED_KEEP_REVIEWING`・`M2_GROUP_STATE_CHANGED`・`changed_components=["M2"]` /
+  machine REJECT_RECOMMENDED / **human KEEP_REVIEWING（2 回目）** / decision_id `cdc_43d36c7b6626eab7` / sequence 4 /
+  previous_record_hash = candidate #3 の record hash / previous_decision_id `cdc_0a420b63cc1257ed` /
+  previous_state KEEP_REVIEWING / HUMAN・FORMAL・NOT_PROMOTED / packet `frp_fbd37f23ac6ffa46` /
+  evidence digest `a4dd35beaf13716d` / material digest `8f410ca4e7da1e58`（1 回目と同一）/
+  group digest `037f307fe6fd2efb` → `7c244c81b2f16dda` / replay `crp_2530396a5a3b8fb7`・`74d5b037498fc0de`
+  （age 5・`W_REPLAY_EVIDENCE_AGE`・KEEP_REVIEWING は replay 必須 action ではない）/ corpus eligible 144 /
+  idempotency key = packet_id / record hash `21025da6…37d8863` / rows 3 → 4 / expected facts 14 項目 /
+  policy 6 層は凍結値 / 書き込み後も Phase 3.9.5 は OPEN）。理由本文は §26 にのみ記録する。
+- §21.1 Decision ledger に seq 4 を追記し（pattern head 連鎖の注記付き）、
+  `COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §10 に 4 回目の行を追加（理由カテゴリのみ）。
+
+Decision semantics・policy 6 層 digest・packet schema・guard・queue semantics・progression semantics は不変。
+コード変更なし（documentation only）。次の Human Review は行わない。
+
 ## v4.54 (2026-09-13) — Add re-entry guard and M2 observability to next_candidate
 
 ### 追加

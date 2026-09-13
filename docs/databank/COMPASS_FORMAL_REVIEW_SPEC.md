@@ -472,9 +472,11 @@ human formal decision reason（formal Decision の理由本文。本節にのみ
 | 1 | `cpt_4d2f4477a946c17e` | REJECT_RECOMMENDED | REJECTED | `cdc_884ab4cafff2dbf3` | `ed8a0c64` | §18 |
 | 2 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING | `cdc_0a420b63cc1257ed` | `179146cd` | §21 |
 | 3 | `cpt_30701289cfb0d151` | REJECT_RECOMMENDED | REJECTED | `cdc_087f4cf39db6ee97` | `36646cf9` | §24 |
+| 4 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING（2 回目・再入後） | `cdc_43d36c7b6626eab7` | `21025da6` | §26 |
 
-chain: seq 2 の `previous_record_hash` = seq 1 の record hash、seq 3 の `previous_record_hash` = seq 2 の
-record hash。全行 HUMAN / FORMAL / NOT_PROMOTED。
+chain: 各 seq の `previous_record_hash` は直前 seq の record hash（seq 2 → 1、seq 3 → 2、seq 4 → 3）。
+全行 HUMAN / FORMAL / NOT_PROMOTED。seq 4 は seq 2 と同じ pattern の 2 回目の Decision であり、
+pattern head 連鎖は `previous_decision_id=cdc_0a420b63cc1257ed` / `previous_state=KEEP_REVIEWING`。
 
 ## 22. Queue Progression v1（KEEP_REVIEWING の提示制御・formal_review policy 1.1.0・凍結）
 
@@ -736,3 +738,67 @@ PROGRESSION section は各 pattern について `reviewed_group_state_digest` / 
 - partial write / crash 時の挙動を明示設計する（Decision append と snapshot write の順序と、片方だけ残った場合の
   読み取り側の扱い）。snapshot の失敗が Decision の二重書き込みを誘発してはならない。
 - `ONE_CANDIDATE_ONE_WRITE`（1 invocation = 1 candidate = real write 1 回・再試行なし）を弱めない。
+
+## 26. Candidate #2 second KEEP_REVIEWING audit record（再入後の 2 回目・履歴事実）
+
+本節は **同一 pattern に対する 2 回目の human formal Decision** の記録であり、§21（1 回目の KEEP_REVIEWING）とは
+別事象として記録する。履歴の事実であり semantics を定義しない（progression は §22、reviewed 束縛は §23、
+re-entry guard は §25）。
+
+| 項目 | 値 |
+|---|---|
+| 実行 driver | `src/intelligence/formal_review/execute.py`（§20 + §23 の reviewed 束縛） |
+| 実行 commit（`--require-commit` 束縛） | `7868617`（v4.54） |
+| pattern_id / pattern_type | `cpt_8c96e2070cd4c702` / EVIDENCE_OUTLOOK |
+| 直前の formal state | KEEP_REVIEWING（§21・seq 2） |
+| 再入 | queue status `REENTERED_KEEP_REVIEWING` / reason `M2_GROUP_STATE_CHANGED` / `changed_components=["M2"]` |
+| fresh queue rank | 1 |
+| **machine recommendation** | **REJECT_RECOMMENDED** |
+| **human formal decision** | **KEEP_REVIEWING**（2 回目・機械推奨への不同意を維持） |
+| decision_id | `cdc_43d36c7b6626eab7` |
+| sequence | 4 |
+| previous_record_hash | `36646cf9…a771dd`（= candidate #3 の record hash・global tail） |
+| previous_decision_id / previous_state | `cdc_0a420b63cc1257ed` / KEEP_REVIEWING（pattern head 連鎖） |
+| actor / actor_type / review_mode | `P395_HUMAN_SUPERVISED_REVIEW` / HUMAN / FORMAL |
+| promotion_status | NOT_PROMOTED |
+| packet_id | `frp_fbd37f23ac6ffa46`（再入後の fresh packet・`--expect-packet-id` で束縛） |
+| packet_evidence_digest | `a4dd35beaf13716d` |
+| material_digest | `8f410ca4e7da1e58`（§21 の 1 回目と同一＝候補自身の material 証拠は不変） |
+| group_state_digest | `7c244c81b2f16dda`（1 回目の `037f307fe6fd2efb` から変化。これが M2 再入の実体） |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de`（captured 139・current 144・evidence age 5・
+`W_REPLAY_EVIDENCE_AGE`・compatible。KEEP_REVIEWING は replay evidence 必須 action ではないため blocker ではない） |
+| stability_class | STABLE |
+| corpus eligible（packet / write 時点） | 144 / 144 |
+| idempotency_key | `frp_fbd37f23ac6ffa46`（= packet_id。1 回目とは別 packet なので二重書き込みではない） |
+| record hash | `21025da696ec775aad5b830d83e7f6cccb942b1447433de8c8ba8c53437d8863` |
+| Decision rows | 3 → 4 |
+| expected facts（14 項目） | `document_contradiction=false` / `document_contradiction_repeated=false` /
+`narrow_sibling_contradiction=true` / `narrow_sibling_repeated=true` / `contradiction_active=true` /
+`reject_driver=NARROW_SIBLING_CONTRADICTION` / `reversal_count=0` / `recovery_count=0` /
+`opposite_sibling_count=3` / `replay_current_compatible=true` / `formal_review_gate_reached=true` /
+`direction_class=DIRECTIONAL` / `eligible_support=5` / `stability_class=STABLE` |
+| sibling group | `JAPAN_EQUITY,SECTOR|target=JAPAN_EQUITY`（group size 9 / member 8 / opposite DOWN 3 件は
+いずれも recommendation KEEP_REVIEWING・formal state NONE。C1 / C3 は本 action に非適用） |
+| policy digest | 6 層とも凍結値（§24 と同一） |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN** |
+
+human formal decision reason（本節にのみ記録し、他所へ複製しない）:
+
+> The candidate's own supporting evidence remains directionally consistent, while the active contradiction is
+> still confined to unresolved opposite-direction sibling patterns; the changed group state does not provide
+> sufficient evidence to reject the candidate.
+
+理由カテゴリ（他文書で参照してよい要約表現）: **candidate's own evidence remained directionally consistent;
+contradiction remained confined to unresolved opposite-direction siblings**。
+
+補足（履歴事実）:
+
+- material_digest が 1 回目と同一である一方 group_state_digest だけが変わっており、§25.1 の記録どおり
+  「候補自身の証拠は不変・group 文脈のみ変化」という再入だったことが Decision 側からも確認できる。
+  どの member が変えたかは §25.1 のとおり復元不能（`PROGRESSION_DELTA_UNRESOLVED`）。
+- 本 Decision により **新しい M2 状態が reviewed baseline になる**。以後 review-relevant な変化が無ければ、
+  次の fresh build で本 pattern は `DEFERRED_UNCHANGED_KEEP_REVIEWING` に戻る。これは進行の結果であって
+  手で設定するものではなく、書き込み後の監査で確認する。
+- 同一 pattern の 2 回目 KEEP_REVIEWING は凍結 transition（`KEEP_REVIEWING → KEEP_REVIEWING`）の範囲内であり、
+  §20.7 の duplicate hazard は呼び出し側束縛（`--expect-rows-before` / `--expect-current-state` /
+  §23 の packet 束縛）で閉じている。
