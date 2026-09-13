@@ -1,0 +1,90 @@
+# P2-D Market Data Bank live pilot（Phase 2-D / 監督者必須Gate）
+#
+# CORE系列（カタログのenabled系列）を実ネットワークで取得し、取込→QA→canonical→
+# index→派生→別プロセス永続化検証→backup manifestまでを一本で実証する。
+# feature branch限定・triggerファイル更新時のみ・1系列=1リクエスト（bulk禁止）。
+# Legacy本番workflow・GitHub Pagesへは影響しない。
+#
+# Secretsは **JQUANTS_API_KEY のみ** をruntime injectionする（P2-G.2以降。
+# TOPIXのJ-Quants V2認証に必要な最小限。値はログ・URL・raw payload・
+# FetchAttemptのいずれにも出力しない。未設定なら空文字＝正常停止）。
+name: p2d-market-pilot
+
+on:
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p2d_market_trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2d-market-pilot
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal deps
+        run: pip install pyyaml yfinance
+      # P2-G.2: J-Quants **V2**が現行API（V1は2026-06-01終了）。
+      # V1エンドポイントのプローブは現行候補としては行わない
+      # （run #6〜#13の実測記録はdocs/へappend-onlyで保全済み）。
+      # credentialはrepository secretsからのruntime injectionのみ
+      # （未設定なら空文字＝TOPIX_CREDENTIAL_MISSINGとして正常停止する）。
+      - name: Run market data bank live pilot (1 request per series)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.market.pilot_runner
+      # Phase 3-A: 直前のpilotが構築したMarket Data Bankの**実データ**から
+      # Factを生成し、Compass数値replay・look-ahead検査・canonical/SQLite/queryを
+      # 実測する（fixtureのみで完了判定しない）。読み取りのみでP2-G.2経路は不変。
+      - name: Phase 3-A Fact Layer real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.facts.pilot --sessions 5
+      # Phase 3-B: 直前のFact Layerが生成した**実Fact**からContextを生成し、
+      # 朝のsnapshot・look-ahead検査・過去Compassとの方向整合を実測する。
+      # 履歴HTML（output/history）は**読み取りのみ**。新規fetchは行わない。
+      - name: Phase 3-B Compass Context Engine real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.context.pilot --sessions 5
+      # Phase 3-C: 直前のContext Engineが生成した**実Context**からEvidence Package・
+      # Narrative Plan・Compass Draftを生成し、validator・adversarial・過去Compass
+      # 評価を実測する。generatorは**決定論的**（LLM providerは接続しない・
+      # secretは注入しない）。履歴HTMLは読み取りのみ。
+      - name: Phase 3-C Evidence-Grounded Compass Generator real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -m src.intelligence.compass.pilot --sessions 5
+      # Phase 3.5: Japan Market Internals。J-Quants Light の daily bars（date指定・
+      # 1 session=1リクエスト）・security master・investor-types（週次）から
+      # universe / breadth / turnover / sector / size / flow を集計し、Fact Layer・
+      # Context Engine・Morning snapshot・Compass Evidence Package へ接続して
+      # BEFORE/AFTER を実測する。JQUANTS_API_KEY のみ runtime injection（値は出力しない）。
+      # full 5年backfillはしない（直近 sessions のみ。見積りを報告する）。
+      - name: Phase 3.5 Japan Market Internals real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.internals.pilot --sessions 45 --mornings 5
+      # Phase 3.6: J-Quants Production Data Strategy。isolated pilot root で
+      # seed（意図的な欠落付き）→ gap detection → repair（欠落だけ）→ daily incremental
+      # （最新 session だけ）→ rerun（0リクエスト）→ master diff → weekly flow refresh →
+      # health / readiness / morning simulation を実測する。JQUANTS_API_KEY のみ runtime
+      # injection。NOT_ENTITLED endpoint は probe しない。5年 backfill はしない。
+      - name: Phase 3.6 J-Quants production data strategy real-data pilot
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.jquants_ops.pilot --mornings 4

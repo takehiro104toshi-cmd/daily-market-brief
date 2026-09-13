@@ -1,0 +1,154 @@
+# 商品市況・セクター/テーマ需要の因果ルール。
+# Stage 1で旧config.yaml `causal_rules` からCOPY+NORMALIZE（内容は忠実コピー、
+# id/confidence/status メタデータを付与）。金利系は rates.yaml、為替系は fx.yaml。
+#
+# 注: beneficiary_sectors / negative_sectors のセクター名は、現時点では
+# 旧config.yaml `sectors:` のキー名をそのまま用いる（entity resolver（Phase 2）
+# 導入までの暫定語彙。docs/rebuild/STAGE1_VNEXT_FOUNDATION.md §4）。
+
+id: causal_rules.market
+version: "1.0.0"
+description: "ニュース見出しトリガー → 恩恵/逆風セクターの因果ルール（商品市況・セクター需要・テーマ需要）"
+source: "config.yaml `causal_rules`（羅針盤等から学習した思考プロセスの一般化。原文引用ではない）より移設"
+status: active
+
+rules:
+  - id: CR_OIL_UP_001
+    trigger_keywords: ["原油高", "原油上昇", "原油急騰", "WTI高"]
+    theme: "資源価格"
+    beneficiary_sectors: ["資源・エネルギー"]
+    negative_sectors: ["自動車", "情報通信・生成AI"]
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "原油価格の上昇は資源関連には追い風、輸送・製造コストの増加を通じて他業種には逆風となりやすい"
+
+  - id: CR_OIL_DOWN_001
+    trigger_keywords: ["原油安", "原油下落", "原油急落", "WTI安"]
+    theme: "資源価格"
+    beneficiary_sectors: ["自動車"]
+    negative_sectors: ["資源・エネルギー"]
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "原油価格の下落は燃料・輸送コストの低下を通じて運輸・製造関連には追い風となりやすい"
+
+  - id: CR_AI_CAPEX_001
+    trigger_keywords: ["半導体投資拡大", "AI投資拡大", "設備投資拡大", "データセンター投資", "データセンター建設", "電力設備投資"]
+    theme: "AI・半導体設備投資"
+    beneficiary_sectors: ["半導体・電子部品", "電機・電線・素材", "電力・インフラ", "情報通信・生成AI"]
+    negative_sectors: []
+    durable: true
+    confidence: confirmed
+    status: active
+    note: "AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい"
+
+  - id: CR_AI_NEGATIVE_001
+    trigger_keywords: ["メモリ価格高騰", "メモリ不足", "部材不足", "発売延期"]
+    theme: "AI投資拡大の負の側面"
+    beneficiary_sectors: []
+    negative_sectors: ["情報通信・生成AI"]
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "部材価格の高騰や供給制約は、最終製品を手掛ける川下メーカーには一時的な逆風となる可能性がある"
+
+  - id: CR_DEFENSE_001
+    trigger_keywords: ["防衛費", "防衛予算", "防衛装備", "防衛費増額"]
+    theme: "防衛"
+    beneficiary_sectors: ["重工業・防衛"]
+    negative_sectors: []
+    durable: true
+    confidence: confirmed
+    status: active
+    note: "防衛予算の拡大方針は、防衛関連の受注環境改善につながりやすい"
+
+  - id: CR_AUTO_MARKET_001
+    trigger_keywords: ["自動車販売", "新型車", "自動車生産", "自動車市場"]
+    theme: "自動車市況"
+    beneficiary_sectors: ["自動車"]
+    negative_sectors: []
+    durable: true
+    confidence: confirmed
+    status: active
+    note: "自動車の生産・販売動向は、完成車・部品メーカーの業績に直結しやすい"
+
+  - id: CR_EV_BATTERY_001
+    trigger_keywords: ["EV普及", "電気自動車", "車載電池", "蓄電池投資"]
+    theme: "EV・蓄電池"
+    beneficiary_sectors: ["自動車", "電機・電線・素材", "資源・エネルギー"]
+    negative_sectors: []
+    durable: true
+    confidence: confirmed
+    status: active
+    note: "EV普及は車載電池・関連部材・電池材料（資源）への需要拡大につながりやすい"
+
+  - id: CR_HR_SAAS_001
+    trigger_keywords: ["人材紹介", "採用市場", "SaaS導入"]
+    theme: "人材・SaaS"
+    beneficiary_sectors: ["情報通信・生成AI"]
+    negative_sectors: []
+    durable: true
+    confidence: likely
+    status: active
+    note: "SaaS・人材関連サービスの拡大は、プラットフォーム提供企業の収益機会につながりやすい"
+
+  - id: CR_CLOUD_PHONE_001
+    trigger_keywords: ["クラウド需要", "データセンター拡張", "スマートフォン販売", "広告収益"]
+    theme: "クラウド・スマートフォン"
+    beneficiary_sectors: ["情報通信・生成AI", "半導体・電子部品"]
+    negative_sectors: []
+    durable: true
+    confidence: confirmed
+    status: active
+    note: "クラウド・スマートフォン関連需要の拡大は、プラットフォーム企業や半導体需要への波及につながりやすい"
+
+  - id: CR_PAYMENT_001
+    trigger_keywords: ["決済", "キャッシュレス", "決済インフラ"]
+    theme: "決済"
+    beneficiary_sectors: ["金融", "情報通信・生成AI"]
+    negative_sectors: []
+    durable: true
+    confidence: likely
+    status: active
+    note: "キャッシュレス決済の普及は、金融機関・プラットフォーム企業双方に事業機会をもたらしやすい"
+
+  - id: CR_CONSTRUCTION_001
+    trigger_keywords: ["建設投資", "住宅着工", "電気工事", "インフラ整備"]
+    theme: "建設・住宅"
+    beneficiary_sectors: ["電力・インフラ"]
+    negative_sectors: []
+    durable: true
+    confidence: confirmed
+    status: active
+    note: "建設・住宅関連の投資拡大は、電気工事・設備工事を手掛ける企業の受注環境改善につながりやすい"
+
+  - id: CR_INBOUND_001
+    trigger_keywords: ["インバウンド", "訪日観光客", "旅行需要", "観光"]
+    theme: "旅行・インバウンド"
+    beneficiary_sectors: []
+    negative_sectors: []
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "インバウンド需要の拡大は旅行・宿泊・小売など関連業種への追い風となりやすい（旧watchlistに直接該当銘柄なしのためセクター空。entity整備後に対応付け）"
+
+  - id: CR_CONSUMPTION_001
+    trigger_keywords: ["個人消費", "消費拡大", "消費者心理"]
+    theme: "消費"
+    beneficiary_sectors: ["自動車"]
+    negative_sectors: []
+    durable: false
+    confidence: likely
+    status: active
+    note: "個人消費の拡大は、自動車など耐久消費財を含む幅広い消費関連企業への追い風となりやすい"
+
+  - id: CR_LOGISTICS_001
+    trigger_keywords: ["物流需要", "配送網拡大", "倉庫投資"]
+    theme: "物流"
+    beneficiary_sectors: ["重工業・防衛"]
+    negative_sectors: []
+    durable: true
+    confidence: likely
+    status: active
+    note: "物流インフラ需要の拡大は、船舶・鉄道車両など輸送機器を手掛ける重工業関連企業の受注環境改善につながりやすい"

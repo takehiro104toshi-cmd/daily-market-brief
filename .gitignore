@@ -10,3 +10,21 @@ pages-site/
 
 # ローカル実行時のログ
 *.log
+
+# vNext（Investment Intelligence OS）の実行時生成データはgit管理しない方針
+# （docs/rebuild/STAGE1_VNEXT_FOUNDATION.md §7。Legacyのdata/配下既存パスには影響しない）
+data/vnext/
+
+# 研究用の社外秘資料はpublicリポジトリへコミットしない（README除く）
+research/source_docs/*
+!research/source_docs/compass
+research/source_docs/compass/*
+!research/source_docs/compass/README.md
+
+# 社外秘（CONFIDENTIAL_SOURCE）: 羅針盤PDFはpublicリポジトリでtracking禁止
+# （docs/security/CONFIDENTIAL_RESEARCH_POLICY.md。既存履歴の除去はSECURITY_REMEDIATION_PLAN参照）
+date/rashinban/*.pdf
+
+# Cloudflare識別子（SENSITIVE_IDENTIFIER）: tracking禁止
+cloudflare/private-insight-wrangler.toml
+cloudflare/.wrangler/

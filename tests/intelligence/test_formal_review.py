@@ -1,0 +1,2179 @@
+"""Phase 3.9.5 First Formal DNA Review — 合成 data root で population / packet / digest / guard / decide / CLI を検証。
+
+すべて temp root。実 CompassData には触れない。formal Decision は temp の decisions.jsonl にだけ書かれる。
+"""
+from __future__ import annotations
+
+import ast
+import importlib.util
+import json
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pytest
+
+from src.intelligence.decision.models import ACTOR_HUMAN
+from src.intelligence.decision.corpus_state import CorpusState
+from src.intelligence.decision.policy import load_decision_policy
+from src.intelligence.decision.store import DecisionStore, decisions_root
+from src.intelligence.evaluation.config import A_CONSISTENCY, A_CROSS, A_NOVELTY, A_QUALITY, A_STRENGTH, A_TIME, AXES, load_policies
+from src.intelligence.evaluation.models import (
+    APPROVE_RECOMMENDED,
+    KEEP_REVIEWING as REC_KEEP_REVIEWING,
+    NOT_READY,
+    REJECT_RECOMMENDED,
+    REVIEW_RECOMMENDED,
+)
+from src.intelligence.evaluation.rules import R_APPROVE, R_KEEP, R_REJECT, R_REVIEW
+from src.intelligence.evaluation.store import evaluation_root
+from src.intelligence.formal_review import cli as fr_cli
+from src.intelligence.formal_review.config import (
+    ACTIONS,
+    APPROVED,
+    KEEP_REVIEWING,
+    REJECTED,
+    REOPENED_FOR_REVIEW,
+    RETIRED,
+    SUPERSEDED,
+    FormalReviewPolicy,
+    formal_review_policy_from_mapping,
+    load_formal_review_policy,
+)
+from src.intelligence.formal_review.errors import (
+    ActionNotAllowed,
+    ApproveAgainstRecommendationBlocked,
+    DecisionHeadChanged,
+    FormalReviewError,
+    FormalReviewPolicyError,
+    MaterialDigestChanged,
+    PacketEvidenceDigestChanged,
+    PacketMissing,
+    PacketPatternMismatch,
+    PolicyDigestMismatch,
+    ReasonNotSubstantive,
+    ReasonTooShort,
+    RecommendationMismatch,
+    RejectAgainstRecommendationBlocked,
+    ReopenNotEligible,
+    ReplacementPatternRequired,
+    ReplayEvidenceRequired,
+    SiblingAcknowledgementRequired,
+    SiblingConflictBlocked,
+    StaleReviewPacket,
+)
+from src.intelligence.formal_review.groups import build_groups, sibling_key
+from src.intelligence.formal_review.metrics import assert_operational_only
+from src.intelligence.formal_review.ordering import SECTION_APPROVE, SECTION_REJECT, SECTION_REOPEN
+from src.intelligence.formal_review.packet import evidence_view, packet_evidence_digest
+from src.intelligence.formal_review.service import FormalDecisionRequest, FormalReviewService
+from src.intelligence.formal_review.store import formal_review_root
+from src.intelligence.replay.config import load_replay_policy
+from src.intelligence.replay.store import ReplayStore, replay_root
+from src.intelligence.shadow_review.config import AGREE, DISAGREE, load_shadow_review_policy
+from src.intelligence.shadow_review.events import ShadowReviewEventStore, shadow_review_root
+from src.intelligence.shadow_review.material import material_digest
+from src.intelligence.shadow_review.models import find_forbidden_keys, shadow_review_id_for
+
+_spec = importlib.util.spec_from_file_location("_tsr", Path(__file__).with_name("test_shadow_review.py"))
+_tsr = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_tsr)
+evaluation_row = _tsr.evaluation
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PKG = REPO_ROOT / "src" / "intelligence" / "formal_review"
+EVAL_POLICY, REC_POLICY = load_policies()
+SHADOW_POLICY = load_shadow_review_policy()
+REPLAY_POLICY = load_replay_policy()
+DECISION_POLICY = load_decision_policy()
+FR_POLICY = load_formal_review_policy()
+NOW = datetime(2026, 9, 6, 6, 0, tzinfo=timezone.utc)
+ELIGIBLE = 139
+REASON_OK = "Approved after reviewing six axes, replay persistence and sibling context in detail."
+REASON_REJECT = "Rejected: repeated UP/DOWN contradiction across supporting documents remains active."
+REASON_KEEP = "Keep reviewing until more regimes are covered."
+
+# ---------------------------------------------------------------- synthetic universe
+COMP_A = {"pattern_type": "EVIDENCE_OUTLOOK", "evidence": ["FX", "US_EQUITY"], "outlook": ["dir=UP", "target=JAPAN_EQUITY"],
+          "market_state": [], "theme": "UNKNOWN", "why": "NO_WHY", "risk": ""}
+COMP_B = {**COMP_A, "outlook": ["dir=DOWN", "target=JAPAN_EQUITY"]}            # pA の反対方向 sibling
+COMP_C = {**COMP_A, "outlook": ["dir=UP", "target=JAPAN_EQUITY", "horizon=1W"]}  # 同方向 sibling（context）
+COMP_K = {"pattern_type": "STATE_OUTLOOK", "evidence": [], "outlook": ["dir=UP", "target=JAPAN_EQUITY"],
+          "market_state": ["equity_direction=UP"], "theme": "UNKNOWN", "why": "", "risk": ""}
+COMP_R = {"pattern_type": "EVIDENCE_OUTLOOK", "evidence": ["JAPAN_RATES"], "outlook": ["dir=DOWN", "target=JAPAN_EQUITY"],
+          "market_state": [], "theme": "UNKNOWN", "why": "NO_WHY", "risk": ""}
+COMP_T = {"pattern_type": "THEME_OUTLOOK", "evidence": [], "outlook": ["dir=DOWN", "target=SECTOR"], "market_state": [],
+          "theme": "THEME", "why": "", "risk": ""}
+
+
+def approve_eval(pid, pattern_type="EVIDENCE_OUTLOOK", **kw):
+    kw.setdefault("support", 6); kw.setdefault("span", 130); kw.setdefault("months", 5); kw.setdefault("cells", 3)
+    kw.setdefault("classification", "NEW_PATTERN_CANDIDATE")
+    return evaluation_row(pid, pattern_type=pattern_type, recommendation=APPROVE_RECOMMENDED, triggered_rule=R_APPROVE,
+                          states={a: "HIGH" for a in AXES}, supporting=("DATA_QUALITY_HIGH", "CONSISTENCY_HIGH"),
+                          corpus_size=ELIGIBLE, corpus_milestone="CORPUS_100", **kw)
+
+
+def reject_eval(pid, pattern_type="EVIDENCE_OUTLOOK", **kw):
+    states = {a: "MEDIUM" for a in AXES}
+    states[A_CONSISTENCY] = "LOW"; states[A_STRENGTH] = "HIGH"; states[A_TIME] = "MEDIUM"
+    kw.setdefault("support", 5)
+    return evaluation_row(pid, pattern_type=pattern_type, recommendation=REJECT_RECOMMENDED, triggered_rule=R_REJECT,
+                          states=states, contradiction=True, contradiction_repeated=True,
+                          supporting=("CONSISTENCY_LOW", "CONTRADICTION_REPEATED"), corpus_size=ELIGIBLE,
+                          corpus_milestone="CORPUS_100", **kw)
+
+
+def review_eval(pid, pattern_type="EVIDENCE_OUTLOOK", **kw):
+    return evaluation_row(pid, pattern_type=pattern_type, recommendation=REVIEW_RECOMMENDED, triggered_rule=R_REVIEW,
+                          corpus_size=ELIGIBLE, corpus_milestone="CORPUS_100", **kw)
+
+
+def metrics_for(pid, rec, *, first=78, persistence="1.0000", reversals=0, in_state=61, history=139,
+                stability="STABLE", worst="HIGH", time_high=61, cross_high=61, main_first=80):
+    approve = rec == APPROVE_RECOMMENDED
+    return {"pattern_id": pid, "current_recommendation": rec, "current_lifecycle": "STRONG_PATTERN_CANDIDATE",
+            "recommendation_transition_count": reversals + 1, "recommendation_reversal_count": reversals,
+            "first_approve_recommended_position": first if approve else None,
+            "first_approve_recommended_date": "2026-07-01" if approve else None,
+            "first_reject_recommended_position": None if approve else first,
+            "first_reject_recommended_date": None if approve else "2026-05-10",
+            "approve_persistence_ratio": persistence if approve else None,
+            "reject_persistence_ratio": None if approve else persistence,
+            "state_persistence_ratio": persistence, "eligible_documents_in_current_state": in_state,
+            "history_eligible_documents": history, "stability_class": stability,
+            "calibration_state": REPLAY_POLICY.stability_calibration_state, "provisional": False,
+            "worst_consistency_observed": worst, "positions_with_time_high": time_high,
+            "positions_with_cross_regime_high": cross_high, "main_appearance_count": 3,
+            "first_surfaced_in_main_position": main_first}
+
+
+class Bench:
+    """合成 data root: research + evaluation + shadow review + decision + replay。corpus state は注入（eligible 139）。"""
+
+    def __init__(self, tmp_path: Path, *, eligible: int = ELIGIBLE, with_replay: bool = True, replay_captured: int = ELIGIBLE):
+        self.root = Path(tmp_path) / "root"
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.eligible = eligible
+        self.ticks = 0
+        self.components = {"pA": COMP_A, "pB": COMP_B, "pC": COMP_C, "pK": COMP_K, "pR": COMP_R, "pT": COMP_T, "pN": COMP_K}
+        self.lifecycles = {pid: "STRONG_PATTERN_CANDIDATE" for pid in self.components}
+        self.lifecycles["pC"] = "REVIEW_CANDIDATE"
+        self.records = {pid: {"pattern_id": pid, "pattern_version": "1.0.0", "components": comp,
+                              "supporting_document_ids": ["d1", "d2", "d3", "d4", "d5", "d6"], "support_count": 6,
+                              "eligible_support": 6, "regime_count": 3, "regime_coverage": ["regime:aaa", "regime:bbb", "regime:ccc"],
+                              "span_days": 130, "valid_ratio": "1.00", "date_range": ["2026-02-20", "2026-06-30"],
+                              "first_seen": "2026-02-20", "last_seen": "2026-06-30", "limitations": [],
+                              "pattern_record_id": f"cpr_{pid}"}
+                        for pid, comp in self.components.items()}
+        self.evals = {
+            "pA": approve_eval("pA"), "pB": approve_eval("pB"), "pC": review_eval("pC"),
+            "pK": approve_eval("pK", pattern_type="STATE_OUTLOOK"), "pR": reject_eval("pR"),
+            "pT": reject_eval("pT", pattern_type="THEME_OUTLOOK"),
+            "pN": evaluation_row("pN", pattern_type="STATE_OUTLOOK", recommendation=NOT_READY, triggered_rule="NOT_READY:DATA_QUALITY_LOW",
+                                 corpus_size=ELIGIBLE, corpus_milestone="CORPUS_100"),
+        }
+        self.dna = {pid: {"pattern_id": pid, "classification": "NEW_PATTERN_CANDIDATE", "best_rule_id": "",
+                          "direction_relation": "UNKNOWN", "candidate_rule_ids": [], "comparison_id": f"crd_{pid}"}
+                    for pid in self.components}
+        self.dna["pK"] = {**self.dna["pK"], "classification": "EXPLAINED_BY_EXISTING_RULE", "best_rule_id": "JP_DIR_001",
+                          "direction_relation": "SAME", "candidate_rule_ids": ["JP_DIR_001"]}
+        self.conflicts = []
+        self.metrics = {"pA": metrics_for("pA", APPROVE_RECOMMENDED, first=78, in_state=61),
+                        "pB": metrics_for("pB", APPROVE_RECOMMENDED, first=125, in_state=14, stability="RECENT_TRANSITION"),
+                        "pK": metrics_for("pK", APPROVE_RECOMMENDED, first=91, in_state=48),
+                        "pR": metrics_for("pR", REJECT_RECOMMENDED, first=33, in_state=106),
+                        "pT": metrics_for("pT", REJECT_RECOMMENDED, first=82, in_state=57, persistence="0.9500")}
+        self.replay_enabled = with_replay
+        self.replay_captured = replay_captured
+        self.replay_policy_digests = None
+        self.write_all()
+
+    # ------------------------------------------------------------ writers
+    def write_all(self):
+        self.write_research(); self.write_evaluations(); self.write_replay()
+
+    def write_research(self):
+        r = self.root / "compass_research"; r.mkdir(parents=True, exist_ok=True)
+        (r / "patterns.jsonl").write_text("".join(json.dumps({**rec, "status": self.lifecycles[pid]}, ensure_ascii=False, sort_keys=True) + "\n"
+                                                  for pid, rec in self.records.items()), encoding="utf-8")
+        (r / "dna_comparisons.jsonl").write_text("".join(json.dumps(d, ensure_ascii=False, sort_keys=True) + "\n" for d in self.dna.values()), encoding="utf-8")
+        (r / "conflicts.jsonl").write_text("".join(json.dumps(c, ensure_ascii=False, sort_keys=True) + "\n" for c in self.conflicts), encoding="utf-8")
+        (r / "structures.jsonl").write_text("".join(json.dumps({"document_id": d, "document_date": f"2026-0{3 + i % 4}-1{i}", "eligible": True,
+                                                                 "created_at": "2026-08-10T00:00:00+00:00"}, sort_keys=True) + "\n"
+                                                    for i, d in enumerate(["d1", "d2", "d3", "d4", "d5", "d6"])), encoding="utf-8")
+
+    def write_evaluations(self):
+        root = evaluation_root(self.root); root.mkdir(parents=True, exist_ok=True)
+        (root / "evaluations.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False, sort_keys=True) + "\n"
+                                                        for r in sorted(self.evals.values(), key=lambda r: r["pattern_id"])), encoding="utf-8")
+        (root / "evaluation_snapshot.json").write_text(json.dumps({"generated_at": NOW.isoformat(), "corpus_size": ELIGIBLE}), encoding="utf-8")
+
+    def write_replay(self):
+        if not self.replay_enabled:
+            return
+        digests = self.replay_policy_digests or {"evaluation": EVAL_POLICY.digest(), "recommendation": REC_POLICY.digest(),
+                                                 "shadow_review": SHADOW_POLICY.digest(), "replay": REPLAY_POLICY.digest()}
+        approve_items = [{"pattern_id": p, "first_approve_position": m["first_approve_recommended_position"], "appeared_only_after_100": m["first_approve_recommended_position"] > 100,
+                          "reversions": {}, "worst_consistency_observed": "HIGH"} for p, m in self.metrics.items() if m["current_recommendation"] == APPROVE_RECOMMENDED]
+        reject_items = [{"pattern_id": p, "first_material_contradiction_position": 30, "first_reject_position": m["first_reject_recommended_position"],
+                         "reject_driver": "SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION", "contradiction_recovery_positions": [],
+                         "was_review_before_reject": True, "recommendation_before_reject": "REVIEW_RECOMMENDED"}
+                        for p, m in self.metrics.items() if m["current_recommendation"] == REJECT_RECOMMENDED]
+        summary = {"run_id": "crp_test", "run_digest": "run" + str(self.replay_captured).rjust(13, "0"), "captured_eligible": self.replay_captured,
+                   "policy_digests": digests, "pattern_metrics": self.metrics,
+                   "approve_stress": {"count": len(approve_items), "items": approve_items},
+                   "reject_stress": {"count": len(reject_items), "items": reject_items}, "run_created_at": NOW.isoformat()}
+        manifest = {"run_id": "crp_test", "replay_policy": {"version": REPLAY_POLICY.policy_version, "digest": REPLAY_POLICY.digest()}}
+        ReplayStore(replay_root(self.root)).write_run("crp_test", manifest=manifest, snapshots=[], timelines=[], events=[], summary=summary)
+
+    # ------------------------------------------------------------ service
+    def corpus_state(self) -> CorpusState:
+        e = self.eligible
+        return CorpusState(documents=e + 2, usable=e + 2, eligible=e, valid=e, milestone="CORPUS_100" if e >= 100 else "CORPUS_50")
+
+    def clock(self) -> datetime:
+        self.ticks += 1
+        return NOW + timedelta(minutes=self.ticks)
+
+    def service(self, policy: FormalReviewPolicy = None, **overrides) -> FormalReviewService:
+        return FormalReviewService(self.root, policy=policy or FR_POLICY, corpus_state_resolver=self.corpus_state,
+                                   clock=self.clock, **overrides)
+
+    def build(self, policy=None):
+        return self.service(policy).build()
+
+    def packet(self, pid):
+        return self.service().store.packet(pid)
+
+    def decide(self, pid, action, reason, *, dry_run=False, packet_id=None, actor="reviewer_taro", **kw):
+        pk = self.packet(pid)
+        req = FormalDecisionRequest(pattern_id=pid, action=action, packet_id=packet_id or (pk["identity"]["packet_id"] if pk else "frp_missing"),
+                                    reason=reason, actor=actor, **kw)
+        return self.service().decide(req, dry_run=dry_run)
+
+    def decisions(self):
+        return DecisionStore(decisions_root(self.root)).records()
+
+    def shadow(self, pid, outcome, reason="", related=""):
+        row = self.evals[pid]
+        payload = {"pattern_id": pid, "reviewed_at": NOW.isoformat(), "reviewer_id": "SUPERVISOR", "reviewer_type": "HUMAN",
+                   "review_outcome": outcome, "reason": reason, "structured_reason": {}, "related_pattern_id": related,
+                   "recommendation_at_review": row["recommendation"], "axis_states_at_review": row["axis_states"],
+                   "axis_applicability_at_review": row["axis_applicability"], "reference_score_at_review": row["reference_score"],
+                   "queue_rank_at_review": 1, "queue_section_at_review": "MAIN",
+                   "material_digest_at_review": material_digest(row, self.lifecycles[pid], SHADOW_POLICY),
+                   "evaluation_id": row["evaluation_id"], "inputs_digest": row["inputs_digest"], "lifecycle_at_review": self.lifecycles[pid],
+                   "evaluation_policy_version": EVAL_POLICY.policy_version, "evaluation_policy_digest": EVAL_POLICY.digest(),
+                   "recommendation_policy_version": REC_POLICY.policy_version, "recommendation_policy_digest": REC_POLICY.digest(),
+                   "shadow_review_policy_version": SHADOW_POLICY.policy_version, "shadow_review_policy_digest": SHADOW_POLICY.digest(),
+                   "corpus_size": ELIGIBLE, "corpus_milestone": "CORPUS_100", "shadow_mode": False, "formal_review_gate_reached": True,
+                   "schema_version": "1.0.0", "sequence": 0, "previous_record_hash": "", "record_hash": ""}
+        payload["shadow_review_id"] = shadow_review_id_for(payload)
+        return ShadowReviewEventStore(shadow_review_root(self.root)).append(payload, SHADOW_POLICY)
+
+
+@pytest.fixture()
+def bench(tmp_path):
+    return Bench(tmp_path)
+
+
+def _sections(b):
+    return b.service().store.queue()["sections"]
+
+
+def _ids(rows):
+    return [r["pattern_id"] for r in rows]
+
+
+def _tree_digest(root: Path, exclude: str = ""):
+    """root 配下の file → sha256。key は OS に依らない POSIX 形式（Windows の backslash を key に持ち込まない）。"""
+    import hashlib
+    out = {}
+    for p in sorted(root.rglob("*")):
+        if p.is_file() and (not exclude or exclude not in p.relative_to(root).parts):
+            out[p.relative_to(root).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
+    return out
+
+
+def _under_logical_dir(key: str, top: str) -> bool:
+    """相対 path 文字列が論理 directory `top` 直下にあるか。POSIX / Windows どちらの区切りでも同じ答えになる。"""
+    from pathlib import PurePosixPath, PureWindowsPath
+
+    parts = PureWindowsPath(key).parts if "\\" in key else PurePosixPath(key).parts
+    return len(parts) >= 2 and parts[0] == top
+
+
+# ================================================================== 1-5 population
+def test_dynamic_population_approve_reject_and_not_ready_excluded(bench):
+    out = bench.build()
+    sec = _sections(bench)
+    assert _ids(sec[SECTION_APPROVE]) == ["pA", "pK", "pB"] and _ids(sec[SECTION_REJECT]) == ["pR", "pT"]
+    assert out["metrics"]["by_recommendation"] == {APPROVE_RECOMMENDED: 3, REJECT_RECOMMENDED: 2}
+    assert bench.service().store.manifest()["population"]["excluded_not_ready"] == 1
+    assert "pN" not in bench.service().store.packet_ids()
+
+
+def test_terminal_and_decided_heads_leave_the_primary_queue(bench):
+    bench.build()
+    bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    bench.decide("pR", "reject", REASON_REJECT)
+    bench.build()
+    sec = _sections(bench)
+    assert "pA" not in _ids(sec[SECTION_APPROVE]) and "pR" not in _ids(sec[SECTION_REJECT])
+    decided = {r["pattern_id"]: r for r in bench.service().store.queue()["decided"]}
+    assert decided["pA"]["allowed_next_actions"] == [SUPERSEDED, RETIRED] and decided["pR"]["allowed_next_actions"] == []
+    bench.decide("pA", "supersede", "Superseded by the broader STATE_OUTLOOK pattern pK.", replacement_pattern_id="pK")
+    bench.build()
+    assert bench.service().store.queue()["decided"][0]["decision_state"] == SUPERSEDED
+    assert bench.service().store.queue()["decided"][0]["allowed_next_actions"] == []
+
+
+def test_reopen_section_only_when_material_change_detected(bench):
+    bench.build()
+    bench.decide("pR", "reject", REASON_REJECT)
+    bench.build()
+    assert _sections(bench)[SECTION_REOPEN] == []
+    bench.evals["pR"]["axis_metrics"][A_STRENGTH]["eligible_support"] = 7          # material change（支持文書が増えた）
+    bench.evals["pR"]["axis_metrics"][A_QUALITY]["eligible_support"] = 7
+    bench.write_evaluations()
+    bench.build()
+    assert _ids(_sections(bench)[SECTION_REOPEN]) == ["pR"]
+    assert bench.packet("pR")["decision"]["reopen"]["status"] == "REOPEN_ELIGIBLE"
+
+
+def test_review_sibling_is_context_only_and_cannot_be_decided(bench):
+    bench.build()
+    queue = bench.service().store.queue()
+    assert [c["pattern_id"] for c in queue["context"]] == ["pC"] and queue["context"][0]["role"] == "CONTEXT_ONLY"
+    assert "pC" not in {r["pattern_id"] for rows in queue["sections"].values() for r in rows}
+    with pytest.raises(FormalReviewError) as exc:
+        bench.decide("pC", "keep-reviewing", REASON_KEEP)
+    assert exc.value.code == "CANDIDATE_MISSING"
+
+
+# ================================================================== 6-8 packet schema / scan / determinism
+REQUIRED_BLOCKS = {
+    "identity": ("packet_id", "packet_schema_version", "built_at", "pattern_id", "pattern_type", "pattern_version", "lifecycle_status", "components"),
+    "recommendation": ("recommendation", "triggered_rule", "blocking_rules", "supporting_rules", "shadow_mode", "formal_review_gate_reached", "corpus_size", "corpus_milestone"),
+    "axes": ("states", "applicability", "reasons", "eligible_support", "support_count", "span_days", "distinct_calendar_months", "distinct_2d_cells", "confirmed_2d_cells", "document_qualities", "valid_ratio", "regime_coverage"),
+    "reference": ("label", "reference_score", "reference_score_comparable", "relative_support_share"),
+    "consistency": ("direction_counts", "document_contradiction", "document_contradiction_repeated", "narrow_sibling_contradiction", "narrow_sibling_repeated", "dna_conflicts", "direction_class"),
+    "dna": ("classification", "best_rule_id", "direction_relation", "candidate_rule_count", "conflict_rule_ids", "conflict_count"),
+    "replay": ("replay_run_id", "replay_run_digest", "captured_eligible", "first_recommendation_position", "first_recommendation_date", "persistence_ratio", "reversal_count", "eligible_documents_in_current_state", "stability_class", "calibration_state", "worst_consistency_observed", "positions_with_time_high", "positions_with_cross_regime_high", "first_surfaced_in_main_position", "evidence_age_eligible_docs"),
+    "shadow_history": ("event_count", "outcome_history", "current_review"),
+    "decision": ("current_state", "head_decision_id", "history_length", "reopen", "allowed_next_actions"),
+    "group": ("sibling_group_key", "members", "group_state_digest"),
+    "freshness": ("material_digest", "packet_evidence_digest", "evaluation_id", "inputs_digest", "policy_digests", "policy_versions", "corpus_eligible_at_build", "head_decision_id"),
+}
+
+
+def test_packet_schema_complete_and_reference_labeled(bench):
+    bench.build()
+    p = bench.packet("pA")
+    for block, fields in REQUIRED_BLOCKS.items():
+        assert set(fields) <= set(p[block]), (block, set(fields) - set(p[block]))
+    assert p["reference"]["label"] == "NON_DECISIONAL_REFERENCE_ONLY" and "warnings" in p
+    assert set(p["freshness"]["policy_digests"]) == {"evaluation", "recommendation", "shadow_review", "replay", "decision", "formal_review"}
+    assert all(f in p["shadow_history"]["outcome_history"][0] for f in ()) and p["shadow_history"]["event_count"] == 0
+    assert p["dna"]["classification"] == "NEW_PATTERN_CANDIDATE" and p["axes"]["regime_coverage"] == ["regime:aaa", "regime:bbb", "regime:ccc"]
+
+
+def test_forbidden_key_scan_is_recursive_and_fails_closed(bench):
+    from src.intelligence.formal_review.errors import ForbiddenKeyInPacket
+
+    bench.build()
+    assert all(find_forbidden_keys(bench.packet(pid)) == [] for pid in bench.service().store.packet_ids())
+    bench.records["pA"]["components"] = {**COMP_A, "path": "leak"}
+    bench.write_research()
+    with pytest.raises(ForbiddenKeyInPacket):
+        bench.build()
+
+
+def test_packet_evidence_digest_deterministic_and_ignores_timestamps(bench):
+    bench.build()
+    first = bench.packet("pA")
+    bench.ticks += 100                                                          # built_at が変わる
+    bench.build()
+    second = bench.packet("pA")
+    assert first["identity"]["built_at"] != second["identity"]["built_at"]
+    assert first["freshness"]["packet_evidence_digest"] == second["freshness"]["packet_evidence_digest"]
+    assert first["identity"]["packet_id"] == second["identity"]["packet_id"]
+    assert "built_at" not in json.dumps(evidence_view(first))
+
+
+# ================================================================== 9-15 digest sensitivity
+def _digest_after(bench, mutate):
+    bench.build()
+    before = bench.packet("pA")["freshness"]["packet_evidence_digest"]
+    mutate(bench)
+    bench.build()
+    return before, bench.packet("pA")["freshness"]["packet_evidence_digest"]
+
+
+def _rewrite(bench):
+    bench.write_evaluations(); bench.write_research(); bench.write_replay()
+
+
+def test_digest_changes_with_support_count(bench):
+    def m(b): b.evals["pA"]["axis_metrics"][A_QUALITY]["support_count"] = 7; _rewrite(b)
+    a, c = _digest_after(bench, m); assert a != c
+
+
+def test_digest_changes_with_span_days(bench):
+    def m(b): b.evals["pA"]["axis_metrics"][A_TIME]["span_days"] = 131; _rewrite(b)
+    a, c = _digest_after(bench, m); assert a != c
+
+
+def test_digest_changes_with_dna_classification(bench):
+    def m(b): b.evals["pA"]["axis_metrics"][A_NOVELTY]["classification"] = "PARTIALLY_EXPLAINED"; _rewrite(b)
+    a, c = _digest_after(bench, m); assert a != c
+
+
+def test_digest_changes_with_replay_evidence(bench):
+    def m(b): b.metrics["pA"]["positions_with_time_high"] = 12; _rewrite(b)
+    a, c = _digest_after(bench, m); assert a != c
+
+
+def test_digest_changes_with_group_state(bench):
+    def m(b):
+        b.evals["pB"]["recommendation"] = REVIEW_RECOMMENDED; b.evals["pB"]["triggered_rule"] = R_REVIEW; _rewrite(b)
+    a, c = _digest_after(bench, m); assert a != c
+
+
+def test_digest_changes_with_decision_head(bench):
+    def m(b): b.decide("pA", "keep-reviewing", REASON_KEEP)
+    a, c = _digest_after(bench, m); assert a != c
+
+
+def test_digest_changes_with_shadow_history(bench):
+    def m(b): b.shadow("pA", AGREE, reason="")
+    a, c = _digest_after(bench, m); assert a != c
+
+
+# ================================================================== 17-25 freshness / stale
+def test_corpus_only_growth_does_not_stale_and_is_recorded(bench):
+    bench.build()
+    old_packet = bench.packet("pA")
+    bench.eligible = 140
+    for row in bench.evals.values():                                             # 再評価: corpus_size / inputs_digest だけ変わる
+        row["corpus_size"] = 140; row["inputs_digest"] = "feedfacefeedface"; row["evaluation_id"] = "cev_" + row["pattern_id"].ljust(16, "1")[:16]
+    bench.write_evaluations()
+    assert bench.service().current_packet("pA")["freshness"]["packet_evidence_digest"] == old_packet["freshness"]["packet_evidence_digest"]
+    out = bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+    assert out["validation"]["ok"] and out["metadata"]["corpus_eligible_at_packet"] == "139" and out["metadata"]["corpus_eligible_at_write"] == "140"
+
+
+def test_recommendation_change_is_stale(bench):
+    bench.build()
+    bench.evals["pA"]["recommendation"] = REVIEW_RECOMMENDED; bench.evals["pA"]["triggered_rule"] = R_REVIEW; bench.write_evaluations()
+    with pytest.raises(RecommendationMismatch):
+        bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+
+
+def test_material_digest_change_is_stale(bench):
+    bench.build()
+    bench.evals["pA"]["axis_metrics"][A_STRENGTH]["eligible_support"] = 7; bench.evals["pA"]["axis_metrics"][A_QUALITY]["eligible_support"] = 7
+    bench.write_evaluations()
+    with pytest.raises(MaterialDigestChanged):
+        bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+
+
+def test_packet_evidence_digest_change_is_stale_even_when_material_unchanged(bench):
+    bench.build()
+    bench.evals["pA"]["axis_metrics"][A_TIME]["span_days"] = 140; bench.write_evaluations()   # material 外・証拠内
+    with pytest.raises(PacketEvidenceDigestChanged):
+        bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+
+
+@pytest.mark.parametrize("layer", ["evaluation", "recommendation", "shadow_review", "replay", "formal_review"])
+def test_policy_digest_change_is_stale(bench, layer):
+    import dataclasses
+
+    bench.build()
+    pk = bench.packet("pA")
+    req = FormalDecisionRequest("pA", "approve", pk["identity"]["packet_id"], REASON_OK, "taro", acknowledge_siblings=("pB",))
+    if layer == "formal_review":
+        svc = bench.service(policy=FormalReviewPolicy(policy_version="1.2.0", replay_evidence_age_warning_eligible_docs=6))
+    else:
+        base = {"evaluation": EVAL_POLICY, "recommendation": REC_POLICY, "shadow_review": SHADOW_POLICY, "replay": REPLAY_POLICY}[layer]
+        changed = dataclasses.replace(base, policy_version="9.9.9")
+        key = {"evaluation": "evaluation_policy", "recommendation": "recommendation_policy",
+               "shadow_review": "shadow_policy", "replay": "replay_policy"}[layer]
+        svc = bench.service(**{key: changed})
+    with pytest.raises(PolicyDigestMismatch):
+        svc.decide(req, dry_run=True)
+
+
+# ================================================================== 26-28 symmetry
+def test_approve_only_for_approve_recommended(bench):
+    bench.build()
+    with pytest.raises(ApproveAgainstRecommendationBlocked):
+        bench.decide("pR", "approve", REASON_OK, dry_run=True)
+
+
+def test_reject_only_for_reject_recommended(bench):
+    bench.build()
+    with pytest.raises(RejectAgainstRecommendationBlocked):
+        bench.decide("pA", "reject", REASON_REJECT, dry_run=True)
+
+
+def test_human_disagreement_uses_keep_reviewing(bench):
+    bench.build()
+    out = bench.decide("pA", "keep-reviewing", "Disagree with approval; want one more regime first.", reason_category="MORE_REGIMES")
+    rec = out["outcome"]["record"]
+    assert out["mutation"] == "APPEND decisions.jsonl" and rec["decision_type"] == KEEP_REVIEWING
+    assert rec["metadata"]["reason_category"] == "MORE_REGIMES" and rec["promotion_status"] == "NOT_PROMOTED"
+
+
+# ================================================================== 29-33 sibling guard
+def test_c1_opposite_approved_sibling_hard_blocks_without_override(bench):
+    bench.build()
+    bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    bench.build()
+    with pytest.raises(SiblingConflictBlocked):
+        bench.decide("pB", "approve", REASON_OK, dry_run=True)
+    with pytest.raises(SiblingConflictBlocked):                                   # acknowledgement は override にならない
+        bench.decide("pB", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pA",))
+    with pytest.raises(FormalReviewPolicyError):                                  # policy にも override mode は存在しない
+        formal_review_policy_from_mapping({"sibling_guard": {"mode": "C1_OVERRIDE_WITH_REASON"}})
+
+
+def test_c3_undecided_opposite_approve_recommended_requires_and_records_acknowledgement(bench):
+    bench.build()
+    with pytest.raises(SiblingAcknowledgementRequired):
+        bench.decide("pA", "approve", REASON_OK, dry_run=True)
+    out = bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    assert out["outcome"]["record"]["metadata"]["acknowledged_sibling"] == "pB"
+    assert bench.packet("pA")["warnings"][0]["code"] == "W_SIBLING_OPPOSITE_APPROVE_RECOMMENDED"
+
+
+def test_no_sibling_widening_for_state_or_theme_outlook(bench):
+    bench.build()
+    assert bench.packet("pK")["group"]["sibling_group_key"] == "" and bench.packet("pK")["group"]["members"] == []
+    assert bench.packet("pT")["group"]["sibling_group_key"] == "" and bench.packet("pT")["group"]["members"] == []
+    assert set(build_groups(bench.records)) == {"FX,US_EQUITY|target=JAPAN_EQUITY", "JAPAN_RATES|target=JAPAN_EQUITY"}
+    assert sibling_key(COMP_K) == "" and sibling_key(COMP_T) == "" and sibling_key(COMP_A) == sibling_key(COMP_B)
+    # STATE_OUTLOOK の反対方向 pattern を APPROVED しても pK は block されない
+    bench.records["pS"] = {**bench.records["pK"], "pattern_id": "pS", "components": {**COMP_K, "outlook": ["dir=DOWN", "target=JAPAN_EQUITY"]}}
+    bench.lifecycles["pS"] = "STRONG_PATTERN_CANDIDATE"; bench.components["pS"] = bench.records["pS"]["components"]
+    bench.evals["pS"] = approve_eval("pS", pattern_type="STATE_OUTLOOK"); bench.dna["pS"] = {**bench.dna["pA"], "pattern_id": "pS"}
+    bench.metrics["pS"] = metrics_for("pS", APPROVE_RECOMMENDED, first=100); _rewrite(bench)
+    bench.build()
+    bench.decide("pS", "approve", REASON_OK)
+    bench.build()
+    assert bench.decide("pK", "approve", REASON_OK, dry_run=True)["validation"]["ok"]
+
+
+# ================================================================== 34-37 replay evidence
+def test_approved_and_rejected_require_replay_evidence(tmp_path):
+    b = Bench(tmp_path, with_replay=False)
+    b.build()
+    with pytest.raises(ReplayEvidenceRequired):
+        b.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+    with pytest.raises(ReplayEvidenceRequired):
+        b.decide("pR", "reject", REASON_REJECT, dry_run=True)
+    assert b.packet("pA")["warnings"][-1]["code"] != "" and "W_REPLAY_EVIDENCE_MISSING" in [w["code"] for w in b.packet("pA")["warnings"]]
+
+
+def test_keep_reviewing_works_without_replay_evidence(tmp_path):
+    b = Bench(tmp_path, with_replay=False)
+    b.build()
+    assert b.decide("pA", "keep-reviewing", REASON_KEEP)["mutation"] == "APPEND decisions.jsonl"
+
+
+def test_replay_evidence_must_be_current_compatible(bench):
+    bench.replay_policy_digests = {"evaluation": "0000000000000000", "recommendation": REC_POLICY.digest(),
+                                   "shadow_review": SHADOW_POLICY.digest(), "replay": REPLAY_POLICY.digest()}
+    bench.write_replay(); bench.build()
+    p = bench.packet("pR")
+    assert p["replay"]["current_compatible"] is False and "POLICY_DIGEST_MISMATCH:evaluation" in p["replay"]["compatibility_reasons"]
+    assert "W_REPLAY_EVIDENCE_NOT_CURRENT" in [w["code"] for w in p["warnings"]]
+    with pytest.raises(ReplayEvidenceRequired):
+        bench.decide("pR", "reject", REASON_REJECT, dry_run=True)
+
+
+def test_replay_age_is_warning_only(tmp_path):
+    old = Bench(tmp_path / "old", replay_captured=134); old.build()
+    assert "W_REPLAY_EVIDENCE_AGE" in [w["code"] for w in old.packet("pK")["warnings"]]
+    assert old.packet("pK")["replay"]["evidence_age_eligible_docs"] == 5
+    assert old.decide("pK", "approve", REASON_OK, dry_run=True)["validation"]["ok"]
+    fresh = Bench(tmp_path / "fresh", replay_captured=135); fresh.build()
+    assert "W_REPLAY_EVIDENCE_AGE" not in [w["code"] for w in fresh.packet("pK")["warnings"]]
+
+
+# ================================================================== 38-40 stability warnings only
+@pytest.mark.parametrize("cls,code", [("RECENT_TRANSITION", "W_RECENT_TRANSITION"), ("OSCILLATING", "W_OSCILLATING"),
+                                      ("INSUFFICIENT_HISTORY", "W_INSUFFICIENT_HISTORY")])
+def test_stability_classes_warn_but_never_block(bench, cls, code):
+    bench.metrics["pK"]["stability_class"] = cls; bench.write_replay(); bench.build()
+    assert code in [w["code"] for w in bench.packet("pK")["warnings"]]
+    assert bench.decide("pK", "approve", REASON_OK, dry_run=True)["validation"]["ok"]
+
+
+# ================================================================== 41-43 ordering
+def test_reject_section_first_and_reject_ordering(bench):
+    bench.build()
+    sec = _sections(bench)
+    assert [r["queue_rank"] for r in sec[SECTION_REJECT]] == [1, 2] and [r["queue_rank"] for r in sec[SECTION_APPROVE]] == [3, 4, 5]
+    assert _ids(sec[SECTION_REJECT]) == ["pR", "pT"]                              # first_reject 33 < 82
+    bench.metrics["pT"]["first_reject_recommended_position"] = 33; bench.write_replay(); bench.build()
+    assert _ids(_sections(bench)[SECTION_REJECT]) == ["pR", "pT"]                 # 同位置 → persistence 1.0 > 0.95
+    bench.metrics["pT"]["reject_persistence_ratio"] = "1.0000"; bench.records["pT"]["eligible_support"] = 6
+    bench.evals["pT"]["axis_metrics"][A_STRENGTH]["eligible_support"] = 9; _rewrite(bench); bench.build()
+    assert _ids(_sections(bench)[SECTION_REJECT]) == ["pT", "pR"]                 # eligible_support 9 > 6
+
+
+def test_approve_ordering_stability_then_first_position_then_support(bench):
+    bench.build()
+    assert _ids(_sections(bench)[SECTION_APPROVE]) == ["pA", "pK", "pB"]           # STABLE(78) STABLE(91) RECENT(125)
+    bench.metrics["pK"]["first_approve_recommended_position"] = 70; bench.write_replay(); bench.build()
+    assert _ids(_sections(bench)[SECTION_APPROVE]) == ["pK", "pA", "pB"]
+    bench.metrics["pK"]["first_approve_recommended_position"] = 78; bench.evals["pK"]["axis_metrics"][A_STRENGTH]["eligible_support"] = 9
+    _rewrite(bench); bench.build()
+    assert _ids(_sections(bench)[SECTION_APPROVE]) == ["pK", "pA", "pB"]           # 同位置 → eligible_support 9 > 6
+    twice = [_ids(_sections(bench)[SECTION_APPROVE]) for _ in (bench.build(), bench.build())]
+    assert twice[0] == twice[1]
+
+
+# ================================================================== 44-50 reasons / disposition
+def test_reason_minimums_and_label_only_rejection(bench):
+    bench.build()
+    with pytest.raises(ReasonTooShort):
+        bench.decide("pA", "keep-reviewing", "too short", dry_run=True)                       # 9 chars < 10
+    with pytest.raises(ReasonTooShort):
+        bench.decide("pA", "approve", "nineteen characters", dry_run=True, acknowledge_siblings=("pB",))
+    with pytest.raises(ReasonNotSubstantive):
+        bench.decide("pA", "approve", "APPROVE_RECOMMENDED.", dry_run=True, acknowledge_siblings=("pB",))
+    with pytest.raises(ReasonTooShort):
+        bench.decide("pR", "reject", "contradiction seen", dry_run=True)
+    with pytest.raises(ReasonNotSubstantive):
+        bench.decide("pA", "keep-reviewing", REASON_KEEP, dry_run=True, reason_category="MORE_LUCK")
+
+
+def test_superseded_retired_and_reopen_reasons(bench):
+    bench.build()
+    bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    bench.build()
+    with pytest.raises(ReplacementPatternRequired):
+        bench.decide("pA", "supersede", "Superseded by a broader pattern found later.", dry_run=True)
+    with pytest.raises(ReplacementPatternRequired):
+        bench.decide("pA", "supersede", "Superseded by a broader pattern found later.", dry_run=True, replacement_pattern_id="pA")
+    with pytest.raises(ReasonTooShort):
+        bench.decide("pA", "retire", "retired now", dry_run=True)
+    assert bench.decide("pA", "retire", "Retired: the regime this pattern described no longer occurs.", dry_run=True)["validation"]["ok"]
+    bench.decide("pR", "reject", REASON_REJECT); bench.build()
+    bench.evals["pR"]["axis_metrics"][A_STRENGTH]["eligible_support"] = 7; bench.evals["pR"]["axis_metrics"][A_QUALITY]["eligible_support"] = 7
+    bench.write_evaluations(); bench.build()
+    with pytest.raises(ReasonTooShort):
+        bench.decide("pR", "reopen", "material change", dry_run=True)
+    out = bench.decide("pR", "reopen", "Material change: supporting evidence grew from 5 to 7 eligible documents.")
+    assert out["outcome"]["record"]["decision_type"] == REOPENED_FOR_REVIEW and out["outcome"]["record"]["reopens_decision_id"]
+
+
+def test_duplicate_overlap_is_keep_reviewing_with_metadata(bench):
+    bench.build()
+    with pytest.raises(ReasonNotSubstantive):
+        bench.decide("pB", "keep-reviewing", "Duplicate of another pattern.", dry_run=True, disposition="DUPLICATE_OR_OVERLAPPING")
+    with pytest.raises(ReasonNotSubstantive):
+        bench.decide("pB", "approve", REASON_OK, dry_run=True, disposition="DUPLICATE_OR_OVERLAPPING", related_pattern_id="pA", acknowledge_siblings=("pA",))
+    out = bench.decide("pB", "keep-reviewing", "Overlaps pA; keep reviewing as one concept.", disposition="DUPLICATE_OR_OVERLAPPING", related_pattern_id="pA")
+    md = out["outcome"]["record"]["metadata"]
+    assert md["disposition"] == "DUPLICATE_OR_OVERLAPPING" and md["related_pattern_id"] == "pA" and out["outcome"]["record"]["decision_type"] == KEEP_REVIEWING
+
+
+# ================================================================== 51-55 reopen
+def test_reopen_requires_material_change_and_ignores_corpus_score_and_time(bench):
+    bench.build()
+    bench.decide("pR", "reject", REASON_REJECT); bench.build()
+    with pytest.raises(ReopenNotEligible):
+        bench.decide("pR", "reopen", "Material change: new contradicting documents arrived.", dry_run=True)
+    bench.eligible = 145                                                                 # corpus growth alone
+    for row in bench.evals.values():
+        row["corpus_size"] = 145
+    bench.evals["pR"]["reference_score"] = 61.0                                           # score only
+    bench.write_evaluations(); bench.ticks += 10_000                                       # elapsed time only
+    bench.build()
+    assert bench.packet("pR")["decision"]["reopen"]["status"] == "NOT_ELIGIBLE"
+    assert _sections(bench)[SECTION_REOPEN] == [] and bench.service().reopen_check()[0]["eligible"] is False
+    rows_before = len(bench.decisions())
+    bench.evals["pR"]["axis_metrics"][A_CONSISTENCY]["contradiction_repeated"] = False    # material: 矛盾の反復が消えた
+    bench.write_evaluations(); bench.build()
+    assert bench.packet("pR")["decision"]["reopen"]["status"] == "REOPEN_ELIGIBLE"
+    assert len(bench.decisions()) == rows_before                                          # system は REOPENED を書かない
+    out = bench.decide("pR", "reopen", "Material change: the repeated contradiction no longer appears in evidence.")
+    assert out["outcome"]["record"]["decision_type"] == REOPENED_FOR_REVIEW
+    bench.build()
+    assert "pR" in _ids(_sections(bench)[SECTION_REJECT])                                  # REOPENED → 再び primary
+
+
+def test_rejected_without_packet_binding_is_unverifiable(bench):
+    from src.intelligence.decision.service import DecisionRequest as RawRequest
+
+    bench.build()
+    svc = bench.service().decision_service()
+    svc.decide(RawRequest("pR", REJECTED, "Rejected outside formal review for the test.", "taro"))   # binding の無い REJECTED
+    bench.build()
+    assert bench.packet("pR")["decision"]["reopen"]["status"] == "UNVERIFIABLE_NO_PACKET_BINDING"
+    with pytest.raises(ReopenNotEligible):
+        bench.decide("pR", "reopen", "Material change: attempting reopen without binding.", dry_run=True)
+
+
+# ================================================================== 56-61 write path / batch / dry run / idempotency
+def test_decision_service_is_the_sole_write_path_static():
+    for py in sorted(PKG.glob("*.py")):
+        text = py.read_text(encoding="utf-8")
+        tree = ast.parse(text)
+        modules = {node.module or "" for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+        if py.name != "service.py":
+            assert not any(m.endswith("decision.service") for m in modules), py.name
+            assert "DecisionStore(" not in text, py.name
+        for node in ast.walk(tree):                                                # store.append(...) 系の直接呼び出しなし
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "append":
+                assert "store" not in ast.unparse(node.func.value).lower(), (py.name, ast.unparse(node))
+    service_src = (PKG / "service.py").read_text(encoding="utf-8")
+    assert service_src.count("DecisionRequest(") == 1 and service_src.count("service.decide(") == 1
+    cli_tree = ast.parse((PKG / "cli.py").read_text(encoding="utf-8"))
+    cli_names = {n.id for n in ast.walk(cli_tree) if isinstance(n, ast.Name)} | \
+        {a.name for n in ast.walk(cli_tree) if isinstance(n, ast.ImportFrom) for a in n.names}
+    assert not cli_names & {"DecisionStore", "DecisionService", "DecisionRequest"}     # CLI は decision store / service に触れない
+
+
+def test_cli_has_no_batch_command_and_decide_takes_one_pattern(bench, monkeypatch, capsys):
+    parser_cmds = set()
+    import argparse
+
+    real_add = argparse._SubParsersAction.add_parser
+
+    def spy(self, name, **kw):
+        parser_cmds.add(name)
+        return real_add(self, name, **kw)
+
+    monkeypatch.setattr(argparse._SubParsersAction, "add_parser", spy)
+    monkeypatch.setattr(fr_cli, "FormalReviewService", lambda root, **kw: bench.service(**kw))
+    assert fr_cli.main(["--data-root", str(bench.root), "validate-policy"]) == 0
+    assert parser_cmds == {"build", "list", "show", "session", "brief", "decide", "status", "reopen-check", "validate-policy"}
+    assert not any("batch" in c for c in parser_cmds)
+    bench.build()
+    with pytest.raises(SystemExit):                                                    # 2 つ目の positional は受け付けない
+        fr_cli.main(["decide", "pA", "pB", "--packet", "x", "--action", "approve", "--reason", REASON_OK, "--actor", "t"])
+    from src.intelligence.formal_review.errors import BatchForbidden
+    with pytest.raises(BatchForbidden):
+        bench.service().decide(FormalDecisionRequest("pA,pB", "approve", "frp_x", REASON_OK, "t"), dry_run=True)
+
+
+def test_dry_run_never_writes(bench):
+    bench.build()
+    before_dec = len(bench.decisions()); before_tree = _tree_digest(bench.root)
+    out = bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+    assert out["mutation"] == "NONE (dry run)" and out["validation"]["ok"] and "outcome" not in out
+    assert len(bench.decisions()) == before_dec and _tree_digest(bench.root) == before_tree
+
+
+def test_idempotent_retry_does_not_duplicate(bench):
+    bench.build()
+    first = bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    second = bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    assert first["outcome"]["appended"] is True and second["outcome"]["appended"] is False
+    assert second["outcome"]["store_reason"] == "DUPLICATE_OF_HEAD_IDEMPOTENT" and len(bench.decisions()) == 1
+    assert bench.decisions()[0].idempotency_key == bench.packet("pA")["identity"]["packet_id"]
+
+
+def test_real_write_requires_explicit_non_dry_run(bench):
+    bench.build()
+    bench.decide("pR", "reject", REASON_REJECT, dry_run=True)
+    assert len(bench.decisions()) == 0
+    bench.decide("pR", "reject", REASON_REJECT)
+    assert len(bench.decisions()) == 1 and bench.decisions()[0].decision_type == REJECTED
+
+
+# ================================================================== 62-67 promotion / DNA / PDF / shadow conversion
+def test_promotion_always_not_promoted_and_no_promotion_vocabulary_in_package(bench):
+    bench.build()
+    rec = bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))["outcome"]["record"]
+    assert rec["promotion_status"] == "NOT_PROMOTED"
+    assert not any("PROMOTED" in v or "DNA_CANDIDATE" in v for v in rec["metadata"].values())
+    for py in PKG.glob("*.py"):
+        text = py.read_text(encoding="utf-8")
+        assert "DNA_CANDIDATE" not in text and "PROMOTED_TO_DNA" not in text, py.name
+
+
+def test_no_dna_file_writes_and_no_pdf_reads(bench):
+    import hashlib
+
+    dna = [REPO_ROOT / "knowledge" / "compass_dna" / "market_rules.yaml", REPO_ROOT / "src" / "intelligence" / "compass" / "market_principles.py"]
+    before = [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna]
+    bench.build(); bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",)); bench.decide("pR", "reject", REASON_REJECT)
+    assert [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna] == before
+    banned = ("pypdf", "ingest_path", "extract_text", "market_rules.yaml", "market_principles", "open(")
+    for py in PKG.glob("*.py"):
+        text = py.read_text(encoding="utf-8")
+        for token in banned:
+            assert token not in text, (py.name, token)
+        modules = {n.module or "" for n in ast.walk(ast.parse(text)) if isinstance(n, ast.ImportFrom)}
+        assert not any(m.endswith(("corpus.pipeline", "corpus.extraction", "corpus.inbox", "compass.market_principles")) for m in modules), py.name
+
+
+def test_shadow_history_is_evidence_only_and_never_converted(bench):
+    bench.shadow("pA", AGREE, reason="")
+    bench.shadow("pR", DISAGREE, reason="I disagree with this recommendation strongly")
+    bench.build()
+    assert len(bench.decisions()) == 0
+    pa, pr = bench.packet("pA"), bench.packet("pR")
+    assert pa["shadow_history"]["event_count"] == 1 and pa["shadow_history"]["outcome_history"][0]["review_outcome"] == AGREE
+    assert pa["decision"]["current_state"] == "NONE" and pa["decision"]["allowed_next_actions"] == [APPROVED, KEEP_REVIEWING]
+    assert "W_SHADOW_DISAGREEMENT_HISTORY" in [w["code"] for w in pr["warnings"]]
+    assert bench.decide("pR", "reject", REASON_REJECT, dry_run=True)["validation"]["ok"]      # 履歴は authority ではない
+    for py in PKG.glob("*.py"):
+        names = {a.name for n in ast.walk(ast.parse(py.read_text(encoding="utf-8"))) if isinstance(n, ast.ImportFrom) for a in n.names}
+        assert not names & {"AGREE", "DISAGREE", "NEEDS_MORE_EVIDENCE", "OUTCOMES"}, py.name
+
+
+# ================================================================== 68-71 metadata / policy
+def test_decision_metadata_binding_and_constraints(bench):
+    bench.build()
+    pk = bench.packet("pA")
+    md = bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))["outcome"]["record"]["metadata"]
+    assert md["packet_id"] == pk["identity"]["packet_id"] and md["packet_evidence_digest"] == pk["freshness"]["packet_evidence_digest"]
+    assert md["material_digest"] == pk["freshness"]["material_digest"] and md["group_state_digest"] == pk["group"]["group_state_digest"]
+    assert md["replay_run_digest"] == pk["replay"]["replay_run_digest"] and md["head_decision_id_at_packet"] == ""
+    assert {k.split(":")[0] for k in md["policy_digests"].split(";")} == {"evaluation", "recommendation", "shadow_review", "replay", "decision", "formal_review"}
+    assert len(md) <= 20 and all(len(v) <= 500 for v in md.values()) and len(md["metadata_payload_digest"]) == 16
+    assert md["formal_review_schema_version"] == "1.0.0" and md["stability_class"] == "STABLE"
+
+
+def test_policy_digest_deterministic_config_matches_and_same_version_drift_fails_closed(bench):
+    assert load_formal_review_policy().policy_version == FormalReviewPolicy().policy_version == "1.1.0"
+    assert load_formal_review_policy().digest() == FormalReviewPolicy().digest() == "d2fb015ca827dd15"
+    assert FormalReviewPolicy().digest() != "cca7b43627b9a355"                 # 1.0.0（Candidate #1/#2 の歴史的 binding）とは別
+    bench.build()
+    with pytest.raises(FormalReviewPolicyError):
+        bench.build(policy=FormalReviewPolicy(replay_evidence_age_warning_eligible_docs=7))     # 同 version で内容変更
+    bench.build(policy=FormalReviewPolicy(policy_version="1.2.0", replay_evidence_age_warning_eligible_docs=7))  # bump は許可
+    for bad in ({"recommendation_symmetry": False}, {"batch_actions_allowed": True}, {"promotion_boundary": "DNA_CANDIDATE"},
+                {"freshness": {"stale_on_corpus_growth": True}}, {"reason": {"min_chars": {"APPROVED": 5}}},
+                {"ordering": {"reject": ["pattern_id"]}}, {"duplicate_disposition": "SUPERSEDED"}):
+        with pytest.raises(FormalReviewPolicyError):
+            formal_review_policy_from_mapping(bad)
+
+
+# ================================================================== 72-76 frozen layers
+def test_frozen_layer_digests_and_decision_policy_unchanged():
+    from src.intelligence.decision.policy import ALLOWED_TRANSITIONS
+
+    assert EVAL_POLICY.digest() == "1a8443098f64d679" and REC_POLICY.digest() == "0a979d8421a01d08"
+    assert SHADOW_POLICY.digest() == "e6f5094cacef6fec"
+    assert REPLAY_POLICY.policy_version == "1.1.0" and REPLAY_POLICY.digest() == "197db7c73eb0db77"
+    d = DECISION_POLICY.as_dict()
+    assert d["formal_review_min_corpus"] == 100 and d["auto_approval"] is False and DECISION_POLICY.policy_version == "1.0.0"
+    assert set(d["reason_required_states"]) == set(d["human_only_states"]) == set(ACTIONS.values())
+    assert {k: set(v) for k, v in ALLOWED_TRANSITIONS.items()} == {
+        None: {KEEP_REVIEWING, APPROVED, REJECTED}, KEEP_REVIEWING: {KEEP_REVIEWING, APPROVED, REJECTED},
+        APPROVED: {SUPERSEDED, RETIRED}, REJECTED: {REOPENED_FOR_REVIEW},
+        REOPENED_FOR_REVIEW: {KEEP_REVIEWING, APPROVED, REJECTED}, SUPERSEDED: set(), RETIRED: set()}
+
+
+# ================================================================== 77-80 derived rebuild / metrics / files
+def test_derived_rebuild_is_deterministic(bench):
+    bench.build(); q1 = bench.service().store.queue(); p1 = {pid: bench.packet(pid) for pid in bench.service().store.packet_ids()}
+    bench.build(); q2 = bench.service().store.queue(); p2 = {pid: bench.packet(pid) for pid in bench.service().store.packet_ids()}
+    assert q1["sections"] == q2["sections"] and q1["context"] == q2["context"]
+    for pid in p1:
+        a, b = dict(p1[pid]), dict(p2[pid])
+        a["identity"] = {k: v for k, v in a["identity"].items() if k != "built_at"}
+        b["identity"] = {k: v for k, v in b["identity"].items() if k != "built_at"}
+        assert a == b
+
+
+def test_metrics_are_operational_only(bench):
+    out = bench.build()
+    assert_operational_only(out["metrics"])
+    blob = json.dumps(out["metrics"]).lower()
+    for word in ("accuracy", "precision", "hit_rate", "forecast", "predict"):
+        assert word not in blob
+    assert set(out["metrics"]) >= {"formal_review_candidates", "by_recommendation", "context_patterns", "pending_count", "reviewed_count",
+                                   "outcomes", "stale_packet_count", "blocked_conflict_count", "acknowledged_sibling_count",
+                                   "reopen_eligible_count", "median_candidate_age_eligible_docs", "replay_evidence_age_eligible_docs"}
+
+
+def test_build_writes_only_derived_formal_review_files(bench):
+    before = _tree_digest(bench.root)
+    bench.build()
+    after = _tree_digest(bench.root)
+    changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
+    assert changed and all(_under_logical_dir(k, "compass_formal_review") for k in changed), sorted(changed)
+    assert {"compass_formal_review/build_manifest.json", "compass_formal_review/queue.json", "compass_formal_review/summary.json"} <= changed
+    assert all("\\" not in k for k in changed)                                     # key は常に POSIX 形式
+
+
+@pytest.mark.parametrize("key,expected", [
+    ("compass_formal_review/queue.json", True),
+    ("compass_formal_review\\build_manifest.json", True),                          # Windows 区切り（Linux 上でも判定できる）
+    ("compass_formal_review\\packets\\cpt_x.json", True),
+    ("compass_formal_review/packets/cpt_x.json", True),
+    ("compass_decisions\\decisions.jsonl", False),
+    ("compass_decisions/decisions.jsonl", False),
+    ("other\\compass_formal_review\\x.json", False),
+    ("compass_formal_review", False),
+])
+def test_logical_dir_check_is_separator_independent(key, expected):
+    assert _under_logical_dir(key, "compass_formal_review") is expected
+
+
+# ================================================================== CLI
+def test_cli_commands_read_only_and_decide_exit_codes(bench, monkeypatch, capsys):
+    monkeypatch.setattr(fr_cli, "FormalReviewService", lambda root, **kw: bench.service(**kw))
+    root = str(bench.root)
+    assert fr_cli.main(["--data-root", root, "build"]) == 0
+    assert fr_cli.main(["--data-root", root, "list"]) == 0
+    capsys.readouterr()
+    assert fr_cli.main(["--data-root", root, "show", "pA"]) == 0
+    assert fr_cli.main(["--data-root", root, "status"]) == 0 and fr_cli.main(["--data-root", root, "reopen-check"]) == 0
+    pk = bench.packet("pA")["identity"]["packet_id"]
+    rows_before = len(bench.decisions())
+    assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", pk, "--action", "approve", "--reason", REASON_OK,
+                        "--actor", "taro", "--acknowledge-sibling", "pB", "--dry-run"]) == 0
+    assert len(bench.decisions()) == rows_before
+    assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", pk, "--action", "approve", "--reason", REASON_OK, "--actor", "taro"]) == 3
+    capsys.readouterr()
+    assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", "frp_wrong", "--action", "approve", "--reason", REASON_OK,
+                        "--actor", "taro", "--acknowledge-sibling", "pB"]) == 3
+    assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", pk, "--action", "approve", "--reason", REASON_OK,
+                        "--actor", "taro", "--acknowledge-sibling", "pB"]) == 3          # stage 2 の confirmation が無い
+    assert len(bench.decisions()) == rows_before
+    assert fr_cli.main(["--data-root", root, "decide", "pA", "--packet", pk, "--action", "approve", "--reason", REASON_OK,
+                        "--actor", "taro", "--acknowledge-sibling", "pB", "--confirm", "CONFIRM APPROVED pA"]) == 0
+    assert len(bench.decisions()) == rows_before + 1
+
+
+# ================================================================== validation driver (Windows packet validation)
+from src.intelligence.formal_review import validation as V  # noqa: E402
+
+EXPECTED_DIGESTS = {"decision": DECISION_POLICY.digest(), "evaluation": "1a8443098f64d679", "recommendation": "0a979d8421a01d08",
+                    "shadow_review": "e6f5094cacef6fec", "replay": "197db7c73eb0db77", "formal_review": "d2fb015ca827dd15"}
+MARKERS = ["HEAD", "POLICY", "BASELINE", "BUILD", "DETERMINISM", "QUEUE", "REPLAY", "FRESHNESS", "SIBLINGS", "DRY_RUN",
+           "SYMMETRY", "REOPEN", "METADATA", "SAFETY", "VALIDATION_OK"]
+
+
+def _validate(bench, capsys, **kw):
+    params = {"expected_digests": EXPECTED_DIGESTS, "skip_git": True, "corpus_state_resolver": bench.corpus_state, "clock": bench.clock}
+    params.update(kw)
+    v = V.RealDataPacketValidation(bench.root, REPO_ROOT, **params)
+    code = v.run_all()
+    out = capsys.readouterr().out
+    return code, out, v
+
+
+def test_validation_driver_dress_rehearsal_markers_privacy_and_no_mutation(bench, capsys):
+    bench.shadow("pA", AGREE, reason="human reason text that must never reach the console output")
+    bench.shadow("pR", DISAGREE, reason="another private human reason for the disagreement record")
+    before_tree = _tree_digest(bench.root, exclude="compass_formal_review")
+    code, out, v = _validate(bench, capsys)
+    assert code == 0, out[-2000:]
+    order = [m for m in MARKERS if f"::P395_{m}::" in out]
+    assert order == MARKERS and "::P395_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)                                        # ASCII only
+    assert "never reach the console" not in out and "private human reason" not in out
+    assert "reason_text" not in out and str(bench.root) not in out
+    assert "dry_run_pass=5" in out and "real_decisions_written=0" in out and "C3_acknowledgement_passed=2" in out
+    assert "SAME_EVIDENCE_UNIVERSE=true" in out and "FIXED_INPUTS_DETERMINISM=PASS" in out and "LIVE_REBUILD_DETERMINISM=PASS" in out
+    assert "reject_against_recommendation=" in out and "REJECT_AGAINST_RECOMMENDATION_BLOCKED" in out
+    assert "approve_against_recommendation=" in out and "APPROVE_AGAINST_RECOMMENDATION_BLOCKED" in out
+    assert "metadata_required_keys_present=True" in out and "promotion_status=NOT_PROMOTED" in out
+    assert len(bench.decisions()) == 0
+    assert _tree_digest(bench.root, exclude="compass_formal_review") == before_tree   # formal_review 以外は不変
+    # packet 内には reason 本文があってよいが console には出ない
+    assert bench.packet("pA")["shadow_history"]["outcome_history"][0]["reason"].startswith("human reason")
+
+
+def test_validation_driver_fails_closed_on_policy_digest_mismatch_before_build(bench, capsys):
+    v = V.RealDataPacketValidation(bench.root, REPO_ROOT, expected_digests={**EXPECTED_DIGESTS, "formal_review": "0000000000000000"},
+                                   skip_git=True, corpus_state_resolver=bench.corpus_state, clock=bench.clock)
+    code = v.run_all()
+    out = capsys.readouterr().out
+    assert code == 4 and "::P395_FAIL::" in out and "section=POLICY" in out and "::P395_BUILD::" not in out
+    assert not bench.service().store.exists()
+
+
+def test_validation_driver_fails_on_unexpected_guard_result(bench, capsys):
+    bench.eligible = 99                                                                # live gate below CORPUS_100
+    code, out, _ = _validate(bench, capsys)
+    assert code == 4 and "section=DRY_RUN" in out and "FORMAL_GATE_NOT_REACHED" in out
+
+
+def test_validation_driver_reports_replay_evidence_required_as_legitimate(tmp_path, capsys):
+    b = Bench(tmp_path, with_replay=False)
+    code, out, _ = _validate(b, capsys)
+    assert code == 0 and "REPLAY_EVIDENCE_REQUIRED" in out and "dry_run_pass=0" in out
+    assert '"legitimate":true' in out and "replay_incompatible_candidates=5" in out
+
+
+def test_validation_driver_corpus_only_growth_keeps_dry_run_valid(bench, capsys):
+    class Growing:
+        def __init__(self, bench):
+            self.bench, self.calls = bench, 0
+
+        def __call__(self):
+            self.calls += 1
+            if self.calls > 3:                                                          # build 後に eligible が増える
+                self.bench.eligible = 141
+            return self.bench.corpus_state()
+
+    code, out, _ = _validate(bench, capsys, corpus_state_resolver=Growing(bench))
+    assert code == 0 and "dry_run_pass=5" in out
+    assert "corpus_eligible_before_after=[139,141]" in out
+
+
+def test_validation_driver_stale_during_sweep_is_legitimate_only_with_intake(bench, capsys, monkeypatch):
+    bench.build()
+    real_decide = FormalReviewService.decide
+    state = {"done": False}
+
+    def mutate_then_decide(self, request, *, dry_run):
+        if not state["done"]:                                                           # 最初の dry-run 直前に evidence が変わる
+            state["done"] = True
+            bench.evals["pR"]["axis_metrics"][A_TIME]["span_days"] = 200
+            bench.write_evaluations()
+        return real_decide(self, request, dry_run=dry_run)
+
+    monkeypatch.setattr(FormalReviewService, "decide", mutate_then_decide)
+    code, out, _ = _validate(bench, capsys)                                              # intake なし → stale は unexpected
+    assert code == 4 and "PACKET_EVIDENCE_DIGEST_CHANGED" in out and "section=DRY_RUN" in out
+
+
+def test_validation_driver_replay_age_warning_and_c3_are_reported(tmp_path, capsys):
+    b = Bench(tmp_path, replay_captured=134)
+    code, out, _ = _validate(b, capsys)
+    assert code == 0 and "W_REPLAY_EVIDENCE_AGE" in out and "C3_acknowledgement_required=2" in out
+    assert "replay_evidence_age_eligible_docs=5" in out
+
+
+def test_validation_cli_main_arguments_and_exit_code(bench, monkeypatch, capsys):
+    monkeypatch.setattr(V, "RealDataPacketValidation", lambda root, repo, **kw: _Injected(root, repo, bench, **kw))
+    code = V.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
+                   "--expect-evaluation", "1a8443098f64d679"])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395_VALIDATION_OK::" in out and "formal_review_expected=d2fb015ca827dd15" in out
+    monkeypatch.setattr(V, "RealDataPacketValidation", lambda root, repo, **kw: _Injected(root, repo, bench, **kw))
+    assert V.main(["--data-root", str(bench.root), "--skip-git", "--expect-replay", "badbadbadbadbad0"]) == 4
+
+
+class _Injected(V.RealDataPacketValidation):
+    def __init__(self, root, repo, bench, **kw):
+        super().__init__(root, repo, corpus_state_resolver=bench.corpus_state, clock=bench.clock, **kw)
+
+
+def test_fresh_compatible_replay_run_recovers_compatibility_and_dry_runs(bench):
+    """Windows follow-up の再現: 旧 replay policy の run しか無い → 非互換 → 現行 policy の新 run が latest になると互換。"""
+    bench.replay_policy_digests = {"evaluation": EVAL_POLICY.digest(), "recommendation": REC_POLICY.digest(),
+                                   "shadow_review": SHADOW_POLICY.digest(), "replay": "d205c3763d07111b"}   # 旧 1.0.0 digest
+    bench.write_replay(); bench.build()
+    stale = bench.packet("pA")["replay"]
+    assert stale["current_compatible"] is False and stale["compatibility_reasons"] == ["POLICY_DIGEST_MISMATCH:replay"]
+    with pytest.raises(ReplayEvidenceRequired):
+        bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))
+    manifest = bench.service().store.manifest()["inputs"]
+    assert manifest["replay_run_policy_digests"]["replay"] == "d205c3763d07111b"
+    # 現行 policy（1.1.0 / 197db7c73eb0db77）で最小の MILESTONE_AND_TRANSITION 相当の新 run を書く → latest.json が更新される
+    bench.replay_policy_digests = None
+    bench.write_replay(); bench.build()
+    fresh = bench.packet("pA")["replay"]
+    assert fresh["current_compatible"] is True and fresh["compatibility_reasons"] == []
+    assert bench.service().store.manifest()["inputs"]["replay_run_policy_digests"]["replay"] == REPLAY_POLICY.digest()
+    assert bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))["validation"]["ok"]
+    assert len(bench.decisions()) == 0
+
+
+# ================================================================== first human review session preparation
+from src.intelligence.formal_review import session as SESSION  # noqa: E402
+
+BRIEF_SECTIONS = ("1_identity", "2_recommendation", "3_evidence", "4_replay", "5_dna_relation", "6_contradiction",
+                  "7_group_context", "8_human_history", "9_decision_state", "10_warnings")
+
+
+def test_candidate_brief_covers_every_required_section(bench):
+    bench.build()
+    brief = SESSION.candidate_brief(bench.packet("pA"), queue_rank=3, section=SECTION_APPROVE)
+    assert all(k in brief for k in BRIEF_SECTIONS)
+    assert brief["1_identity"]["pattern_id"] == "pA" and brief["1_identity"]["queue_rank"] == 3
+    assert brief["2_recommendation"]["machine_recommendation"] == APPROVE_RECOMMENDED
+    assert set(brief["3_evidence"]["axis_states"]) == set(AXES) and brief["3_evidence"]["reference_score_note"] == "NON_DECISIONAL_REFERENCE_ONLY"
+    assert brief["4_replay"]["stability_class"] == "STABLE" and brief["4_replay"]["first_recommendation_position"] == 78
+    assert brief["5_dna_relation"]["classification"] and brief["9_decision_state"]["allowed_actions"] == [APPROVED, KEEP_REVIEWING]
+    assert brief["7_group_context"]["C3_status"] == "ACKNOWLEDGEMENT_REQUIRED" and brief["7_group_context"]["C3_acknowledgement_required_for"] == ["pB"]
+    assert find_forbidden_keys(brief) == []
+
+
+def test_brief_never_exposes_human_reason_text(bench):
+    secret = "private human reason text that must never appear in the session presentation"
+    bench.shadow("pA", AGREE, reason=secret)
+    bench.build()
+    step = SESSION.candidate_step(bench.packet("pA"), queue_rank=3, section=SECTION_APPROVE)
+    assert secret not in json.dumps(step, ensure_ascii=False)
+    assert step["brief"]["8_human_history"]["shadow_review_event_count"] == 1
+    assert step["brief"]["8_human_history"]["current_outcome"] == AGREE
+    assert bench.packet("pA")["shadow_history"]["outcome_history"][0]["reason"] == secret   # packet 側には残る
+
+
+def test_explanations_are_factual_deterministic_and_free_of_advisory_language(bench):
+    bench.build()
+    for pid in ("pA", "pR"):
+        first, second = SESSION.explanation(bench.packet(pid)), SESSION.explanation(bench.packet(pid))
+        assert first == second and first
+        SESSION.assert_no_advisory_language(first)
+        blob = " ".join(first)
+        assert "Human formal decision required" in blob and "evidence only" in blob
+    approve = " ".join(SESSION.explanation(bench.packet("pA")))
+    assert "Recommendation became APPROVE at eligible position 78" in approve and "0 reversals" in approve
+    reject = " ".join(SESSION.explanation(bench.packet("pR")))
+    assert "Recommendation became REJECT at eligible position 33" in reject
+    assert "repeated supporting-document directional contradiction" in reject and "has not recovered" in reject
+    with pytest.raises(ValueError):
+        SESSION.assert_no_advisory_language(["this one should be approved"])
+
+
+def test_review_questions_match_the_candidate_direction(bench):
+    bench.build()
+    approve_ids = [q["id"] for q in SESSION.review_questions(bench.packet("pA"))]
+    reject_ids = [q["id"] for q in SESSION.review_questions(bench.packet("pR"))]
+    assert approve_ids == ["A1", "A2", "A3", "A4", "A5", "A6"] and reject_ids == ["R1", "R2", "R3", "R4", "R5", "R6"]
+    assert "APPROVED or KEEP_REVIEWING" in SESSION.review_questions(bench.packet("pA"))[4]["question"]
+    assert "REJECTED or KEEP_REVIEWING" in SESSION.review_questions(bench.packet("pR"))[4]["question"]
+
+
+def test_session_plan_follows_the_frozen_queue_order_and_excludes_context(bench):
+    bench.build()
+    store = bench.service().store
+    packets = {pid: store.packet(pid) for pid in store.packet_ids()}
+    plan = SESSION.session_plan(store.queue(), packets)
+    assert [s["brief"]["1_identity"]["pattern_id"] for s in plan["steps"]] == ["pR", "pT", "pA", "pK", "pB"]
+    assert [s["section"] for s in plan["steps"]][:2] == [SECTION_REJECT, SECTION_REJECT]
+    assert [s["step"] for s in plan["steps"]] == [1, 2, 3, 4, 5] and plan["total_steps"] == 5
+    assert [c["pattern_id"] for c in plan["context_patterns"]] == ["pC"]
+    assert any("ONE_PATTERN_AT_A_TIME" in r for r in plan["rules"]) and any("TWO_STAGE" in r for r in plan["rules"])
+    assert SESSION.session_plan(store.queue(), packets) == plan                       # 決定的
+
+
+def test_session_commands_are_two_stage_and_carry_required_acknowledgements(bench):
+    bench.build()
+    commands = {c["decision_type"]: c for c in SESSION.decision_commands(bench.packet("pA"), actor="taro")}
+    assert set(commands) == {APPROVED, KEEP_REVIEWING}
+    approve = commands[APPROVED]
+    assert approve["stage_1_dry_run"].endswith("--dry-run") and "--confirm" not in approve["stage_1_dry_run"]
+    assert approve["confirmation_token"] == "CONFIRM APPROVED pA" and approve["confirmation_token"] in approve["stage_2_real_write"]
+    assert approve["acknowledge_siblings_required"] == ["pB"] and "--acknowledge-sibling pB" in approve["stage_2_real_write"]
+    assert commands[KEEP_REVIEWING]["acknowledge_siblings_required"] == []
+
+
+def test_sibling_predictors_agree_with_the_guard(bench):
+    bench.build()
+    packet = bench.packet("pA")
+    assert SESSION.sibling_status(packet)["C3_acknowledgement_required_for"] == ["pB"]
+    with pytest.raises(SiblingAcknowledgementRequired):                                # guard が権威
+        bench.decide("pA", "approve", REASON_OK, dry_run=True)
+    assert bench.decide("pA", "approve", REASON_OK, dry_run=True, acknowledge_siblings=("pB",))["validation"]["ok"]
+    bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))
+    bench.build()
+    status = SESSION.sibling_status(bench.packet("pB"))
+    assert status["C1_blocking_approved_siblings"] == ["pA"] and status["C1_status"] == "APPROVED_BLOCKED_BY_OPPOSITE_SIBLING"
+    with pytest.raises(SiblingConflictBlocked):
+        bench.decide("pB", "approve", REASON_OK, dry_run=True)
+
+
+def test_cli_session_and_brief_are_read_only(bench, monkeypatch, capsys):
+    monkeypatch.setattr(fr_cli, "FormalReviewService", lambda root, **kw: bench.service(**kw))
+    bench.build()
+    before = _tree_digest(bench.root)
+    assert fr_cli.main(["--data-root", str(bench.root), "session"]) == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["total_steps"] == 5 and plan["mutation"] == "NONE"
+    assert fr_cli.main(["--data-root", str(bench.root), "brief", "pA"]) == 0
+    step = json.loads(capsys.readouterr().out)
+    assert step["brief"]["1_identity"]["pattern_id"] == "pA" and step["review_questions"][0]["id"] == "A1"
+    assert fr_cli.main(["--data-root", str(bench.root), "brief", "nope"]) == 1
+    capsys.readouterr()
+    assert _tree_digest(bench.root) == before and len(bench.decisions()) == 0
+
+
+def test_cli_real_write_requires_the_exact_confirmation_token(bench, monkeypatch, capsys):
+    monkeypatch.setattr(fr_cli, "FormalReviewService", lambda root, **kw: bench.service(**kw))
+    bench.build()
+    root = str(bench.root)
+    pk = bench.packet("pR")["identity"]["packet_id"]
+    base = ["--data-root", root, "decide", "pR", "--packet", pk, "--action", "reject", "--reason", REASON_REJECT, "--actor", "taro"]
+    assert fr_cli.main(base + ["--dry-run"]) == 0                                      # stage 1 は token 不要
+    assert len(bench.decisions()) == 0
+    assert fr_cli.main(base) == 3                                                      # token なし
+    assert fr_cli.main(base + ["--confirm", "CONFIRM REJECTED pA"]) == 3               # 別 pattern の token
+    assert fr_cli.main(base + ["--confirm", "CONFIRM APPROVED pR"]) == 3               # 別 state の token
+    assert fr_cli.main(base + ["--confirm", "confirm rejected pR"]) == 3               # 大文字小文字も一致必須
+    assert len(bench.decisions()) == 0
+    capsys.readouterr()
+    assert fr_cli.main(base + ["--confirm", "CONFIRM REJECTED pR"]) == 0
+    assert len(bench.decisions()) == 1 and bench.decisions()[0].decision_type == REJECTED
+    assert bench.decisions()[0].promotion_status == "NOT_PROMOTED"
+
+
+# ================================================================== candidate #1 pilot driver
+from src.intelligence.formal_review import pilot as PILOT  # noqa: E402
+
+PILOT_MARKERS = ["HEAD", "POLICY", "BASELINE", "BUILD", "CANDIDATE", "FRESHNESS", "BRIEF", "EXPLANATION", "QUESTIONS",
+                 "DRY_RUN_MACHINE_ACTION", "DRY_RUN_KEEP_REVIEWING", "HUMAN_DECISION", "COMMANDS", "SAFETY", "PILOT_OK"]
+
+
+def _pilot(bench, capsys, **kw):
+    params = {"expected_digests": EXPECTED_DIGESTS, "skip_git": True, "corpus_state_resolver": bench.corpus_state,
+              "clock": bench.clock}
+    params.update(kw)
+    code = PILOT.CandidateOnePilot(bench.root, REPO_ROOT, **params).run_all()
+    return code, capsys.readouterr().out
+
+
+def test_pilot_presents_only_rank_one_and_writes_nothing(bench, capsys):
+    bench.shadow("pR", DISAGREE, reason="private human reason text the pilot must never print")
+    before = _tree_digest(bench.root, exclude="compass_formal_review")
+    code, out = _pilot(bench, capsys, historical_head="cpt_4d2f4477a946c17e")
+    assert code == 0, out[-1500:]
+    assert [m for m in PILOT_MARKERS if f"::P395C_{m}::" in out] == PILOT_MARKERS and "::P395C_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)
+    assert "pattern_id=pR" in out and "candidates_shown=1" in out and "queue_rank=1" in out
+    for other in ("pT", "pA", "pK", "pB", "pC"):                                  # candidate #2 以降は出さない
+        assert other not in out, other
+    assert "private human reason" not in out and str(bench.root) not in out
+    assert out.splitlines().count("result=DRY_RUN_PASS") == 2                      # machine action と keep-reviewing
+    assert "human_selected_action=PENDING" in out and "human_reason=PENDING" in out
+    assert "real_decisions_written=0" in out and "QUEUE_HEAD_CHANGED=true" in out
+    assert len(bench.decisions()) == 0
+    assert _tree_digest(bench.root, exclude="compass_formal_review") == before
+
+
+def test_pilot_never_calls_decide_outside_dry_run(bench, capsys):
+    tree = ast.parse((PKG / "pilot.py").read_text(encoding="utf-8"))
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "decide"]
+    assert calls, "the pilot must exercise the decide path"
+    for call in calls:                                                            # dry_run=True 以外では呼べない
+        flags = [k for k in call.keywords if k.arg == "dry_run"]
+        assert len(flags) == 1 and isinstance(flags[0].value, ast.Constant) and flags[0].value.value is True
+    assert "--confirm" not in (PKG / "pilot.py").read_text(encoding="utf-8")      # stage 2 の経路を持たない
+    _pilot(bench, capsys)
+    assert len(bench.decisions()) == 0
+
+
+def test_pilot_reports_queue_head_unchanged_when_it_matches(bench, capsys):
+    code, out = _pilot(bench, capsys, historical_head="pR")
+    assert code == 0 and "QUEUE_HEAD_CHANGED=false" in out and "historical_head_compared=pR" in out
+
+
+def test_pilot_fails_before_build_on_policy_mismatch(bench, capsys):
+    code, out = _pilot(bench, capsys, expected_digests={**EXPECTED_DIGESTS, "replay": "0000000000000000"})
+    assert code == 4 and "section=POLICY" in out and "::P395C_BUILD::" not in out
+    assert not bench.service().store.exists() and len(bench.decisions()) == 0
+
+
+def test_pilot_blocks_when_replay_evidence_is_missing(tmp_path, capsys):
+    b = Bench(tmp_path, with_replay=False)
+    code, out = _pilot(b, capsys)
+    assert code == 4 and "REPLAY_EVIDENCE_REQUIRED" in out and "section=DRY_RUN_MACHINE_ACTION" in out
+    assert "::P395C_PILOT_OK::" not in out and len(b.decisions()) == 0
+
+
+def test_pilot_blocks_on_a_stale_candidate_packet(bench, capsys, monkeypatch):
+    real_build = FormalReviewService.build
+
+    def build_then_change(self):
+        out = real_build(self)
+        bench.evals["pR"]["axis_metrics"][A_TIME]["span_days"] = 200               # build 後に証拠が変わる
+        bench.write_evaluations()
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "build", build_then_change)
+    code, out = _pilot(bench, capsys)
+    assert code == 4 and "section=FRESHNESS" in out and "fresh=False" in out
+    assert "changed_blocks=" in out and len(bench.decisions()) == 0
+
+
+def test_pilot_derives_c3_acknowledgement_automatically(bench, capsys):
+    for pid in ("pR", "pT", "pK"):                                                # rank 1 を APPROVE 候補 pA にする
+        bench.evals.pop(pid)
+    bench.write_evaluations()
+    code, out = _pilot(bench, capsys)
+    assert code == 0 and "pattern_id=pA" in out and 'acknowledge_siblings=["pB"]' in out
+    assert out.splitlines().count("result=DRY_RUN_PASS") == 2 and "machine_consistent_decision_type=APPROVED" in out
+    assert len(bench.decisions()) == 0
+
+
+def test_pilot_treats_c1_sibling_block_as_a_legitimate_guard_result(bench, capsys):
+    bench.build()
+    bench.decide("pA", "approve", REASON_OK, acknowledge_siblings=("pB",))         # 反対方向 sibling を先に APPROVED
+    for pid in ("pR", "pT", "pK"):
+        bench.evals.pop(pid)
+    bench.write_evaluations()
+    rows_before = len(bench.decisions())
+    code, out = _pilot(bench, capsys)
+    assert code == 0 and "pattern_id=pB" in out                                    # 残る唯一の候補
+    assert "result=SIBLING_CONFLICT_BLOCKED" in out and "technical_dry_run_result=SIBLING_CONFLICT_BLOCKED" in out
+    assert "::P395C_PILOT_OK::" in out and out.splitlines().count("result=DRY_RUN_PASS") == 1   # keep-reviewing は通る
+    assert len(bench.decisions()) == rows_before
+
+
+class _InjectedPilot(PILOT.CandidateOnePilot):
+    """corpus state と clock を bench から注入する pilot（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)
+
+
+def test_pilot_cli_main_wires_arguments(bench, monkeypatch, capsys):
+    _InjectedPilot.bench = bench
+    monkeypatch.setattr(PILOT, "CandidateOnePilot", _InjectedPilot)
+    code = PILOT.main(["--data-root", str(bench.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
+                       "--historical-head", "cpt_4d2f4477a946c17e", "--actor", "P395_HUMAN_PILOT_PREP"])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395C_PILOT_OK::" in out and "QUEUE_HEAD_CHANGED=true" in out
+    assert len(bench.decisions()) == 0
+
+
+# ================================================================== 94-108 candidate #1 execution wrapper（pilot_execute.py）
+from src.intelligence.formal_review import pilot_execute as EXEC  # noqa: E402
+from src.intelligence.replay.store import replay_root as _replay_root  # noqa: E402
+
+EXEC_MARKERS = ["ARGUMENTS", "HEAD", "POLICY", "BASELINE", "FRESH_BUILD", "EVIDENCE_RECHECK", "STAGE1_DRY_RUN",
+                "STAGE2_CONFIRM", "STAGE2_WRITE", "DECISION_AUDIT", "SAFETY", "PILOT_DECISION_OK", "END"]
+FROZEN = EXEC.FROZEN_PATTERN_ID
+
+
+def _frozen_bench(tmp_path, **kw):
+    """rank 1 の REJECT candidate を凍結 candidate #1 の id に付け替えた bench（pT は candidate #2 として残す）。"""
+    b = Bench(tmp_path, **kw)
+    for holder in (b.components, b.lifecycles, b.records, b.evals, b.dna, b.metrics):
+        if "pR" in holder:
+            holder[FROZEN] = holder.pop("pR")
+    b.records[FROZEN] = {**b.records[FROZEN], "pattern_id": FROZEN, "pattern_record_id": "cpr_" + FROZEN}
+    b.evals[FROZEN] = {**b.evals[FROZEN], "pattern_id": FROZEN}
+    b.dna[FROZEN] = {**b.dna[FROZEN], "pattern_id": FROZEN, "comparison_id": "crd_" + FROZEN}
+    b.metrics[FROZEN] = {**b.metrics[FROZEN], "pattern_id": FROZEN}
+    b.write_all()
+    return b
+
+
+def _solo_frozen_bench(tmp_path, *, approve=False):
+    """候補が凍結 candidate #1 だけの bench（rank 1 は必ず凍結 id になる）。"""
+    b = _frozen_bench(tmp_path)
+    for pid in [p for p in list(b.components) if p != FROZEN]:
+        for holder in (b.components, b.lifecycles, b.records, b.evals, b.dna, b.metrics):
+            holder.pop(pid, None)
+    if approve:
+        b.evals[FROZEN] = approve_eval(FROZEN)
+        b.metrics[FROZEN] = metrics_for(FROZEN, APPROVE_RECOMMENDED)
+    b.write_all()
+    return b
+
+
+def _execute(b, capsys, **kw):
+    params = {"pattern_id": FROZEN, "action": EXEC.FROZEN_ACTION, "actor": EXEC.FROZEN_ACTOR,
+              "confirm": EXEC.FROZEN_CONFIRM, "expected_digests": EXPECTED_DIGESTS, "skip_git": True,
+              "corpus_state_resolver": b.corpus_state, "clock": b.clock}
+    params.update(kw)
+    code = EXEC.CandidateOneExecutor(b.root, REPO_ROOT, **params).run_all()
+    return code, capsys.readouterr().out
+
+
+def test_execute_writes_exactly_one_rejected_decision(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    b.shadow(FROZEN, DISAGREE, reason="private human shadow reason the executor must never print")
+    code, out = _execute(b, capsys)
+    assert code == 0, out[-2000:]
+    assert [m for m in EXEC_MARKERS if f"::P395D_{m}::" in out] == EXEC_MARKERS and "::P395D_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)
+    assert "private human shadow reason" not in out and str(b.root) not in out
+    for other in ("pT", "pA", "pK", "pB", "pC"):                                  # candidate #2 以降は触れない
+        assert other not in out, other
+    assert "candidates_processed=1" in out and "real_decisions_written=1" in out and "authorised_writes=1" in out
+    assert "write_attempt=1" in out and "result=DRY_RUN_PASS" in out
+    rows = b.decisions()
+    assert len(rows) == 1
+    row = rows[0].as_dict()
+    assert row["pattern_id"] == FROZEN and row["decision_type"] == REJECTED and row["actor"] == EXEC.FROZEN_ACTOR
+    assert row["actor_type"] == ACTOR_HUMAN and row["review_mode"] == "FORMAL" and row["sequence"] == 1
+    assert row["promotion_status"] == "NOT_PROMOTED" and row["reason"] == EXEC.FROZEN_REASON
+
+
+def test_execute_post_write_binding_audit_matches_the_reviewed_packet(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    code, out = _execute(b, capsys)
+    assert code == 0
+    assert not [line for line in out.splitlines() if line.startswith("audit_") and line.endswith("=FAILED")]
+    for name in ("PACKET_ID_BOUND", "PACKET_EVIDENCE_DIGEST_BOUND", "MATERIAL_DIGEST_BOUND", "SIX_POLICY_LAYERS_BOUND",
+                 "REPLAY_BINDING_PRESENT", "RECORD_HASH_RECOMPUTES", "EXACT_HUMAN_REASON_STORED", "CHAIN_ROOT"):
+        assert f"audit_{name}=OK" in out, name
+    assert "decision_hash_chain=VALID" in out and "reason_matches_frozen_human_reason=True" in out
+    packet = b.packet(FROZEN)
+    md = b.decisions()[0].as_dict()["metadata"]
+    assert md["packet_id"] == packet["identity"]["packet_id"]
+    assert md["packet_evidence_digest"] == packet["freshness"]["packet_evidence_digest"]
+    assert md["material_digest"] == packet["freshness"]["material_digest"]
+    for layer, digest in packet["freshness"]["policy_digests"].items():
+        assert f"{layer}:{digest}" in md["policy_digests"], layer
+
+
+@pytest.mark.parametrize("override,reason", [
+    ({"pattern_id": "pT"}, "PATTERN_NOT_THIS_PILOT"),
+    ({"pattern_id": "pA"}, "PATTERN_NOT_THIS_PILOT"),
+    ({"action": "approve"}, "ACTION_NOT_THIS_PILOT"),
+    ({"action": "keep-reviewing"}, "ACTION_NOT_THIS_PILOT"),
+    ({"actor": "someone_else"}, "ACTOR_NOT_THIS_PILOT"),
+    ({"reason": "Rejected because the evidence looks contradictory to me."}, "REASON_NOT_THE_FROZEN_HUMAN_REASON"),
+    ({"confirm": "CONFIRM REJECT cpt_4d2f4477a946c17e"}, "CONFIRMATION_MISMATCH"),
+    ({"confirm": "confirm rejected cpt_4d2f4477a946c17e"}, "CONFIRMATION_MISMATCH"),
+    ({"confirm": ""}, "CONFIRMATION_MISMATCH"),
+])
+def test_execute_refuses_anything_but_the_frozen_single_candidate_decision(tmp_path, capsys, override, reason):
+    b = _frozen_bench(tmp_path)
+    code, out = _execute(b, capsys, **override)
+    assert code == 4 and f"reason={reason}" in out and "stage=ARGUMENTS" in out
+    assert "::P395D_HEAD::" not in out and "::P395D_STAGE2_WRITE::" not in out
+    assert not b.service().store.exists() and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_decision_store_is_not_empty(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    b.build()
+    b.decide("pT", "reject", REASON_REJECT)
+    capsys.readouterr()
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=DECISION_STORE_NOT_EMPTY" in out and "stage=BASELINE" in out
+    assert "::P395D_STAGE1_DRY_RUN::" not in out and "::P395D_STAGE2_WRITE::" not in out
+    assert len(b.decisions()) == 1 and b.decisions()[0].pattern_id == "pT"
+
+
+def test_execute_stops_on_policy_digest_mismatch_before_any_build(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    code, out = _execute(b, capsys, expected_digests={**EXPECTED_DIGESTS, "replay": "0000000000000000"})
+    assert code == 4 and "stage=POLICY" in out and "::P395D_FRESH_BUILD::" not in out
+    assert not b.service().store.exists() and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_queue_head_changed(tmp_path, capsys):
+    b = Bench(tmp_path)                                                            # rank 1 は pR（凍結 id ではない）
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=CANDIDATE_HEAD_CHANGED" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE1_DRY_RUN::" not in out and "::P395D_STAGE2_WRITE::" not in out
+    assert len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_recommendation_changed(tmp_path, capsys):
+    b = _solo_frozen_bench(tmp_path, approve=True)
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=RECOMMENDATION_CHANGED" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_the_reject_evidence_changed(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    summary = _replay_root(b.root) / "runs" / "crp_test" / "summary.json"
+    data = json.loads(summary.read_text(encoding="utf-8"))
+    for item in data["reject_stress"]["items"]:
+        item["contradiction_recovery_positions"] = [120]
+    summary.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=HUMAN_REVIEW_EVIDENCE_CHANGED_RECOVERY" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_replay_evidence_is_incompatible(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    b.replay_policy_digests = {"evaluation": EVAL_POLICY.digest(), "recommendation": REC_POLICY.digest(),
+                               "shadow_review": SHADOW_POLICY.digest(), "replay": "d205c3763d07111b"}   # 旧 1.0.0
+    b.write_replay()
+    code, out = _execute(b, capsys)
+    assert code == 4 and "reason=REPLAY_NOT_COMPATIBLE" in out and "stage=EVIDENCE_RECHECK" in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execute_stops_when_there_is_no_replay_evidence_at_all(tmp_path, capsys):
+    b = _frozen_bench(tmp_path, with_replay=False)
+    code, out = _execute(b, capsys)
+    assert code == 4 and "stage=EVIDENCE_RECHECK" in out and "::P395D_STAGE1_DRY_RUN::" not in out
+    assert "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_stage_one_failure_prevents_stage_two(tmp_path, capsys, monkeypatch):
+    b = _frozen_bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def refusing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            out = real(self, request, dry_run=True)
+            return {**out, "validation": {"ok": False, "errors": [{"code": "SIMULATED_VALIDATION_FAILURE"}]}}
+        raise AssertionError("stage 2 must not run after a failed stage 1")
+
+    monkeypatch.setattr(FormalReviewService, "decide", refusing)
+    code, out = _execute(b, capsys)
+    assert code == 4 and "stage=STAGE1_DRY_RUN" in out and "SIMULATED_VALIDATION_FAILURE" in out
+    assert seen == [True] and "::P395D_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_write_exception_without_a_row_reports_no_retry(tmp_path, capsys, monkeypatch):
+    b = _frozen_bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def failing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            return real(self, request, dry_run=True)
+        raise RuntimeError("simulated transport failure before append")
+
+    monkeypatch.setattr(FormalReviewService, "decide", failing)
+    code, out = _execute(b, capsys)
+    assert code == 4 and f"reason={EXEC.WRITE_FAILED_NO_ROW}" in out and "retry_policy=NO_AUTOMATIC_RETRY" in out
+    assert seen == [True, False] and "matching_rows_found=0" in out                # production write は 1 回だけ
+    assert "write_attempts=1" in out and len(b.decisions()) == 0
+
+
+def test_succeeded_write_with_a_lost_response_is_audited_and_never_retried(tmp_path, capsys, monkeypatch):
+    b = _frozen_bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def lossy(self, request, *, dry_run):
+        seen.append(dry_run)
+        out = real(self, request, dry_run=dry_run)
+        if not dry_run:
+            raise RuntimeError("append succeeded but the response was lost")
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "decide", lossy)
+    code, out = _execute(b, capsys)
+    assert code == 0, out[-2000:]
+    assert f"write_response={EXEC.WRITE_RESPONSE_FAILED}" in out and "retry_policy=NO_AUTOMATIC_RETRY" in out
+    assert "matching_rows_found=1" in out and seen == [True, False]                # 2 回目の write を試みない
+    assert "::P395D_PILOT_DECISION_OK::" in out and "real_decisions_written=1" in out
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == REJECTED and rows[0].pattern_id == FROZEN
+
+
+def test_execute_refuses_a_second_write_attempt(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    executor = EXEC.CandidateOneExecutor(b.root, REPO_ROOT, pattern_id=FROZEN, action=EXEC.FROZEN_ACTION,
+                                         actor=EXEC.FROZEN_ACTOR, confirm=EXEC.FROZEN_CONFIRM, skip_git=True,
+                                         corpus_state_resolver=b.corpus_state, clock=b.clock)
+    executor.write_attempts = 1
+    with pytest.raises(EXEC.ExecuteFailure) as excinfo:
+        executor.stage2_write()
+    capsys.readouterr()
+    assert excinfo.value.reason == "SECOND_WRITE_ATTEMPT_REFUSED" and len(b.decisions()) == 0
+
+
+def test_execute_touches_no_dna_pdf_or_shadow_review_state(tmp_path, capsys):
+    import hashlib
+
+    dna = [REPO_ROOT / "knowledge" / "compass_dna" / "market_rules.yaml",
+           REPO_ROOT / "src" / "intelligence" / "compass" / "market_principles.py"]
+    before_dna = [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna]
+    b = _frozen_bench(tmp_path)
+    b.shadow(FROZEN, DISAGREE, reason="shadow history is evidence only")
+    before = _tree_digest(b.root, exclude="compass_formal_review")
+    code, out = _execute(b, capsys)
+    assert code == 0
+    after = _tree_digest(b.root, exclude="compass_formal_review")
+    changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
+    droot = decisions_root(b.root).relative_to(b.root).as_posix()
+    assert changed and all(k.startswith(droot + "/") for k in changed), changed
+    assert [hashlib.sha256(p.read_bytes()).hexdigest() for p in dna] == before_dna
+    for line in ("shadow_review_events_unchanged=True", "dna_blobs_unchanged=True", "pdf_inventory_unchanged=True",
+                 "promotion_status_written=NOT_PROMOTED"):
+        assert line in out, line
+
+
+def test_execute_module_makes_exactly_one_production_write_call_static():
+    text = (PKG / "pilot_execute.py").read_text(encoding="utf-8")
+    calls = [n for n in ast.walk(ast.parse(text)) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "decide"]
+    flags = [k.value.value for call in calls for k in call.keywords if k.arg == "dry_run"]
+    assert len(calls) == 2 and sorted(flags, key=str) == [False, True]              # dry-run 1 回 + real write 1 回だけ
+    assert text.count("dry_run=False") == 1
+    assert FROZEN in text and text.count("FormalDecisionRequest(") == 1        # decision request は 1 つだけ
+    assert "nargs" not in text and 'action="append"' not in text              # 複数 pattern を受ける口が無い
+    request = next(n for n in ast.walk(ast.parse(text)) if isinstance(n, ast.Call)
+                   and getattr(n.func, "id", "") == "FormalDecisionRequest")
+    bound = {k.arg: ast.unparse(k.value) for k in request.keywords}
+    assert bound["pattern_id"] == "FROZEN_PATTERN_ID" and bound["action"] == "FROZEN_ACTION"
+    assert bound["actor"] == "FROZEN_ACTOR" and bound["reason"] == "FROZEN_REASON"
+
+
+def test_execute_cli_main_wires_arguments_and_refuses_other_actions(tmp_path, monkeypatch, capsys):
+    refused = _frozen_bench(tmp_path / "refused")
+    _InjectedExecutor.bench = refused
+    monkeypatch.setattr(EXEC, "CandidateOneExecutor", _InjectedExecutor)
+    argv = ["--data-root", str(refused.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
+            "--pattern", FROZEN, "--actor", EXEC.FROZEN_ACTOR, "--confirm", EXEC.FROZEN_CONFIRM]
+    assert EXEC.main(argv + ["--action", "approve"]) == 4
+    assert "reason=ACTION_NOT_THIS_PILOT" in capsys.readouterr().out and len(refused.decisions()) == 0
+    accepted = _frozen_bench(tmp_path / "accepted")
+    _InjectedExecutor.bench = accepted
+    code = EXEC.main(["--data-root", str(accepted.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
+                      "--pattern", FROZEN, "--action", "reject", "--actor", EXEC.FROZEN_ACTOR,
+                      "--confirm", EXEC.FROZEN_CONFIRM])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395D_END::" in out and "real_decisions_written=1" in out
+    assert len(accepted.decisions()) == 1
+
+
+class _InjectedExecutor(EXEC.CandidateOneExecutor):
+    """corpus state と clock を bench から注入する executor（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)
+
+
+# ================================================================== 109-117 next candidate read-only review（next_candidate.py）
+from src.intelligence.formal_review import next_candidate as NEXT  # noqa: E402
+from src.intelligence.formal_review.store import FormalReviewStore  # noqa: E402
+
+NEXT_MARKERS = ["HEAD", "POLICY", "DECISION_CHAIN", "BASELINE", "FRESH_BUILD", "QUEUE_EXCLUSION", "NEXT_CANDIDATE",
+                "DRY_RUN", "SAFETY", "NEXT_REVIEW_OK", "END"]
+
+
+def _decided_bench(tmp_path, **kw):
+    """凍結 candidate #1 が既に REJECTED になっている bench（pT が次の rank 1 になる）。"""
+    b = _frozen_bench(tmp_path, **kw)
+    b.build()
+    b.decide(FROZEN, "reject", REASON_REJECT)
+    return b
+
+
+def _next(b, capsys, **kw):
+    params = {"expected_digests": EXPECTED_DIGESTS, "skip_git": True, "corpus_state_resolver": b.corpus_state,
+              "clock": b.clock}
+    params.update(kw)
+    code = NEXT.NextCandidateReview(b.root, REPO_ROOT, **params).run_all()
+    return code, capsys.readouterr().out
+
+
+def test_next_candidate_presents_the_new_rank_one_and_writes_nothing(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    b.shadow("pT", DISAGREE, reason="private human shadow reason the review must never print")
+    before = _tree_digest(b.root, exclude="compass_formal_review")
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN])
+    assert code == 0, out[-2000:]
+    assert [m for m in NEXT_MARKERS if f"::P395N_{m}::" in out] == NEXT_MARKERS and "::P395N_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out)
+    assert "private human shadow reason" not in out and str(b.root) not in out
+    assert "pattern_id=pT" in out and "candidates_shown=1" in out and "queue_rank=1" in out
+    assert "candidates_presented=1" in out and "real_decisions_written_by_this_run=0" in out
+    assert "human_selected_action=PENDING" in out and "human_reason=PENDING" in out
+    assert out.splitlines().count("result=DRY_RUN_PASS") == 2                      # machine action と keep-reviewing
+    assert "real_decisions_written=0" in out and len(b.decisions()) == 1
+    assert _tree_digest(b.root, exclude="compass_formal_review") == before
+
+
+def test_next_candidate_excludes_the_decided_pattern_from_the_primary_queue(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN])
+    assert code == 0
+    assert "decided_patterns_in_primary_queue=[]" in out and "queue_exclusion_check=PASSED" in out
+    assert '"decision_state":"REJECTED"' in out and '"in_primary_queue":false' in out
+    sections = _sections(b)
+    assert FROZEN not in _ids(sections[SECTION_REJECT]) + _ids(sections[SECTION_APPROVE]) + _ids(sections[SECTION_REOPEN])
+    assert FROZEN in [row["pattern_id"] for row in b.service().store.queue()["decided"]]
+    assert b.packet(FROZEN)["decision"]["current_state"] == REJECTED
+
+
+def test_next_candidate_reaudits_the_existing_decision_row(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    row = b.decisions()[0].as_dict()
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN],
+                      reaudit={"pattern": FROZEN, "decision": row["decision_id"], "state": REJECTED,
+                               "record_hash": row["record_hash"]})
+    assert code == 0 and "reaudit=PASSED" in out and "decision_hash_chain=VALID" in out
+    assert not [line for line in out.splitlines() if line.startswith("reaudit_") and line.endswith("=FAILED")]
+    for name in ("DECISION_ID", "DECISION_TYPE", "RECORD_HASH_MATCHES_EXPECTED", "RECORD_HASH_RECOMPUTES",
+                 "PROMOTION_STATUS_NOT_PROMOTED", "PACKET_BINDING_PRESENT", "MATERIAL_DIGEST_BINDING_PRESENT",
+                 "SIX_POLICY_LAYERS_BOUND", "REPLAY_BINDING_PRESENT", "HUMAN_REASON_PRESENT"):
+        assert f"reaudit_{name}=OK" in out, name
+    assert "decision_rows=1" in out and "sequences=[1]" in out and "head_sequence=1" in out
+
+
+@pytest.mark.parametrize("field,value", [("record_hash", "0" * 64), ("decision", "cdc_wrong"), ("state", APPROVED)])
+def test_next_candidate_reaudit_fails_closed_on_a_wrong_expectation(tmp_path, capsys, field, value):
+    b = _decided_bench(tmp_path)
+    row = b.decisions()[0].as_dict()
+    expect = {"pattern": FROZEN, "decision": row["decision_id"], "state": REJECTED, "record_hash": row["record_hash"]}
+    expect[field] = value
+    capsys.readouterr()
+    code, out = _next(b, capsys, reaudit=expect)
+    assert code == 4 and "reason=EXISTING_DECISION_ROW_REAUDIT_FAILED" in out and "stage=DECISION_CHAIN" in out
+    assert "::P395N_FRESH_BUILD::" not in out and len(b.decisions()) == 1
+
+
+def test_next_candidate_requires_at_least_one_decision_row(tmp_path, capsys):
+    b = _frozen_bench(tmp_path)
+    code, out = _next(b, capsys)
+    assert code == 4 and "reason=DECISION_STORE_EMPTY" in out and "stage=DECISION_CHAIN" in out
+    assert "::P395N_NEXT_CANDIDATE::" not in out and len(b.decisions()) == 0
+
+
+def test_next_candidate_fails_closed_when_a_decided_pattern_is_still_primary(tmp_path, capsys, monkeypatch):
+    b = _decided_bench(tmp_path)
+    real_queue = FormalReviewStore.queue
+
+    def leaking(self):
+        queue = real_queue(self)
+        rows = list(queue["sections"][SECTION_REJECT])
+        rows.append({**rows[0], "pattern_id": FROZEN, "queue_rank": 99})       # 既決 pattern が primary に残った状態
+        return {**queue, "sections": {**queue["sections"], SECTION_REJECT: rows}}
+
+    monkeypatch.setattr(FormalReviewStore, "queue", leaking)
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=[FROZEN])
+    assert code == 4 and f"reason={NEXT.DECIDED_IN_PRIMARY}" in out and "stage=QUEUE_EXCLUSION" in out
+    assert "::P395N_NEXT_CANDIDATE::" not in out and "::P395N_DRY_RUN::" not in out
+    assert len(b.decisions()) == 1
+
+
+def test_next_candidate_requires_expected_decided_patterns_to_be_decided(tmp_path, capsys):
+    b = _decided_bench(tmp_path)
+    capsys.readouterr()
+    code, out = _next(b, capsys, expect_decided=["pC"])                          # context-only、未決
+    assert code == 4 and "reason=EXPECTED_DECIDED_PATTERN_NOT_IN_DECIDED_CONTEXT" in out
+    assert "stage=QUEUE_EXCLUSION" in out and len(b.decisions()) == 1
+
+
+def test_next_candidate_has_no_write_path_static():
+    text = (PKG / "next_candidate.py").read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    assert not [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "decide"]                                      # decide を直接呼ばない
+    assert "dry_run=False" not in text and "--confirm" not in text and "FormalDecisionRequest" not in text
+    assert "confirmation_token" not in text and "CONFIRM " not in text
+
+
+def test_next_candidate_cli_main_wires_arguments(tmp_path, monkeypatch, capsys):
+    b = _decided_bench(tmp_path)
+    row = b.decisions()[0].as_dict()
+    _InjectedNext.bench = b
+    monkeypatch.setattr(NEXT, "NextCandidateReview", _InjectedNext)
+    capsys.readouterr()
+    code = NEXT.main(["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
+                      "--expect-decided", FROZEN, "--reaudit-pattern", FROZEN,
+                      "--reaudit-decision", row["decision_id"], "--reaudit-state", REJECTED,
+                      "--reaudit-record-hash", row["record_hash"]])
+    out = capsys.readouterr().out
+    assert code == 0 and "::P395N_END::" in out and "reaudit=PASSED" in out and "pattern_id=pT" in out
+    assert len(b.decisions()) == 1
+    _InjectedNext.bench = b
+    monkeypatch.setattr(NEXT, "NextCandidateReview", _InjectedNext)
+    assert NEXT.main(["--data-root", str(b.root), "--skip-git", "--expect-replay", "badbadbadbadbad0"]) == 4
+    assert "stage=POLICY" in capsys.readouterr().out and len(b.decisions()) == 1
+
+
+class _InjectedNext(NEXT.NextCandidateReview):
+    """corpus state と clock を bench から注入する review（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)
+
+
+# ================================================================== 118-142 generic execution session（execute.py）
+from src.intelligence.formal_review import execute as EXECUTE  # noqa: E402
+
+SESSION_MARKERS = ["ARGUMENTS", "HEAD", "POLICY", "DECISION_CHAIN", "BASELINE", "FRESH_BUILD", "TARGET",
+                   "PACKET_FRESHNESS", "EXPECTED_FACTS", "GROUP_CONTEXT", "STAGE1_DRY_RUN", "STAGE2_CONFIRM",
+                   "STAGE2_WRITE", "DECISION_AUDIT", "SAFETY", "EXECUTION_OK", "END"]
+HUMAN_ACTOR = "P395_HUMAN_SUPERVISED_REVIEW"
+REASON_SIBLING = ("The candidate evidence itself remains directionally consistent, while the active contradiction "
+                  "comes from unresolved opposite-direction sibling patterns that have not yet received formal decisions.")
+
+
+def _session_kwargs(b, pattern, action, rows_before, **kw):
+    params = {"pattern_id": pattern, "action": action, "actor": HUMAN_ACTOR, "reason": REASON_OK,
+              "confirm": EXECUTE.confirmation_token(ACTIONS[action], pattern), "expect_rows_before": rows_before,
+              "expect_current_state": "NONE", "expected_digests": EXPECTED_DIGESTS, "skip_git": True,
+              "corpus_state_resolver": b.corpus_state, "clock": b.clock}
+    params.update(kw)
+    return params
+
+
+def _run_session(b, capsys, pattern, action, rows_before, **kw):
+    code = EXECUTE.FormalExecutionSession(b.root, REPO_ROOT, **_session_kwargs(b, pattern, action, rows_before, **kw)).run_all()
+    return code, capsys.readouterr().out
+
+
+def _seeded(tmp_path):
+    """凍結 candidate #1 相当が既に REJECTED（rows=1）の bench。"""
+    b = _frozen_bench(tmp_path)
+    b.build()
+    b.decide(FROZEN, "reject", REASON_REJECT, actor=HUMAN_ACTOR)
+    return b
+
+
+def test_execution_session_writes_one_reject(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, require_queue_rank=1,
+                             expect_recommendation=REJECT_RECOMMENDED)
+    assert code == 0, out[-2000:]
+    assert [m for m in SESSION_MARKERS if f"::P395X_{m}::" in out] == SESSION_MARKERS and "::P395X_FAIL::" not in out
+    assert all(ord(ch) < 128 for ch in out) and REASON_REJECT not in out          # reason 本文は出さない
+    assert "reason_chars=" in out and "reason_digest=" in out
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == REJECTED and rows[0].pattern_id == "pR"
+    assert rows[0].actor == HUMAN_ACTOR and rows[0].promotion_status == "NOT_PROMOTED"
+
+
+def test_execution_session_writes_one_approve_with_sibling_acknowledgement(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pA", "approve", 0, expect_recommendation=APPROVE_RECOMMENDED,
+                             acknowledge_siblings=("pB",))
+    assert code == 0, out[-2000:]
+    assert 'acknowledge_siblings=["pB"]' in out and "audit_DECISION_TYPE=OK" in out
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == APPROVED and rows[0].promotion_status == "NOT_PROMOTED"
+
+
+def test_execution_session_writes_one_keep_reviewing(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pT", "keep-reviewing", 0, reason=REASON_SIBLING,
+                             expect_recommendation=REJECT_RECOMMENDED)
+    assert code == 0, out[-2000:]
+    rows = b.decisions()
+    assert len(rows) == 1 and rows[0].decision_type == KEEP_REVIEWING and rows[0].reason == REASON_SIBLING
+
+
+@pytest.mark.parametrize("override,stage,reason", [
+    ({"pattern_id": "pN"}, "TARGET", "TARGET_NOT_IN_PRIMARY_QUEUE"),
+    ({"require_queue_rank": 2}, "TARGET", "CANDIDATE_HEAD_CHANGED"),
+    ({"expect_recommendation": APPROVE_RECOMMENDED}, "TARGET", "RECOMMENDATION_CHANGED"),
+    ({"expect_current_state": KEEP_REVIEWING}, "TARGET", "CURRENT_STATE_MISMATCH"),
+    ({"expect_rows_before": 3}, "DECISION_CHAIN", "DECISION_ROWS_BEFORE_MISMATCH"),
+])
+def test_execution_session_stops_before_write_on_a_bound_expectation_mismatch(tmp_path, capsys, override, stage, reason):
+    b = Bench(tmp_path)
+    kw = {"reason": REASON_REJECT, "require_queue_rank": 1, "expect_recommendation": REJECT_RECOMMENDED}
+    kw.update(override)
+    pattern = kw.pop("pattern_id", "pR")
+    rows_before = kw.pop("expect_rows_before", 0)
+    code, out = _run_session(b, capsys, pattern, "reject", rows_before, **kw)
+    assert code == 4 and f"stage={stage}" in out and reason in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_stops_on_a_stale_packet(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real_current = FormalReviewService.current_packet
+
+    def drifted(self, pattern_id, inputs=None):
+        packet = real_current(self, pattern_id, inputs)
+        packet["consistency"] = {**packet["consistency"], "direction_class": "DRIFTED_AFTER_REVIEW"}
+        packet["freshness"] = {**packet["freshness"], "packet_evidence_digest": "0" * 16}
+        return packet
+
+    monkeypatch.setattr(FormalReviewService, "current_packet", drifted)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 4 and "stage=FRESHNESS" in out and "stale" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_stops_when_replay_evidence_is_incompatible(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.replay_policy_digests = {"evaluation": EVAL_POLICY.digest(), "recommendation": REC_POLICY.digest(),
+                               "shadow_review": SHADOW_POLICY.digest(), "replay": "d205c3763d07111b"}   # 旧 1.0.0
+    b.write_replay()
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 3 and "REPLAY_EVIDENCE_REQUIRED" in out and "stage=FORMAL_REVIEW_GUARD" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_stops_on_an_expected_fact_mismatch(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT,
+                             expect_facts={"document_contradiction": True, "reversal_count": 7})
+    assert code == 4 and "stage=EXPECTED_FACTS" in out and "HUMAN_REVIEW_EVIDENCE_CHANGED:reversal_count" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_accepts_matching_expected_facts(tmp_path, capsys):
+    b = Bench(tmp_path)
+    facts = {"document_contradiction": True, "document_contradiction_repeated": True, "contradiction_active": True,
+             "reject_driver": "SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION", "reversal_count": 0, "recovery_count": 0,
+             "replay_current_compatible": True, "formal_review_gate_reached": True}
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, expect_facts=facts)
+    assert code == 0 and "fact_mismatches=[]" in out and "expected_facts_check=PASSED" in out
+    assert len(b.decisions()) == 1
+
+
+def test_execution_session_stops_when_the_group_context_materially_changed(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.build()
+    reviewed = b.packet("pA")["group"]["group_state_digest"]
+    reviewed_material = EXECUTE.group_material_digest(EXECUTE.material_group_view(b.packet("pA")))
+    b.decide("pB", "keep-reviewing", REASON_KEEP, actor=HUMAN_ACTOR)              # sibling の formal state が変わる
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pA", "approve", 1, expect_group_state_digest=reviewed,
+                             expect_group_material_digest=reviewed_material, acknowledge_siblings=("pB",))
+    assert code == 4 and "stage=GROUP_CONTEXT" in out and EXECUTE.GROUP_CONTEXT_CHANGED in out
+    assert "group_material_matches_reviewed=False" in out
+    assert "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 1
+
+
+def test_execution_session_stops_when_the_group_digest_changed_without_a_material_baseline(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pA", "approve", 0, expect_group_state_digest="0000000000000000",
+                             acknowledge_siblings=("pB",))
+    assert code == 4 and "stage=GROUP_CONTEXT" in out and "group_material_baseline=NOT_SUPPLIED" in out
+    assert len(b.decisions()) == 0
+
+
+def test_execution_session_allows_an_equivalent_group_regeneration(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.build()
+    material = EXECUTE.group_material_digest(EXECUTE.material_group_view(b.packet("pA")))
+    code, out = _run_session(b, capsys, "pA", "approve", 0, expect_group_state_digest="0000000000000000",
+                             expect_group_material_digest=material, acknowledge_siblings=("pB",))
+    assert code == 0 and "group_context=EQUIVALENT_REPRESENTATION_REGENERATED" in out
+    assert "group_state_digest_changed=True" in out and len(b.decisions()) == 1
+
+
+def test_execution_session_reports_group_context_unchanged(tmp_path, capsys):
+    b = Bench(tmp_path)
+    b.build()
+    reviewed = b.packet("pR")["group"]["group_state_digest"]
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, expect_group_state_digest=reviewed)
+    assert code == 0 and "group_context=GROUP_CONTEXT_UNCHANGED" in out and len(b.decisions()) == 1
+
+
+def test_execution_session_dry_run_failure_prevents_the_real_write(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def refusing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            return {**real(self, request, dry_run=True),
+                    "validation": {"ok": False, "errors": [{"code": "SIMULATED_VALIDATION_FAILURE"}]}}
+        raise AssertionError("stage 2 must not run after a failed stage 1")
+
+    monkeypatch.setattr(FormalReviewService, "decide", refusing)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 4 and "stage=STAGE1_DRY_RUN" in out and "SIMULATED_VALIDATION_FAILURE" in out
+    assert seen == [True] and "::P395X_STAGE2_WRITE::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_refuses_a_confirmation_mismatch(tmp_path, capsys):
+    b = Bench(tmp_path)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT, confirm="CONFIRM REJECT pR")
+    assert code == 4 and "stage=ARGUMENTS" in out and "reason=CONFIRMATION_MISMATCH" in out
+    assert "::P395X_HEAD::" not in out and len(b.decisions()) == 0
+
+
+def test_execution_session_write_exception_without_a_row_never_retries(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def failing(self, request, *, dry_run):
+        seen.append(dry_run)
+        if dry_run:
+            return real(self, request, dry_run=True)
+        raise RuntimeError("simulated transport failure before append")
+
+    monkeypatch.setattr(FormalReviewService, "decide", failing)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 4 and f"reason={EXECUTE.WRITE_FAILED_NO_ROW}" in out and "retry_policy=NO_AUTOMATIC_RETRY" in out
+    assert seen == [True, False] and "write_attempts=1" in out and len(b.decisions()) == 0
+
+
+def test_execution_session_audits_a_succeeded_write_with_a_lost_response(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    real = FormalReviewService.decide
+    seen = []
+
+    def lossy(self, request, *, dry_run):
+        seen.append(dry_run)
+        out = real(self, request, dry_run=dry_run)
+        if not dry_run:
+            raise RuntimeError("append succeeded but the response was lost")
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "decide", lossy)
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 0 and f"write_response={EXECUTE.WRITE_RESPONSE_FAILED}" in out
+    assert "matching_new_rows_found=1" in out and seen == [True, False] and len(b.decisions()) == 1
+
+
+def test_execution_session_reports_ambiguous_write_results_without_retrying(tmp_path, capsys, monkeypatch):
+    b = Bench(tmp_path)
+    session = EXECUTE.FormalExecutionSession(b.root, REPO_ROOT, **_session_kwargs(b, "pR", "reject", 0, reason=REASON_REJECT))
+    real = FormalReviewService.decide
+    seen = []
+
+    def lossy(self, request, *, dry_run):
+        seen.append(dry_run)
+        out = real(self, request, dry_run=dry_run)
+        if not dry_run:
+            raise RuntimeError("response lost")
+        return out
+
+    monkeypatch.setattr(FormalReviewService, "decide", lossy)
+    real_rows = EXECUTE.FormalExecutionSession.rows
+
+    def doubled(self):
+        rows = real_rows(self)
+        return rows + [{**rows[-1], "decision_id": "cdc_duplicate"}] if rows else rows
+
+    monkeypatch.setattr(EXECUTE.FormalExecutionSession, "rows", doubled)
+    code = session.run_all()
+    out = capsys.readouterr().out
+    assert code == 4 and f"reason={EXECUTE.AMBIGUOUS_WRITE}" in out and "matching_new_rows_found=2" in out
+    assert seen == [True, False] and "write_attempts=1" in out
+
+
+def test_execution_session_audits_the_global_chain_and_the_pattern_head(tmp_path, capsys):
+    b = _seeded(tmp_path)
+    first = b.decisions()[0].as_dict()
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pT", "keep-reviewing", 1, reason=REASON_SIBLING,
+                             expect_recommendation=REJECT_RECOMMENDED)
+    assert code == 0, out[-2000:]
+    assert not [line for line in out.splitlines() if line.startswith("audit_") and line.endswith("=FAILED")]
+    rows = [r.as_dict() for r in b.decisions()]
+    assert len(rows) == 2 and rows[1]["sequence"] == 2
+    assert rows[1]["previous_record_hash"] == first["record_hash"]                # global append-only chain
+    assert rows[1]["previous_decision_id"] == "" and rows[1]["previous_state"] == ""   # この pattern では初回
+    assert "audit_PREVIOUS_RECORD_HASH_IS_GLOBAL_TAIL=OK" in out and "audit_SEQUENCE_IS_NEXT=OK" in out
+    # 同じ pattern への 2 度目（KEEP_REVIEWING → KEEP_REVIEWING）は pattern head を previous として引き継ぐ
+    capsys.readouterr()
+    code_refused, out_refused = _run_session(b, capsys, "pT", "keep-reviewing", 2, reason=REASON_KEEP,
+                                             expect_current_state=KEEP_REVIEWING)
+    assert code_refused == 4 and "reason=TARGET_DEFERRED_KEEP_REVIEWING" in out_refused   # 既定: deferred は target 不可
+    assert "::P395X_STAGE2_WRITE::" not in out_refused and len(b.decisions()) == 2
+    code2, out2 = _run_session(b, capsys, "pT", "keep-reviewing", 2, reason=REASON_KEEP,
+                               expect_current_state=KEEP_REVIEWING, allow_deferred=True)    # 明示 opt-in
+    assert code2 == 0, out2[-2000:]
+    assert "deferred_target_allowed=True" in out2 and "section=deferred" in out2
+    rows = [r.as_dict() for r in b.decisions()]
+    assert len(rows) == 3 and rows[2]["previous_state"] == KEEP_REVIEWING
+    assert rows[2]["previous_decision_id"] == rows[1]["decision_id"]
+    assert "audit_PREVIOUS_STATE_IS_PATTERN_HEAD=OK" in out2 and "audit_PREVIOUS_DECISION_ID_IS_PATTERN_HEAD=OK" in out2
+
+
+def test_execution_session_touches_no_dna_pdf_or_shadow_state(tmp_path, capsys):
+    import hashlib as _h
+
+    dna = [REPO_ROOT / "knowledge" / "compass_dna" / "market_rules.yaml",
+           REPO_ROOT / "src" / "intelligence" / "compass" / "market_principles.py"]
+    before_dna = [_h.sha256(p.read_bytes()).hexdigest() for p in dna]
+    b = Bench(tmp_path)
+    b.shadow("pR", DISAGREE, reason="shadow history is evidence only")
+    before = _tree_digest(b.root, exclude="compass_formal_review")
+    capsys.readouterr()
+    code, out = _run_session(b, capsys, "pR", "reject", 0, reason=REASON_REJECT)
+    assert code == 0
+    changed = {k for k in set(before) | set(_tree_digest(b.root, exclude="compass_formal_review"))
+               if before.get(k) != _tree_digest(b.root, exclude="compass_formal_review").get(k)}
+    droot = decisions_root(b.root).relative_to(b.root).as_posix()
+    assert changed and all(k.startswith(droot + "/") for k in changed), changed
+    assert [_h.sha256(p.read_bytes()).hexdigest() for p in dna] == before_dna
+    for line in ("shadow_review_events_unchanged=True", "dna_blobs_unchanged=True", "pdf_inventory_unchanged=True",
+                 "promotion_status_written=NOT_PROMOTED", "real_decisions_written_by_this_operation=1",
+                 "candidates_processed=1"):
+        assert line in out, line
+
+
+def test_execution_session_candidate_two_shaped_rehearsal_and_accidental_rerun(tmp_path, capsys):
+    """rows 1 / state NONE から KEEP_REVIEWING を 1 行だけ書き、同じ実行の再走が write 前に失敗することを示す。"""
+    b = _seeded(tmp_path)
+    b.build()
+    # candidate #2 と同じ「束縛の形」を合成 pattern の実値で表現する（値そのものは合成 fixture のもの）
+    facts = {"document_contradiction": True, "document_contradiction_repeated": True,
+             "narrow_sibling_contradiction": False, "narrow_sibling_repeated": False, "contradiction_active": True,
+             "reject_driver": "SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION", "reversal_count": 0, "recovery_count": 0,
+             "opposite_sibling_count": 0, "replay_current_compatible": True, "formal_review_gate_reached": True}
+    reviewed_group = b.packet("pT")["group"]["group_state_digest"]
+    capsys.readouterr()
+    kw = dict(reason=REASON_SIBLING, expect_recommendation=REJECT_RECOMMENDED, require_queue_rank=1,
+              expect_facts=facts, expect_group_state_digest=reviewed_group)
+    code, out = _run_session(b, capsys, "pT", "keep-reviewing", 1, **kw)
+    assert code == 0, out[-2000:]
+    rows = [r.as_dict() for r in b.decisions()]
+    assert len(rows) == 2 and rows[1]["decision_type"] == KEEP_REVIEWING and rows[1]["sequence"] == 2
+    assert rows[1]["reason"] == REASON_SIBLING and rows[1]["actor"] == HUMAN_ACTOR
+    assert "decision_hash_chain=VALID" in out
+    code2, out2 = _run_session(b, capsys, "pT", "keep-reviewing", 1, **kw)          # 事故による再走
+    assert code2 == 4 and "DECISION_ROWS_BEFORE_MISMATCH:2!=1" in out2
+    assert "::P395X_STAGE2_WRITE::" not in out2 and len(b.decisions()) == 2
+    code3, out3 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw)          # 行数だけ直しても write 前に止まる
+    assert code3 == 4 and "stage=TARGET" in out3                                    # KEEP_REVIEWING 不変 → deferred（既定は拒否）
+    assert "reason=TARGET_DEFERRED_KEEP_REVIEWING" in out3
+    assert "::P395X_STAGE2_WRITE::" not in out3 and len(b.decisions()) == 2
+    kw_allowed = {**kw, "allow_deferred": True}                                       # opt-in しても束縛した期待値で止まる
+    code4, out4 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw_allowed)
+    assert code4 == 4 and "stage=TARGET" in out4                                     # deferred は rank を持たない → rank 束縛が先に落ちる
+    assert "reason=CANDIDATE_HEAD_CHANGED" in out4 or "CURRENT_STATE_MISMATCH:KEEP_REVIEWING!=NONE" in out4
+    assert "::P395X_STAGE2_WRITE::" not in out4 and len(b.decisions()) == 2
+    kw_state = {k: v for k, v in kw_allowed.items() if k != "require_queue_rank"}        # rank 束縛を外すと state で止まる
+    code5, out5 = _run_session(b, capsys, "pT", "keep-reviewing", 2, **kw_state)
+    assert code5 == 4 and "CURRENT_STATE_MISMATCH:KEEP_REVIEWING!=NONE" in out5
+    assert "::P395X_STAGE2_WRITE::" not in out5 and len(b.decisions()) == 2
+
+
+def test_execution_session_has_no_candidate_specific_constants_and_no_batch_interface():
+    text = (PKG / "execute.py").read_text(encoding="utf-8")
+    assert "cpt_" not in text and "frp_" not in text and "cdc_" not in text        # candidate 固有の凍結値なし
+    assert "directionally" not in text and "P395_HUMAN" not in text                # 人間 reason / actor の凍結なし
+    tree = ast.parse(text)
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+             and n.func.attr == "decide"]
+    flags = [k.value.value for call in calls for k in call.keywords if k.arg == "dry_run"]
+    assert len(calls) == 2 and sorted(flags, key=str) == [False, True]
+    assert text.count("dry_run=False") == 1 and text.count("FormalDecisionRequest(") == 1
+    assert "while " not in text and "subprocess" not in text and "retry(" not in text
+    assert "load_formal_review_policy" not in text and "write_text" not in text     # policy / config を書かない
+    pattern_arg = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                   and getattr(n.func, "attr", "") == "add_argument"
+                   and any(isinstance(a, ast.Constant) and a.value == "--pattern" for a in n.args)]
+    assert len(pattern_arg) == 1
+    assert not [k for k in pattern_arg[0].keywords if k.arg in ("nargs", "action")]  # 複数 pattern を受けない
+
+
+def test_execution_session_cli_main_wires_arguments_and_rejects_unknown_facts(tmp_path, monkeypatch, capsys):
+    b = Bench(tmp_path / "ok")
+    _InjectedSession.bench = b
+    monkeypatch.setattr(EXECUTE, "FormalExecutionSession", _InjectedSession)
+    base = ["--data-root", str(b.root), "--skip-git", "--expect-formal-review", "d2fb015ca827dd15",
+            "--pattern", "pR", "--action", "reject", "--actor", HUMAN_ACTOR, "--reason", REASON_REJECT,
+            "--confirm", "CONFIRM REJECTED pR", "--expect-rows-before", "0", "--expect-current-state", "NONE",
+            "--expect-machine-recommendation", REJECT_RECOMMENDED, "--require-queue-rank", "1"]
+    assert EXECUTE.main(base + ["--expect-fact", "os.system=1"]) == 4
+    assert "UNKNOWN_EXPECTED_FACT" in capsys.readouterr().out and len(b.decisions()) == 0
+    _InjectedSession.bench = b
+    monkeypatch.setattr(EXECUTE, "FormalExecutionSession", _InjectedSession)
+    assert EXECUTE.main(base + ["--expect-fact", "reversal_count=0", "--expect-fact", "contradiction_active=true"]) == 0
+    out = capsys.readouterr().out
+    assert "::P395X_END::" in out and "real_decisions_written_by_this_operation=1" in out and len(b.decisions()) == 1
+
+
+class _InjectedSession(EXECUTE.FormalExecutionSession):
+    """corpus state と clock を bench から注入する execution session（CLI 配線の検証用）。"""
+
+    bench = None
+
+    def __init__(self, root, repo, **kw):
+        super().__init__(root, repo, corpus_state_resolver=type(self).bench.corpus_state,
+                         clock=type(self).bench.clock, **kw)

@@ -86,6 +86,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # v4.12 Stage 1.7（承認事項D）: Security Guard。機密ファイル（羅針盤PDF等の
+      # CONFIDENTIAL_SOURCE・SENSITIVE_IDENTIFIER）が誤ってGit trackingされた場合、
+      # レポート生成前にworkflowを失敗させる（docs/security/DATA_CLASSIFICATION_POLICY.md）。
+      - name: Security guard (confidential tracking check)
+        run: python -m pytest tests/intelligence/test_confidential_guard.py -q
+
       # cron 文字列 / dispatch 入力から (slot_id, mode, trigger_type, force, recovery) を解決する。
       - name: Resolve report slot
         id: sched

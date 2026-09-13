@@ -1,0 +1,622 @@
+# =============================================================================
+# MarketSeries正式カタログ（Phase 2-D PART B / versioned config）
+# =============================================================================
+# 原則: A NUMBER WITHOUT IDENTITY AND CONTEXT IS NOT MARKET DATA
+#
+# - series_id は src/intelligence/databank/market_model.make_series_id の規約
+#   （instrument_id.metric.observation_type[.session]）から決定論的に導出される。
+#   loaderが照合し、不一致はカタログエラー（雑な同一視の混入を防ぐ）。
+# - 指数現物・ETF・先物は**別instrument**（例: 日経平均指数 ≠ 1321 ETF ≠ 日経先物）。
+#   先物継続足は instrument_id を futures:*_cont として明示する。
+# - USDJPYの「終値」は複数存在する（spot連続取引のprovider日足 / 東京仲値fixing /
+#   東京17時・NY17時クローズ）——本カタログはprovider日足closeを global セッションの
+#   別系列として定義し、fixing等を追加する場合は**新series**として追加する。
+# - 金利は「4.25% → 値4.25・unit pct」で固定（ratio 0.0425と混在させない）。
+# - as_of_policy:
+#     exchange_close … trading_date + close_time_local（timezone）→ UTC変換した確定時刻
+#     day_end_utc    … 取引所単一クローズが定義できない系列（FX/先物継続/金利/暗号資産）。
+#                      as_of = trading_date 23:59:59Z（「当日中のどこか」の明示的規約。
+#                      個別値ごとの時刻捏造をしないための固定規約）
+# - calendar は欠測サニティ検知（週末日付の検出等）のみに使う。**補完には使わない**
+#   （休日・障害・未公表はMISSINGのまま。0・前日値・補間で埋めない）。
+# - enabled: false は「identityのみ定義（収集しない）」。probe: true は
+#   legacy実績のないprovider symbol（取得失敗はSOURCE GAPとして扱いエラーにしない）。
+
+id: market_series_core
+version: "1.2.1"
+description: >-
+  Market Data BankのCORE系列カタログ（series identity＋取得運用フィールド。
+  Phase 2-D PART B / Phase 2-G official source gap closure）。
+  series_idはmake_series_id規約から決定論導出される。
+source: "監督者指示（P2-D/P2-G directive）＋legacy config.yaml stooq_symbols実績"
+status: active
+updated: "2026-08-30"
+changelog: >-
+  1.2.1（P2-G.2 closeout）: TOPIXをprobe:falseへ（Light plan投入後のrun #15で
+  V2 live取得を実証——HTTP 200・268行・最新2026-09-01・CURRENT_USABLE）。
+  1.2.0（P2-G.2）: J-Quants V1（2026-06-01終了）からV2へ移行。TOPIXの
+  endpoint_templateをV2の専用パス /v2/indices/bars/daily/topix へ、認証を
+  API Key方式（env JQUANTS_API_KEY のruntime injection）へ更新。series identity
+  （index:topix.close.closing.tokyo）とNO PROXY SUBSTITUTION原則は不変。
+  J-Quants/TOPIX経路以外（treasury_gov / mof_japan / 他系列）は無変更。
+  1.1.0（P2-G）: PRIMARY_OFFICIAL providers追加（treasury_gov / mof_japan /
+  jquants）。UST2Y/UST10Yのofficial par yield系列を新設（既存^TNX系列とは
+  概念が異なるため別series——NO SILENT MIXING）。JGB10Yを財務省国債金利情報へ、
+  TOPIXをJ-Quants（JPX公式系API）へ接続。データ実績ゼロの旧UST2Y（市場実勢・
+  Stooq経路）はidentity定義のみへ（enabled:false）。cross spreadはofficial par
+  同士の組へ再定義（^TNX×official parの概念混合spreadは生成しない）。
+
+# ---------------------------------------------------------------------------
+# データ供給元の種別（PART C: 一次公表元とデータプロバイダを混同しない）
+#   PRIMARY_OFFICIAL     … 取引所・中央銀行・統計局の公式公表値
+#   MARKET_DATA_PROVIDER … 市場データ集約プロバイダ（本フェーズの取得元）
+#   SECONDARY            … 報道等の二次値
+# ---------------------------------------------------------------------------
+providers:
+  yfinance:
+    source_type: MARKET_DATA_PROVIDER
+    tier: 2
+    endpoint_template: ""            # ライブラリ経由（yfinance）。生HTTPは扱わない
+    response_format: library
+    provider_normalized: true        # ライブラリ前処理済み（float供給。生CSVではない）
+    notes: >-
+      Yahoo Financeマーケットデータ（yfinance経由）。legacyの一次経路そのもの
+      （src/collectors/market_data.py はyfinance一次・Stooq quoteフォールバックで
+      本番Actionsから毎日実績）。ティッカーもlegacy config.yaml実績値。
+      floatで供給される事実はfetchごとにprovider_float_transitとして申告される。
+  stooq:
+    source_type: MARKET_DATA_PROVIDER
+    tier: 2
+    endpoint_template: "https://stooq.com/q/d/l/?s={symbol}&i=d&d1={d1}&d2={d2}"
+    response_format: csv          # Date,Open,High,Low,Close(,Volume)
+    provider_normalized: false    # HTTP応答CSVをそのままraw保存できる（生値・非加工）
+    notes: >-
+      無料の市場データプロバイダ。取引所公式値ではない（PRIMARY_OFFICIALの
+      日次公表値取込はSOURCE GAP G9系として将来トラック）。
+      legacy実績: config.yaml stooq_symbols / src/collectors/market_data.py（quote endpoint）。
+      **注意（P2-D live pilot実測）**: 日足historyエンドポイント（q/d/l/）はIP単位の
+      ダウンロード制限があり、共有IP（GitHub Actionsランナー等）からはHTTP 200で
+      HTML制限ページが返る。historyの一次経路にはyfinanceを使う。
+  treasury_gov:
+    source_type: PRIMARY_OFFICIAL
+    tier: 1
+    endpoint_template: "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{year}/all?type=daily_treasury_yield_curve&field_tdr_date_value={year}&page&_format=csv"
+    response_format: csv
+    provider_normalized: false
+    notes: >-
+      米財務省 Daily Treasury Par Yield Curve Rates（公式公表値）。symbolは
+      CSVの年限列名（"2 Yr"等）。par yield＝流通市場bid quotes（15:30 ET頃・
+      NY連銀取得）から財務省が補間したconstant maturity。市場実勢利回りindex
+      （^TNX等）・入札結果とは別概念。Tier1はsource種別であり
+      「データが絶対に正しい」の保証ではない（既存原則維持）。
+  mof_japan:
+    source_type: PRIMARY_OFFICIAL
+    tier: 1
+    endpoint_template: "https://www.mof.go.jp/jgbs/reference/interest_rate/data/jgbcm_all.csv"
+    response_format: csv
+    provider_normalized: false
+    notes: >-
+      財務省 国債金利情報（公式公表値・Shift_JIS・和暦日付）。symbolはCSVの
+      年限列名（"10年"等）。固定利付国債の流通市場価格ベースのconstant
+      maturity・15時クローズ時点。入札平均利回り・特定銘柄利回りとは別概念。
+  jquants:
+    source_type: PRIMARY_OFFICIAL
+    tier: 1
+    endpoint_template: "https://api.jquants.com/v2/indices/bars/daily/topix"
+    api_version: "v2"
+    response_format: json
+    provider_normalized: false
+    notes: >-
+      J-Quants（JPX子会社 JPX Market Innovation & Research 運営の公式データAPI）
+      **V2**。V1は2026-06-01に終了しており現行仕様ではない。
+      /v2/indices/bars/daily/topix はTOPIX指数値そのもの（ETF・先物ではない）。
+      認証はAPI Keyをリクエストヘッダで送る方式（V1のtoken交換は廃止）。
+      ヘッダ名は実装定数 jquants_v2.AUTH_HEADER を正とする
+      （ヘッダ名リテラルをknowledge/へ持ち込まない——秘密混入防止ガード）。
+      値は環境変数 JQUANTS_API_KEY からのruntime injectionのみ
+      ——secretをGit/config/カタログへ保存しない。
+      応答は {"data": [...], "pagination_key": ...}・四本値項目はV2短縮名
+      （O/H/L/C）。データ更新は毎営業日16:30頃（JST）。
+      **PLAN_CAPABILITY**: TOPIX四本値がLightプラン以上である点のみ公式
+      クイックスタート(V2)で確認済み。プラン別の遅延日数・履歴範囲は依然
+      UNVERIFIEDで、実取得結果により確定する（TOPIX_SOURCE_DECISION.md参照）。
+
+defaults:
+  frequency: daily
+  adjustment: unadjusted
+  preferred_source: stooq
+  fallback_sources: []   # fallback発動時はsource-changed記録必須（silent switch禁止）
+
+series:
+  # ----- 株価指数（日本） -----
+  - series_id: "index:nikkei225.close.closing.tokyo"
+    display_name: "日経平均株価"
+    asset_class: equity_index
+    instrument_id: "index:nikkei225"
+    metric: close
+    observation_type: closing
+    session: tokyo
+    unit: index
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: "15:30"     # 2024-11-05以降の東証現物クローズ
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^nkx", yfinance: "^N225" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。ETF(1321等)・日経225先物とは別系列"
+
+  - series_id: "index:topix.close.closing.tokyo"
+    display_name: "TOPIX"
+    asset_class: equity_index
+    instrument_id: "index:topix"
+    metric: close
+    observation_type: closing
+    session: tokyo
+    unit: index
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: "15:30"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { jquants: "topix", stooq: "^tpx" }
+    preferred_source: jquants
+    fallback_sources: []          # official経路のみ（stooq symbolは記録として残すがchainに入れない）
+    probe: false                  # P2-G.2 live実証済み（run #15: V2 API Key認証HTTP 200・
+                                  # 268行 2025-07-28〜2026-09-01・CURRENT_USABLE）
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      TOPIX指数現物終値（P2-G.2: J-Quants **V2** /indices/bars/daily/topix値。
+      **TOPIX ≠ 1306.T等ETF ≠ TOPIX先物**——ETF/先物を指数seriesへ流用しない）。
+      credentialは環境変数runtime injectionのみ。未設定・取得不能なら
+      SOURCE GAPとして正直に欠測とする（代用で埋めない）。
+
+  - series_id: "index:growth250.close.closing.tokyo"
+    display_name: "東証グロース市場250指数"
+    asset_class: equity_index
+    instrument_id: "index:growth250"
+    metric: close
+    observation_type: closing
+    session: tokyo
+    unit: index
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: "15:30"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: {}          # Stooqにsymbol確認できず（SOURCE GAP: 下記notes）
+    enabled: false
+    role: CORE
+    identity_notes: >-
+      収集不可（provider symbol未確認）。identityのみ定義し、JPX公式等の
+      PRIMARY_OFFICIAL経路をSOURCE GAPとして別トラックで検討する。
+
+  # ----- 株価指数（米国） -----
+  - series_id: "index:dji.close.closing.us"
+    display_name: "NYダウ（Dow Jones Industrial Average）"
+    asset_class: equity_index
+    instrument_id: "index:dji"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^dji", yfinance: "^DJI" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。DIA ETF・YM先物とは別系列"
+
+  - series_id: "index:spx.close.closing.us"
+    display_name: "S&P 500"
+    asset_class: equity_index
+    instrument_id: "index:spx"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^spx", yfinance: "^GSPC" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。SPY ETF・ES先物とは別系列"
+
+  - series_id: "index:nasdaq_composite.close.closing.us"
+    display_name: "ナスダック総合指数"
+    asset_class: equity_index
+    instrument_id: "index:nasdaq_composite"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^ndq", yfinance: "^IXIC" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "総合指数（Composite）。Nasdaq 100（^ndx）とは別系列——混同禁止"
+
+  - series_id: "index:nasdaq100.close.closing.us"
+    display_name: "Nasdaq 100"
+    asset_class: equity_index
+    instrument_id: "index:nasdaq100"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^ndx" }
+    enabled: false                # 任意系列: 過剰収集を避けP2-Dでは識別のみ定義
+    role: EXTENDED
+    identity_notes: "Nasdaq総合とは別系列。QQQ ETF・NQ先物とも別"
+
+  - series_id: "index:sox.close.closing.us"
+    display_name: "フィラデルフィア半導体指数（SOX）"
+    asset_class: equity_index
+    instrument_id: "index:sox"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:00"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^sox", yfinance: "^SOX" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "指数現物終値。SOXX/SMH ETFとは別系列"
+
+  # ----- ボラティリティ -----
+  - series_id: "index:vix.close.closing.us"
+    display_name: "VIX（CBOE Volatility Index）"
+    asset_class: volatility
+    instrument_id: "index:vix"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: index
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "16:15"     # Cboe指数配信クローズ
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { stooq: "^vix", yfinance: "^VIX" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "指数値（年率IVポイント）。VIX先物・VXX等ETNとは別系列"
+
+  # ----- 為替 -----
+  - series_id: "fx:USDJPY.rate.closing.global"
+    display_name: "ドル円（USD/JPY）"
+    asset_class: fx
+    instrument_id: "fx:USDJPY"
+    metric: rate
+    observation_type: closing
+    session: global
+    unit: jpy_per_usd
+    currency: "JPY"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "usdjpy", yfinance: "JPY=X" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      spot連続取引のprovider日足close（1USDあたりJPY）。東京仲値（official_fixing）・
+      東京17時/NY17時クローズの公表値とは**別系列**——必要になれば別series_idで追加する。
+
+  - series_id: "fx:EURUSD.rate.closing.global"
+    display_name: "ユーロドル（EUR/USD）"
+    asset_class: fx
+    instrument_id: "fx:EURUSD"
+    metric: rate
+    observation_type: closing
+    session: global
+    unit: usd_per_eur
+    currency: "USD"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "eurusd", yfinance: "EURUSD=X" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "spot連続取引のprovider日足close（1EURあたりUSD）。ECB参照レートとは別系列"
+
+  # ----- 金利 -----
+  - series_id: "rates:JGB10Y.yield.closing.tokyo"
+    display_name: "日本10年国債利回り（財務省 国債金利情報）"
+    asset_class: rates
+    instrument_id: "rates:JGB10Y"
+    metric: yield
+    observation_type: closing
+    session: tokyo
+    unit: pct
+    currency: ""
+    timezone: "Asia/Tokyo"
+    close_time_local: "15:00"     # 財務省の説明: 市場クローズ（15時）時点
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { mof_japan: "10年" }
+    preferred_source: mof_japan
+    fallback_sources: []
+    probe: false                  # P2-G live実証済み（run #7: 265行・2025-07-28〜2026-08-27）
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      財務省「国債金利情報」の10年（P2-G: 固定利付国債の流通市場価格ベースの
+      constant maturity・15時クローズ。単位pct: 1.05%→1.05）。
+      **入札平均利回り・特定銘柄利回り・クーポンとは別物**（auction結果ページを
+      日次系列として使わない）。旧Stooq経路（流通市場ベンチマーク・データ実績ゼロ）
+      は概念が異なるため本seriesから除外——観測ゼロのままの再定義であり
+      既存データの再解釈は発生していない。
+
+  - series_id: "rates:UST2Y.yield.closing.us"
+    display_name: "米2年国債利回り（市場実勢・identity定義のみ）"
+    asset_class: rates
+    instrument_id: "rates:UST2Y"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "2usy.b" }
+    probe: true
+    enabled: false                # P2-G: 経路無し（Stooq共有IP制限）・観測ゼロのままidentity定義のみ維持
+    role: EXTENDED
+    identity_notes: >-
+      流通市場ベンチマーク利回り（unit pct: 4.25%→4.25。ratio 0.0425とは混在させない）。
+      財務省par yield（公式統計）・入札結果とは別系列。P2-Gで2年金利の実データは
+      rates:UST2Y_par（Treasury official par yield・別概念の別series）が担う——
+      本seriesへofficial値を**混入しない**（NO SILENT MIXING）。
+
+  - series_id: "rates:UST2Y_par.yield.closing.us"
+    display_name: "米2年国債par yield（財務省Daily Treasury Par Yield Curve）"
+    asset_class: rates
+    instrument_id: "rates:UST2Y_par"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "15:30"     # NY連銀取得のindicative bid quotes（約15:30 ET）基準
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { treasury_gov: "2 Yr" }
+    preferred_source: treasury_gov
+    fallback_sources: []
+    probe: false                  # P2-G live実証済み（run #7: 274行・2025-07-28〜2026-08-28）
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      米財務省Daily Treasury Par Yield Curve Ratesの「2 Yr」列（P2-G）。
+      **official par yield ≠ 市場実勢利回りindex（^TNX型・rates:UST2Y） ≠
+      入札yield ≠ 2年note価格 ≠ 2Y ETF ≠ futures implied**——代用しない。
+      単位pct（4.25%→4.25）。
+
+  - series_id: "rates:UST10Y_par.yield.closing.us"
+    display_name: "米10年国債par yield（財務省Daily Treasury Par Yield Curve）"
+    asset_class: rates
+    instrument_id: "rates:UST10Y_par"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: "15:30"
+    as_of_policy: exchange_close
+    calendar: weekdays
+    provider_symbols: { treasury_gov: "10 Yr" }
+    preferred_source: treasury_gov
+    fallback_sources: []
+    probe: false                  # P2-G live実証済み（run #7: 274行・official spread生成済み）
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      米財務省Daily Treasury Par Yield Curve Ratesの「10 Yr」列（P2-G optional
+      parallel series）。既存 rates:UST10Y（yfinance ^TNX・市場実勢系）とは
+      **別概念の別series**として併存——既存seriesの削除・上書きはしない。
+      spreadはofficial par同士（10Y_par−2Y_par）で計算する（概念整合）。
+
+  - series_id: "rates:UST10Y.yield.closing.us"
+    display_name: "米10年国債利回り"
+    asset_class: rates
+    instrument_id: "rates:UST10Y"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "10usy.b", yfinance: "^TNX" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      流通市場ベンチマーク利回り（legacy実績あり。yfinance ^TNX=CBOE 10-Year
+      Treasury Note Yield Index・pct表示）。財務省公式統計・入札結果とは別系列。
+
+  - series_id: "rates:UST30Y.yield.closing.us"
+    display_name: "米30年国債利回り"
+    asset_class: rates
+    instrument_id: "rates:UST30Y"
+    metric: yield
+    observation_type: closing
+    session: us
+    unit: pct
+    currency: ""
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "30usy.b" }
+    enabled: false                # 任意系列: P2-Dでは識別のみ定義
+    role: EXTENDED
+    identity_notes: "流通市場ベンチマーク利回り"
+
+  # ----- コモディティ（先物継続足＝現物スポットと別instrument） -----
+  - series_id: "futures:wti_cont.close.closing.us"
+    display_name: "WTI原油先物（期近継続）"
+    asset_class: commodity
+    instrument_id: "futures:wti_cont"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: usd_per_barrel
+    currency: "USD"
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "cl.f", yfinance: "CL=F" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: >-
+      NYMEX CL期近の継続足（provider日足bar）。取引所公式settlement・現物スポット価格
+      とは別系列。限月乗換はprovider仕様に従う（継続足であることをidentityに固定）。
+
+  - series_id: "futures:brent_cont.close.closing.us"
+    display_name: "ブレント原油先物（期近継続）"
+    asset_class: commodity
+    instrument_id: "futures:brent_cont"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: usd_per_barrel
+    currency: "USD"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "cb.f" }
+    enabled: false                # 任意系列: P2-Dでは識別のみ定義
+    role: EXTENDED
+    identity_notes: "ICE Brent期近継続足"
+
+  - series_id: "futures:gold_cont.close.closing.us"
+    display_name: "金先物（期近継続）"
+    asset_class: commodity
+    instrument_id: "futures:gold_cont"
+    metric: close
+    observation_type: closing
+    session: us
+    unit: usd_per_ozt
+    currency: "USD"
+    timezone: "America/New_York"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: weekdays
+    provider_symbols: { stooq: "gc.f", yfinance: "GC=F" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "COMEX GC期近の継続足。金現物スポット（XAUUSD）とは別系列"
+
+  # ----- 暗号資産 -----
+  - series_id: "crypto:BTCUSD.close.closing.global"
+    display_name: "ビットコイン（BTC/USD）"
+    asset_class: crypto
+    instrument_id: "crypto:BTCUSD"
+    metric: close
+    observation_type: closing
+    session: global
+    unit: usd
+    currency: "USD"
+    timezone: "UTC"
+    close_time_local: ""
+    as_of_policy: day_end_utc
+    calendar: all_days            # 24/7取引（週末日付は欠測ではない）
+    provider_symbols: { stooq: "btcusd", yfinance: "BTC-USD" }
+    preferred_source: yfinance
+    fallback_sources: [stooq]
+    enabled: true
+    role: CORE
+    identity_notes: "provider集約のBTC/USD日足close。特定取引所の公式終値ではない"
+
+# ---------------------------------------------------------------------------
+# 派生系列の基盤（PART F: foundation only——TAライブラリ化はしない）
+# per_series: 各base seriesへ適用する汎用派生。series_idはbaseから決定論導出
+#   （instrument・session維持・metric置換・observation_type=derived_metric）。
+# cross_series: 複数seriesを入力とする派生（入力series_idを明示）。
+# ---------------------------------------------------------------------------
+derivations:
+  per_series:
+    - { metric: return_1d,  calculation: "return_1d:1.0.0",  unit: pct }
+    - { metric: return_5d,  calculation: "return_5d:1.0.0",  unit: pct }
+    - { metric: ma25,       calculation: "ma25:1.0.0",       unit: same_as_base }
+    - { metric: dist_25dma, calculation: "dist_25dma:1.0.0", unit: pct }
+  cross_series:
+    # P2-G: spreadはofficial par同士で計算する（概念整合）。^TNX（市場実勢index）×
+    # official parの混合spreadは生成しない。旧定義（UST10Y×UST2Y・実データゼロで
+    # 一度も生成されず）はこの概念整合形へ置換。
+    - series_id: "rates:UST10Y_par_UST2Y_par.spread.derived_metric"
+      display_name: "米10年-2年金利差（official par yield）"
+      inputs:
+        - "rates:UST10Y_par.yield.closing.us"
+        - "rates:UST2Y_par.yield.closing.us"
+      calculation: "yield_spread:1.0.0"
+      unit: pct_point
+    - series_id: "index:nikkei225_topix.nt_ratio.derived_metric"
+      display_name: "NT倍率"
+      inputs:
+        - "index:nikkei225.close.closing.tokyo"
+        - "index:topix.close.closing.tokyo"
+      calculation: "nt_ratio:1.0.0"
+      unit: x
+
+# ---------------------------------------------------------------------------
+# 市場内部指標（market internals）: P2-Dではschema/catalog準備のみ（収集しない）。
+# 騰落銘柄数・新高値新安値等はPRIMARY_OFFICIAL経路の確保が前提（SOURCE GAP扱い）。
+# ---------------------------------------------------------------------------
+internals_placeholder:
+  - instrument_id: "internals:tse_prime_advance_decline"
+    metric: advancers
+    status: "not_collected（供給元未確保。identityの予約のみ）"

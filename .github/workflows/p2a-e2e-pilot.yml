@@ -1,0 +1,34 @@
+# P2-A Real End-to-End Pilot（Phase 2-A / 監督者必須Gate）
+#
+# Phase 1全層（Fetch→Raw→Parse→Normalize→Evidence QA→Gate）を実sourceで一本通す。
+# feature branch限定・triggerファイル更新時のみ・少数source（bulk禁止）・Secrets不使用。
+# Legacy本番workflow・GitHub Pagesへは影響しない。
+name: p2a-e2e-pilot
+
+on:
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p2a_e2e_trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2a-e2e-pilot
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal deps
+        run: pip install pyyaml
+      - name: Run real end-to-end pilot (no bulk, no secrets, no mocks)
+        run: python -m src.intelligence.pipeline.e2e_runner

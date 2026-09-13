@@ -1,0 +1,2606 @@
+# フィードカタログ（Canonical・v3.0.0）
+# Phase 1-B（2026-08-29）Source Registry & Health Auditの成果。生成: 決定表＋実測データ
+# （tank記事ストア実測・Legacy CI 14日実測・collectors URL突合）から決定的に導出。
+#
+# 重要な区別: historical（tank実績=HISTORICALLY_OBSERVED）とcurrent_health（現在死活）は
+# 別レイヤーで保持し、混同しない。過去に取れていたことは現在取れることを意味しない。
+# current_healthは観測evidenceからの導出値（正）。Secret値・認証情報は一切記載しない。
+id: source_reliability.source_feeds
+version: 3.0.1
+description: '自動取得対象フィードのCanonicalカタログ（86ソース）。Phase 1-B Source Registry & Health Auditで再構成: endpoint（取得口）/historical（tank実績）/recent_ci（Legacy
+  CI実測）/current_health（現在死活の導出結果）/investment_value/role/duplicate_groupを分離保持'
+source: v2.0.0（tank config/sources.yaml＋data/article_store実測＋dmb collectors）を基礎に、Legacy CI日次レポート実測（output/2026-08-16..29のデータ品質カード）とsrc/collectors・config.yamlのURL突合で現在死活を判定
+status: active
+evidence_layers:
+  historical: tank記事ストア実測（観測窓 2026-06-22..2026-07-22）。過去実績であり現在正常の証明ではない
+  recent_ci: Legacy日次レポートのデータ品質カード実測（2026-08-16..2026-08-29、14日分）。URL一致でカタログidへ対応付け
+  live_check: P1-C live validation（GitHub Actions runner・2026-08-29・run1=11ソース/run2=3ソース・1ソース1リクエスト）。method=live_httpの
+    current_health はこの実測。残るソースは開発環境egress遮断のため未検証のまま
+vocabulary:
+  current_health.state:
+  - healthy
+  - degraded
+  - auth_required
+  - rate_limited
+  - moved
+  - dead
+  - unverified
+  current_health.method:
+  - live_http
+  - legacy_ci_report
+  - tank_shards
+  - static_analysis
+  - live_check_blocked
+  investment_value:
+  - MARKET_CRITICAL
+  - HIGH
+  - MEDIUM
+  - LOW
+  role:
+  - CORE
+  - SUPPORT
+  - CONTEXT
+  - DISABLE
+  category:
+  - primary_official
+  - high_quality_secondary
+  - general_secondary
+  - market_data_provider
+  - other
+  endpoint.declared_format:
+  - rss2
+  - atom
+  - rdf
+  - json_api
+  - html
+  - unknown
+  endpoint.auth_type:
+  - none
+  - api_key_header
+  - api_key_query
+  - bearer
+  - other
+  endpoint.usage_status:
+  - public_feed
+  - api_terms
+  - restricted
+  - unknown
+feeds:
+- id: fed_press
+  name: U.S. Federal Reserve — Press Releases
+  lang: en
+  country: US
+  region: North America
+  primary_category: monetary_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 98
+  fetch_interval_minutes: 60
+  origin: tank+dmb
+  endpoint:
+    url: https://www.federalreserve.gov/feeds/press_all.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 14
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: degraded
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP200・RSS2・20件パース成功（フィード本体は稼働。Legacy CI 14/14失敗はクライアント条件=UA等と確定）。サンプル内で日付タグ未確認のため鮮度未確定→healthy昇格はしない'
+  investment_value: MARKET_CRITICAL
+  role: CORE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 14
+- id: boj_whatsnew
+  name: Bank of Japan — What's New (English)
+  lang: en
+  country: JP
+  region: Asia
+  primary_category: monetary_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 98
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.boj.or.jp/en/rss/whatsnew.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 36
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: healthy
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP200・RSS2・47件パース・最新2026-08-28（CORE実接続確認済み）'
+  investment_value: MARKET_CRITICAL
+  role: CORE
+  duplicate_group: boj
+- id: ecb_press
+  name: European Central Bank — Press
+  lang: en
+  country: EU
+  region: Europe
+  primary_category: monetary_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 97
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.ecb.europa.eu/rss/press.html
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 16
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MARKET_CRITICAL
+  role: DISABLE
+  duplicate_group: ecb
+  replacement_source: dmb_ecb_press
+- id: boe_news
+  name: Bank of England — News
+  lang: en
+  country: GB
+  region: Europe
+  primary_category: monetary_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 96
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.bankofengland.co.uk/rss/news
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 16
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: us_bls
+  name: U.S. Bureau of Labor Statistics — News Releases
+  lang: en
+  country: US
+  region: North America
+  primary_category: employment
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 96
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.bls.gov/feed/news_release.rss
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MARKET_CRITICAL
+  role: DISABLE
+  duplicate_group: bls
+  replacement_source: bls_latest
+- id: uk_gov
+  name: UK Government — Announcements
+  lang: en
+  country: GB
+  region: Europe
+  primary_category: fiscal_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 92
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.gov.uk/government/announcements.atom
+    declared_format: atom
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: dead
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP404（announcements.atom提供終了。gov.ukフィード構成変更）。新URL調査までの暫定代替は二次報道（guardian_business）'
+  investment_value: HIGH
+  role: DISABLE
+  replacement_source: guardian_business
+- id: us_treasury
+  name: U.S. Department of the Treasury — Press
+  lang: en
+  country: US
+  region: North America
+  primary_category: fiscal_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 95
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://home.treasury.gov/rss/press.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: 2回の実行とも全attempt timeout（bot防御疑い）。endpoint実体・format未確定のまま。P1-D以降にUA/経路調整のうえ再検証'
+  investment_value: MARKET_CRITICAL
+  role: CORE
+- id: un_news
+  name: UN News — All
+  lang: en
+  country: ''
+  region: Global
+  primary_category: geopolitics
+  source_class: international_institution
+  category: primary_official
+  tier: 1
+  trust_score: 88
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://news.un.org/feed/subscribe/en/news/all/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 49
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: imf_news
+  name: IMF — News
+  lang: en
+  country: ''
+  region: Global
+  primary_category: gdp
+  source_class: international_institution
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 180
+  origin: tank
+  endpoint:
+    url: https://www.imf.org/en/News/rss
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: wto_news
+  name: WTO — Latest News
+  lang: en
+  country: ''
+  region: Global
+  primary_category: tariffs
+  source_class: international_institution
+  category: primary_official
+  tier: 1
+  trust_score: 89
+  fetch_interval_minutes: 180
+  origin: tank
+  endpoint:
+    url: https://www.wto.org/library/rss/latest_news_e.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 10
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: bbc_business
+  name: BBC News — Business
+  lang: en
+  country: GB
+  region: Europe
+  primary_category: manufacturing
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 80
+  fetch_interval_minutes: 45
+  origin: tank
+  endpoint:
+    url: https://feeds.bbci.co.uk/news/business/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 96
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: bbc_world
+  name: BBC News — World
+  lang: en
+  country: GB
+  region: Global
+  primary_category: geopolitics
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 80
+  fetch_interval_minutes: 45
+  origin: tank
+  endpoint:
+    url: https://feeds.bbci.co.uk/news/world/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 84
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: guardian_business
+  name: The Guardian — Business
+  lang: en
+  country: GB
+  region: Europe
+  primary_category: banking
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 76
+  fetch_interval_minutes: 45
+  origin: tank
+  endpoint:
+    url: https://www.theguardian.com/uk/business/rss
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 119
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: cnbc_markets
+  name: CNBC — Markets
+  lang: en
+  country: US
+  region: North America
+  primary_category: rates
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 72
+  fetch_interval_minutes: 45
+  origin: tank+dmb
+  endpoint:
+    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 134
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+  duplicate_group: cnbc
+- id: npr_business
+  name: NPR — Business
+  lang: en
+  country: US
+  region: North America
+  primary_category: consumption
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 74
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://feeds.npr.org/1006/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 15
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: aljazeera_all
+  name: Al Jazeera — All News
+  lang: en
+  country: QA
+  region: Middle East
+  primary_category: diplomacy_war
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 72
+  fetch_interval_minutes: 45
+  origin: tank
+  endpoint:
+    url: https://www.aljazeera.com/xml/rss/all.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 236
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: scmp_news
+  name: South China Morning Post — News
+  lang: en
+  country: HK
+  region: Asia
+  primary_category: us_china
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 70
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.scmp.com/rss/91/feed
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 244
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: japan_times
+  name: The Japan Times — News
+  lang: en
+  country: JP
+  region: Asia
+  primary_category: manufacturing
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 72
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.japantimes.co.jp/feed/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 130
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: eia_today
+  name: U.S. EIA — Today in Energy
+  lang: en
+  country: US
+  region: North America
+  primary_category: oil
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 180
+  origin: tank+dmb
+  endpoint:
+    url: https://www.eia.gov/rss/todayinenergy.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 11
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: oilprice
+  name: OilPrice.com — Latest
+  lang: en
+  country: US
+  region: Global
+  primary_category: oil
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://oilprice.com/rss/main
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 64
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: defense_news
+  name: Defense News — Latest
+  lang: en
+  country: US
+  region: Global
+  primary_category: defense
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 66
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 52
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: bbc_scienv
+  name: BBC News — Science & Environment
+  lang: en
+  country: GB
+  region: Global
+  primary_category: environment
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 78
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://feeds.bbci.co.uk/news/science_and_environment/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 45
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: arstechnica
+  name: Ars Technica — All
+  lang: en
+  country: US
+  region: Global
+  primary_category: technology
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 66
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: http://feeds.arstechnica.com/arstechnica/index
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 47
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: theverge
+  name: The Verge — All
+  lang: en
+  country: US
+  region: Global
+  primary_category: technology
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.theverge.com/rss/index.xml
+    declared_format: atom
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 59
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: healthy
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP200・Atom・10件パース・最新2026-08-29（Atom形式のlive実証）'
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: reuters_business
+  name: Reuters — Business & Finance
+  lang: en
+  country: US
+  region: Global
+  primary_category: earnings
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 80
+  fetch_interval_minutes: 45
+  origin: tank+dmb
+  endpoint:
+    url: https://www.reutersagency.com/feed/?best-topics=business-finance
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: likely_dead
+    tank_enabled: false
+  current_health:
+    state: dead
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Reuters agency feed提供終了濃厚（tank時点でlikely_dead）＋Legacy CI 14/14日取得失敗
+  investment_value: HIGH
+  role: DISABLE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 14
+  duplicate_group: reuters
+  replacement_source: yahoo_finance_us_all
+- id: bloomberg_markets
+  name: Bloomberg — Markets
+  lang: en
+  country: US
+  region: North America
+  primary_category: rates
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 78
+  fetch_interval_minutes: 45
+  origin: tank+dmb
+  endpoint:
+    url: https://feeds.bloomberg.com/markets/news.rss
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 147
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: wsj_markets
+  name: WSJ — Markets
+  lang: en
+  country: US
+  region: North America
+  primary_category: earnings
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 78
+  fetch_interval_minutes: 45
+  origin: tank+dmb
+  endpoint:
+    url: https://feeds.a.dj.com/rss/RSSMarketsMain.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: marketwatch_top
+  name: MarketWatch — Top Stories
+  lang: en
+  country: US
+  region: North America
+  primary_category: earnings
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 72
+  fetch_interval_minutes: 45
+  origin: tank
+  endpoint:
+    url: https://feeds.content.dowjones.io/public/rss/mw_topstories
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 73
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: DISABLE
+  duplicate_group: marketwatch
+  replacement_source: dmb_marketwatch_top
+- id: yahoo_finance_us_all
+  name: Yahoo Finance — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: earnings
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 65
+  fetch_interval_minutes: 45
+  origin: tank+dmb
+  endpoint:
+    url: https://finance.yahoo.com/news/rssindex
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 608
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: economic_times_in
+  name: The Economic Times (India) — All
+  lang: en
+  country: IN
+  region: Asia
+  primary_category: gdp
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 68
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://economictimes.indiatimes.com/rssfeedsdefault.cms
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 51
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: cna_business
+  name: Channel News Asia — Business
+  lang: en
+  country: SG
+  region: Asia
+  primary_category: manufacturing
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 74
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.channelnewsasia.com/rssfeeds/8395986
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 203
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: abc_au_business
+  name: ABC News Australia — Business
+  lang: en
+  country: AU
+  region: Global
+  primary_category: materials
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 76
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.abc.net.au/news/feed/51892/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 50
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: cbc_business
+  name: CBC News — Business
+  lang: en
+  country: CA
+  region: North America
+  primary_category: earnings
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 76
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://www.cbc.ca/webfeed/rss/rss-business
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 25
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: dw_business
+  name: Deutsche Welle — Business
+  lang: en
+  country: DE
+  region: Europe
+  primary_category: manufacturing
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 76
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://rss.dw.com/rdf/rss-en-bus
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 20
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: allafrica_headlines
+  name: AllAfrica — Headlines
+  lang: en
+  country: ''
+  region: Africa
+  primary_category: gdp
+  source_class: aggregator
+  category: general_secondary
+  tier: 3
+  trust_score: 55
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 48
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: LOW
+  role: DISABLE
+- id: mercopress
+  name: MercoPress — South Atlantic News Agency
+  lang: en
+  country: ''
+  region: Global
+  primary_category: gdp
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 55
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://en.mercopress.com/rss/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 18
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: LOW
+  role: DISABLE
+- id: retaildive
+  name: Retail Dive — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: retail
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.retaildive.com/feeds/news/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 23
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: bankingdive
+  name: Banking Dive — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: banking
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.bankingdive.com/feeds/news/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 20
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: utilitydive
+  name: Utility Dive — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: electric_power
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.utilitydive.com/feeds/news/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 19
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: healthcaredive
+  name: Healthcare Dive — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: healthcare
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.healthcaredive.com/feeds/news/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 20
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: manufacturingdive
+  name: Manufacturing Dive — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: materials
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.manufacturingdive.com/feeds/news/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 16
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: supplychaindive
+  name: Supply Chain Dive — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: logistics
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 62
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.supplychaindive.com/feeds/news/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 22
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: freightwaves
+  name: FreightWaves — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: shipping
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 58
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.freightwaves.com/news/feed
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 59
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: mining_com
+  name: Mining.com — News
+  lang: en
+  country: CA
+  region: Global
+  primary_category: rare_earth
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 60
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.mining.com/feed/
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: lightreading
+  name: Light Reading — News
+  lang: en
+  country: US
+  region: Global
+  primary_category: telecom
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 58
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.lightreading.com/rss_simple.asp
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: LOW
+  role: DISABLE
+- id: greenbiz
+  name: GreenBiz — News
+  lang: en
+  country: US
+  region: Global
+  primary_category: environment
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 58
+  fetch_interval_minutes: 90
+  origin: tank
+  endpoint:
+    url: https://www.greenbiz.com/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: LOW
+  role: DISABLE
+- id: rba_media
+  name: Reserve Bank of Australia — Media Releases
+  lang: en
+  country: AU
+  region: Global
+  primary_category: monetary_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 96
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.rba.gov.au/rss/rss-cb.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: uk_ons_releases
+  name: UK Office for National Statistics — Releases
+  lang: en
+  country: GB
+  region: Europe
+  primary_category: gdp
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 93
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.ons.gov.uk/releases/rss
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: jp_kantei_news
+  name: 首相官邸 — 新着情報
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: fiscal_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 95
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.kantei.go.jp/jp/news.rdf
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: jp_meti_release
+  name: 経済産業省 — 報道発表
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: regulation
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 95
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.meti.go.jp/ml_index_release_atom.xml
+    declared_format: atom
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: jp_fsa_news
+  name: 金融庁 — 新着情報
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: banking
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 95
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.fsa.go.jp/fsaNewsListAll_rss2.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 15
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: jp_stat_release
+  name: 総務省統計局 — 統計新着
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: gdp
+  source_class: statistics_agency
+  category: primary_official
+  tier: 1
+  trust_score: 94
+  fetch_interval_minutes: 180
+  origin: tank
+  endpoint:
+    url: https://www.stat.go.jp/rss/index.rdf
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: dead
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP404（stat.go.jp/rss/index.rdf提供終了と確定）。JP公式統計の代替経路はestat_macro（APIキー設定後）'
+  investment_value: MARKET_CRITICAL
+  role: DISABLE
+  replacement_source: estat_macro
+- id: jp_cao_new
+  name: 内閣府 — 新着情報
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: macroeconomics
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 93
+  fetch_interval_minutes: 180
+  origin: tank
+  endpoint:
+    url: https://www.cao.go.jp/rss/new.rdf
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: jp_mof_press
+  name: 財務省 — 新着情報
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: fiscal_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 95
+  fetch_interval_minutes: 180
+  origin: tank
+  endpoint:
+    url: https://www.mof.go.jp/rss/new.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: dead
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP404（new.xml提供終了と確定）。MOF公式RSS全滅の一部。暫定代替は二次報道（nhk_business）'
+  investment_value: MARKET_CRITICAL
+  role: DISABLE
+  duplicate_group: mof
+  replacement_source: nhk_business
+- id: jp_mlit_news
+  name: 国土交通省 — 報道発表
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: infrastructure
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://www.mlit.go.jp/page/rss.rdf
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: jp_boj_stat
+  name: 日本銀行 — 統計・調査
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: monetary_policy
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 97
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.boj.or.jp/rss/release.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: jp_jpx_news
+  name: 日本取引所グループ (JPX) — お知らせ
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: corporate_disclosures
+  source_class: exchange
+  category: primary_official
+  tier: 1
+  trust_score: 92
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.jpx.co.jp/news/rss/index.rdf
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: jp_env_news
+  name: 環境省 — 報道発表
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: environment
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 88
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://www.env.go.jp/rss/news.rdf
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: us_sec_press
+  name: U.S. SEC — Press Releases
+  lang: en
+  country: US
+  region: North America
+  primary_category: regulation
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 96
+  fetch_interval_minutes: 120
+  origin: tank+dmb
+  endpoint:
+    url: https://www.sec.gov/news/pressreleases.rss
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 10
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: us_edgar_8k
+  name: SEC EDGAR — Latest 8-K Filings (Atom)
+  lang: en
+  country: US
+  region: North America
+  primary_category: corporate_disclosures
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 30
+  origin: tank
+  endpoint:
+    url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&company=&dateb=&owner=include&count=100&output=atom
+    declared_format: atom
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: us_edgar_10q
+  name: SEC EDGAR — Latest 10-Q Filings (Atom)
+  lang: en
+  country: US
+  region: North America
+  primary_category: corporate_disclosures
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-Q&company=&dateb=&owner=include&count=100&output=atom
+    declared_format: atom
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: us_edgar_10k
+  name: SEC EDGAR — Latest 10-K Filings (Atom)
+  lang: en
+  country: US
+  region: North America
+  primary_category: corporate_disclosures
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=10-K&company=&dateb=&owner=include&count=100&output=atom
+    declared_format: atom
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: us_edgar_6k
+  name: SEC EDGAR — Latest 6-K Filings (Atom)
+  lang: en
+  country: US
+  region: North America
+  primary_category: corporate_disclosures
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 88
+  fetch_interval_minutes: 120
+  origin: tank
+  endpoint:
+    url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=6-K&company=&dateb=&owner=include&count=100&output=atom
+    declared_format: atom
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: us_census_economic
+  name: U.S. Census Bureau — Economic Indicators
+  lang: en
+  country: US
+  region: North America
+  primary_category: gdp
+  source_class: statistics_agency
+  category: primary_official
+  tier: 1
+  trust_score: 93
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://www.census.gov/economic-indicators/indicator.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 10
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: us_bea_news
+  name: U.S. Bureau of Economic Analysis — News
+  lang: en
+  country: US
+  region: North America
+  primary_category: gdp
+  source_class: statistics_agency
+  category: primary_official
+  tier: 1
+  trust_score: 94
+  fetch_interval_minutes: 180
+  origin: tank
+  endpoint:
+    url: https://www.bea.gov/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: HIGH
+  role: SUPPORT
+- id: us_federal_register_energy
+  name: U.S. Federal Register — Energy Dept documents
+  lang: en
+  country: US
+  region: North America
+  primary_category: regulation
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://www.federalregister.gov/api/v1/documents.rss?conditions%5Bagencies%5D%5B%5D=energy-department
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 112
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: us_ftc_press
+  name: U.S. FTC — Press Releases
+  lang: en
+  country: US
+  region: North America
+  primary_category: regulation
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://www.ftc.gov/feeds/press-release.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: verified
+    tank_enabled: true
+    articles_observed:
+      count: 10
+      window: 2026-06-22..2026-07-22
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: us_fda_press
+  name: U.S. FDA — Press Announcements
+  lang: en
+  country: US
+  region: North America
+  primary_category: healthcare
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 90
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://www.fda.gov/about-fda/contact-fda/stay-informed/rss-feeds/press-releases/rss.xml
+    declared_format: unknown
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: unverified
+    method: live_check_blocked
+    checked_at: '2026-08-29'
+    note: 開発環境egress遮断によりlive check不能（2026-08-29）。tank実績は historical 参照（過去実績≠現在正常）
+  investment_value: MEDIUM
+  role: CONTEXT
+- id: edinet_disclosures
+  name: EDINET — 法定開示（有報/四半期/臨報/大量保有）
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: corporate_disclosures
+  source_class: regulator
+  category: primary_official
+  tier: 1
+  trust_score: 95
+  fetch_interval_minutes: 60
+  origin: tank
+  endpoint:
+    url: https://api.edinet-fsa.go.jp/api/v2/documents.json
+    declared_format: json_api
+    auth_type: api_key_query
+    usage_status: api_terms
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: auth_required
+    method: static_analysis
+    checked_at: '2026-08-29'
+    note: 'EDINET API v2はSubscription-Keyパラメータ必須（キー未設定。Secret値は保持しない）。live check 2026-08-29: APIホスト到達確認（パラメータ無しGETは404仕様。認証挙動自体は未実証）'
+  investment_value: HIGH
+  role: SUPPORT
+- id: estat_macro
+  name: e-Stat — 主要マクロ統計の更新（GDP/CPI/雇用/消費/生産/貿易等）
+  lang: ja
+  country: JP
+  region: Asia
+  primary_category: gdp
+  source_class: statistics_agency
+  category: primary_official
+  tier: 1
+  trust_score: 94
+  fetch_interval_minutes: 240
+  origin: tank
+  endpoint:
+    url: https://api.e-stat.go.jp/rest/3.0/app/json/getStatsList
+    declared_format: json_api
+    auth_type: api_key_query
+    usage_status: api_terms
+  historical:
+    tank_verification: unverified
+    tank_enabled: false
+  current_health:
+    state: auth_required
+    method: static_analysis
+    checked_at: '2026-08-29'
+    note: e-Stat APIはappIdパラメータ必須（キー未設定。Secret値は本カタログに保持しない）
+  investment_value: MARKET_CRITICAL
+  role: SUPPORT
+- id: yahoo_jp_business
+  name: Yahoo!ニュース 経済
+  lang: ja
+  country: JP
+  source_class: aggregator
+  category: general_secondary
+  tier: 3
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://news.yahoo.co.jp/rss/topics/business.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: yahoo_jp_reuters
+  name: ロイター(Yahoo!ニュース経由)
+  lang: ja
+  country: JP
+  source_class: aggregator
+  category: general_secondary
+  tier: 3
+  trust_score: 75
+  origin: dmb
+  endpoint:
+    url: https://news.yahoo.co.jp/rss/media/reut/all.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: dead
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Yahoo!ニュースのロイター配信面消滅。Legacy CI 14/14日取得失敗
+  investment_value: HIGH
+  role: DISABLE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 14
+  duplicate_group: reuters
+  replacement_source: yahoo_jp_business
+- id: nhk_business
+  name: NHKニュース 経済
+  lang: ja
+  country: JP
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 85
+  origin: dmb
+  endpoint:
+    url: https://www3.nhk.or.jp/rss/news/cat5.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'Legacy CI 14/14日配信＋live check 2026-08-29: HTTP200・RSS2・86件パース（二重に実証）'
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: yahoo_jp_toppicks
+  name: Yahoo!ニュース トピックス
+  lang: ja
+  country: JP
+  source_class: aggregator
+  category: general_secondary
+  tier: 3
+  trust_score: 50
+  origin: dmb
+  endpoint:
+    url: https://news.yahoo.co.jp/rss/topics/top-picks.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: MEDIUM
+  role: CONTEXT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: nhk_general
+  name: NHKニュース 総合
+  lang: ja
+  country: JP
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 85
+  origin: dmb
+  endpoint:
+    url: https://www3.nhk.or.jp/rss/news/cat0.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: MEDIUM
+  role: CONTEXT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: nikkei
+  name: 日本経済新聞 電子版(見出し)
+  lang: ja
+  country: JP
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 90
+  origin: dmb
+  endpoint:
+    url: https://www.nikkei.com/rss/index.rdf
+    declared_format: rdf
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: dead
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: 日経公開RSS提供終了（index.rdf恒常取得不能）。Legacy CI 14/14日取得失敗
+  investment_value: HIGH
+  role: DISABLE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 14
+  replacement_source: yahoo_jp_business
+- id: dmb_cnbc_markets
+  name: CNBC Markets
+  lang: en
+  country: US
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://www.cnbc.com/id/20910258/device/rss/rss.html
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+  duplicate_group: cnbc
+- id: dmb_marketwatch_top
+  name: MarketWatch Top Stories
+  lang: en
+  country: US
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://feeds.marketwatch.com/marketwatch/topstories/
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+  duplicate_group: marketwatch
+- id: marketwatch_market
+  name: MarketWatch Market Pulse
+  lang: en
+  country: US
+  source_class: major_news
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://feeds.marketwatch.com/marketwatch/realtimeheadlines/
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+    url_corrected_from: https://feeds.marketwatch.com/marketwatch/marketpulse/
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: HIGH
+  role: SUPPORT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+  duplicate_group: marketwatch
+- id: investing_news
+  name: Investing.com News
+  lang: en
+  country: US
+  source_class: aggregator
+  category: general_secondary
+  tier: 3
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://www.investing.com/rss/news.rss
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: MEDIUM
+  role: CONTEXT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: dmb_boj_whatsnew
+  name: 日本銀行 What's New
+  lang: ja
+  country: JP
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://www.boj.or.jp/rss/whatsnew.rdf
+    declared_format: rdf
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: dead
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP404（whatsnew.rdf提供終了と確定。P1-B DEGRADED判定を実測で更新）。EN版boj_whatsnewが稼働中'
+  investment_value: MARKET_CRITICAL
+  role: DISABLE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 14
+  duplicate_group: boj
+  replacement_source: boj_whatsnew
+- id: mof_whatsnew
+  name: 財務省 新着情報
+  lang: ja
+  country: JP
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://www.mof.go.jp/rss/whatsnew.rdf
+    declared_format: rdf
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: dead
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP404（whatsnew.rdf提供終了と確定）。jp_mof_press(new.xml)も同日404でMOF公式RSSは全滅→一次情報の空白。新URL調査までの暫定代替は二次報道（nhk_business）'
+  investment_value: MARKET_CRITICAL
+  role: DISABLE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 14
+  duplicate_group: mof
+  replacement_source: nhk_business
+- id: dmb_ecb_press
+  name: ECB Press Releases
+  lang: en
+  country: US
+  source_class: primary_official
+  category: primary_official
+  tier: 1
+  trust_score: 97
+  origin: dmb
+  endpoint:
+    url: https://www.ecb.europa.eu/rss/press.xml
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: live_http
+    checked_at: '2026-08-29'
+    note: 'live check 2026-08-29: HTTP200・RSS2・15件パース・最新2026-08-28（CORE実接続確認済み）'
+  investment_value: MARKET_CRITICAL
+  role: CORE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+  duplicate_group: ecb
+- id: bls_latest
+  name: BLS 最新統計
+  lang: en
+  country: US
+  source_class: statistics_agency
+  category: primary_official
+  tier: 1
+  trust_score: 97
+  origin: dmb
+  endpoint:
+    url: https://www.bls.gov/feed/bls_latest.rss
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI 14/14日配信（2026-08-16..29）で現在も稼働＝healthyの根拠。ただしlive check 2026-08-29はvNext汎用UAに403（bls.govはUA条件あり。P1-C
+      fetcherのUA調整が必要）
+  investment_value: MARKET_CRITICAL
+  role: CORE
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+  duplicate_group: bls
+- id: coindesk
+  name: CoinDesk
+  lang: en
+  country: US
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://www.coindesk.com/arc/outboundfeeds/rss/
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: MEDIUM
+  role: CONTEXT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+- id: cointelegraph
+  name: CoinTelegraph
+  lang: en
+  country: US
+  source_class: specialist_media
+  category: high_quality_secondary
+  tier: 2
+  trust_score: 60
+  origin: dmb
+  endpoint:
+    url: https://cointelegraph.com/rss
+    declared_format: rss2
+    auth_type: none
+    usage_status: public_feed
+  historical:
+    tank_verification: unverified
+    tank_enabled: true
+  current_health:
+    state: healthy
+    method: legacy_ci_report
+    checked_at: '2026-08-29'
+    note: Legacy CI日次レポートで14/14日配信確認（2026-08-16..2026-08-29）
+  investment_value: MEDIUM
+  role: CONTEXT
+  recent_ci:
+    window: 2026-08-16..2026-08-29
+    days_observed: 14
+    days_failed: 0
+reference_only:
+- US Treasury（安定した公開RSSが未確認のため自動取得はせず参照リンクのみ）
+- Bank of England（RSS構成の確証が低いため自動取得はせず参照リンクのみ）
+- IMF / World Bank / OECD（統計ポータルであり定型RSSでの検知に不向き）
+- Nasdaq / NYSE 公式（RSS形式が不安定なため見送り、参照リンクのみ）
+- OpenAI Blog / Google AI Blog / Microsoft AI Blog / Meta AI Blog / AWS Blog / Oracle Newsroom（安定した公開RSSが未確認）
+- NVIDIA / AMD / Intel / TSMC / ASML / Micron / Samsung / SK hynix Newsroom（定型RSSがなくスクレイピングが必要になるため）
+- 株探 / みんかぶ / moomoo / 楽天証券 / SBI証券 / JPX（参照リンク登録のみ。旧collectors Family B）
+skipped:
+- Seeking Alpha RSS（利用規約・Bot対策のリスクが不明確なため見送り）
+- Benzinga RSS（利用規約・Bot対策のリスクが不明確なため見送り）
+- SEMI / TrendForce（公開RSSが未確認。TrendForceは有料レポートが中心）
+- Baltic Exchange / Baltic Dry Index（公開の無償取得手段が未確認）
+- Coinbase Blog（安定した公開RSSが未確認）

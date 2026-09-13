@@ -21,6 +21,21 @@
 14. 毎回リポジトリ構成を推測しない（既知の構成・ドキュメントに基づいて作業する）
 15. GitHub Pages・GitHub Actions・Secretsは変更しない（依頼がある場合のみ）
 
+## J-Quants First（データ取得の最上位ルール・Phase 3.6で導入）
+
+market / company data を必要とする機能・Phaseでは、**最初に J-Quants capability を確認する**。
+
+1. `src/intelligence/jquants_ops/registry.py`（実測済み endpoint 台帳）と
+   `capability_gate.evaluate_capability()` を通し、結果を報告に載せる
+   （CURRENT_PLAN_SUPPORTED / CURRENT_PLAN_UNSUPPORTED / ALREADY_AVAILABLE /
+   NEEDS_NEW_ENDPOINT / PLAN_UPGRADE_CANDIDATE / DEFER）。
+2. 分類語彙: AVAILABLE_ON_CURRENT_PLAN / ALREADY_INGESTED / NEW_ENDPOINT_AVAILABLE /
+   NOT_ENTITLED / PLAN_UPGRADE_CANDIDATE / ALTERNATIVE_APPROVED_SOURCE / DEFERRED / NOT_REQUIRED。
+3. 現在の契約で取得可能なデータがある場合、理由なく別 source を重複実装しない。
+4. Standard / Premium endpoint を迂回しない。既知の 403 endpoint を再 probe し続けない。
+5. plan upgrade は自動実施しない（`plan_upgrade_register.py` へ記載し監督者判断）。
+6. 詳細: `docs/databank/JQUANTS_FIRST_RULE.md`。
+
 ## 設計原則（設計より実装を優先しない）
 
 このプロジェクトでは実装よりも設計の一貫性を優先する。
