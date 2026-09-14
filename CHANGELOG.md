@@ -4,6 +4,37 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.62 (2026-09-14) — Add Morning Brief deterministic Markdown renderer (Phase 4 P4-1B)
+
+### 追加
+
+- `src/intelligence/reports/render_markdown.py`【新規】
+  `render_morning_brief_markdown(brief: MorningBrief) -> str`。
+  入力は **`MorningBrief` のみ**（`CompassDraft` も `EvidencePackage` も受け取らず、
+  pipeline へ戻らない）。純関数で、同じ brief → byte 一致の Markdown。
+  I/O・Path・open・filesystem・時刻・乱数・環境変数・network を使わず、入力を書き換えない。
+  三段見出しは `30秒版｜今日のお客様向け一言` / `3分版｜今日のポイント` /
+  `詳細版｜相場の見通し＋なぜ`（4 つ目の分析段を作らない）。
+  Tier 2 は既存 point / coverage / 欠落次元・注意次元のみ、Tier 3 は既存 outlook /
+  outlook_points / why / risk のみを描画する。提示できない区分は固定表記
+  `（この区分は本日提示できません。理由: <契約語彙>）` で示し、市場コメントで埋めない。
+  理由は `[a-z0-9_]` の契約語彙のときだけ表示する（内部例外文を出さない fail-closed）。
+  provenance は **pattern A**: claim_id / fact_id / context_id / draft_id / package_id /
+  brief_id を customer-facing Markdown へ出さず、技術 footer も隠し HTML comment も作らない。
+  行頭 `#` のみ escape して節構造を守る（表示文字は変えない）。
+- `tests/intelligence/test_morning_brief_markdown.py`【新規】31 件。決定論・見出し順序・
+  Tier 1 の verbatim・提示不可時に散文を作らないこと・point 順序・既存 point 以外を出さないこと・
+  欠落次元／注意次元の表示・欠落を市場観へ読み替えないこと・Tier 3 の捏造なし・
+  abstain 時に無根拠のコメントが出ないこと・id / local path / PDF 名を出さないこと・
+  日本語の完全往復・入力を書き換えないこと・governance / legacy import 隔離・
+  I/O なし・`CompassDraft` / `EvidencePackage` を参照しないこと。
+
+`MorningBrief` schema は変更なし（表示の都合で schema を広げていない）。
+`morning_brief.py` / `model.py` / `pipeline.py` / `config.yaml` / `reports/__init__.py` は無変更。
+renderer は presentation only で、生成・言い換え・claim 再選択・再ランク・再検証・
+欠落の補完・`rule_ref` の修復を行わない。pilot / HTML / CSS / PDF / Pages / Actions /
+通知 / 配信 / 永続化 / Market Signal / LLM は含まない。
+
 ## v4.61 (2026-09-14) — Add Morning Brief three-tier core projection (Phase 4 P4-1A)
 
 ### 追加
