@@ -4,6 +4,49 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.63 (2026-09-14) — Add Morning Brief real-data pilot (Phase 4 P4-1C)
+
+### 追加
+
+- `src/intelligence/reports/pilot.py`【新規】Morning Brief real-data pilot（read-only）。
+  Market Data Bank の実 Fact / Context → EvidencePackage → 既存 quality gate を通った
+  CompassDraft → `build_morning_brief()` → `render_morning_brief_markdown()` を
+  端から端まで通し、構造化診断と実 Markdown を stdout へ出す薄い orchestration。
+  marker は `::P41C_HEAD::` / `INPUT` / `COMPASS` / `BRIEF` / `MARKDOWN` / `SAFETY` / `END`、
+  Markdown は `::P41C_MARKDOWN_BEGIN::` 〜 `::P41C_MARKDOWN_END::` で区切る。
+  `--session-date` 未指定なら既存 semantics の最新 morning session を使う
+  （日付規則を発明せず `weekday_after_last_fact_session` をそのまま使う）。
+  market bank が無い / 指定 session が無い場合は `::P41C_PILOT_SKIP::` で止まり推測しない。
+  **書き込みをしない**: CompassStore へ persist せず、product store（briefs.jsonl /
+  SQLite / Markdown archive / HTML）も作らない。保護 subtree
+  （compass_decisions / formal_review / compass_research / compass_replay /
+  compass_corpus / compass / reports / knowledge/compass_dna）は before/after で
+  **名前と byte 数だけ**を突き合わせ（本文は読まない）、絶対 path を stdout へ出さない。
+- `tests/intelligence/test_morning_brief_pilot.py`【新規】27 件。実 pipeline 出力の使用・
+  draft / package への id 束縛・Markdown が brief の描画と一致すること・手組み draft 迂回なし・
+  P4-1A / P4-1B の再利用（別 composer / 別 renderer を定義しない）・決定論（診断と sha256）・
+  Markdown 区切りの安定・明示 session 指定・data root へ 1 byte も書かないこと・
+  Decision / formal review / DNA / draft store / product store 無変更・promotion なし・
+  market bank 無しと未知 session の skip・欠落次元の surfacing・
+  ABSTAINED 時に無根拠の散文を出さないこと・governance / legacy / Phase 5+ import 隔離・
+  machine path / PDF 名 / 資格情報値を出さないこと・Markdown に内部 id を出さないこと。
+
+### 改善
+
+- `src/intelligence/compass/pilot.py`: real-data 入力の取得と朝の決め方を
+  `load_pilot_inputs()` / `PilotInputs` / `market_bank_available()` / `MORNING_RULE` として
+  module 関数へ切り出した（**behavior-preserving な抽出のみ**）。
+  Compass pilot と Morning Brief pilot が ingestion と日付規則を二重実装せず共有するための
+  最小 refactor で、`::P3C_*::` の出力内容・順序・値は変えていない（既存 pilot テスト 3 件を含む
+  `test_compass_generator.py` 80 件がそのまま通る）。
+
+Phase 4 entry contract 準拠: pilot は decision / formal_review / review / shadow_review /
+corpus / corpus_research / replay / evaluation と legacy（src/report・src/analysis・
+src/collectors）と Phase 5+（predictions / themes / thesis / screening / personalization）を
+import しない。APPROVED pattern の注入なし、Candidate 審査なし、promotion なし、
+Compass DNA 不変。HTML / CSS / PDF / Pages / Actions / 通知 / 配信 / 永続化 /
+Market Signal / LLM は含まない。
+
 ## v4.62 (2026-09-14) — Add Morning Brief deterministic Markdown renderer (Phase 4 P4-1B)
 
 ### 追加

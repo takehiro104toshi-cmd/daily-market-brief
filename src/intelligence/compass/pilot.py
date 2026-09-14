@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 from ..core.paths import data_root, market_bank_root
 from ..facts import pilot as fact_pilot
@@ -47,6 +49,83 @@ def _next_weekday(session_date: str) -> str:
     while day.weekday() >= 5:
         day += timedelta(days=1)
     return day.isoformat()
+
+
+#: market bank の index（これが無ければ real-data pilot は skip する）
+MARKET_BANK_INDEX = ("index", "market.sqlite3")
+#: 朝の決め方（Fact session の翌平日。Phase 3-C から不変）
+MORNING_RULE = "weekday_after_last_fact_session"
+
+
+@dataclass(frozen=True)
+class PilotInputs:
+    """real-data pilot の共通入力（Phase 3-C と同一の取得経路・同一の朝の決め方）。
+
+    Fact / Context / 対象 morning session をここで一度だけ組み、
+    Compass pilot と Morning Brief pilot が**同じ実装**を使う。
+    """
+
+    root: Path
+    bank: Path
+    config: object
+    facts: Tuple
+    context_items: Tuple
+    event_fact_count: int
+    fact_sessions: Tuple[str, ...]
+    mornings: Tuple[str, ...]
+
+    def sessions(self, count: int) -> List[str]:
+        """新しい方から `count` 件の morning session（Phase 3-C の切り出しと同じ）。"""
+        return list(self.mornings[-count:]) if count > 0 else []
+
+
+def market_bank_available(root: Optional[Path] = None) -> bool:
+    bank = market_bank_root(root if root is not None else data_root())
+    return bank.joinpath(*MARKET_BANK_INDEX).exists()
+
+
+def load_pilot_inputs(*, now: datetime, sessions_of_facts: int,
+                      root: Optional[Path] = None) -> Optional[PilotInputs]:
+    """market bank から Fact / Context / morning session を組む。bank が無ければ None。
+
+    Phase 3-A / 3-B と**同じ生成経路**（Fact / Context Layer を複製しない）。
+    market bank は読むだけで、ここでは何も書かない。
+    """
+    base = root if root is not None else data_root()
+    bank = market_bank_root(base)
+    if not bank.joinpath(*MARKET_BANK_INDEX).exists():
+        return None
+
+    from ..market.store import MarketBankStore
+
+    config = load_compass_config()
+    market = MarketBankStore(bank)
+    try:
+        qa = fact_pilot._qa_decisions(market)
+        points_by_series = {sid: fact_pilot.load_points(market.index, qa, sid)
+                            for sid, _n, _u in fact_pilot.PILOT_SERIES}
+        facts = assess_conflicts(fact_pilot.build_all_market_facts(
+            points_by_series, now=now, sessions=sessions_of_facts))
+    finally:
+        market.close()
+    events = _event_facts(base, now)
+    fact_sessions = sorted({f.time.primary_date for f in facts})
+    all_items: List = []
+    for offset, session_date in enumerate(fact_sessions):
+        previous = fact_sessions[offset - 1] if offset > 0 else None
+        items = build_session_contexts(facts, session_date, previous_session=previous,
+                                       event_facts=events, now=now)
+        all_items.extend(rank_contexts(items, session_date=session_date))
+    # Compassを書く朝 = 各Fact sessionの**翌**Tokyo session（前営業日の材料で書く）。
+    # 最終Fact sessionの翌平日がJST今日以前なら、その朝も対象にする
+    mornings = list(fact_sessions[1:])
+    if fact_sessions:
+        candidate = _next_weekday(fact_sessions[-1])
+        if candidate <= (now + timedelta(hours=9)).date().isoformat():
+            mornings.append(candidate)
+    return PilotInputs(root=base, bank=bank, config=config, facts=tuple(facts),
+                       context_items=tuple(all_items), event_fact_count=len(events),
+                       fact_sessions=tuple(fact_sessions), mornings=tuple(mornings))
 
 
 def _claim_row(claim) -> Dict[str, object]:
@@ -108,44 +187,23 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     now = datetime.now(timezone.utc)
     root = data_root()
-    bank = market_bank_root(root)
-    if not (bank / "index" / "market.sqlite3").exists():
+    inputs = load_pilot_inputs(now=now, sessions_of_facts=args.sessions + 1, root=root)
+    if inputs is None:
         print("::P3C_PILOT_SKIP::" + json.dumps(
-            {"reason": "market_bank_not_local", "market_bank_root": str(bank)},
+            {"reason": "market_bank_not_local", "market_bank_root": str(market_bank_root(root))},
             ensure_ascii=False))
         return 0
 
-    from ..market.store import MarketBankStore
-
-    config = load_compass_config()
-    market = MarketBankStore(bank)
-    qa = fact_pilot._qa_decisions(market)
-    points_by_series = {sid: fact_pilot.load_points(market.index, qa, sid)
-                        for sid, _n, _u in fact_pilot.PILOT_SERIES}
-    # Phase 3-A / 3-B と**同じ生成経路**（Fact / Context Layerを複製しない）
-    facts = assess_conflicts(fact_pilot.build_all_market_facts(
-        points_by_series, now=now, sessions=args.sessions + 1))
-    events = _event_facts(root, now)
-    fact_sessions = sorted({f.time.primary_date for f in facts})
-    all_items: List = []
-    for offset, session_date in enumerate(fact_sessions):
-        previous = fact_sessions[offset - 1] if offset > 0 else None
-        items = build_session_contexts(facts, session_date, previous_session=previous,
-                                       event_facts=events, now=now)
-        all_items.extend(rank_contexts(items, session_date=session_date))
-    # Compassを書く朝 = 各Fact sessionの**翌**Tokyo session（前営業日の材料で書く）。
-    # 最終Fact sessionの翌平日がJST今日以前なら、その朝も対象にする
-    mornings = list(fact_sessions[1:])
-    if fact_sessions:
-        candidate = _next_weekday(fact_sessions[-1])
-        if candidate <= (now + timedelta(hours=9)).date().isoformat():
-            mornings.append(candidate)
-    sessions = mornings[-args.sessions:]
+    config = inputs.config
+    facts = list(inputs.facts)
+    all_items = list(inputs.context_items)
+    fact_sessions = list(inputs.fact_sessions)
+    sessions = inputs.sessions(args.sessions)
     print("::P3C_INPUT::" + json.dumps({
         "sessions": sessions, "fact_sessions": fact_sessions,
-        "next_morning_rule": "weekday_after_last_fact_session",
+        "next_morning_rule": MORNING_RULE,
         "facts_total": len(facts), "contexts_total": len(all_items),
-        "event_facts": len(events), "generator": config.generator,
+        "event_facts": inputs.event_fact_count, "generator": config.generator,
         "config": config.as_dict(),
     }, ensure_ascii=False))
 
@@ -267,7 +325,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         "generator_prompt_used": False,
     }, ensure_ascii=False))
 
-    market.close()
     store.close()
     return 0
 
