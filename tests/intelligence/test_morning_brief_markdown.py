@@ -30,6 +30,11 @@ from src.intelligence.reports.model import (
 )
 from src.intelligence.reports.morning_brief import build_morning_brief
 from src.intelligence.reports.render_markdown import (
+    CONFIDENCE_JA,
+    DIMENSION_JA,
+    DIRECTION_JA,
+    HORIZON_JA,
+    STATUS_JA,
     H_COVERAGE,
     H_RISK,
     H_TIER1,
@@ -138,16 +143,16 @@ class TestDeterminism:
 # ---------------------------------------------------------------- tier 1
 
 class TestTier1:
-    def test_text_appears_verbatim(self, brief, markdown):
-        assert brief.tier1.available and brief.tier1.text
-        assert brief.tier1.text in markdown
+    def test_display_text_appears_verbatim(self, brief, markdown):
+        assert brief.tier1.available and brief.tier1.display_text
+        assert brief.tier1.display_text in markdown
 
     def test_unavailable_emits_no_invented_prose(self, brief):
         out = render_morning_brief_markdown(replace(
             brief, tier1=BriefTier1(available=False,
                                     unavailable_reason=R_ONE_LINER_UNAVAILABLE)))
         assert f"（この区分は本日提示できません。理由: {R_ONE_LINER_UNAVAILABLE}）" in out
-        assert brief.tier1.text not in out
+        assert brief.tier1.display_text not in out
 
     def test_unsafe_reason_is_not_exposed(self, brief):
         """契約語彙でない理由（例外文など）は表示しない。"""
@@ -163,31 +168,31 @@ class TestTier1:
 class TestTier2:
     def test_renders_points_in_brief_order(self, brief, markdown):
         assert brief.tier2.points
-        positions = [markdown.index(p.text) for p in brief.tier2.points]
+        positions = [markdown.index(p.display_text) for p in brief.tier2.points]
         assert positions == sorted(positions)
 
     def test_renders_only_existing_points_and_coverage(self, brief, markdown):
         section = markdown.split(f"## {H_TIER2}")[1].split(f"## {H_TIER3}")[0]
         bullets = [line[2:] for line in section.splitlines() if line.startswith("- ")]
-        known = {p.text for p in brief.tier2.points} | {p.text for p in brief.tier2.coverage}
+        known = ({p.display_text for p in brief.tier2.points}
+                 | {p.display_text for p in brief.tier2.coverage})
         extra = [b for b in bullets if b not in known
                  and not b.startswith((L_MISSING, L_UNRELIABLE))]
         assert extra == [], extra
 
     def test_coverage_claim_is_rendered(self, brief, markdown):
         for point in brief.tier2.coverage:
-            assert point.text in markdown
+            assert point.display_text in markdown
 
     def test_missing_and_unreliable_dimensions_are_represented(self, degraded_brief):
+        """生キーではなく日本語ラベル＋充足状況で出ること。"""
         out = render_morning_brief_markdown(degraded_brief)
         assert degraded_brief.tier2.missing_dimensions
-        assert f"### {H_COVERAGE}" in out
+        assert f"### {H_COVERAGE}" in out and L_MISSING in out
         for dim in degraded_brief.tier2.missing_dimensions:
-            assert dim in out
-        assert L_MISSING in out
-        for dim in degraded_brief.tier2.unreliable_dimensions:
-            assert dim in out
-        assert L_UNRELIABLE in out
+            assert dim not in out                       # 生キーは出さない
+            assert DIMENSION_JA[dim] in out             # ラベルは出す
+            assert STATUS_JA[degraded_brief.tier2.dimension_status[dim]] in out
 
     def test_missing_dimension_is_not_turned_into_a_market_view(self, degraded_brief):
         out = render_morning_brief_markdown(degraded_brief)
@@ -199,11 +204,14 @@ class TestTier2:
         out = render_morning_brief_markdown(replace(
             brief, tier2=BriefTier2(available=False, coverage=brief.tier2.coverage,
                                     missing_dimensions=("usd_jpy",),
+                                    dimension_status={"usd_jpy": "STALE"},
                                     unavailable_reason="no_grounded_points")))
         assert "（この区分は本日提示できません。理由: no_grounded_points）" in out
-        assert "usd_jpy" in out
+        assert DIMENSION_JA["usd_jpy"] in out and STATUS_JA["STALE"] in out
+        assert "usd_jpy" not in out
         for point in brief.tier2.points:
-            assert point.text not in out.split(f"## {H_TIER2}")[1].split(f"## {H_TIER3}")[0]
+            body = out.split(f"## {H_TIER2}")[1].split(f"## {H_TIER3}")[0]
+            assert point.display_text not in body
 
 
 # ---------------------------------------------------------------- tier 3
@@ -212,11 +220,11 @@ class TestTier3:
     def test_renders_outlook_why_and_risk_from_brief_only(self, brief, markdown):
         section = markdown.split(f"## {H_TIER3}")[1]
         assert brief.tier3.outlook is not None
-        assert brief.tier3.outlook.direction in section
-        assert brief.tier3.outlook.confidence in section
-        assert brief.tier3.outlook.horizon in section
+        assert DIRECTION_JA[brief.tier3.outlook.direction] in section
+        assert CONFIDENCE_JA[brief.tier3.outlook.confidence] in section
+        assert HORIZON_JA[brief.tier3.outlook.horizon] in section
         bullets = [line[2:] for line in section.splitlines() if line.startswith("- ")]
-        known = {p.text for p in
+        known = {p.display_text for p in
                  brief.tier3.outlook_points + brief.tier3.why + brief.tier3.risk}
         assert set(bullets) <= known
         assert f"### {H_WHY}" in section and f"### {H_RISK}" in section
@@ -233,7 +241,7 @@ class TestTier3:
         assert f"（この区分は本日提示できません。理由: {R_NO_GROUNDED_COUNTER_CASE}）" in section
         assert f"### {H_WHY}" not in section and f"### {H_RISK}" not in section
         for point in brief.tier3.outlook_points + brief.tier3.why + brief.tier3.risk:
-            assert point.text not in section
+            assert point.display_text not in section
 
 
 # ---------------------------------------------------------------- abstain / minimal
@@ -292,10 +300,10 @@ class TestProvenanceAndSafety:
 
     def test_japanese_text_round_trips_exactly(self, brief, markdown):
         for point in brief.points:
-            assert point.text in markdown, point.claim_id
+            assert point.display_text in markdown, point.claim_id
 
     def test_leading_hash_in_source_text_cannot_break_sections(self, brief):
-        poisoned = replace(brief.tier1, text="# 見出しに化ける文。")
+        poisoned = replace(brief.tier1, display_text="# 見出しに化ける文。")
         out = render_morning_brief_markdown(replace(brief, tier1=poisoned))
         headings = [line for line in out.splitlines() if line.startswith("#")]
         assert "# 見出しに化ける文。" not in headings

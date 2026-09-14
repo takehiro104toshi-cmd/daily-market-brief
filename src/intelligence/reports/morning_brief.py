@@ -14,14 +14,19 @@
 - **再ランクしない**。並びは claim の `order`、同点は `claim_id` で決める。
 - **fail closed**。材料が無ければ散文で埋めず、tier を落として機械可読な理由を残す。
 - `rule_ref` は claim から**そのまま**運ぶ（ここで作らない・直さない・置き換えない）。
+- customer-facing 本文（`display_text`）は、逐語 `text` から**固定の言い換え規則**だけで作る。
+  内部語彙（経験則 ID / Evidence Package / 因果注記の内部表現 / 次元キーの再掲）を外すだけで、
+  事実・含意・注意喚起の意味は変えない。新しい市場判断も新しい claim も作らない。
 - Decision / formal_review / corpus / replay / shadow_review / evaluation と legacy は import しない。
 """
 from __future__ import annotations
 
-from typing import List, Sequence, Tuple
+import re
+from typing import Dict, List, Sequence, Tuple
 
 from ..compass.evidence_package import EvidencePackage
 from ..compass.model import ClaimRole, CompassClaim, CompassDraft, CompassOutlook
+from ..compass.one_liner import strip_provenance
 from .model import (
     MORNING_BRIEF_SCHEMA_VERSION,
     R_DRAFT_NOT_USABLE,
@@ -43,6 +48,32 @@ from .model import (
 )
 
 
+# ---------------------------------------------------------------- customer-safe 言い換え
+#: 内部語 → 顧客向け語（**固定文字列の置換のみ**。判断も語順も変えない）
+DISPLAY_REPLACEMENTS: Tuple[Tuple[str, str], ...] = (
+    ("本Evidence Packageに含まれない", "現在の確認対象には含まれない"),
+    ("（因果関係は特定しない）", "（因果関係を示すものではありません）"),
+)
+#: COVERAGE claim が再掲する次元一覧。構造化された missing / unreliable が正なので本文からは外す
+_COVERAGE_DIMENSION_SENTENCE = re.compile(r"語れない次元: [^。]*。")
+
+
+def customer_text(text: str) -> str:
+    """逐語 claim text → 顧客向け表示テキスト（決定論的・冪等）。
+
+    行うのは次の 3 つだけ:
+      1. 経験則 ID の出典タグを外す（`根拠（経験則 JP_DIR_001）:` → `根拠:`）
+      2. 内部語の固定置換（`DISPLAY_REPLACEMENTS`）
+      3. COVERAGE 本文の次元再掲を外す（構造化フィールドと重複するため）
+    事実・数値・含意・注意喚起は一切変更しない。
+    """
+    out = strip_provenance(text)
+    for src, dst in DISPLAY_REPLACEMENTS:
+        out = out.replace(src, dst)
+    out = _COVERAGE_DIMENSION_SENTENCE.sub("", out)
+    return out.strip()
+
+
 def _to_point(claim: CompassClaim) -> BriefPoint:
     """claim → projection。**値を作り替えない**（text も rule_ref もそのまま）。"""
     return BriefPoint(
@@ -50,6 +81,7 @@ def _to_point(claim: CompassClaim) -> BriefPoint:
         claim_role=claim.claim_role,
         claim_type=claim.claim_type,
         text=claim.text,
+        display_text=customer_text(claim.text),
         grounding_status=claim.grounding_status,
         order=claim.order,
         supporting_fact_ids=tuple(claim.supporting_fact_ids),
@@ -77,7 +109,13 @@ def _tier1(draft: CompassDraft, usable: bool) -> BriefTier1:
     if not text.strip():
         return BriefTier1(available=False,
                           unavailable_reason=draft.abstain_reason or R_ONE_LINER_UNAVAILABLE)
-    return BriefTier1(available=True, text=text)
+    return BriefTier1(available=True, text=text, display_text=customer_text(text))
+
+
+def _dimension_status(package: EvidencePackage, dimensions: Sequence[str]) -> Dict[str, str]:
+    """表示に出す次元の充足状況（key -> ContextStatus の値）。信頼性の意味を構造で保持する。"""
+    known = dict(package.dimension_status)
+    return {dim: str(getattr(known.get(dim), "value", "") or "") for dim in dimensions}
 
 
 def _tier2(draft: CompassDraft, package: EvidencePackage, usable: bool) -> BriefTier2:
@@ -85,17 +123,19 @@ def _tier2(draft: CompassDraft, package: EvidencePackage, usable: bool) -> Brief
     coverage = _grounded(draft.claims, *TIER2_COVERAGE_ROLES)
     missing = tuple(package.missing_dimensions)
     unreliable = tuple(package.unreliable_dimensions)
+    status = _dimension_status(package, missing + unreliable)
     if not usable:
         return BriefTier2(available=False, coverage=coverage, missing_dimensions=missing,
-                          unreliable_dimensions=unreliable,
+                          unreliable_dimensions=unreliable, dimension_status=status,
                           unavailable_reason=draft.abstain_reason or R_DRAFT_NOT_USABLE)
     points = _grounded(draft.claims, *TIER2_POINT_ROLES)
     if not points:
         return BriefTier2(available=False, coverage=coverage, missing_dimensions=missing,
-                          unreliable_dimensions=unreliable,
+                          unreliable_dimensions=unreliable, dimension_status=status,
                           unavailable_reason=R_NO_GROUNDED_POINTS)
     return BriefTier2(available=True, points=points, coverage=coverage,
-                      missing_dimensions=missing, unreliable_dimensions=unreliable)
+                      missing_dimensions=missing, unreliable_dimensions=unreliable,
+                      dimension_status=status)
 
 
 def _brief_outlook(outlook: CompassOutlook) -> BriefOutlook:

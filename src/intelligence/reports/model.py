@@ -9,18 +9,25 @@ schema。ここは「読み替え層」であり、新しい知識も新しい�
 - Decision state / formal-review pattern id / replay metadata / promotion state /
   local path / PDF 名 / 機密本文は **schema に持たない**。
 - Compass DNA の `rule_ref` は claim から**そのまま**運ぶ。ここで作らない・直さない。
+
+customer-facing 本文と監査用本文の分離（0.2.0）:
+- `text` … `CompassClaim.text` の**逐語**。監査・provenance 用で、変更しない。
+- `display_text` … 顧客向け表示用。**同じ事実・同じ含意**のまま、内部語彙
+  （`（経験則 JP_DIR_001）` / `本Evidence Package` / `（因果関係は特定しない）` /
+  次元キーの再掲）だけを決定論的に言い換えたもの。新しい市場判断は足さない。
 """
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Mapping, Optional, Tuple
 
 from ..compass.model import ClaimRole, ClaimType, GroundingStatus, QualityVerdict
 from ..core.ids import content_id
 
 #: Morning Brief schema の版（`COMPASS_SCHEMA_VERSION` とは独立に動く）
-MORNING_BRIEF_SCHEMA_VERSION = "0.1.0"
+#: 0.2.0: customer-safe な `display_text` と `dimension_status` を追加（P4-1 presentation refinement）
+MORNING_BRIEF_SCHEMA_VERSION = "0.2.0"
 
 # ---------------------------------------------------------------- unavailable reasons
 #: tier が出せない理由は**機械可読な固定語**にする（散文で言い換えない）
@@ -43,12 +50,13 @@ TIER3_ROLES: Tuple[ClaimRole, ...] = (ClaimRole.OUTLOOK, ClaimRole.WHY, ClaimRol
 
 @dataclass(frozen=True, kw_only=True)
 class BriefPoint:
-    """claim 1 件の projection。**本文は draft の claim.text をそのまま運ぶ。**"""
+    """claim 1 件の projection。`text` は逐語（監査）、`display_text` は顧客向け。"""
 
     claim_id: str
     claim_role: ClaimRole
     claim_type: ClaimType
     text: str
+    display_text: str
     grounding_status: GroundingStatus
     order: int = 0
     supporting_fact_ids: Tuple[str, ...] = ()
@@ -63,6 +71,7 @@ class BriefPoint:
             "claim_role": self.claim_role.value,
             "claim_type": self.claim_type.value,
             "text": self.text,
+            "display_text": self.display_text,
             "grounding_status": self.grounding_status.value,
             "order": self.order,
             "supporting_fact_ids": list(self.supporting_fact_ids),
@@ -75,14 +84,16 @@ class BriefPoint:
 
 @dataclass(frozen=True, kw_only=True)
 class BriefTier1:
-    """30 秒版「今日のお客様向け一言」。`CompassDraft.one_liner` の完全一致のみ。"""
+    """30 秒版「今日のお客様向け一言」。`text` は `CompassDraft.one_liner` の完全一致。"""
 
     available: bool
     text: str = ""
+    display_text: str = ""
     unavailable_reason: str = ""
 
     def as_dict(self) -> Dict[str, object]:
         return {"available": self.available, "text": self.text,
+                "display_text": self.display_text,
                 "unavailable_reason": self.unavailable_reason}
 
 
@@ -95,6 +106,8 @@ class BriefTier2:
     coverage: Tuple[BriefPoint, ...] = ()
     missing_dimensions: Tuple[str, ...] = ()
     unreliable_dimensions: Tuple[str, ...] = ()
+    #: 上記 2 つに挙げた次元の充足状況（key -> ContextStatus の値。表示語ではない）
+    dimension_status: Mapping[str, str] = field(default_factory=dict)
     unavailable_reason: str = ""
 
     def as_dict(self) -> Dict[str, object]:
@@ -104,6 +117,7 @@ class BriefTier2:
             "coverage": [p.as_dict() for p in self.coverage],
             "missing_dimensions": list(self.missing_dimensions),
             "unreliable_dimensions": list(self.unreliable_dimensions),
+            "dimension_status": dict(self.dimension_status),
             "unavailable_reason": self.unavailable_reason,
         }
 

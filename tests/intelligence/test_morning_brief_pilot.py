@@ -236,14 +236,19 @@ class TestDegradedPaths:
         assert "::P41C_BRIEF::" not in out and brief_pilot.MARKDOWN_BEGIN not in out
 
     def test_missing_and_unreliable_dimensions_are_surfaced(self, seeded, capsys):
+        """診断には生キー、customer Markdown には日本語ラベルで出ること（P4-1 presentation）。"""
+        from src.intelligence.reports.render_markdown import DIMENSION_JA
+
         out, m = _run(capsys)
         surfaced = (list(m["BRIEF"]["missing_dimensions"])
                     + list(m["BRIEF"]["unreliable_dimensions"]))
         assert surfaced, "seed が劣化次元を作らないと本テストは無意味"
         assert m["BRIEF"]["unreliable_dimensions"] == \
             m["COMPASS"]["package_unreliable_dimensions"]
+        block = _markdown_block(out)
         for dim in surfaced:
-            assert dim in _markdown_block(out)
+            assert dim not in block                 # 生キーは顧客向けに出さない
+            assert DIMENSION_JA[dim] in block       # ラベルは出す
 
     def test_abstained_pipeline_result_is_handled_safely(self, seeded, capsys, monkeypatch):
         """実 pipeline 結果を ABSTAINED に差し替えても、無根拠の散文を出さない。"""

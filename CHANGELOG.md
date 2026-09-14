@@ -4,6 +4,44 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.65 (2026-09-14) — Improve Morning Brief customer-facing presentation (Phase 4 P4-1)
+
+実データ run（Actions 34896447537 / session 2026-09-15）で顧客向け Markdown に内部語彙が
+出ていた件への対応。**分析層（Compass generator / CompassDraft）は一切変更しない**。
+customer-facing の整形は MorningBrief projection と Markdown presentation だけで行う。
+
+### 追加
+
+- `src/intelligence/reports/model.py`: schema **0.1.0 → 0.2.0**。
+  `BriefPoint.display_text` / `BriefTier1.display_text`（顧客向け本文。逐語 `text` は監査用に保持）、
+  `BriefTier2.dimension_status`（表示に出す次元の ContextStatus。信頼性の意味を構造で保持）。
+- `src/intelligence/reports/morning_brief.py`: `customer_text()`（決定論的・冪等）と
+  `DISPLAY_REPLACEMENTS`。経験則 ID の出典タグ除去（`根拠（経験則 JP_DIR_001）:` → `根拠:`）、
+  `本Evidence Packageに含まれない` → `現在の確認対象には含まれない`、
+  `（因果関係は特定しない）` → `（因果関係を示すものではありません）`、
+  COVERAGE 本文の `語れない次元: …。` 除去（構造化フィールドが正のため重複を排除）。
+  事実・数値・含意・注意喚起は変更しない。`rule_ref` などの provenance は object 側に保持する。
+- `src/intelligence/reports/render_markdown.py`: 明示的な表示対応表
+  `DIRECTION_JA`（5 値）/ `CONFIDENCE_JA`（3 値）/ `HORIZON_JA` / `DIMENSION_JA`（market state 8 +
+  market internals 5）/ `STATUS_JA`（ContextStatus 7 値）と `UnmappedDisplayValue`。
+  対応表に無い値は生値も代替文も出さず **fail closed**。
+  missing は unreliable の部分集合であるため、同じ項目を 2 行に出さない表示重複排除も入れた。
+  見出し語は `現在確認できていない項目` / `取り扱いに注意が必要な項目`。
+- `tests/intelligence/test_morning_brief_presentation.py`【新規】22 件。実データ形
+  （2026-09-15・4 次元 STALE・UPWARD_BIAS・LOW・next_tokyo_session・JP_DIR_001 / JP_US_001）の
+  regression fixture、内部トークン非露出、意味の保持、provenance の object 側保持、
+  対応表の網羅性、未知値の fail closed、draft 不変、決定論、助言語なし、abstain 安全、import 隔離。
+
+### 改善
+
+- 既存 report テスト（`test_morning_brief.py` / `test_morning_brief_markdown.py` /
+  `test_morning_brief_pilot.py`）を 0.2.0 schema と表示ラベルに追随させた。
+  Markdown 側は生キーが出ないこと・日本語ラベルが出ることを両方 assert する。
+
+`src/intelligence/compass/**` / `facts` / `context` / `market` / governance / legacy /
+workflow / trigger file は無変更。CompassDraft schema も claim text も不変。
+HTML / Market Signal / delivery / Actions trigger は含まない。
+
 ## v4.64 (2026-09-14) — Add P4-1C Morning Brief validation step to p2d-market-pilot workflow
 
 ### 追加

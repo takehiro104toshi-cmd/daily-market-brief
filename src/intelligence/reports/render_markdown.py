@@ -12,15 +12,22 @@ provenance の扱いは **pattern A**: claim_id / fact_id / context_id / digest 
 customer-facing Markdown へ出さず、`MorningBrief` 側に残したままにする
 （技術 footer も隠し HTML comment も作らない）。
 
-claim 本文（`（経験則 JP_DIR_001）` のような出典表記を含む）は Compass の
-quality gate を通過した**承認済みの文**であり、ここでは**そのまま**表示する。
+本文は `BriefPoint.display_text` / `BriefTier1.display_text`（P4-1A projection が作った
+customer-safe テキスト）を**そのまま**表示する。逐語 `text` は brief 側に残るが描画しない。
+
+構造化された値（方向・確度・対象期間・次元キー・充足状況）は、**明示的な対応表**だけで
+日本語ラベルへ置き換える。対応表に無い値は捏造せず `UnmappedDisplayValue` で fail closed。
 """
 from __future__ import annotations
 
 import re
-from typing import List
+from typing import Dict, List
 
 from .model import BriefPoint, BriefTier2, BriefTier3, MorningBrief
+
+
+class UnmappedDisplayValue(KeyError):
+    """表示対応表に無い構造化値。**推測で表示しない**ための fail-closed 例外。"""
 
 #: 見出し（P4-1 の三段。ここで 4 つ目の分析段を作らない）
 H_TITLE = "モーニングブリーフ"
@@ -31,9 +38,9 @@ H_COVERAGE = "対象範囲・欠落"
 H_WHY = "なぜ"
 H_RISK = "反対材料"
 
-#: 欠落次元のラベル（次元名そのものは変換せず、市場観へ読み替えない）
-L_MISSING = "欠落した観測次元"
-L_UNRELIABLE = "取り扱いに注意が必要な次元"
+#: 欠落・注意項目の見出し語（市場観へは読み替えない。可否だけを述べる）
+L_MISSING = "現在確認できていない項目"
+L_UNRELIABLE = "取り扱いに注意が必要な項目"
 L_DIRECTION = "方向"
 L_CONFIDENCE = "確度"
 L_HORIZON = "対象期間"
@@ -46,6 +53,61 @@ UNAVAILABLE_WITH_REASON = "（この区分は本日提示できません。理�
 _SAFE_REASON = re.compile(r"\A[a-z0-9_]{1,64}\Z")
 #: 行頭の `#` は節構造を壊すため escape する（表示文字は変わらない）
 _LEADING_HASH = re.compile(r"\A(\s*)#")
+
+
+# ---------------------------------------------------------------- 表示対応表（明示・完全）
+#: OutlookDirection の値 → 顧客向け表現（方向の強弱を足さない）
+DIRECTION_JA: Dict[str, str] = {
+    "UPWARD_BIAS": "上方向にやや傾く",
+    "DOWNWARD_BIAS": "下方向にやや傾く",
+    "RANGE_BOUND": "一定の範囲で推移しやすい",
+    "MIXED": "強弱が混在する",
+    "UNCERTAIN": "方向は定めにくい",
+}
+#: Confidence の値 → 顧客向け表現
+CONFIDENCE_JA: Dict[str, str] = {"HIGH": "高", "MEDIUM": "中", "LOW": "低"}
+#: outlook horizon の値 → 顧客向け表現
+HORIZON_JA: Dict[str, str] = {"next_tokyo_session": "次の東京市場"}
+#: 観測次元キー → 顧客向け表現（market state 8 次元 + market internals 5 次元）
+DIMENSION_JA: Dict[str, str] = {
+    "japan_equities": "日本株",
+    "nikkei_vs_topix": "日経平均とTOPIXの相対動向",
+    "nt_ratio": "NT倍率",
+    "japan_rates": "国内金利",
+    "us_rates_2y": "米2年金利",
+    "us_rates_10y": "米10年金利",
+    "us_curve": "米国の利回り曲線",
+    "usd_jpy": "ドル円",
+    "breadth": "値上がり銘柄の広がり",
+    "turnover": "売買代金",
+    "sector_leadership": "業種の強弱",
+    "size_leadership": "大型・小型の強弱",
+    "investor_flow": "投資部門別の売買動向",
+}
+#: ContextStatus の値 → 顧客向け表現（信頼性の意味は変えない）
+STATUS_JA: Dict[str, str] = {
+    "AVAILABLE": "確認済み",
+    "MISSING": "未確認",
+    "STALE": "更新遅れ",
+    "INSUFFICIENT_HISTORY": "履歴不足",
+    "CONFLICTED": "情報が一致しない",
+    "LIMITED_USE": "限定的に利用",
+    "NOT_ENTITLED": "取得対象外",
+}
+
+
+def _label(mapping: Dict[str, str], value: str, kind: str) -> str:
+    """対応表にある値だけを表示する。無ければ fail closed（生値も代替文も出さない）。"""
+    try:
+        return mapping[value]
+    except KeyError:
+        raise UnmappedDisplayValue(f"{kind}:{value}") from None
+
+
+def _dimension_phrase(key: str, status: str) -> str:
+    """`日経平均とTOPIXの相対動向（更新遅れ）` の形。status が無ければラベルのみ。"""
+    label = _label(DIMENSION_JA, key, "dimension")
+    return f"{label}（{_label(STATUS_JA, status, 'status')}）" if status else label
 
 
 def _safe_lines(text: str) -> List[str]:
@@ -69,7 +131,7 @@ def _bullet(text: str) -> List[str]:
 def _bullets(points: "tuple[BriefPoint, ...]") -> List[str]:
     out: List[str] = []
     for point in points:
-        out.extend(_bullet(point.text))
+        out.extend(_bullet(point.display_text))
     return out
 
 
@@ -88,10 +150,14 @@ def _tier2_block(tier2: BriefTier2) -> List[str]:
         body.append(_unavailable(tier2.unavailable_reason))
     coverage: List[str] = []
     coverage.extend(_bullets(tier2.coverage))
-    if tier2.missing_dimensions:
-        coverage.append(f"- {L_MISSING}: " + "、".join(tier2.missing_dimensions))
-    if tier2.unreliable_dimensions:
-        coverage.append(f"- {L_UNRELIABLE}: " + "、".join(tier2.unreliable_dimensions))
+    status = dict(tier2.dimension_status)
+    missing = tuple(tier2.missing_dimensions)
+    # unreliable は missing を含む上位集合。同じ項目を 2 行に出さない（表示上の重複のみ除去）
+    unreliable = tuple(k for k in tier2.unreliable_dimensions if k not in set(missing))
+    for heading, keys in ((L_MISSING, missing), (L_UNRELIABLE, unreliable)):
+        if keys:
+            coverage.append(f"- {heading}: " + "、".join(
+                _dimension_phrase(k, status.get(k, "")) for k in keys))
     if coverage:
         body.extend(["", f"### {H_COVERAGE}", ""] + coverage)
     return body
@@ -102,9 +168,9 @@ def _tier3_block(tier3: BriefTier3) -> List[str]:
         return [_unavailable(tier3.unavailable_reason)]
     outlook = tier3.outlook
     body: List[str] = [
-        f"**{L_DIRECTION}**: {outlook.direction} ／ "
-        f"**{L_CONFIDENCE}**: {outlook.confidence} ／ "
-        f"**{L_HORIZON}**: {outlook.horizon}",
+        f"**{L_DIRECTION}**: {_label(DIRECTION_JA, outlook.direction, 'direction')} ／ "
+        f"**{L_CONFIDENCE}**: {_label(CONFIDENCE_JA, outlook.confidence, 'confidence')} ／ "
+        f"**{L_HORIZON}**: {_label(HORIZON_JA, outlook.horizon, 'horizon')}",
         "",
     ]
     body.extend(_bullets(tier3.outlook_points))
@@ -121,8 +187,8 @@ def render_morning_brief_markdown(brief: MorningBrief) -> str:
 
     lines.append(f"## {H_TIER1}")
     lines.append("")
-    if brief.tier1.available and brief.tier1.text:
-        lines.extend(_paragraph(brief.tier1.text))
+    if brief.tier1.available and brief.tier1.display_text:
+        lines.extend(_paragraph(brief.tier1.display_text))
     else:
         lines.append(_unavailable(brief.tier1.unavailable_reason))
     lines.append("")

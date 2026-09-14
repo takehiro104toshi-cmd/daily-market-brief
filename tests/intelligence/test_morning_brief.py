@@ -130,8 +130,8 @@ class TestDeterminism:
             assert keys == sorted(keys)
 
     def test_schema_version_stable(self, brief):
-        assert brief.schema_version == MORNING_BRIEF_SCHEMA_VERSION == "0.1.0"
-        assert brief.as_dict()["schema_version"] == "0.1.0"
+        assert brief.schema_version == MORNING_BRIEF_SCHEMA_VERSION == "0.2.0"
+        assert brief.as_dict()["schema_version"] == "0.2.0"
 
 
 # ---------------------------------------------------------------- tier 1
@@ -222,6 +222,12 @@ class TestProvenance:
 # ---------------------------------------------------------------- missingness / abstain
 
 class TestMissingnessAndAbstain:
+    def test_dimension_status_is_preserved_for_listed_dimensions(self, brief, package):
+        listed = set(brief.tier2.missing_dimensions) | set(brief.tier2.unreliable_dimensions)
+        assert set(brief.tier2.dimension_status) == listed
+        for dim, status in brief.tier2.dimension_status.items():
+            assert status == package.dimension_status[dim].value
+
     def test_missing_dimensions_are_preserved(self, brief, package):
         assert brief.tier2.missing_dimensions == tuple(package.missing_dimensions)
         assert brief.tier2.unreliable_dimensions == tuple(package.unreliable_dimensions)
