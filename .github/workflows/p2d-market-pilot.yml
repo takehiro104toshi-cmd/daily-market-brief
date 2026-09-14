@@ -67,6 +67,16 @@ jobs:
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
         run: python -m src.intelligence.compass.pilot --sessions 5
+      # Phase 4 P4-1C: 直前のPhase 3-Cと**同じephemeral data root**の実Market Bankから
+      # EvidencePackage→CompassDraft（既存quality gate）→MorningBrief→Markdownを
+      # 端から端まで通し、構造化診断と実Markdownをstdoutへ出す。**読み取り専用**
+      # （Decision・formal review・MorningBrief product store・Markdown file・promotion・
+      # Compass DNA・Market Bank・replayのいずれも書かない。保護subtreeをbefore/afterで照合し、
+      # 変化があればexit 1）。session は既存semanticsの最新morningを使う（日付固定なし）。
+      - name: Phase 4 P4-1C Morning Brief real-data pilot (read-only)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -X utf8 -m src.intelligence.reports.pilot
       # Phase 3.5: Japan Market Internals。J-Quants Light の daily bars（date指定・
       # 1 session=1リクエスト）・security master・investor-types（週次）から
       # universe / breadth / turnover / sector / size / flow を集計し、Fact Layer・

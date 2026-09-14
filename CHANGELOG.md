@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.64 (2026-09-14) — Add P4-1C Morning Brief validation step to p2d-market-pilot workflow
+
+### 追加
+
+- `.github/workflows/p2d-market-pilot.yml`: Phase 3-C step の直後に
+  「Phase 4 P4-1C Morning Brief real-data pilot (read-only)」step を 1 つ追加
+  （`python -X utf8 -m src.intelligence.reports.pilot`）。同一 job・同一の
+  ephemeral data root `INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data` を使い、
+  Market Bank を作り直さない。stdout をリダイレクト・artifact 化・抑制しないため、
+  `::P41C_HEAD::` 〜 `::P41C_END::` と `::P41C_MARKDOWN_BEGIN::` 〜 `::P41C_MARKDOWN_END::`
+  の実 Markdown が Actions ログにそのまま残る。`continue-on-error` は付けず、
+  pilot の非ゼロ終了（binding 失敗・safety_check 失敗・保護 subtree 変化）で job を落とす。
+
+Python code 変更なし。trigger / permissions / concurrency / secrets / schedule は不変
+（既存どおり `.github/p2d_market_trigger` への push のみで起動）。
+新規 job なし、新規 workflow なし、delivery / Pages / 通知 / Market Signal なし。
+article-intelligence-data-tank・external_intelligence・raw.githubusercontent への参照ゼロ
+（Phase 4 input contract は不変）。
+
 ## v4.63 (2026-09-14) — Add Morning Brief real-data pilot (Phase 4 P4-1C)
 
 ### 追加
