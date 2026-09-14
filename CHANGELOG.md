@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.56 (2026-09-14) — Add candidate #4 real-write audit record（EVIDENCE_RISK / human REJECTED）
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §27「Candidate #4 real-write audit record」（履歴事実のみ。
+  driver `execute.py` / 実行 commit 束縛 `4589b31` / pattern `cpt_3831c38233ab1fcd`（**EVIDENCE_RISK**・本 Phase 初）/
+  machine REJECT_RECOMMENDED / **human REJECTED** / decision_id `cdc_f41559274158993b` / sequence 5 /
+  previous_record_hash = Candidate #2 2 回目の record hash / previous_decision_id・previous_state 空 /
+  HUMAN・FORMAL・NOT_PROMOTED / packet `frp_128f51cfd53b1674` / evidence digest `258c9aa883ee8d2f` /
+  material digest `079a7d021d71a006` / group digest `151d41b8867b0b4b`（sibling なし）/
+  replay `crp_2530396a5a3b8fb7`・`74d5b037498fc0de`（age 5・警告のみ・再生成なし）/ stability STABLE /
+  corpus eligible 144 / idempotency key = packet_id / record hash `5a78b695…c24814` / rows 4 → 5 /
+  reject driver `SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION` / support 6・span 109 日・4 か月・
+  direction counts UP 3・DOWN 2・RANGE 1 / axis Consistency LOW・Strength HIGH・Time HIGH・Cross HIGH・Quality HIGH /
+  DNA PARTIALLY_EXPLAINED・`JP_DIR_002`・conflicts 0 / 書き込み後も Phase 3.9.5 は OPEN）。理由本文は §27 にのみ記録。
+  低 support は REJECT の理由になり得ない（凍結 rule は Strength HIGH と反復矛盾を同時に要求する）ことも明記。
+- §21.1 Decision ledger に seq 5、`COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §10 に 5 回目の行を追加（理由カテゴリのみ）。
+
+Decision semantics・policy 6 層 digest・packet schema・guard・queue semantics・progression semantics は不変。
+コード変更なし（documentation only）。次の Human Review は行わない。
+
 ## v4.55 (2026-09-13) — Add candidate #2 second KEEP_REVIEWING audit record（再入後の 2 回目）
 
 ### 追加

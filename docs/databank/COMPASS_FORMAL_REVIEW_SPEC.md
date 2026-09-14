@@ -473,8 +473,9 @@ human formal decision reason（formal Decision の理由本文。本節にのみ
 | 2 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING | `cdc_0a420b63cc1257ed` | `179146cd` | §21 |
 | 3 | `cpt_30701289cfb0d151` | REJECT_RECOMMENDED | REJECTED | `cdc_087f4cf39db6ee97` | `36646cf9` | §24 |
 | 4 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING（2 回目・再入後） | `cdc_43d36c7b6626eab7` | `21025da6` | §26 |
+| 5 | `cpt_3831c38233ab1fcd` | REJECT_RECOMMENDED | REJECTED | `cdc_f41559274158993b` | `5a78b695` | §27 |
 
-chain: 各 seq の `previous_record_hash` は直前 seq の record hash（seq 2 → 1、seq 3 → 2、seq 4 → 3）。
+chain: 各 seq の `previous_record_hash` は直前 seq の record hash（seq 2 → 1、seq 3 → 2、seq 4 → 3、seq 5 → 4）。
 全行 HUMAN / FORMAL / NOT_PROMOTED。seq 4 は seq 2 と同じ pattern の 2 回目の Decision であり、
 pattern head 連鎖は `previous_decision_id=cdc_0a420b63cc1257ed` / `previous_state=KEEP_REVIEWING`。
 
@@ -802,3 +803,63 @@ contradiction remained confined to unresolved opposite-direction siblings**。
 - 同一 pattern の 2 回目 KEEP_REVIEWING は凍結 transition（`KEEP_REVIEWING → KEEP_REVIEWING`）の範囲内であり、
   §20.7 の duplicate hazard は呼び出し側束縛（`--expect-rows-before` / `--expect-current-state` /
   §23 の packet 束縛）で閉じている。
+
+## 27. Candidate #4 real-write audit record（監査証跡・履歴事実）
+
+本節は Phase 3.9.5 で 5 番目に書かれた実 human formal Decision の記録であり、§18 / §21 / §24 / §26 とは
+別事例として記録する。履歴の事実のみで semantics は定義しない。
+
+| 項目 | 値 |
+|---|---|
+| 実行 driver | `src/intelligence/formal_review/execute.py`（§20 + §23 の reviewed 束縛） |
+| 実行 commit（`--require-commit` 束縛） | `4589b31` |
+| pattern_id / pattern_type | `cpt_3831c38233ab1fcd` / **EVIDENCE_RISK**（本 Phase で最初の EVIDENCE_RISK） |
+| 直前の formal state | NONE（この pattern では初回の Decision） |
+| fresh queue rank | 1 |
+| **machine recommendation** | **REJECT_RECOMMENDED** |
+| **human formal decision** | **REJECTED**（機械推奨と同方向） |
+| decision_id | `cdc_f41559274158993b` |
+| sequence | 5 |
+| previous_record_hash | `21025da6…37d8863`（= Candidate #2 2 回目の record hash・global tail） |
+| previous_decision_id / previous_state | 空 / 空 |
+| actor / actor_type / review_mode | `P395_HUMAN_SUPERVISED_REVIEW` / HUMAN / FORMAL |
+| promotion_status | NOT_PROMOTED |
+| packet_id | `frp_128f51cfd53b1674` |
+| packet_evidence_digest | `258c9aa883ee8d2f` |
+| material_digest | `079a7d021d71a006` |
+| group_state_digest | `151d41b8867b0b4b`（sibling group なし・member 0・opposite 0・C1 / C3 非適用） |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de`（captured 139 / current 144 / age 5 /
+`W_REPLAY_EVIDENCE_AGE` / compatible。first REJECT position 82・2026-06-08・current-state eligible 57・
+persistence 1.0000・reversal 0・recovery 0） |
+| stability_class | STABLE |
+| corpus eligible（packet / write 時点） | 144 / 144 |
+| idempotency_key | `frp_128f51cfd53b1674`（= packet_id） |
+| record hash | `5a78b69580afac6842b1cfba1cc1922a63b24770039a4ce011348d9508c24814` |
+| Decision rows | 4 → 5 |
+| **reject driver** | **`SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION`**（document contradiction true / repeated true /
+first material contradiction position 41 / currently active / recovery なし / reversal 0 /
+recommendation before reject KEEP_REVIEWING / was_review_before_reject false） |
+| 証拠 | support 6 / eligible_support 6 / span 109 日 / 4 calendar months / distinct 2D cells 4 /
+confirmed 2D cells 2 / valid ratio 1.00 / direction counts UP 3・DOWN 2・RANGE 1 |
+| axis 状態 | Consistency LOW / Strength HIGH / Time HIGH / Cross-Regime HIGH / Data Quality HIGH |
+| DNA | classification PARTIALLY_EXPLAINED / best rule `JP_DIR_002` / direction relation UNKNOWN / conflicts 0
+（DNA promotion は別 gate・本 Decision は DNA を編集しない） |
+| policy digest | 6 層とも凍結値 |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN** |
+
+human formal decision reason（本節にのみ記録し、他所へ複製しない）:
+
+> The supporting evidence remains directionally contradictory across multiple observations and months; the
+> contradiction is repeated, active, and unrecovered, with no replay reversal or recovery.
+
+理由カテゴリ（他文書で参照してよい要約表現）: **candidate's own supporting evidence remained directionally
+contradictory across repeated observations with no recovery**。
+
+補足（履歴事実）:
+
+- support が 6 と小さいが、**低 support は REJECT の理由になり得ない**。凍結 rule（`rules.py` の REJECT 分岐）は
+  Consistency LOW かつ Strength HIGH 以上かつ Time MEDIUM 以上かつ「反復した矛盾」を同時に要求し、証拠不足は
+  Strength を下げて REJECT を **block** する側に働く。本件は Strength HIGH のまま document 間の反復矛盾が
+  成立した事例である（§24 の Candidate #3 と同じ driver、Candidate #2 の sibling 由来矛盾とは別系統）。
+- `W_REPLAY_EVIDENCE_AGE`（age 5）は警告であり、REJECTED の gate は replay の *compatibility* のみを要求する。
+  本 Decision で replay の再生成は行っていない。
