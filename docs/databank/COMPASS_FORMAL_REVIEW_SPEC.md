@@ -474,8 +474,10 @@ human formal decision reason（formal Decision の理由本文。本節にのみ
 | 3 | `cpt_30701289cfb0d151` | REJECT_RECOMMENDED | REJECTED | `cdc_087f4cf39db6ee97` | `36646cf9` | §24 |
 | 4 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING（2 回目・再入後） | `cdc_43d36c7b6626eab7` | `21025da6` | §26 |
 | 5 | `cpt_3831c38233ab1fcd` | REJECT_RECOMMENDED | REJECTED | `cdc_f41559274158993b` | `5a78b695` | §27 |
+| 6 | `cpt_2beb409780e71951` | REJECT_RECOMMENDED | REJECTED | `cdc_baf47bff41345e55` | `dc54c8e1` | §28 |
 
-chain: 各 seq の `previous_record_hash` は直前 seq の record hash（seq 2 → 1、seq 3 → 2、seq 4 → 3、seq 5 → 4）。
+chain: 各 seq の `previous_record_hash` は直前 seq の record hash（seq 2 → 1、seq 3 → 2、seq 4 → 3、seq 5 → 4、
+seq 6 → 5）。
 全行 HUMAN / FORMAL / NOT_PROMOTED。seq 4 は seq 2 と同じ pattern の 2 回目の Decision であり、
 pattern head 連鎖は `previous_decision_id=cdc_0a420b63cc1257ed` / `previous_state=KEEP_REVIEWING`。
 
@@ -861,5 +863,66 @@ contradictory across repeated observations with no recovery**。
   Consistency LOW かつ Strength HIGH 以上かつ Time MEDIUM 以上かつ「反復した矛盾」を同時に要求し、証拠不足は
   Strength を下げて REJECT を **block** する側に働く。本件は Strength HIGH のまま document 間の反復矛盾が
   成立した事例である（§24 の Candidate #3 と同じ driver、Candidate #2 の sibling 由来矛盾とは別系統）。
+- `W_REPLAY_EVIDENCE_AGE`（age 5）は警告であり、REJECTED の gate は replay の *compatibility* のみを要求する。
+  本 Decision で replay の再生成は行っていない。
+
+## 28. Candidate #5 real-write audit record（監査証跡・履歴事実）
+
+本節は Phase 3.9.5 で 6 番目に書かれた実 human formal Decision の記録であり、§18 / §21 / §24 / §26 / §27 とは
+別事例として記録する。履歴の事実のみで semantics は定義しない。
+
+| 項目 | 値 |
+|---|---|
+| 実行 driver | `src/intelligence/formal_review/execute.py`（§20 + §23 の reviewed 束縛） |
+| 実行 commit（`--require-commit` 束縛） | `20d4f91` |
+| pattern_id / pattern_type | `cpt_2beb409780e71951` / EVIDENCE_RISK（§27 に続く 2 件目の EVIDENCE_RISK） |
+| 直前の formal state | NONE（この pattern では初回の Decision） |
+| fresh queue rank | 1 |
+| **machine recommendation** | **REJECT_RECOMMENDED** |
+| **human formal decision** | **REJECTED**（機械推奨と同方向） |
+| decision_id | `cdc_baf47bff41345e55` |
+| sequence | 6 |
+| previous_record_hash | `5a78b695…c24814`（= Candidate #4 の record hash・global tail） |
+| previous_decision_id / previous_state | 空 / 空 |
+| actor / actor_type / review_mode | `P395_HUMAN_SUPERVISED_REVIEW` / HUMAN / FORMAL |
+| promotion_status | NOT_PROMOTED |
+| packet_id | `frp_31b58c05cbe35f6b` |
+| packet_evidence_digest | `f9aff0868cc93ab2` |
+| material_digest | `f9876cc57488f32a` |
+| group_state_digest | `6b41cd5ff461944a`（sibling group なし・member 0・opposite 0・C1 / C3 非適用） |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de`（captured 139 / current 144 / age 5 /
+`W_REPLAY_EVIDENCE_AGE` / compatible。first REJECT position 114・2026-07-28・current-state eligible 25・
+persistence 1.0000・reversal 0・recovery 0） |
+| stability_class | STABLE |
+| corpus eligible（packet / write 時点） | 144 / 144 |
+| idempotency_key | `frp_31b58c05cbe35f6b`（= packet_id） |
+| record hash | `dc54c8e1f804a5bca15005df67bfa9b269a1ff97214374de490f15076f8385c5` |
+| Decision rows | 5 → 6 |
+| **reject driver** | **`SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION`**（document contradiction true / repeated true /
+first material contradiction position 101 / currently active / recovery なし / reversal 0 /
+recommendation before reject KEEP_REVIEWING / was_review_before_reject false） |
+| 証拠 | support 15 / eligible_support 15 / span 207 日 / 8 calendar months / distinct 2D cells 6 /
+confirmed 2D cells 5 / valid ratio 1.00 / document qualities VALID 15 / direction counts UP 12・DOWN 3 |
+| axis 状態 | Consistency LOW / Strength HIGH / Time HIGH / Cross-Regime HIGH / Data Quality HIGH |
+| DNA | classification PARTIALLY_EXPLAINED / best rule `JP_US_001` / direction relation UNKNOWN / conflicts 0
+（DNA promotion は別 gate・本 Decision は DNA を編集しない） |
+| policy digest | 6 層とも凍結値 |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN** |
+
+human formal decision reason（本節にのみ記録し、他所へ複製しない）:
+
+> The supporting evidence remains directionally contradictory across a substantial observation span, with repeated
+> opposing observations and no replay recovery or reversal despite persistent evidence over time.
+
+理由カテゴリ（他文書で参照してよい要約表現）: **candidate's own supporting evidence remained directionally
+contradictory across a substantial observation span with no recovery or reversal**。
+
+補足（履歴事実）:
+
+- §27（support 6・span 109 日）と同じ driver だが、証拠量は大きく異なる（support 15・span 207 日・8 か月・
+  confirmed 2D cells 5）。**証拠が厚くても矛盾が反復すれば REJECT になる**という、§24 の comment
+  「矛盾は再現性に勝つ」の対偶側の実例であり、低 support が REJECT の理由ではないことを改めて示す。
+- direction counts は UP 12 / DOWN 3 と一方向に偏るが、`document_contradiction_repeated` の閾値（各方向 2 件）を
+  DOWN 側が満たすため反復矛盾が成立している。`direction_class` は NON_DIRECTIONAL。
 - `W_REPLAY_EVIDENCE_AGE`（age 5）は警告であり、REJECTED の gate は replay の *compatibility* のみを要求する。
   本 Decision で replay の再生成は行っていない。
