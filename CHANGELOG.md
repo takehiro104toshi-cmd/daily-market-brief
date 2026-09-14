@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.58 (2026-09-14) — Add candidate #6 real-write audit record（RECENT_TRANSITION 下の REJECTED）
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §29「Candidate #6 real-write audit record」（履歴事実のみ。
+  driver `execute.py` / 実行 commit 束縛 `97585a8` / pattern `cpt_1fde85f01d393e44`（EVIDENCE_RISK・3 件目）/
+  machine REJECT_RECOMMENDED / **human REJECTED** / decision_id `cdc_c6230f0c9892efce` / sequence 7 /
+  previous_record_hash = Candidate #5 の record hash / previous_decision_id・previous_state 空 /
+  HUMAN・FORMAL・NOT_PROMOTED / packet `frp_c35e1082e7a652a1` / evidence digest `2a178df5d4eb25b5` /
+  material digest `005ee05cd85d2a11` / group digest `cdb17ff7a7a3bee4`（sibling なし）/
+  replay `crp_2530396a5a3b8fb7`・`74d5b037498fc0de` / **stability RECENT_TRANSITION**（first REJECT position 125・
+  2026-08-17・current-state eligible 14・persistence 1.0000・reversal 0・recovery 0）/ corpus eligible 144 /
+  idempotency key = packet_id / record hash `b7c8f7f9…1c23785c` / rows 6 → 7 /
+  reject driver `SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION` / support 10・span 195 日・5 か月・
+  direction counts DOWN 4・UP 2・MIXED 1・RANGE 3 / DNA PARTIALLY_EXPLAINED・`JP_US_001`・conflicts 0 /
+  書き込み後も Phase 3.9.5 は OPEN）。理由本文は §29 にのみ記録。
+- §29 は `RECENT_TRANSITION` の凍結 policy 上の位置づけも記録する: guard は metadata 束縛にのみ使い判定しない・
+  `allowed_next_actions` は stability に依存しない・`stability_rank` は approve 順序 key のみに効き reject 順序には
+  入らない・効果は警告表示のみ。Human Review は警告を無視も自動通過もせず、recovery / reversal が無いことを
+  理由に REJECTED を選んだ。
+- §21.1 Decision ledger に seq 7、`COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §10 に 7 回目の行を追加（理由カテゴリのみ）。
+
+Decision semantics・policy 6 層 digest・packet schema・guard・queue semantics・progression semantics は不変。
+コード変更なし（documentation only）。次の Human Review は行わない。
+
 ## v4.57 (2026-09-14) — Add candidate #5 real-write audit record（EVIDENCE_RISK / human REJECTED）
 
 ### 追加

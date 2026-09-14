@@ -475,9 +475,10 @@ human formal decision reason（formal Decision の理由本文。本節にのみ
 | 4 | `cpt_8c96e2070cd4c702` | REJECT_RECOMMENDED | KEEP_REVIEWING（2 回目・再入後） | `cdc_43d36c7b6626eab7` | `21025da6` | §26 |
 | 5 | `cpt_3831c38233ab1fcd` | REJECT_RECOMMENDED | REJECTED | `cdc_f41559274158993b` | `5a78b695` | §27 |
 | 6 | `cpt_2beb409780e71951` | REJECT_RECOMMENDED | REJECTED | `cdc_baf47bff41345e55` | `dc54c8e1` | §28 |
+| 7 | `cpt_1fde85f01d393e44` | REJECT_RECOMMENDED | REJECTED | `cdc_c6230f0c9892efce` | `b7c8f7f9` | §29 |
 
 chain: 各 seq の `previous_record_hash` は直前 seq の record hash（seq 2 → 1、seq 3 → 2、seq 4 → 3、seq 5 → 4、
-seq 6 → 5）。
+seq 6 → 5、seq 7 → 6）。
 全行 HUMAN / FORMAL / NOT_PROMOTED。seq 4 は seq 2 と同じ pattern の 2 回目の Decision であり、
 pattern head 連鎖は `previous_decision_id=cdc_0a420b63cc1257ed` / `previous_state=KEEP_REVIEWING`。
 
@@ -926,3 +927,69 @@ contradictory across a substantial observation span with no recovery or reversal
   DOWN 側が満たすため反復矛盾が成立している。`direction_class` は NON_DIRECTIONAL。
 - `W_REPLAY_EVIDENCE_AGE`（age 5）は警告であり、REJECTED の gate は replay の *compatibility* のみを要求する。
   本 Decision で replay の再生成は行っていない。
+
+## 29. Candidate #6 real-write audit record（RECENT_TRANSITION 下の REJECTED・履歴事実）
+
+本節は Phase 3.9.5 で 7 番目に書かれた実 human formal Decision の記録であり、**stability_class が
+`RECENT_TRANSITION` の状態で書かれた最初の Decision** である。履歴の事実のみで semantics は定義しない。
+
+| 項目 | 値 |
+|---|---|
+| 実行 driver | `src/intelligence/formal_review/execute.py`（§20 + §23 の reviewed 束縛） |
+| 実行 commit（`--require-commit` 束縛） | `97585a8` |
+| pattern_id / pattern_type | `cpt_1fde85f01d393e44` / EVIDENCE_RISK（3 件目） |
+| 直前の formal state | NONE（この pattern では初回の Decision） |
+| fresh queue rank | 1 |
+| **machine recommendation** | **REJECT_RECOMMENDED** |
+| **human formal decision** | **REJECTED**（機械推奨と同方向） |
+| decision_id | `cdc_c6230f0c9892efce` |
+| sequence | 7 |
+| previous_record_hash | `dc54c8e1…6f8385c5`（= Candidate #5 の record hash・global tail） |
+| previous_decision_id / previous_state | 空 / 空 |
+| actor / actor_type / review_mode | `P395_HUMAN_SUPERVISED_REVIEW` / HUMAN / FORMAL |
+| promotion_status | NOT_PROMOTED |
+| packet_id | `frp_c35e1082e7a652a1` |
+| packet_evidence_digest | `2a178df5d4eb25b5` |
+| material_digest | `005ee05cd85d2a11` |
+| group_state_digest | `cdb17ff7a7a3bee4`（sibling group なし・member 0・opposite 0・C1 / C3 非適用） |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de`（captured 139 / current 144 / age 5 /
+`W_REPLAY_EVIDENCE_AGE` / compatible） |
+| **stability_class** | **RECENT_TRANSITION**（`W_RECENT_TRANSITION`。first REJECT position 125・2026-08-17 /
+current-state eligible 14 / persistence 1.0000 / reversal 0 / recovery 0 / reversions なし） |
+| corpus eligible（packet / write 時点） | 144 / 144 |
+| idempotency_key | `frp_c35e1082e7a652a1`（= packet_id） |
+| record hash | `b7c8f7f9312718f65ac2fd4378a4189fc0fcc0da29b894185041c5f91c23785c` |
+| Decision rows | 6 → 7 |
+| **reject driver** | **`SUPPORTING_DOCUMENT_UP_DOWN_CONTRADICTION`**（document contradiction true / repeated true /
+first material contradiction position 49 / currently active / recovery なし / reversal 0 /
+recommendation before reject KEEP_REVIEWING / was_review_before_reject false） |
+| 証拠 | support 10 / eligible_support 10 / span 195 日 / 5 calendar months / distinct 2D cells 7 /
+confirmed 2D cells 3 / valid ratio 1.00 / document qualities VALID 10 /
+direction counts DOWN 4・UP 2・MIXED 1・RANGE 3 |
+| axis 状態 | Consistency LOW / Strength HIGH / Time HIGH / Cross-Regime HIGH / Data Quality HIGH |
+| DNA | classification PARTIALLY_EXPLAINED / best rule `JP_US_001` / direction relation UNKNOWN / conflicts 0 |
+| policy digest | 6 層とも凍結値 |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN** |
+
+human formal decision reason（本節にのみ記録し、他所へ複製しない）:
+
+> The supporting evidence remains directionally contradictory across repeated observations, and although the reject
+> state is relatively recent, it has persisted without recovery or reversal across the current replay state.
+
+理由カテゴリ（他文書で参照してよい要約表現）: **candidate's own supporting evidence remained directionally
+contradictory; the current reject state was recent but persisted across the replay state without recovery or
+reversal**。
+
+補足（履歴事実・`RECENT_TRANSITION` の位置づけ）:
+
+- `RECENT_TRANSITION` は **凍結 policy 上の blocker ではない**。実装上の扱いは次のとおりで、本 Decision は
+  その前提で書かれた。
+  - `guard.py` は `stability_class` を Decision metadata へ束縛するだけで、判定に使わない。
+  - `allowed_next_actions` は head state・recommendation・reopen 適格性から決まり、stability に依存しない。
+  - queue 順序では `stability_rank` は **approve 順序 key のみ**に効き、reject 順序 key
+    （first reject position → persistence ratio → eligible support → pattern id）には入らない。
+  - したがって効果は警告表示のみ（警告本文自体が「evidence gates are satisfied」と述べる）。
+- Human Review はこの警告を**無視も自動通過もせず**、reject state が新しい（first REJECT position 125・
+  current-state eligible 14）ことを認めたうえで、その間に recovery も reversal も無いことを理由に REJECTED を選んだ。
+- §27（support 6）・§28（support 15）と同じ driver。本件は support 10・span 195 日で、
+  direction counts が 4 方向に分散（DOWN 4・UP 2・MIXED 1・RANGE 3）しつつ UP/DOWN 各 2 件以上の反復条件を満たす。
