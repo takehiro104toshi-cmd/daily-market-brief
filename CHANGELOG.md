@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.60 (2026-09-14) — Add Phase 3.9.5 final gate assessment and Phase 4 entry contract
+
+### 追加
+
+- `docs/databank/PHASE4_ENTRY_CONTRACT.md`【新規】Phase 4（Morning Brief）の入口契約を凍結
+  （監督者承認事項・documentation only）。
+  用語の凍結（Production Compass DNA / APPROVED / NOT_PROMOTED / Promotion）、
+  knowledge boundary 7+1 class と権限レベル（AUTHORITATIVE_RULE / VALIDATED_REVIEW_KNOWLEDGE /
+  NOT_KNOWLEDGE / UNDECIDED / GOVERNANCE_RECORD / RESEARCH_EVIDENCE / PROCESS_ARTIFACT / OBSERVATION）、
+  input contract（allowed・authority・provenance・required current state・staleness・fallback）、
+  **default deny の fail-closed consumption rule 7 条**、
+  APPROVED ≠ PROMOTED の凍結、remaining queue non-blocking、replay age の扱い、
+  Phase 4 entry checklist 10 項目、変更手続き。
+- 同書は現状の実装事実も記録する: `src/intelligence/compass/` は `decisions.jsonl` も `patterns.jsonl` も
+  読まない / generator の入力は `EvidencePackage` に限定 / `principle_validation` が未登録 `rule_ref` を
+  error にするため formal pattern を rule として通せない / `src/` に promote 経路も `knowledge/` への
+  書き込みも存在しない。
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §32「Phase 3.9.5 final gate assessment」
+  （gate criteria 14 項目すべて TRUE・blocker なし・CLOSED 推奨 / 実データ 16 経路の coverage /
+  意図的に見送った coverage / Phase 4 への引き継ぎ）。
+- `COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §9 に、closure が全候補審査を条件としないこと、
+  残 queue が Phase 4 を block しないこと、入口契約の所在を追記。
+
+### 確認（変更なし）
+
+- replay の再生成は行っていない。formal review の replay gate は `available` と `current_compatible` のみを
+  検査し age は検査しない（age は `W_REPLAY_EVIDENCE_AGE` 警告のみ）。Morning Brief 系は replay を読まない。
+  **Phase 4 entry は replay 再生成を要求しない。**
+
+Decision data・policy 6 層 digest・Compass DNA・実装は一切変更なし（documentation only）。
+promotion 挙動は追加していない。Candidate #8 の Human Review は行っていない。
+
 ## v4.59 (2026-09-14) — Add candidate #7 real-write audit record（Phase 3.9.5 最初の APPROVED）
 
 ### 追加

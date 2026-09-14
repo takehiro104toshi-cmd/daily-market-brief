@@ -1112,3 +1112,54 @@ close しない。** close 条件は §13 / `COMPASS_FIRST_FORMAL_REVIEW_SESSION
 - KEEP_REVIEWING head からの APPROVED / REJECTED（現状の APPROVED・REJECTED はすべて head なしからの初回）。
 - Cross-Regime が applicable な APPROVE（`CROSS_REGIME_HIGH` 側の supporting）。
 - 機械推奨と逆向きの APPROVED（REJECT_RECOMMENDED に対する APPROVED）。
+
+## 32. Phase 3.9.5 final gate assessment（監督者 gate 決定の記録・履歴事実）
+
+監督者は Phase 3.9.5 の representative human review coverage を **Phase 4 gate に対して SUFFICIENT** と判定した。
+本節はその最終 gate 評価の記録である。Phase 4 の入口契約は
+`PHASE4_ENTRY_CONTRACT.md` に分離して凍結する。
+
+### 32.1 gate criteria（14 項目）
+
+| # | 判定項目 | 結果 | 根拠 |
+|---|---|---|---|
+| 1 | formal-review policy が frozen / versioned | TRUE | 6 層とも version + digest を持ち、drift は `validate()` が拒否。formal_review 1.1.0 / `d2fb015ca827dd15` |
+| 2 | Decision transition が frozen | TRUE | `decision/policy.py` `ALLOWED_TRANSITIONS`。policy digest `0c54ec01e2a251d9` |
+| 3 | 人間の最終承認が強制されている | TRUE | `decision/gates.py` `human_action_error`（`HUMAN_ACTION_REQUIRED`）。全 8 行が actor_type HUMAN / review_mode FORMAL |
+| 4 | formal review が auto-promote しない | TRUE | `src/` に promote 関数・`PROMOTED` state が存在しない。`promotion_status` は無条件 `NOT_PROMOTED` |
+| 5 | Decision history が append-only / hash chain | TRUE | `decision/store.py`（sequence 連番・`previous_record_hash` → `record_hash`・corrupt は load 時に拒否） |
+| 6 | fresh packet binding が存在する | TRUE | §23（`--expect-packet-id` / `--expect-material-digest` / `--expect-packet-evidence-digest`） |
+| 7 | group context binding が存在する | TRUE | §23 / §30（`--expect-group-state-digest`・`HUMAN_REVIEW_EVIDENCE_CHANGED_GROUP_CONTEXT`） |
+| 8 | replay compatibility binding が存在する | TRUE | `guard.py` の `REPLAY_EVIDENCE` check（`available` かつ `current_compatible`） |
+| 9 | KEEP_REVIEWING progression / deferred / re-entry が機能する | TRUE | §22 Queue Progression v1 / §25 re-entry guard / §26（seq 4 の実データ再入） |
+| 10 | REJECTED に実データ実行証跡がある | TRUE | §18 / §24 / §27 / §28 / §29（seq 1・3・5・6・7） |
+| 11 | APPROVED に実データ実行証跡がある | TRUE | §30（seq 8） |
+| 12 | 初の実 APPROVED で NOT_PROMOTED 境界が保たれた | TRUE | §30（row 8 promotion_status NOT_PROMOTED / DNA 不変） |
+| 13 | Windows read-only re-audit path が機能する | TRUE | Candidate #7 Windows reaudit PASSED（監督者確認） |
+| 14 | Phase 4 の依存に「全候補の審査」が含まれない | TRUE | `src/intelligence/compass/` は `decisions.jsonl` も `patterns.jsonl` も読まない |
+
+14 項目すべて TRUE。blocker なし。**Phase 3.9.5 CLOSED を推奨する。**
+
+### 32.2 実データで達成した coverage
+
+KEEP_REVIEWING write / KEEP_REVIEWING re-entry / REJECTED write / REJECTED with STABLE replay /
+REJECTED with RECENT_TRANSITION replay / APPROVED write / APPROVED with C1 clear /
+APPROVED with C3 not required / NOT_PROMOTED boundary / Decision global hash chain / pattern-head chain /
+packet freshness guard / group digest guard / replay compatibility guard / one-write・no-retry execution /
+Windows real-data Decision reaudit —— 以上 16 経路（詳細は §31）。
+
+### 32.3 意図的に見送った coverage（Phase 4 の blocker ではない）
+
+残り全候補の審査 / `REOPENED_FOR_REVIEW` real write / `SUPERSEDED` real write / `RETIRED` real write /
+C1 blocker の実発火 / C3 acknowledgement を伴う APPROVED / Cross-Regime applicable な APPROVE。
+
+これらは **自然に遭遇したときの将来 coverage 項目**であり、
+**これを踏むためだけに事例を作らない**（監督者指示）。
+
+### 32.4 Phase 4 への引き継ぎ
+
+- Phase 4 の入口契約は `PHASE4_ENTRY_CONTRACT.md`（knowledge boundary / input contract /
+  APPROVED ≠ Production DNA / remaining queue non-blocking / replay age / entry checklist）。
+- **APPROVED は Production DNA ではない。** promotion は将来の独立した監督者 gate。
+- 次 rank 1（`cpt_05548cdeda5cf3fb` / THEME_OUTLOOK / APPROVE_RECOMMENDED）は
+  **Human Review の authorised target ではない**。情報として識別されるだけである。

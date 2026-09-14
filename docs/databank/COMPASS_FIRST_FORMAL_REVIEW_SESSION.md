@@ -156,6 +156,11 @@ promotion status。加えて Decision hash chain 妥当・DNA 不変・PDF 不�
 packet binding、全 APPROVED が NOT_PROMOTED、DNA 不変、監督者の最終判定が要る。
 DNA promotion は別 gate であり、この Phase では一切行わない。
 
+監督者は Phase 3.9.5 の representative coverage を Phase 4 gate に対して SUFFICIENT と判定した（`COMPASS_FORMAL_REVIEW_SPEC.md` §32）。closure は **全候補の審査完了を条件としない**。
+残 queue（未審査 APPROVE_RECOMMENDED / 未審査 REJECT_RECOMMENDED / deferred KEEP_REVIEWING）は
+Phase 4 を block せず、Formal Review は Phase 4 以降も継続する分析ガバナンス process として扱う。
+Phase 4 の入口契約は `PHASE4_ENTRY_CONTRACT.md` に凍結した。
+
 ## 10. session 実績（運用記録・履歴事実）
 
 | 回 | 日付(UTC) | 対象 | 機械推奨 | 人間の formal state | decision_id | sequence | 書き込み |
