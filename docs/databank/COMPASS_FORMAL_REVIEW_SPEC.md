@@ -476,9 +476,10 @@ human formal decision reason（formal Decision の理由本文。本節にのみ
 | 5 | `cpt_3831c38233ab1fcd` | REJECT_RECOMMENDED | REJECTED | `cdc_f41559274158993b` | `5a78b695` | §27 |
 | 6 | `cpt_2beb409780e71951` | REJECT_RECOMMENDED | REJECTED | `cdc_baf47bff41345e55` | `dc54c8e1` | §28 |
 | 7 | `cpt_1fde85f01d393e44` | REJECT_RECOMMENDED | REJECTED | `cdc_c6230f0c9892efce` | `b7c8f7f9` | §29 |
+| 8 | `cpt_e6a847467534e87d` | **APPROVE_RECOMMENDED** | **APPROVED** | `cdc_7c976f66ab5b2ed3` | `7c5d832b` | §30 |
 
 chain: 各 seq の `previous_record_hash` は直前 seq の record hash（seq 2 → 1、seq 3 → 2、seq 4 → 3、seq 5 → 4、
-seq 6 → 5、seq 7 → 6）。
+seq 6 → 5、seq 7 → 6、seq 8 → 7）。
 全行 HUMAN / FORMAL / NOT_PROMOTED。seq 4 は seq 2 と同じ pattern の 2 回目の Decision であり、
 pattern head 連鎖は `previous_decision_id=cdc_0a420b63cc1257ed` / `previous_state=KEEP_REVIEWING`。
 
@@ -993,3 +994,121 @@ reversal**。
   current-state eligible 14）ことを認めたうえで、その間に recovery も reversal も無いことを理由に REJECTED を選んだ。
 - §27（support 6）・§28（support 15）と同じ driver。本件は support 10・span 195 日で、
   direction counts が 4 方向に分散（DOWN 4・UP 2・MIXED 1・RANGE 3）しつつ UP/DOWN 各 2 件以上の反復条件を満たす。
+
+## 30. Candidate #7 real-write audit record（最初の APPROVED・履歴事実）
+
+本節は Phase 3.9.5 で 8 番目に書かれた実 human formal Decision の記録であり、**Phase 3.9.5 で最初の
+`APPROVED`**（かつ最初の `APPROVE_RECOMMENDED` 候補・最初の STATE_OUTLOOK）である。履歴の事実のみで
+semantics は定義しない。
+
+| 項目 | 値 |
+|---|---|
+| 実行 driver | `src/intelligence/formal_review/execute.py`（§20 + §23 の reviewed 束縛） |
+| 実行 commit（`--require-commit` 束縛） | `aa8299c` |
+| pattern_id / pattern_type | `cpt_e6a847467534e87d` / STATE_OUTLOOK（初） |
+| 直前の formal state | NONE（この pattern では初回の Decision） |
+| fresh queue rank | 1 |
+| **machine recommendation** | **APPROVE_RECOMMENDED**（初） |
+| **human formal decision** | **APPROVED**（初・機械推奨と同方向） |
+| decision_id | `cdc_7c976f66ab5b2ed3` |
+| sequence | 8 |
+| previous_record_hash | `b7c8f7f9…1c23785c`（= Candidate #6 の record hash・global tail） |
+| previous_decision_id / previous_state | 空 / 空 |
+| actor / actor_type / review_mode | `P395_HUMAN_SUPERVISED_REVIEW` / HUMAN / FORMAL |
+| **promotion_status** | **NOT_PROMOTED**（APPROVED でも例外なく） |
+| packet_id | `frp_898a59b98aa52378` |
+| packet_evidence_digest | `d42fac40fab957d7` |
+| material_digest | `cab309f842679798` |
+| group_state_digest | `6c52ebaa05309f89`（group size 0・member 0・opposite 0・**C1 CLEAR / C3 NOT_REQUIRED**） |
+| replay run id / digest | `crp_2530396a5a3b8fb7` / `74d5b037498fc0de`（captured 139 / current 144 / age 5 /
+`W_REPLAY_EVIDENCE_AGE` は warning only / compatible） |
+| stability_class | STABLE（first APPROVE position 78・2026-06-02 / current-state eligible 61 /
+persistence 1.0000 / reversal 0 / reversions なし） |
+| corpus eligible（packet / write 時点） | 144 / 144 |
+| idempotency_key | `frp_898a59b98aa52378`（= packet_id） |
+| record hash | `7c5d832b562979c817ec5fa7de517b11ab8fcdd2ae987ed9feaa9fb72a45bda7` |
+| Decision rows | 7 → 8 |
+| **適用 rule** | **`APPROVE:ALL_APPLICABLE_CORE_CONDITIONS_MET`** / blocking_rules 空 / supporting
+`DATA_QUALITY_HIGH`・`TYPE_APPROVAL_ELIGIBLE`・`ALL_APPLICABLE_CORE_AT_LEAST_MEDIUM`・`CONSISTENCY_HIGH`・
+`TIME_STABILITY_HIGH`・`CROSS_REGIME_NOT_APPLICABLE_SKIPPED` |
+| 証拠 | support 4 / eligible_support 4 / span 61 日 / 3 calendar months / distinct 2D cells 1 /
+confirmed 2D cells 1 / valid ratio 1.00 / document qualities VALID 4 / direction counts UP 4 |
+| axis 状態 | Consistency HIGH（`COMMITTED_DIRECTION_REPEATED_NO_CONTRADICTION`）/ Strength HIGH /
+Time HIGH（`SPAN_AND_MONTHS_HIGH`）/ Data Quality HIGH（`ALL_SUPPORT_VALID_AND_ELIGIBLE`）/
+Cross-Regime NOT_APPLICABLE（nominal state LOW・凍結 semantics により skip） |
+| contradiction | document false / document repeated false / narrow sibling false / narrow sibling repeated false /
+active false / direction_class DIRECTIONAL |
+| DNA | classification PARTIALLY_EXPLAINED / best rule `JP_DIR_001` / direction relation CONDITIONAL /
+candidate rule 3 件 / **conflicts 0** |
+| policy digest | 6 層とも凍結値 |
+| Phase 状態 | この書き込み後も **Phase 3.9.5 は OPEN**（APPROVED は Phase を閉じない） |
+
+human formal decision reason（本節にのみ記録し、他所へ複製しない）:
+
+> The evidence is internally consistent, directionally uniform, and stable across time, with no active contradiction,
+> sibling conflict, or replay reversal; current-compatible replay supports formal approval while DNA promotion
+> remains a separate gate.
+
+理由カテゴリ（他文書で参照してよい要約表現）: **internally consistent directional evidence remained stable across
+replay, with no contradiction, sibling conflict or reversal; formal approval was kept strictly separate from DNA
+promotion**。
+
+補足（履歴事実・APPROVED の境界）:
+
+- **APPROVED ≠ DNA promotion。** 本 Decision は Compass DNA を編集しておらず、Production DNA を作らず、
+  promotion metadata / promotion state も書いていない。`FormalReviewService.decide` の書き込み経路は
+  `DecisionStore.append` の 1 か所のみで、action による分岐がなく `promotion_status` は無条件に
+  `NOT_PROMOTED`。policy 側でも `promotion boundary is frozen` として固定されている（`True` 化は PolicyError）。
+  runtime では stage 1 dry-run・decision audit・safety の 3 か所が独立に `NOT_PROMOTED` を検査する。
+- **Cross-Regime の nominal LOW は失敗ではない。** approve の blocking 判定は `axes[A_CROSS].applicable` が
+  真のときのみ評価され、非適用時は supporting へ `CROSS_REGIME_NOT_APPLICABLE_SKIPPED` が入る（凍結 semantics）。
+- **novelty は要求しない。** `approve_requires_novelty` は False 固定であり、DNA novelty NOT_APPLICABLE
+  （nominal 表示 MEDIUM）は approve の追加条件にならない。
+- **C1 / C3 は APPROVED action でのみ評価される。** 本件は group size 0 のため C1 `CLEAR`・C3 `NOT_REQUIRED` で、
+  `--acknowledge-sibling` は 1 つも渡していない（`acknowledge_siblings=[]`）。sibling 承認は書かれていない。
+- **遷移の一方向性。** `ALLOWED_TRANSITIONS[None]` は {KEEP_REVIEWING, APPROVED, REJECTED} で NONE → APPROVED は
+  適法。ただし `ALLOWED_TRANSITIONS[APPROVED]` は {SUPERSEDED, RETIRED} のみであり、この pattern は今後
+  KEEP_REVIEWING / REJECTED / REOPENED_FOR_REVIEW へは戻せない。
+- §18〜§29 の 7 件（REJECTED 5 / KEEP_REVIEWING 2）と異なり、本件は **contradiction が一切立っていない**
+  候補である（document / narrow sibling ともに false、active false、DNA conflicts 0）。
+
+## 31. Phase 3.9.5 formal-review coverage snapshot（監督者 gate 判断用の証拠・履歴事実）
+
+本節は「Phase 3.9.5 がどこまで実データで踏まれたか」の読み取り専用の要約である。**本節は Phase 3.9.5 を
+close しない。** close 条件は §13 / `COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §9 のとおり監督者判断による。
+
+| 指標 | 値 |
+|---|---|
+| Decision row 数 | 8 |
+| formal review を受けた unique pattern 数 | 7 |
+| 最新 state: APPROVED | 1（`cpt_e6a847467534e87d`） |
+| 最新 state: REJECTED | 5（`cpt_4d2f4477a946c17e` / `cpt_30701289cfb0d151` / `cpt_3831c38233ab1fcd` /
+`cpt_2beb409780e71951` / `cpt_1fde85f01d393e44`） |
+| 最新 state: KEEP_REVIEWING | 1（`cpt_8c96e2070cd4c702`・2 行を書いた同一 pattern） |
+| 最新 state: REOPENED_FOR_REVIEW / SUPERSEDED / RETIRED | 0 / 0 / 0 |
+
+実データ上で踏まれた経路:
+
+| 経路 | 実績 | 記録 |
+|---|---|---|
+| KEEP_REVIEWING write | 済 | §21（seq 2） |
+| KEEP_REVIEWING re-entry（再入後の 2 回目） | 済 | §25 / §26（seq 4） |
+| REJECTED write | 済 | §18 / §24 / §27 / §28 / §29（seq 1・3・5・6・7） |
+| REJECTED with STABLE replay | 済 | §24 / §27 / §28（seq 3・5・6。seq 1 は `stability_class` を記録に残していない） |
+| REJECTED with RECENT_TRANSITION replay | 済 | §29（seq 7） |
+| APPROVED write | 済 | §30（seq 8） |
+| APPROVED with C1 clear | 済 | §30（C1 `CLEAR`・blocking sibling なし） |
+| APPROVED with C3 not required | 済 | §30（C3 `NOT_REQUIRED`・acknowledge なし） |
+| NOT_PROMOTED boundary | 済 | 全 8 行 |
+| Decision hash chaining | 済 | 全 8 行の global tail 連鎖 + seq 4 の pattern head 連鎖 |
+| packet freshness guard | 済 | §23（`HUMAN_REVIEW_PACKET_CHANGED` を含む reviewed 束縛） |
+| group digest guard | 済 | §23 / §30（`HUMAN_REVIEW_EVIDENCE_CHANGED_GROUP_CONTEXT`） |
+| replay compatibility guard | 済 | 全 write（`replay_current_compatible=true` 束縛。age は warning only） |
+
+まだ実データで踏まれていない経路（欠落の明示。gate 判断の材料であって不備の主張ではない）:
+
+- `REOPENED_FOR_REVIEW` / `SUPERSEDED` / `RETIRED` の write。
+- C1 `SIBLING_CONFLICT_BLOCKED` が実際に発火した APPROVED 試行、および C3 acknowledgement を伴う APPROVED。
+- KEEP_REVIEWING head からの APPROVED / REJECTED（現状の APPROVED・REJECTED はすべて head なしからの初回）。
+- Cross-Regime が applicable な APPROVE（`CROSS_REGIME_HIGH` 側の supporting）。
+- 機械推奨と逆向きの APPROVED（REJECT_RECOMMENDED に対する APPROVED）。

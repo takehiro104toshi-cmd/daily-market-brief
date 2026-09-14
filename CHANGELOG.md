@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.59 (2026-09-14) — Add candidate #7 real-write audit record（Phase 3.9.5 最初の APPROVED）
+
+### 追加
+
+- `docs/databank/COMPASS_FORMAL_REVIEW_SPEC.md` §30「Candidate #7 real-write audit record」（履歴事実のみ。
+  driver `execute.py` / 実行 commit 束縛 `aa8299c` / pattern `cpt_e6a847467534e87d`（STATE_OUTLOOK・初）/
+  **machine APPROVE_RECOMMENDED / human APPROVED**（Phase 3.9.5 で最初の APPROVED）/
+  decision_id `cdc_7c976f66ab5b2ed3` / sequence 8 / previous_record_hash = Candidate #6 の record hash /
+  previous_decision_id・previous_state 空 / HUMAN・FORMAL・**NOT_PROMOTED** /
+  packet `frp_898a59b98aa52378` / evidence digest `d42fac40fab957d7` / material digest `cab309f842679798` /
+  group digest `6c52ebaa05309f89`（group size 0・C1 CLEAR・C3 NOT_REQUIRED・acknowledge なし）/
+  replay `crp_2530396a5a3b8fb7`・`74d5b037498fc0de`（captured 139 / current 144 / age 5 は warning only）/
+  stability STABLE（first APPROVE position 78・2026-06-02・current-state eligible 61・persistence 1.0000・
+  reversal 0）/ corpus eligible 144 / idempotency key = packet_id /
+  record hash `7c5d832b…2a45bda7` / rows 7 → 8 /
+  適用 rule `APPROVE:ALL_APPLICABLE_CORE_CONDITIONS_MET`・blocking 空・supporting に
+  `CROSS_REGIME_NOT_APPLICABLE_SKIPPED` / support 4・span 61 日・3 か月・direction UP 4 /
+  contradiction はすべて false / DNA PARTIALLY_EXPLAINED・`JP_DIR_001`・direction relation CONDITIONAL・
+  conflicts 0 / 書き込み後も Phase 3.9.5 は OPEN）。理由本文は §30 にのみ記録。
+- §30 は APPROVED の境界も記録する: APPROVED ≠ DNA promotion（唯一の書き込み経路は `DecisionStore.append` で
+  action 分岐なし・`promotion_status` は無条件 NOT_PROMOTED・policy でも凍結・runtime 3 重検査）/
+  Cross-Regime の nominal LOW は非適用時に blocking へ入らない / novelty は要求しない /
+  C1・C3 は APPROVED action でのみ評価され本件は CLEAR・NOT_REQUIRED /
+  `ALLOWED_TRANSITIONS[APPROVED]` は {SUPERSEDED, RETIRED} のみで KEEP_REVIEWING へは戻せない。
+- 同 §31「Phase 3.9.5 formal-review coverage snapshot」（Decision 8 行 / unique pattern 7 件 /
+  APPROVED 1・REJECTED 5・KEEP_REVIEWING 1・REOPENED_FOR_REVIEW / SUPERSEDED / RETIRED 0 /
+  実データで踏まれた 13 経路と、まだ踏まれていない経路の明示）。本節は Phase 3.9.5 を close しない。
+- §21.1 Decision ledger に seq 8、`COMPASS_FIRST_FORMAL_REVIEW_SESSION.md` §10 に 8 回目の行を追加
+  （理由カテゴリのみ）。
+
+Decision semantics・policy 6 層 digest・packet schema・guard・queue semantics・progression semantics は不変。
+コード変更なし（documentation only）。次の Human Review は行わない。
+
 ## v4.58 (2026-09-14) — Add candidate #6 real-write audit record（RECENT_TRANSITION 下の REJECTED）
 
 ### 追加

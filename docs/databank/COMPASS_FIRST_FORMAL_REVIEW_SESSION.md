@@ -167,16 +167,22 @@ DNA promotion は別 gate であり、この Phase では一切行わない。
 | 5 | 2026-09-14 | `cpt_3831c38233ab1fcd`（EVIDENCE_RISK） | REJECT_RECOMMENDED | **REJECTED** | `cdc_f41559274158993b` | 5 | 1 行（4 → 5） |
 | 6 | 2026-09-14 | `cpt_2beb409780e71951`（EVIDENCE_RISK） | REJECT_RECOMMENDED | **REJECTED** | `cdc_baf47bff41345e55` | 6 | 1 行（5 → 6） |
 | 7 | 2026-09-14 | `cpt_1fde85f01d393e44`（EVIDENCE_RISK・RECENT_TRANSITION） | REJECT_RECOMMENDED | **REJECTED** | `cdc_c6230f0c9892efce` | 7 | 1 行（6 → 7） |
+| 8 | 2026-09-14 | `cpt_e6a847467534e87d`（STATE_OUTLOOK） | **APPROVE_RECOMMENDED** | **APPROVED** | `cdc_7c976f66ab5b2ed3` | 8 | 1 行（7 → 8） |
 
 各回の詳細な監査証跡（packet 束縛・digest・replay run・record hash・無変更証明・formal reason 本文）は
-`COMPASS_FORMAL_REVIEW_SPEC.md` §18（1 回目）/ §21（2 回目）/ §24（3 回目）/ §26（4 回目）/ §27（5 回目）/ §28（6 回目）/ §29（7 回目）に
+`COMPASS_FORMAL_REVIEW_SPEC.md` §18（1 回目）/ §21（2 回目）/ §24（3 回目）/ §26（4 回目）/ §27（5 回目）/ §28（6 回目）/ §29（7 回目）/ §30（8 回目）に
 一元記録する。
 本表には理由本文を複製しない（3 回目の理由カテゴリは repeated active supporting-document contradiction with
 no replay recovery、4 回目は candidate's own evidence remained directionally consistent; contradiction remained
 confined to unresolved opposite-direction siblings）。
 
-進行中: Decision 7 行 / 対象 pattern 6 件 / APPROVED 0 / REJECTED 5 / KEEP_REVIEWING 1（同一 pattern の 2 回目を含む）。
+進行中: Decision 8 行 / 対象 pattern 7 件 / APPROVED 1 / REJECTED 5 / KEEP_REVIEWING 1（同一 pattern の 2 回目を含む）。
 7 回目は `RECENT_TRANSITION` 下で書かれた最初の Decision（警告は blocker ではなく evidence）。
+8 回目は Phase 3.9.5 で最初の **APPROVED**（最初の APPROVE_RECOMMENDED 候補・最初の STATE_OUTLOOK）であり、
+理由カテゴリは internally consistent directional evidence remained stable across replay with no
+contradiction, sibling conflict or reversal。APPROVED でも promotion_status は NOT_PROMOTED のままで、
+Compass DNA も Production DNA も変更していない（詳細は `COMPASS_FORMAL_REVIEW_SPEC.md` §30、
+ここまでの coverage は同 §31）。
 5 回目の理由カテゴリは candidate's own supporting evidence remained directionally contradictory across repeated
 observations with no recovery、6 回目は同じ driver をより厚い証拠（support 15・span 207 日）で確認した事例。残りは毎回 fresh build で再導出する。
 既決（APPROVED / REJECTED）の pattern は primary queue から外れるが、**KEEP_REVIEWING は終端ではなく primary
