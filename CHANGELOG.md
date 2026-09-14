@@ -4,6 +4,40 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.61 (2026-09-14) — Add Morning Brief three-tier core projection (Phase 4 P4-1A)
+
+### 追加
+
+- `src/intelligence/reports/model.py`【新規】Morning Brief schema（frozen dataclass）。
+  `MorningBrief`（brief_id / session_date / reference_session / draft_id / package_id /
+  verdict / generator / tier1 / tier2 / tier3 / abstain_reason / schema_version 0.1.0）、
+  `BriefPoint`（claim_id / claim_role / claim_type / text / grounding_status / order /
+  supporting_fact_ids / supporting_context_ids / rule_ref / interpretation_type /
+  market_principle_version）、`BriefTier1` / `BriefTier2` / `BriefTier3` / `BriefOutlook`、
+  機械可読な unavailable 理由語（`one_liner_unavailable` / `draft_not_usable` /
+  `no_grounded_points` / `no_grounded_outlook` / `no_grounded_counter_case`）、
+  内容アドレス `make_brief_id()`。
+  verdict / grounding status は Compass の既存語彙（`QualityVerdict` / `GroundingStatus`）を
+  そのまま使い、競合する品質状態機械を作らない。
+- `src/intelligence/reports/morning_brief.py`【新規】`build_morning_brief(draft, package)`。
+  検証済み `CompassDraft` を三段へ射影する**純関数**（I/O・store・data root・時刻・乱数なし。
+  生成しない・再検証しない・再ランクしない）。
+  Tier 1 = `draft.one_liner` の完全一致、Tier 2 = grounded HEADLINE / WHAT_HAPPENED ＋
+  COVERAGE ＋ 欠落次元、Tier 3 = grounded OUTLOOK / WHY / RISK ＋ outlook header。
+  RISK（反対材料）が grounded で残っていなければ Tier 3 を出さない。
+  `rule_ref` は claim からそのまま運ぶ（作らない・直さない・置き換えない）。
+- `tests/intelligence/test_morning_brief.py`【新規】35 件。決定論・brief_id の内容アドレス性・
+  Tier 1 の完全一致・散文を発明しないこと・role 境界・rejected / pending claim の除外・
+  provenance 保持・欠落次元の保持・abstain / fail closed・未登録 rule_ref の pass-through・
+  `cpt_*` を rule_ref として出さないこと・Decision layer field を持たないこと・
+  governance / legacy import 隔離・機密 path guard・純関数 guard。
+
+Phase 4 entry contract（`docs/databank/PHASE4_ENTRY_CONTRACT.md`）準拠:
+`reports/` は `decision` / `formal_review` / `review` / `shadow_review` / `corpus` /
+`corpus_research` / `replay` / `evaluation` と legacy（`src/report` / `src/analysis` /
+`src/collectors`）を一切 import しない。Compass DNA は不変、promotion なし。
+既存 source file の変更なし・`config.yaml` 変更なし・renderer / pilot / 永続化なし。
+
 ## v4.60 (2026-09-14) — Add Phase 3.9.5 final gate assessment and Phase 4 entry contract
 
 ### 追加
