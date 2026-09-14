@@ -4,6 +4,58 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.66 (2026-09-14) — Fix residual Context Direction token in customer-facing invalidation prose (Phase 4 P4-1)
+
+最終実データ検証 run（Actions **34902637659** / session 2026-09-15）の顧客向け Markdown に
+唯一残っていた内部語彙への対応。
+
+    無効化条件: TOPIXが前営業日の方向（UP）と逆に動く場合。
+
+`UP` は `context.model.Direction` の統制語彙（監査用の生値）であり、
+`compass/outlook.py` の無効化条件定型がそのまま埋め込んでいた。
+**分析層（`compass/outlook.py` / `compass/generator.py` / `CompassDraft` claim text /
+`Direction` enum）は一切変更しない。** 表示層の projection だけで日本語へ写像する。
+
+### 追加
+
+- `src/intelligence/reports/morning_brief.py`:
+  - `CONTEXT_DIRECTION_JA` — `context.model.Direction` の **全 13 値**に対する明示的な
+    顧客向け日本語対応表（UP→上昇 / DOWN→下落 / FLAT→横ばい / STRONGER→強含み /
+    WEAKER→弱含み / STEEPENING→スティープ化 / FLATTENING→フラット化 /
+    OUTPERFORM→相対的に上回る / UNDERPERFORM→相対的に下回る / ABOVE→上回る /
+    BELOW→下回る / MIXED→強弱混在 / UNKNOWN→不明）。
+    主語に依存しない方向語だけを使い、新しい市場判断を足さない
+    （例: STRONGER / WEAKER を「円安 / 円高」へ読み替えない）。
+  - `UnmappedContextDirection`（`KeyError`）— 対応表に無い値は生値も代替文も出さず **fail closed**。
+  - `_DIRECTION_IN_PROSE` — 置換対象を無効化条件の定型 `方向（<統制語彙>）` の内側だけに限定する。
+    全文置換ではないため `TOPIX` / `USDJPY` / 数値 / 他の claim 本文には触れない。
+    写像後は日本語になり再び一致しないため冪等。
+- `tests/intelligence/test_morning_brief_presentation.py`: 統制語彙写像のテスト 16 件を追加
+  （実データ形の変換 / 生値の Markdown 非出現 / 逐語 `text` と構造化 `invalidation_conditions` の
+  生値保持 / enum 全値の写像網羅 / 未知値の fail closed / RATE_DIRECTION 定型 /
+  TOPIX・数値・定型外の大文字語の不変 / 決定論・byte 同一 / 既往内部語彙の非出現 /
+  助言語の不追加 / composer の import 境界）。
+
+### 改善
+
+- `customer_text()` の規則を 3 → 4 とし、無効化条件の統制語彙写像を最後段に追加した。
+  既存 3 規則（経験則 ID 除去 / 固定置換 / COVERAGE 次元再掲の除去）は変更していない。
+- P4-1 実データ regression case に、実際に観測された無効化条件文を追加した。
+
+### 修正
+
+- 顧客向け Markdown の Tier 3 本文に内部統制語彙 `UP` が露出していた問題を解消。
+  `方向（UP）` → `方向（上昇）`。逐語 `BriefPoint.text` と
+  `BriefOutlook.invalidation_conditions` は監査用に生値のまま保持する。
+
+### 変更なし（明示）
+
+- MorningBrief schema は **0.2.0 のまま**（bump なし）。Compass schema も変更なし。
+- `.github/workflows/p2d-market-pilot.yml` / `.github/p2d_market_trigger` は変更なし
+  （本更新では Actions run を起動しない）。
+- 任意提案（`確度: 低` の重複解消 / `pt` 表記 / tier 重複の再設計 / その他の推敲）は
+  非ブロッキングのため **実施していない**。
+
 ## v4.65 (2026-09-14) — Improve Morning Brief customer-facing presentation (Phase 4 P4-1)
 
 実データ run（Actions 34896447537 / session 2026-09-15）で顧客向け Markdown に内部語彙が

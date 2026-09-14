@@ -15,7 +15,8 @@
 - **fail closed**。材料が無ければ散文で埋めず、tier を落として機械可読な理由を残す。
 - `rule_ref` は claim から**そのまま**運ぶ（ここで作らない・直さない・置き換えない）。
 - customer-facing 本文（`display_text`）は、逐語 `text` から**固定の言い換え規則**だけで作る。
-  内部語彙（経験則 ID / Evidence Package / 因果注記の内部表現 / 次元キーの再掲）を外すだけで、
+  内部語彙（経験則 ID / Evidence Package / 因果注記の内部表現 / 次元キーの再掲 /
+  無効化条件の定型に現れる Context 統制語彙）を外すだけで、
   事実・含意・注意喚起の意味は変えない。新しい市場判断も新しい claim も作らない。
 - Decision / formal_review / corpus / replay / shadow_review / evaluation と legacy は import しない。
 """
@@ -27,6 +28,7 @@ from typing import Dict, List, Sequence, Tuple
 from ..compass.evidence_package import EvidencePackage
 from ..compass.model import ClaimRole, CompassClaim, CompassDraft, CompassOutlook
 from ..compass.one_liner import strip_provenance
+from ..context.model import Direction
 from .model import (
     MORNING_BRIEF_SCHEMA_VERSION,
     R_DRAFT_NOT_USABLE,
@@ -57,20 +59,66 @@ DISPLAY_REPLACEMENTS: Tuple[Tuple[str, str], ...] = (
 #: COVERAGE claim が再掲する次元一覧。構造化された missing / unreliable が正なので本文からは外す
 _COVERAGE_DIMENSION_SENTENCE = re.compile(r"語れない次元: [^。]*。")
 
+#: Context 統制語彙（`context.model.Direction`）→ 顧客向け日本語。
+#:
+#: 無効化条件の定型文（`compass.outlook.invalidation_conditions`）は方向を統制語彙の生値で
+#: 埋め込む。生値は監査用の語であり顧客向けの語ではないため、表示層でだけ日本語へ写像する。
+#: **主語に依存しない語**を選ぶ（例: STRONGER を「円高／円安」と読み替えない）。
+#: 読み替えで新しい市場判断を足さないためであり、分析層の意味づけは変えない。
+#: `Direction` の全値を明示的に持つ（既定値・総称フォールバックは持たない）。
+CONTEXT_DIRECTION_JA: Dict[str, str] = {
+    Direction.UP.value: "上昇",
+    Direction.DOWN.value: "下落",
+    Direction.FLAT.value: "横ばい",
+    Direction.STRONGER.value: "強含み",
+    Direction.WEAKER.value: "弱含み",
+    Direction.STEEPENING.value: "スティープ化",
+    Direction.FLATTENING.value: "フラット化",
+    Direction.OUTPERFORM.value: "相対的に上回る",
+    Direction.UNDERPERFORM.value: "相対的に下回る",
+    Direction.ABOVE.value: "上回る",
+    Direction.BELOW.value: "下回る",
+    Direction.MIXED.value: "強弱混在",
+    Direction.UNKNOWN.value: "不明",
+}
+
+#: 統制語彙が本文に現れる**唯一の定型**（`…前営業日の方向（UP）と逆に…` / `…の方向（UP）が反転…`）。
+#: 全文置換はしない。この構造の内側だけを見るので TOPIX・USDJPY・数値・他の claim 本文は触らない。
+_DIRECTION_IN_PROSE = re.compile(r"方向（([A-Z][A-Z_]*)）")
+
+
+class UnmappedContextDirection(KeyError):
+    """`方向（…）` の内側に写像を持たない統制語彙が現れた（fail closed）。
+
+    生値のまま顧客へ出すことも、その場で語を作ることもしない。
+    """
+
+
+def _direction_label(match: "re.Match[str]") -> str:
+    """定型の内側にある統制語彙 1 個だけを顧客向け日本語へ置き換える。"""
+    raw = match.group(1)
+    try:
+        return f"方向（{CONTEXT_DIRECTION_JA[raw]}）"
+    except KeyError:
+        raise UnmappedContextDirection(raw) from None
+
 
 def customer_text(text: str) -> str:
     """逐語 claim text → 顧客向け表示テキスト（決定論的・冪等）。
 
-    行うのは次の 3 つだけ:
+    行うのは次の 4 つだけ:
       1. 経験則 ID の出典タグを外す（`根拠（経験則 JP_DIR_001）:` → `根拠:`）
       2. 内部語の固定置換（`DISPLAY_REPLACEMENTS`）
       3. COVERAGE 本文の次元再掲を外す（構造化フィールドと重複するため）
+      4. 無効化条件の定型 `方向（…）` の中の Context 統制語彙だけを日本語へ写像する
     事実・数値・含意・注意喚起は一切変更しない。
+    4 の写像後は日本語になり定型に再び一致しないため、二度通しても結果は変わらない。
     """
     out = strip_provenance(text)
     for src, dst in DISPLAY_REPLACEMENTS:
         out = out.replace(src, dst)
     out = _COVERAGE_DIMENSION_SENTENCE.sub("", out)
+    out = _DIRECTION_IN_PROSE.sub(_direction_label, out)
     return out.strip()
 
 
