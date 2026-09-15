@@ -74,9 +74,14 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
         `34927100267` **PASS**。`src/intelligence/reports/delivery.py` ＋
         `delivery_emit.py`（Morning Delivery schema 0.1.0）＋ `delivery_pilot.py`。
         仕様は `docs/databank/MORNING_DELIVERY_SPEC.md`
-      - P4-3b bridge（production producer / Pages 並走 route / 通知経路 / root 切替）—
-        **IN PROGRESS**。b1 producer proof のみ実装済み
-        （`.github/workflows/p43b1-morning-delivery-producer.yml`・公開はしない）
+      - P4-3b1 production producer proof — **完了・凍結（2026-09-15）**:
+        実装 `feb960d` / reachability `a2a6222` / 最終実データ検証 Actions run
+        `34938529433` **PASS**。`.github/workflows/p43b1-morning-delivery-producer.yml`
+        （公開はしない・workflow_dispatch ＋ feature branch 限定の検証用 trigger file）
+      - P4-3b2 Pages 並走 route（`/v2`）— **IN PROGRESS**。b2a publication boundary
+        （`src/intelligence/reports/pages_parallel.py` ＋ `docs/pages/v2_index.html`）
+        のみ実装済み。artifact 選択・download（b2b）と本番 Pages 統合（b2c）は未着手
+      - P4-3b3 通知経路 / P4-3b4 root 切替 — 未着手
 
 ## Phase 5 — Prediction Journal
 

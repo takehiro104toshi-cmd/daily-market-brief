@@ -4,6 +4,51 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.73 (2026-09-15) — Add P4-3b2a Pages parallel publication validator (Phase 4 P4-3b2a)
+
+P4-3a の凍結済み公開安全 artifact 4 点を受け取り、**公開契約を検証してから** `/v2`
+配信ディレクトリを隔離して組み立てる publication boundary 層を追加した。
+**公開はしない**（GitHub API・artifact download・Pages deploy・本番 workflow 変更なし）。
+P4-1 / P4-2 / P4-3a / P4-3b1 は無変更。
+
+    抽出済み artifact（4 file）→ 公開契約の検証 → 隔離 staging → 検証 → v2 へ差し替え
+      → v2/ に index.html ＋ 承認済み 4 file ＝ ちょうど 5 file
+
+### 追加
+
+- `src/intelligence/reports/pages_parallel.py`【新規】— publication boundary。
+  - `validate_publication_artifacts(artifact_dir, *, jst_today)` — 28 項目の公開契約検査。
+    entry 数・種別（ディレクトリ / 隠し / `.part` / HTML / SQLite / JSONL / DB / index）、
+    dated ペアの session 一致、latest と dated の byte 一致、公開 JSON の key 集合、
+    `markdown_sha256` / `markdown_bytes` の実バイト照合、signal の available / label /
+    unavailable_reason の整合、凍結 `FORBIDDEN_PUBLIC_SUBSTRINGS` の走査。
+    **語彙は凍結 module から import して使い、書き写さない。**
+  - `assemble_v2_publication(...)` — 同階層の隔離 staging へ承認済み論理名を
+    **1 つずつ** copy（wildcard copy をしない）→ 組み上がった tree を実測検証 →
+    v2 へ差し替え。宛先 basename は `v2` 以外を拒否し、legacy root には触れない。
+  - **時計を読まない**（JST 当日は呼び出し側が明示的に渡す）。**未来 session だけを拒否**し、
+    古い session は拒否しない（連休・祝日・producer の実行間隔により正常なため。
+    公開物は file 名と `session_date` / `reference_session` で自己記述する）。
+  - CLI: `python -m src.intelligence.reports.pages_parallel --artifact-dir … --v2-destination …
+    --jst-today … --index-template …`（暗黙の既定 path なし・`::P43B2A_*::` marker）。
+- `docs/pages/v2_index.html`【新規】— `/v2` の固定リンクページ（静的テンプレート）。
+  見出しと `latest_morning_brief.md` / `latest_morning_brief.json` / legacy root への
+  リンクのみ。レポート本文・signal ラベル・内部 id・日付・JS・外部資源を含まない。
+  **動的生成しない**（この file を copy するだけ）。
+- `tests/intelligence/test_pages_parallel.py`【新規】— 公開境界のみを検査する 60 件
+  （正常系 / 入力集合の拒否 / session / 公開 JSON / root safety / index / 境界 /
+  隔離 pages-site シミュレーション）。
+
+### 改善
+
+- `docs/rebuild/REBUILD_ROADMAP.md` — P4-3b1 を CLOSED / FROZEN として記録
+  （実装 `feb960d` / reachability `a2a6222` / 実データ検証 run `34938529433` PASS）、
+  P4-3b2 を IN PROGRESS として追記。**P4-3 自体は `[ ]` のまま**。
+
+### 修正
+
+- なし（既存 semantics の変更はない）。
+
 ## v4.72 (2026-09-15) — Fix P4-3b1 producer reachability with a feature-branch trigger file
 
 P4-3b1 producer は `workflow_dispatch` のみを持ち、default branch に存在しないため

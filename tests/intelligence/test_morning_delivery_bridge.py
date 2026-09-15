@@ -436,4 +436,11 @@ def test_roadmap_keeps_p4_3_incomplete() -> None:
                      "Morning Delivery schema 0.1.0",
                      "docs/databank/MORNING_DELIVERY_SPEC.md"):
         assert evidence in text, f"closeout の証跡を記載すること: {evidence}"
-    assert "P4-3b bridge" in text and "IN PROGRESS" in text
+    # b1 closeout 後は sub-note が増分ごとに分かれる。b1 が CLOSED として記録され、
+    # 後続の b2 が IN PROGRESS として残っていることを確認する（弱めない）。
+    assert "P4-3b1 production producer proof — **完了・凍結" in text, \
+        "b1 の CLOSED / FROZEN を sub-note として記録すること"
+    for evidence in ("feb960d", "a2a6222", "34938529433"):
+        assert evidence in text, f"b1 closeout の証跡を記載すること: {evidence}"
+    assert "P4-3b2" in text and "IN PROGRESS" in text, \
+        "後続の bridge 増分が未完であることを残すこと"
