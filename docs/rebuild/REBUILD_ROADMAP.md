@@ -82,9 +82,22 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
         - b2a publication validator / assembler — **完了・凍結（2026-09-15）**:
           実装 `2bb7e62`。`src/intelligence/reports/pages_parallel.py` ＋
           `docs/pages/v2_index.html`（公開はしない）
-        - b2b Actions artifact handoff — **実装済み / 実 run 検証待ち**:
+        - b2b Actions artifact handoff — **完了・凍結（2026-09-15）**:
+          実装 `412981f` / 検証 trigger `67d65e1` / 最終実データ検証 Actions run
+          `34963135973` **PASS**（full suite 2804 passed）。
           `.github/workflows/p43b2b-delivery-handoff.yml` ＋
-          `scripts/p43b2b_select_run.py`（cross-run 受け渡しの実証のみ・公開しない）
+          `scripts/p43b2b_select_run.py`（cross-run 受け渡しの実証のみ・公開しない）。
+          実証した経路: producer run 選定 → ancestry 信頼判定 → artifact 完全一致選定
+          → artifact-id cross-run download → 実測 wrapper 形の検証 → 凍結 P4-3b2a での
+          検証・組み立て → v2 ちょうど 5 file → 合成 legacy root / history 不変
+          → preview artifact upload（Pages deploy なし / リポジトリ書き込みなし /
+          notifier 呼び出しなし）。
+          検証履歴（保全・削除しない）: run `34955374514` は job level で `runner`
+          context を使った不正 workflow file により job ゼロで失敗（実装欠陥ではなく
+          規約違反の記録）。run `34958591500` は `download-artifact@v4` の
+          `artifact-ids` 指定が artifact 名の wrapper ディレクトリを作るという**実測**を
+          得て、凍結 b2a が fail closed で正しく拒否した記録（この 2 件が
+          `412981f` の是正根拠である）。
         - b2c 本番 Pages 統合 — **LOCKED**（`main` への到達手段が未決）
       - P4-3b3 通知経路 / P4-3b4 root 切替 — 未着手
 

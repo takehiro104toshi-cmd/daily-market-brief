@@ -46,6 +46,22 @@ selector（`p43b2b_select_run.py`）・p43b1 producer・本番 workflow・`docs/
   移動系コマンドを使わないこと、実測 run `34958591500` を根拠として workflow へ
   明記していることを検査する。
 
+### 検証（P4-3b2b CLOSED / FROZEN）
+
+- 是正後の実データ再検証 Actions run **`34963135973`** — **PASS**（trigger commit `67d65e1`）。
+  全 10 step 成功。`::P43B2B_SAFETY::` は `safety_check: PASSED` /
+  `download_root_holds_only_the_wrapper: true` / `synthetic_root_unchanged: true` /
+  `synthetic_history_unchanged: true` / `git_writes: 0` / `pages_deployed: false` /
+  `notifier_invoked: false`。`/v2` はちょうど 5 file、`session_date` は JST 当日
+  `2026-09-15`、preview artifact `morning-delivery-v2-pages-preview`（5 file / 3441 bytes）。
+  凍結 b2a は**無変更のまま**通過し、run 34958591500 の拒否が b2a の欠陥ではなく
+  配線の誤りであったことが確定した。
+- 検証履歴は保全する（削除・書き換えをしない）: run `34955374514`
+  （INVALID_WORKFLOW_FILE / ZERO_JOBS）、run `34958591500`（DOWNLOAD_SHAPE fail-closed）。
+- P4-3b2b は **CLOSED / FROZEN**。`p43b2b-delivery-handoff.yml` /
+  `p43b2b_select_run.py` / `pages_parallel.py` / `docs/pages/v2_index.html` は
+  監督者の明示的な再開決定がない限り変更しない。
+
 ## v4.74 (2026-09-15) — Add P4-3b2b Actions artifact handoff validation (Phase 4 P4-3b2b)
 
 凍結済み p43b1 producer の Actions artifact を **cross-run で受け取り**、凍結済み
