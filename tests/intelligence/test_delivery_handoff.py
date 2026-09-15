@@ -43,6 +43,15 @@ PRODUCER_ARTIFACT = "morning-delivery-v2"
 EXPECTED_TIMEOUT = 5
 TRUST_BASELINE = "a2a6222"
 
+#: 展開先。`artifact-ids` 指定の download はこの直下へ artifact 名の wrapper を作る
+#: （run 34958591500 で実測）。b2a の入力は wrapper 自身であり、この root ではない。
+DOWNLOAD_ROOT_DIRNAME = "p43b2_download"
+DOWNLOAD_ROOT = "${RUNNER_TEMP}/" + DOWNLOAD_ROOT_DIRNAME
+
+WRAPPER_CHECK_STEP = "Verify the observed download wrapper shape"
+B2A_STEP = "Assemble /v2 with the frozen P4-3b2a validator"
+EVIDENCE_STEP = "Verify isolation and emit evidence"
+
 
 def _load_selector():
     spec = importlib.util.spec_from_file_location("p43b2b_select_run", SELECTOR_PATH)
@@ -142,6 +151,17 @@ def test_trigger_file_exists_and_is_inert() -> None:
 
 # ---------------------------------------------------------------- download contract
 
+def step_index(name: str) -> int:
+    for index, step in enumerate(steps()):
+        if step.get("name") == name:
+            return index
+    raise AssertionError(f"step not found: {name}")
+
+
+def step_named(name: str) -> dict:
+    return steps()[step_index(name)]
+
+
 def test_download_uses_artifact_ids_not_name() -> None:
     download = step_using("actions/download-artifact@v4")
     with_ = download.get("with") or {}
@@ -154,13 +174,75 @@ def test_download_pins_run_id_and_token_and_isolated_path() -> None:
     with_ = step_using("actions/download-artifact@v4").get("with") or {}
     assert "selected_run_id" in str(with_.get("run-id")), with_.get("run-id")
     assert "secrets.GITHUB_TOKEN" in str(with_.get("github-token"))
-    assert str(with_.get("path")).startswith("${{ runner.temp }}/"), with_.get("path")
+    assert str(with_.get("path")) == "${{ runner.temp }}/" + DOWNLOAD_ROOT_DIRNAME, \
+        with_.get("path")
 
 
-def test_extraction_directory_is_isolated_and_checked_empty() -> None:
-    assert "p43b2_artifact" in executable_text()
-    assert 'test -z "$(ls -A "${RUNNER_TEMP}/p43b2_artifact")"' in run_bodies(), \
-        "展開前に隔離ディレクトリが空であることを確かめる"
+def test_download_root_is_isolated_and_checked_empty() -> None:
+    assert DOWNLOAD_ROOT_DIRNAME in executable_text()
+    assert f'test -z "$(ls -A "{DOWNLOAD_ROOT}")"' in run_bodies(), \
+        "展開前に download root が空であることを確かめる"
+    assert "p43b2_artifact" not in executable_text(), \
+        "wrapper を生む展開先を b2a の入力として再利用しない"
+
+
+def test_download_root_is_not_the_b2a_input() -> None:
+    """実測した wrapper 形（run 34958591500）を前提に、b2a へは wrapper 自身を渡す。"""
+    body = run_bodies()
+    assert f'--artifact-dir "{DOWNLOAD_ROOT}/${{ARTIFACT_NAME}}"' in body, body
+    assert f'--artifact-dir "{DOWNLOAD_ROOT}"' not in body, \
+        "download root をそのまま b2a へ渡すと wrapper で必ず落ちる"
+
+
+def test_wrapper_name_comes_from_the_selector_contract() -> None:
+    """artifact 名の第 2 の定数を作らない（selector が完全一致で検証した値を使う）。"""
+    assert selector.ARTIFACT_NAME == PRODUCER_ARTIFACT
+    for name in (WRAPPER_CHECK_STEP, B2A_STEP, EVIDENCE_STEP):
+        env = step_named(name).get("env") or {}
+        assert env.get("ARTIFACT_NAME") == "${{ steps.select.outputs.artifact_name }}", name
+    assert f"{DOWNLOAD_ROOT}/{PRODUCER_ARTIFACT}" not in executable_text(), \
+        "wrapper 名を shell へ直書きしない（selector output が唯一の出所）"
+
+
+def test_wrapper_shape_is_verified_between_download_and_b2a() -> None:
+    download_at = next(index for index, step in enumerate(steps())
+                       if "download-artifact@v4" in str(step.get("uses", "")))
+    assert download_at < step_index(WRAPPER_CHECK_STEP) < step_index(B2A_STEP)
+
+
+def test_wrapper_check_verifies_every_shape_condition() -> None:
+    """download root の存在・entry 数 1・名前一致・ディレクトリ・sibling 皆無。"""
+    body = str(step_named(WRAPPER_CHECK_STEP).get("run", ""))
+    assert 'pathlib.Path(os.environ["RUNNER_TEMP"]) / "p43b2_download"' in body
+    assert "root.is_dir()" in body, "download root の存在を確かめる"
+    assert "len(entries) != 1" in body, "entry はちょうど 1 つ"
+    assert "entries[0] != expected" in body, "entry 名は artifact 名と完全一致"
+    assert "(root / expected).is_dir()" in body, "その entry はディレクトリ"
+    assert "sibling" in body, "sibling が無いことを証跡に残す"
+    assert "sys.exit(1 if problems else 0)" in body, "期待と違えば fail closed"
+
+
+def test_wrapper_check_does_not_validate_the_publication_files() -> None:
+    """4 点の公開物検証は凍結 b2a の責務。ここで複製も先取りもしない。"""
+    body = str(step_named(WRAPPER_CHECK_STEP).get("run", ""))
+    for duplicated in ("latest_morning_brief", "session_date", "reference_session",
+                       ".md", ".json", "sha256", "exactly 4"):
+        assert duplicated not in body, duplicated
+
+
+def test_extracted_files_are_never_moved_copied_or_flattened() -> None:
+    body = run_bodies()
+    for forbidden in ("mv ", "cp ", "rsync", "shutil", "copytree", "os.rename",
+                      "os.replace", "os.walk", "rglob", ".glob(", "find ",
+                      "next(root.iterdir())", "p43b2_download/*"):
+        assert forbidden not in body, forbidden
+
+
+def test_observed_wrapper_shape_is_documented_with_its_evidence() -> None:
+    """README の記述ではなく実測を根拠として残す（憶測で戻さないため）。"""
+    text = HANDOFF_WORKFLOW.read_text(encoding="utf-8")
+    assert "34958591500" in text, "実測 run を根拠として明記する"
+    assert "artifact-ids" in text and "wrapper" in text
 
 
 # ---------------------------------------------------------------- b2a reuse
@@ -237,6 +319,14 @@ def test_preview_artifact_is_distinctly_named_and_v2_only() -> None:
     assert with_.get("retention-days") == 14
     assert with_.get("if-no-files-found") == "error"
     assert len([s for s in steps() if "upload-artifact" in str(s.get("uses", ""))]) == 1
+
+
+def test_safety_evidence_reports_the_download_root_shape() -> None:
+    body = str(step_named(EVIDENCE_STEP).get("run", ""))
+    assert "download_root_entry_names" in body, "展開形を証跡に残す"
+    assert "download_root_holds_only_the_wrapper" in body
+    assert "download_root_holds_only_the_wrapper" in body.split("safety_check", 1)[1], \
+        "wrapper 以外が現れたら SAFETY を PASSED にしない"
 
 
 def test_synthetic_legacy_root_is_verified() -> None:

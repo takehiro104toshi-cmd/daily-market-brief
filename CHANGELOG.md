@@ -4,6 +4,48 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.75 (2026-09-15) — Fix P4-3b2b download shape to the observed artifact wrapper (Phase 4 P4-3b2b)
+
+実 run `34958591500` で **`actions/download-artifact@v4` の `artifact-ids` 指定は
+`path` 直下に artifact 名の wrapper ディレクトリを 1 つ作る**ことを実測した
+（ログ: `Starting download of artifact to: <runner temp>/p43b2_artifact/morning-delivery-v2`）。
+凍結 b2a はその形を契約違反として正しく fail closed で拒否した
+（`artifact directory must hold exactly 4 entries, found 1: ['morning-delivery-v2']`）。
+README の「指定 path へ直接展開」は `name` 指定時の挙動であり、`artifact-ids` には当てはまらない。
+
+handoff workflow の**配線だけ**を実測形へ合わせた。**凍結 b2a（`pages_parallel.py`）・
+selector（`p43b2b_select_run.py`）・p43b1 producer・本番 workflow・`docs/pages/v2_index.html`
+はいずれも無変更**。artifact-id ベースの選定も維持する（名前指定 download へは切り替えない）。
+
+### 修正
+
+- `.github/workflows/p43b2b-delivery-handoff.yml` — 展開先と b2a 入力を分離した。
+  - 展開先を `${RUNNER_TEMP}/p43b2_download`（download root）へ改称し、b2a へは
+    その直下の wrapper 自身 `${RUNNER_TEMP}/p43b2_download/${ARTIFACT_NAME}` を渡す。
+  - wrapper 名は selector が**完全一致で検証済み**の
+    `steps.select.outputs.artifact_name` をそのまま使う（artifact 名の第 2 の定数を作らない）。
+  - **移動・複製・flatten・再帰探索・wildcard・名前推測は一切行わない**
+    （`mv` / `cp` / `rsync` / `shutil` / `glob` を使わないことをテストで固定）。
+
+### 追加
+
+- 同 workflow に step `Verify the observed download wrapper shape`【新規】—
+  download 直後・b2a 呼び出し前に、実測した展開形だけを fail closed で許す。
+  - download root が存在すること / entry がちょうど 1 つであること / その名が
+    selector の artifact 名と完全一致すること / それがディレクトリであること /
+    sibling が 1 つも無いこと、の 5 点のみを確かめる。
+  - **公開物 4 点の検証はここでは行わない**（凍結 b2a の責務を先取りも複製もしない）。
+- `::P43B2B_PUBLICATION::` へ `download_root_entry_names`、`::P43B2B_SAFETY::` へ
+  `download_root_holds_only_the_wrapper` を追加（wrapper 以外が現れたら PASSED にしない）。
+
+### 改善
+
+- `tests/intelligence/test_delivery_handoff.py` — 実測した wrapper 契約を構造テストで固定
+  （69 → 77 件）。download root と b2a 入力が別であること、shape 検査が download と b2a の
+  **間**に入ること、5 条件すべてを検査していること、公開物検証を複製していないこと、
+  移動系コマンドを使わないこと、実測 run `34958591500` を根拠として workflow へ
+  明記していることを検査する。
+
 ## v4.74 (2026-09-15) — Add P4-3b2b Actions artifact handoff validation (Phase 4 P4-3b2b)
 
 凍結済み p43b1 producer の Actions artifact を **cross-run で受け取り**、凍結済み

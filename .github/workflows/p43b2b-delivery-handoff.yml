@@ -4,8 +4,16 @@
 # 凍結済み P4-3b2a validator/assembler で `/v2` を隔離組み立てできることを実証する。
 #
 #   producer run の選定（信頼判定込み）→ artifact id で download → runner.temp へ展開
-#     → 凍結 b2a（pages_parallel）で検証・組み立て → 合成 legacy root の不変を実測
-#     → 組み立て済み v2 のみを preview artifact として upload
+#     → 展開形（wrapper）を fail closed で確認 → 凍結 b2a（pages_parallel）で検証・組み立て
+#     → 合成 legacy root の不変を実測 → 組み立て済み v2 のみを preview artifact として upload
+#
+# **展開形について（実測に基づく）**: `actions/download-artifact@v4` を **artifact-ids**
+# 指定で使うと、`path` の直下に **artifact 名の wrapper ディレクトリ**が 1 つ作られ、
+# 公開物はその中へ展開される。run 34958591500 のログで実測した形であり、README の
+# 「指定 path へ直接展開」という記述は `name` 指定時の挙動である。b2a の入力は
+# したがって wrapper ディレクトリ自身を指す。**移動・複製・flatten・再帰探索は
+# 一切行わない。** wrapper 名は selector が完全一致で検証した artifact 名
+# （`steps.select.outputs.artifact_name`）をそのまま用い、推測しない。
 #
 # **公開はしない。** GitHub Pages を準備も deploy もせず、リポジトリへ書き込まず、
 # notifier も main.py も呼ばない（本番 Pages 統合は P4-3b2c の別 gate）。
@@ -60,7 +68,7 @@ jobs:
         id: prepare
         run: |
           set -euo pipefail
-          mkdir -p "${RUNNER_TEMP}/p43b2_artifact" "${RUNNER_TEMP}/p43b2_pages_site/history"
+          mkdir -p "${RUNNER_TEMP}/p43b2_download" "${RUNNER_TEMP}/p43b2_pages_site/history"
           printf '<html>synthetic legacy root</html>\n' > "${RUNNER_TEMP}/p43b2_pages_site/index.html"
           printf '<html>synthetic history sentinel</html>\n' > "${RUNNER_TEMP}/p43b2_pages_site/history/sentinel.html"
           {
@@ -69,26 +77,66 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           # 凍結 Compass pilot と同一の導出（runner の UTC 日付をそのまま使わない）。
           echo "jst_today=$(python -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat())')" >> "$GITHUB_OUTPUT"
-          test -z "$(ls -A "${RUNNER_TEMP}/p43b2_artifact")" || { echo "::error::artifact dir not empty"; exit 1; }
+          test -z "$(ls -A "${RUNNER_TEMP}/p43b2_download")" || { echo "::error::download root not empty"; exit 1; }
 
       # 選定した artifact を **id 指定**で取り出す（名前一致に依存しない）。
       # pattern / merge-multiple は使わない。zip digest は action 既定で検証される。
+      # 展開先は download root であり、b2a へ渡す入力そのものではない（下の wrapper 確認を参照）。
       - name: Download the selected producer artifact
         uses: actions/download-artifact@v4
         with:
           artifact-ids: ${{ steps.select.outputs.artifact_id }}
           run-id: ${{ steps.select.outputs.selected_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ runner.temp }}/p43b2_artifact
+          path: ${{ runner.temp }}/p43b2_download
+
+      # 実測した展開形だけを許す。download root は wrapper 1 つのみを持ち、その名は
+      # selector が完全一致で検証した artifact 名でなければならない。
+      # 期待と 1 bit でも違えば b2a を呼ばずにここで落とす（移動も複製もしない）。
+      # **公開物 4 点の検証はここでは行わない**——それは凍結 b2a の責務である。
+      - name: Verify the observed download wrapper shape
+        env:
+          ARTIFACT_NAME: ${{ steps.select.outputs.artifact_name }}
+        run: |
+          set -euo pipefail
+          python -X utf8 - <<'PY'
+          import os, pathlib, sys
+
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "p43b2_download"
+          expected = os.environ["ARTIFACT_NAME"]
+          entries = sorted(p.name for p in root.iterdir()) if root.is_dir() else []
+          problems = []
+
+          if not expected or "/" in expected or expected in (".", ".."):
+              problems.append("selector did not provide a usable artifact name")
+          elif not root.is_dir():
+              problems.append("download root does not exist")
+          elif len(entries) != 1:
+              problems.append(
+                  f"download root must hold exactly 1 entry, found {len(entries)}: {entries}")
+          elif entries[0] != expected:
+              problems.append(f"download root entry is {entries[0]!r}, expected the artifact name")
+          elif not (root / expected).is_dir():
+              problems.append("the expected wrapper entry is not a directory")
+
+          print(f"p43b2b download root entry count: {len(entries)}")
+          print(f"p43b2b download root entry names: {entries}")
+          print(f"p43b2b sibling entry count beside the wrapper: {max(len(entries) - 1, 0)}")
+          print(f"p43b2b wrapper shape: {'OK' if not problems else 'REJECTED'}")
+          for problem in problems:
+              print(f"::error::p43b2b download shape: {problem}")
+          sys.exit(1 if problems else 0)
+          PY
 
       # 凍結済み P4-3b2a を呼ぶだけ。公開契約の検証も v2 の組み立ても複製しない。
-      # 展開結果が wrapper ディレクトリなどで契約に反すれば b2a が fail closed で落とす
-      # （再帰的な flatten で黙って辻褄を合わせない）。
+      # 入力は上で確認済みの wrapper ディレクトリそのもの（flatten せずに指す）。
       - name: Assemble /v2 with the frozen P4-3b2a validator
+        env:
+          ARTIFACT_NAME: ${{ steps.select.outputs.artifact_name }}
         run: |
           set -euo pipefail
           python -X utf8 -m src.intelligence.reports.pages_parallel \
-            --artifact-dir "${RUNNER_TEMP}/p43b2_artifact" \
+            --artifact-dir "${RUNNER_TEMP}/p43b2_download/${ARTIFACT_NAME}" \
             --v2-destination "${RUNNER_TEMP}/p43b2_pages_site/v2" \
             --jst-today "${{ steps.prepare.outputs.jst_today }}" \
             --index-template docs/pages/v2_index.html
@@ -99,6 +147,7 @@ jobs:
         env:
           ROOT_DIGEST_BEFORE: ${{ steps.prepare.outputs.root_digest }}
           HISTORY_DIGEST_BEFORE: ${{ steps.prepare.outputs.history_digest }}
+          ARTIFACT_NAME: ${{ steps.select.outputs.artifact_name }}
         run: |
           set -euo pipefail
           python -X utf8 - <<'PY'
@@ -106,7 +155,8 @@ jobs:
 
           temp = pathlib.Path(os.environ["RUNNER_TEMP"])
           site = temp / "p43b2_pages_site"
-          artifact_dir = temp / "p43b2_artifact"
+          download_root = temp / "p43b2_download"
+          artifact_dir = download_root / os.environ["ARTIFACT_NAME"]
           v2 = site / "v2"
 
           def digest(path):
@@ -117,6 +167,7 @@ jobs:
                                                        sort_keys=True))
 
           published = sorted(p.name for p in v2.iterdir())
+          download_entries = sorted(p.name for p in download_root.iterdir())
           extracted = sorted(p.name for p in artifact_dir.iterdir())
           public = json.loads((v2 / "latest_morning_brief.json").read_text(encoding="utf-8"))
           markdown = (v2 / "latest_morning_brief.md").read_bytes()
@@ -127,6 +178,7 @@ jobs:
               "reference_session": public["reference_session"],
               "published_names": published,
               "published_count": len(published),
+              "download_root_entry_names": download_entries,
               "extracted_entry_names": extracted,
               "markdown_bytes": len(markdown),
               "markdown_sha256": hashlib.sha256(markdown).hexdigest(),
@@ -145,6 +197,8 @@ jobs:
               "site_entries": site_entries,
               "no_temp_residue": site_entries == ["history", "index.html", "v2"],
               "published_is_exactly_five": len(published) == 5,
+              "download_root_holds_only_the_wrapper": download_entries == [
+                  os.environ["ARTIFACT_NAME"]],
               "repository_output_written": False,
               "repository_pages_site_written": False,
               "pages_deployed": False,
@@ -153,7 +207,8 @@ jobs:
           }
           checks["safety_check"] = "PASSED" if (
               root_ok and history_ok and checks["no_temp_residue"]
-              and checks["published_is_exactly_five"]) else "FAILED"
+              and checks["published_is_exactly_five"]
+              and checks["download_root_holds_only_the_wrapper"]) else "FAILED"
           emit("SAFETY", checks)
           if checks["safety_check"] != "PASSED":
               emit("END", {"result": "FAILED"})
