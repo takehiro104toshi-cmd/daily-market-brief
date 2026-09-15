@@ -61,7 +61,9 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
 
 ## Phase 4 — Morning Brief
 
-- [ ] P4-1 (M) 30秒版/3分版/詳細版の3段組版（「今日のお客様向け一言」「今日のポイント」「相場の見通し＋なぜ」）
+- [x] P4-1 (M) 30秒版/3分版/詳細版の3段組版 — **完了・凍結（2026-09-14）**: 実装 `56cf51a` /
+      最終実データ検証 Actions run `34908731914` **PASS**。`src/intelligence/reports/`
+      （`model.py` schema 0.2.0 / `morning_brief.py` / `render_markdown.py` / `pilot.py`）
 - [ ] P4-2 (S) Market Signal（強気〜弱気5段階）をルール評価結果から算出
 - [ ] P4-3 (S) 配信: 既存Pages/通知経路への接続（旧notifiers再利用）
 

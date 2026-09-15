@@ -4,6 +4,64 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.67 (2026-09-15) — Add Market Signal five-level projection (Phase 4 P4-2 v0.1.0)
+
+検証済み `MorningBrief` を 5 段階の方向シグナルへ射影する決定論的な純関数を追加した。
+**P4-1 は CLOSED / FROZEN であり、その成果物は一切変更していない**
+（`reports/model.py` / `morning_brief.py` / `render_markdown.py` / `pilot.py` 無変更、
+MorningBrief schema 0.2.0 のまま、`brief_id` の挙動も Markdown も不変）。
+
+監督者承認済み決定 D-1〜D-4 に従う。roadmap の「強気〜弱気5段階」は
+**5 段階の方向スケール**の意図と解釈し、投資スタンス語は導入しない。
+
+### 追加
+
+- `src/intelligence/reports/market_signal.py`【新規】— Market Signal v0.1.0。
+  - `SignalLevel`（5 値）: `UPWARD_LEAN` / `SLIGHT_UPWARD_LEAN` / `NEUTRAL_RANGE` /
+    `SLIGHT_DOWNWARD_LEAN` / `DOWNWARD_LEAN`。`core.types.Direction` は再利用しない。
+  - `SIGNAL_LEVEL_JA`: 上昇寄り / やや上昇寄り / 中立（レンジ）/ やや下落寄り / 下落寄り。
+    順序値（+2…）は顧客へ出さない。強気 / 弱気 / bullish / bearish を使わない。
+  - `LEVEL_BY_STATE`: `UPWARD_BIAS`・`DOWNWARD_BIAS` × `HIGH`/`MEDIUM`/`LOW` と
+    `RANGE_BOUND` × `LOW` の**承認済み 7 組だけ**を持つ。
+  - `UNAVAILABLE_BY_DIRECTION`: `MIXED` → `direction_mixed` / `UNCERTAIN` →
+    `direction_uncertain`。**確度に依存しない**ため、将来 `MIXED + MEDIUM` や
+    `UNCERTAIN + HIGH` が現れても raise せず安全に unavailable になる。
+    `NEUTRAL_RANGE` へ写像される方向は `RANGE_BOUND` だけ。
+  - `MarketSignal`（frozen / kw-only）: `signal_id` / `session_date` / `reference_session` /
+    `available` / `level` / `confidence` / `horizon` / `brief_id` / `unavailable_reason` /
+    `schema_version`。model に日本語 `label` は持たず、`draft_id` / `package_id` も持たない
+    （`brief_id` が唯一の直接 provenance）。
+  - `UnmappedSignalState`: 未知の direction / 未知の confidence / `RANGE_BOUND + HIGH|MEDIUM` /
+    level なしの available / 機械可読でない unavailable 理由などを **fail closed**。
+  - `build_market_signal(brief)` — 入力は `MorningBrief` のみ（`CompassDraft` も
+    `EvidencePackage` も raw claim も受け取らない）。quality gate を構造的に迂回できない。
+  - `signal_payload` / `canonical_signal` / `make_signal_id` — 既存 `content_id` 規約を使い、
+    prefix `signal_`。日本語ラベル・時刻・path・hostname・PID・乱数を同一性に含めない。
+- `tests/intelligence/test_market_signal.py`【新規】93 件。承認済み写像 7 組 / MIXED・
+  UNCERTAIN の確度非依存 unavailable / fail closed 各種 / 列挙の網羅 / verdict と劣化 /
+  同一性と決定論 / provenance binding / **P4-1 非退行**（Markdown byte 同一・`brief_id` 不変・
+  schema 0.2.0）/ 助言語彙なし / governance・legacy・Phase 5・外部記事基盤・生成モデルの
+  import ゼロ / 入出力・永続化・ネットワークなし。
+- `docs/databank/MARKET_SIGNAL_SPEC.md`【新規】— P4-2 Market Signal v0.1.0 の凍結仕様
+  （役割 / 5 段階 / 日本語ラベル / 写像 / unavailable 方針 / 入力契約 / 決定論と同一性 /
+  provenance / governance 境界 / Phase 5 境界 / 助言禁止 / 表示は P4-3 へ繰り延べ）。
+
+### 改善
+
+- `docs/rebuild/REBUILD_ROADMAP.md`: P4-1 を `[x]` 完了・凍結として記録
+  （実装 `56cf51a` / 最終実データ検証 Actions run `34908731914` PASS）。
+
+### 変更なし（明示）
+
+- P4-1 の成果物（`reports/model.py` / `morning_brief.py` / `render_markdown.py` /
+  `pilot.py`）は無変更。MorningBrief schema は **0.2.0 のまま**。
+- 依存は `MorningBrief → MarketSignal` の一方向のみ。P4-1 側はこの module を参照しない。
+- 凍結済み Morning Brief Markdown は変更しない。バッジ・ヘッダを追加しない。
+  `::P42_SIGNAL::` はまだ追加しない。HTML / CSS / PWA なし（表示は P4-3）。
+- `.github/workflows/p2d-market-pilot.yml` / `.github/p2d_market_trigger` 無変更
+  （本更新では Actions run を起動しない）。
+- `config.yaml` 無変更。新規パッケージ・ディレクトリを作らない。
+
 ## v4.66 (2026-09-14) — Fix residual Context Direction token in customer-facing invalidation prose (Phase 4 P4-1)
 
 最終実データ検証 run（Actions **34902637659** / session 2026-09-15）の顧客向け Markdown に
