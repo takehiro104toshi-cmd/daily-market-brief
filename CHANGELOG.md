@@ -4,6 +4,40 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.72 (2026-09-15) — Fix P4-3b1 producer reachability with a feature-branch trigger file
+
+P4-3b1 producer は `workflow_dispatch` のみを持ち、default branch に存在しないため
+GitHub が workflow として登録せず、**run を 1 件も作成できなかった**
+（`list_workflows` に不在 / runs endpoint 404 / dispatch 403）。
+既存 pilot（p1c / p2a / p2d / p2h）と**同一機構**の専用 trigger file による
+feature branch 限定 push trigger を追加して到達可能にする。
+
+これは **reachability の修正のみ**であり、producer の意味論は一切変えていない。
+push trigger は**恒久的な本番スケジュールではない**（cron は追加していない）。
+
+### 追加
+
+- `.github/p43b1_producer_trigger`【新規】— 専用 trigger file。
+  内容は注記のみで、workflow から読まれも実行もされない（p1c のような parse はしない）。
+- `tests/intelligence/test_morning_delivery_bridge.py` へ検査 4 件を追加。
+  - push が専用 trigger file **1 本のみ**に path 限定されていること。
+  - branch も feature branch に限定され、`branches-ignore` / `paths-ignore` /
+    `tags` で範囲を広げていないこと（既存 4 pilot の規約とも突き合わせる）。
+  - trigger file が inert であること（資格情報・コマンド・URL を含まない）。
+  - reachability fix で **step 構成が変わっていない**こと
+    （step 数・順序・名称・先頭 2 action・末尾 upload・job の構成要素）。
+
+### 改善
+
+- `.github/workflows/p43b1-morning-delivery-producer.yml` — `on:` に
+  feature branch 限定・path 限定の `push` を追加。`workflow_dispatch` は維持。
+  **trigger section 以外は無変更**（steps / permissions / timeout 15 分 /
+  artifact upload / Market Bank コマンド / delivery_pilot コマンド / closeout 意味論）。
+
+### 修正
+
+- なし（既存 semantics の変更はない）。
+
 ## v4.71 (2026-09-15) — Add P4-3b1 Morning Delivery production producer (Phase 4 P4-3b1)
 
 凍結済み vNext チェーンが legacy 本番 workflow から**独立して**走り、P4-3a の承認済み

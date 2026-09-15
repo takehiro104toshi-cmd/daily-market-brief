@@ -26,6 +26,17 @@ name: p43b1-morning-delivery-producer
 
 on:
   workflow_dispatch:
+  # reachability 目的のみの feature branch 限定 trigger（既存 pilot と同一機構）。
+  # **本番スケジュールではない。** この workflow は default branch に存在しないため
+  # workflow_dispatch では run を作成できず（GitHub の仕様）、監督者が承認した
+  # live validation を起動する手段として、専用 trigger ファイルへの push だけに
+  # path を絞って置く。branch も feature branch に限定する。
+  # 恒久的な日次実行の設計は Stage 4 / P4-3b2 の運用方針レビューと P12-1 に残す。
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p43b1_producer_trigger"
 
 permissions:
   contents: read

@@ -39,6 +39,23 @@ DATA_ROOT = "${{ runner.temp }}/intelligence_data"
 ARTIFACT_NAME = "morning-delivery-v2"
 EXPECTED_TIMEOUT = 15
 
+#: reachability 用の専用 trigger（既存 pilot と同一機構・同一 branch 限定）
+FEATURE_BRANCH = "claude/investment-intelligence-phase0-rvdplu"
+TRIGGER_PATH = ".github/p43b1_producer_trigger"
+TRIGGER_FILE = REPO_ROOT / TRIGGER_PATH
+
+#: producer の step 構成（reachability fix で変えてはならない）
+EXPECTED_STEP_NAMES = (
+    None,                                                    # actions/checkout@v4
+    None,                                                    # actions/setup-python@v5
+    "Install minimal deps",
+    "Security guard (confidential tracking check)",
+    "Run market data bank live pilot (1 request per series)",
+    "Phase 4 P4-3b1 Morning Delivery producer (isolated artifacts)",
+    "Verify exactly the four approved artifacts",
+    "Upload Morning Delivery artifacts",
+)
+
 _MODULE = re.compile(r"python\b[^\n|;&]*?-m\s+([A-Za-z0-9_.]+)")
 
 
@@ -117,14 +134,76 @@ def test_producer_supports_workflow_dispatch() -> None:
 
 
 def test_producer_declares_no_invented_schedule() -> None:
-    """日次時刻は監督者決定事項。推測の cron も本番模倣の push も置かない。"""
+    """日次時刻は監督者決定事項。推測の cron を置かない。"""
     triggers = producer_triggers()
     assert "schedule" not in triggers, \
         "daily schedule は監督者決定。cron を推測で置かない"
-    assert "push" not in triggers, "本番を模倣する push trigger を使わない"
     assert "pull_request" not in triggers
-    assert set(triggers) == {"workflow_dispatch"}, \
-        f"b1 の trigger は workflow_dispatch のみ: {sorted(triggers)}"
+    assert set(triggers) == {"workflow_dispatch", "push"}, \
+        f"b1 の trigger は workflow_dispatch と専用 trigger file の push のみ: {sorted(triggers)}"
+
+
+def test_producer_push_trigger_is_scoped_to_the_dedicated_trigger_file() -> None:
+    """reachability 用 push は専用 trigger file 1 本にだけ反応する（既存 pilot と同一機構）。"""
+    push = producer_triggers()["push"]
+    assert isinstance(push, dict), "push trigger は branches / paths を持つこと"
+    assert push.get("paths") == [TRIGGER_PATH], \
+        f"push は {TRIGGER_PATH} のみに path 限定すること: {push.get('paths')}"
+    assert push.get("branches") == [FEATURE_BRANCH], \
+        f"push は feature branch のみに限定すること: {push.get('branches')}"
+
+
+def test_producer_has_no_broad_push_trigger() -> None:
+    """branch 全体・path 無制限・tag への反応を作らない。"""
+    push = producer_triggers()["push"]
+    assert set(push) == {"branches", "paths"}, \
+        f"push trigger の key は branches / paths のみ: {sorted(push)}"
+    for widening in ("branches-ignore", "paths-ignore", "tags", "tags-ignore"):
+        assert widening not in push, f"push の範囲を広げる {widening} を使わない"
+    # 既存 pilot（p1c / p2a / p2d / p2h）と同じ形であること
+    for name in ("p1c-live-validation.yml", "p2a-e2e-pilot.yml",
+                 "p2d-market-pilot.yml", "p2h-jquants-light.yml"):
+        data = _load(WORKFLOW_DIR / name)
+        other = (data.get("on", data.get(True)) or {})["push"]
+        assert other.get("branches") == [FEATURE_BRANCH], \
+            f"{name}: 参照した規約が変わっている"
+        assert len(other.get("paths") or []) == 1, \
+            f"{name}: 参照した規約が変わっている（trigger file は 1 本）"
+
+
+def test_trigger_file_exists_and_is_inert() -> None:
+    """trigger file は push event を作るためだけのもの。読まれも実行もされない。"""
+    assert TRIGGER_FILE.is_file(), f"{TRIGGER_PATH} を作成すること"
+    text = TRIGGER_FILE.read_text(encoding="utf-8")
+    assert 0 < len(text) < 1024, "trigger file は小さな注記のみ"
+    # workflow はこの file を読まない（p1c のように内容を parse しない）
+    for step in producer_steps():
+        assert TRIGGER_PATH not in str(step.get("run", "")), \
+            "producer は trigger file の内容を読まない"
+    lowered = text.lower()
+    for forbidden in ("api_key", "secret", "token", "password", "bearer",
+                      "$(", "`", "curl ", "python -m", "rm ", "http://", "https://"):
+        assert forbidden not in lowered, \
+            f"trigger file に資格情報・コマンドを書かない: {forbidden}"
+
+
+def test_producer_steps_are_unchanged_by_the_reachability_fix() -> None:
+    """reachability fix は trigger section のみ。step 構成は変えない。"""
+    steps = producer_steps()
+    assert len(steps) == len(EXPECTED_STEP_NAMES), \
+        f"step 数が変わっている: {len(steps)}"
+    for step, expected in zip(steps, EXPECTED_STEP_NAMES):
+        if expected is None:
+            assert "uses" in step and "run" not in step, "先頭 2 step は action のみ"
+        else:
+            assert step.get("name") == expected, \
+                f"step 名/順序が変わっている: {step.get('name')} != {expected}"
+    assert steps[0]["uses"] == "actions/checkout@v4"
+    assert steps[1]["uses"].startswith("actions/setup-python@")
+    assert steps[-1]["uses"].startswith("actions/upload-artifact@")
+    job = next(iter(producer_jobs().values()))
+    assert set(job) == {"runs-on", "timeout-minutes", "steps"}, \
+        f"job の構成要素が変わっている: {sorted(job)}"
 
 
 def test_producer_declares_explicit_timeout() -> None:
