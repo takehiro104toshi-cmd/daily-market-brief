@@ -4,6 +4,64 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.74 (2026-09-15) — Add P4-3b2b Actions artifact handoff validation (Phase 4 P4-3b2b)
+
+凍結済み p43b1 producer の Actions artifact を **cross-run で受け取り**、凍結済み
+P4-3b2a で `/v2` を隔離組み立てできることを実証する検証 workflow を追加した。
+**公開はしない**（Pages deploy なし・リポジトリ書き込みなし・本番 workflow 無変更）。
+P4-1 / P4-2 / P4-3a / P4-3b1 / P4-3b2a はいずれも無変更。
+
+    producer run の選定（信頼判定込み）→ artifact id で download → runner.temp へ展開
+      → 凍結 b2a で検証・組み立て → 合成 legacy root の不変を実測 → preview を upload
+
+### 追加
+
+- `.github/workflows/p43b2b-delivery-handoff.yml`【新規】— b2b 検証 workflow。
+  - trigger は `workflow_dispatch` ＋ feature branch 限定・専用 trigger file 1 本に
+    path を絞った push のみ。cron は置かない。
+  - `permissions: contents: read / actions: read` のみ（write 系ゼロ）。
+    `actions: read` は cross-run download に必要な最小権限。新しい secret は作らない。
+  - `timeout-minutes: 5`（実測見積り 2 分未満）。selector も b2a も標準ライブラリだけで
+    動くため **pip install が不要**。
+  - download は **artifact id 直指定**（`artifact-ids`）。`pattern` / `merge-multiple` は
+    使わない。展開先は `runner.temp` 配下で、展開前に空であることを確認する。
+  - 組み立ては凍結 b2a の CLI を呼ぶだけ（公開契約の検証を複製しない）。展開結果が
+    契約に反すれば b2a が fail closed で落とす（再帰 flatten で辻褄を合わせない）。
+  - `runner.temp` に合成 legacy root（`index.html` / `history/sentinel.html`）を置き、
+    組み立て前後の digest 一致を実測する。
+  - 組み立て済み `v2` **のみ**を `morning-delivery-v2-pages-preview`（producer artifact
+    とは別名）で upload。Pages artifact ではない。
+- `.github/p43b2b_handoff_trigger`【新規】— 専用 trigger file（inert）。
+- `scripts/p43b2b_select_run.py`【新規】— CI 配管専用の run / artifact selector。
+  - 標準ライブラリのみ。**`src.intelligence` を import しない**（境界テストは無変更）。
+  - 適格条件: producer workflow path 完全一致 / feature branch / completed /
+    success / event ∈ {push, workflow_dispatch} / **run_attempt == 1**。
+    新しい順は**探索順序であって信頼ではない**。
+  - 信頼判定: compare API で `base=a2a6222...head` を確かめ、承認済み status **かつ**
+    `behind_by == 0` の両方を要求する。想定外の応答・欠損はすべて fail closed。
+  - artifact 条件: 名前完全一致で**ちょうど 1 件** / `expired == false` /
+    0 < size <= 1 MiB。圧縮サイズは内容検証ではなく、内容の権威は b2a のまま。
+  - 認証は環境変数から受け取り、**値を出力しない**（marker にも GITHUB_OUTPUT にも）。
+  - 適格な run が無ければ非ゼロ終了（検証 proof なので fail closed。本番 b2c の
+    skip 意味論とは分けて扱う）。
+- `tests/intelligence/test_delivery_handoff.py`【新規】— b2b の構造ガード 68 件
+  （workflow 契約 / download 契約 / b2a 再利用 / 公開しないこと / selector の
+  run・trust・artifact 判定 / 凍結資産の不変 / closeout 登録）。
+  **pytest から実 GitHub API を呼ばない**（mock 応答のみ）。
+
+### 改善
+
+- `tests/intelligence/test_live_run_closeout.py` / `docs/databank/LIVE_RUN_CLOSEOUT_PROTOCOL.md`
+  — b2b workflow を Automated Closeout へ登録（待機上限 5 分 → 7 分）。
+  `::P43B2B_*::` marker 行も追記。完全一致 assertion は弱めていない。
+- `docs/rebuild/REBUILD_ROADMAP.md` — b2a を CLOSED / FROZEN（実装 `2bb7e62`）として
+  記録し、b2b を「実装済み / 実 run 検証待ち」、b2c を LOCKED と明記。
+  **P4-3 自体は `[ ]` のまま**で、P4-3b2 も完了扱いにしない。
+
+### 修正
+
+- なし（既存 semantics の変更はない）。
+
 ## v4.73 (2026-09-15) — Add P4-3b2a Pages parallel publication validator (Phase 4 P4-3b2a)
 
 P4-3a の凍結済み公開安全 artifact 4 点を受け取り、**公開契約を検証してから** `/v2`

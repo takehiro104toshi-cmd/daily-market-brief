@@ -27,6 +27,7 @@ CLOSEOUT_WORKFLOWS = (
     "p2d-market-pilot.yml",
     "p2h-jquants-light.yml",
     "p43b1-morning-delivery-producer.yml",
+    "p43b2b-delivery-handoff.yml",
 )
 
 #: protocolの表から `| <workflow>.yml | <分> |` を読む

@@ -78,9 +78,14 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
         実装 `feb960d` / reachability `a2a6222` / 最終実データ検証 Actions run
         `34938529433` **PASS**。`.github/workflows/p43b1-morning-delivery-producer.yml`
         （公開はしない・workflow_dispatch ＋ feature branch 限定の検証用 trigger file）
-      - P4-3b2 Pages 並走 route（`/v2`）— **IN PROGRESS**。b2a publication boundary
-        （`src/intelligence/reports/pages_parallel.py` ＋ `docs/pages/v2_index.html`）
-        のみ実装済み。artifact 選択・download（b2b）と本番 Pages 統合（b2c）は未着手
+      - P4-3b2 Pages 並走 route（`/v2`）— **IN PROGRESS**
+        - b2a publication validator / assembler — **完了・凍結（2026-09-15）**:
+          実装 `2bb7e62`。`src/intelligence/reports/pages_parallel.py` ＋
+          `docs/pages/v2_index.html`（公開はしない）
+        - b2b Actions artifact handoff — **実装済み / 実 run 検証待ち**:
+          `.github/workflows/p43b2b-delivery-handoff.yml` ＋
+          `scripts/p43b2b_select_run.py`（cross-run 受け渡しの実証のみ・公開しない）
+        - b2c 本番 Pages 統合 — **LOCKED**（`main` への到達手段が未決）
       - P4-3b3 通知経路 / P4-3b4 root 切替 — 未着手
 
 ## Phase 5 — Prediction Journal

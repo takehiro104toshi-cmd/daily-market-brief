@@ -1,0 +1,175 @@
+# P4-3b2b Morning Delivery artifact handoff validation（Phase 4 P4-3b2b / 監督者必須Gate）
+#
+# 凍結済み p43b1 producer が upload した Actions artifact を **cross-run で受け取り**、
+# 凍結済み P4-3b2a validator/assembler で `/v2` を隔離組み立てできることを実証する。
+#
+#   producer run の選定（信頼判定込み）→ artifact id で download → runner.temp へ展開
+#     → 凍結 b2a（pages_parallel）で検証・組み立て → 合成 legacy root の不変を実測
+#     → 組み立て済み v2 のみを preview artifact として upload
+#
+# **公開はしない。** GitHub Pages を準備も deploy もせず、リポジトリへ書き込まず、
+# notifier も main.py も呼ばない（本番 Pages 統合は P4-3b2c の別 gate）。
+# 本番 workflow `daily-market-brief.yml` と p43b1 producer は変更しない。
+#
+# 認証は GITHUB_TOKEN のみ（cross-run download に必要な actions: read）。
+# 新しい secret は作らない。値はログ・marker・job summary のいずれにも出力しない。
+#
+# schedule は未設定。push は専用 trigger file 1 本にのみ反応する reachability 手段であり、
+# 本番スケジュールではない（恒久的な日次実行の設計は P12-1 に残す）。
+name: p43b2b-delivery-handoff
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p43b2b_handoff_trigger"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: p43b2b-delivery-handoff
+  cancel-in-progress: false
+
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    # artifact 受け渡しのみ。b2a も selector も標準ライブラリだけで動くため pip install が不要。
+    # 実測見積り 2 分未満に対する妥当な上限。
+    timeout-minutes: 5
+    env:
+      ARTIFACT_DIR: ${{ runner.temp }}/p43b2_artifact
+      PAGES_SITE: ${{ runner.temp }}/p43b2_pages_site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 信頼できる producer run と artifact を 1 組だけ選ぶ（CI 配管・内容には関与しない）。
+      # 新しい順は探索順序であって信頼ではない。適格な run が無ければ非ゼロで止まる。
+      - name: Select trusted producer run and artifact
+        id: select
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -X utf8 scripts/p43b2b_select_run.py
+
+      # 隔離ディレクトリと、legacy root を模した sentinel を runner.temp 配下だけに作る。
+      # リポジトリの pages-site / output/v2 には触れない。
+      - name: Prepare isolated directories and synthetic legacy sentinels
+        id: prepare
+        run: |
+          set -euo pipefail
+          mkdir -p "${ARTIFACT_DIR}" "${PAGES_SITE}/history"
+          printf '<html>synthetic legacy root</html>\n' > "${PAGES_SITE}/index.html"
+          printf '<html>synthetic history sentinel</html>\n' > "${PAGES_SITE}/history/sentinel.html"
+          {
+            echo "root_digest=$(sha256sum "${PAGES_SITE}/index.html" | cut -d' ' -f1)"
+            echo "history_digest=$(sha256sum "${PAGES_SITE}/history/sentinel.html" | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+          # 凍結 Compass pilot と同一の導出（runner の UTC 日付をそのまま使わない）。
+          echo "jst_today=$(python -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat())')" >> "$GITHUB_OUTPUT"
+          test -z "$(ls -A "${ARTIFACT_DIR}")" || { echo "::error::artifact dir not empty"; exit 1; }
+
+      # 選定した artifact を **id 指定**で取り出す（名前一致に依存しない）。
+      # pattern / merge-multiple は使わない。zip digest は action 既定で検証される。
+      - name: Download the selected producer artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ steps.select.outputs.artifact_id }}
+          run-id: ${{ steps.select.outputs.selected_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/p43b2_artifact
+
+      # 凍結済み P4-3b2a を呼ぶだけ。公開契約の検証も v2 の組み立ても複製しない。
+      # 展開結果が wrapper ディレクトリなどで契約に反すれば b2a が fail closed で落とす
+      # （再帰的な flatten で黙って辻褄を合わせない）。
+      - name: Assemble /v2 with the frozen P4-3b2a validator
+        run: |
+          set -euo pipefail
+          python -X utf8 -m src.intelligence.reports.pages_parallel \
+            --artifact-dir "${ARTIFACT_DIR}" \
+            --v2-destination "${PAGES_SITE}/v2" \
+            --jst-today "${{ steps.prepare.outputs.jst_today }}" \
+            --index-template docs/pages/v2_index.html
+
+      # 合成 legacy root が byte 単位で不変であることを実測し、証跡を marker で出す。
+      # 絶対パス・認証値・レポート本文は出力しない。
+      - name: Verify isolation and emit evidence
+        env:
+          ROOT_DIGEST_BEFORE: ${{ steps.prepare.outputs.root_digest }}
+          HISTORY_DIGEST_BEFORE: ${{ steps.prepare.outputs.history_digest }}
+          SESSION_HINT: ${{ steps.select.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          python -X utf8 - <<'PY'
+          import hashlib, json, os, pathlib, sys
+
+          site = pathlib.Path(os.environ["PAGES_SITE"])
+          artifact_dir = pathlib.Path(os.environ["ARTIFACT_DIR"])
+          v2 = site / "v2"
+
+          def digest(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          def emit(marker, payload):
+              print(f"::P43B2B_{marker}::" + json.dumps(payload, ensure_ascii=False,
+                                                       sort_keys=True))
+
+          published = sorted(p.name for p in v2.iterdir())
+          extracted = sorted(p.name for p in artifact_dir.iterdir())
+          public = json.loads((v2 / "latest_morning_brief.json").read_text(encoding="utf-8"))
+          markdown = (v2 / "latest_morning_brief.md").read_bytes()
+          public_bytes = (v2 / "latest_morning_brief.json").read_bytes()
+
+          emit("PUBLICATION", {
+              "session_date": public["session_date"],
+              "reference_session": public["reference_session"],
+              "published_names": published,
+              "published_count": len(published),
+              "extracted_entry_names": extracted,
+              "markdown_bytes": len(markdown),
+              "markdown_sha256": hashlib.sha256(markdown).hexdigest(),
+              "json_bytes": len(public_bytes),
+              "json_sha256": hashlib.sha256(public_bytes).hexdigest(),
+              "signal_available": public["signal"]["available"],
+          })
+
+          root_ok = digest(site / "index.html") == os.environ["ROOT_DIGEST_BEFORE"]
+          history_ok = (digest(site / "history" / "sentinel.html")
+                        == os.environ["HISTORY_DIGEST_BEFORE"])
+          site_entries = sorted(p.name for p in site.iterdir())
+          checks = {
+              "synthetic_root_unchanged": root_ok,
+              "synthetic_history_unchanged": history_ok,
+              "site_entries": site_entries,
+              "no_temp_residue": site_entries == ["history", "index.html", "v2"],
+              "published_is_exactly_five": len(published) == 5,
+              "repository_output_written": False,
+              "repository_pages_site_written": False,
+              "pages_deployed": False,
+              "notifier_invoked": False,
+              "git_writes": 0,
+          }
+          checks["safety_check"] = "PASSED" if (
+              root_ok and history_ok and checks["no_temp_residue"]
+              and checks["published_is_exactly_five"]) else "FAILED"
+          emit("SAFETY", checks)
+          if checks["safety_check"] != "PASSED":
+              emit("END", {"result": "FAILED"})
+              sys.exit(1)
+          emit("END", {"result": "OK", "session_date": public["session_date"]})
+          PY
+
+      # 組み立て済み v2 **のみ**を upload する（producer artifact 名と混同しない別名）。
+      # 合成 root / history / 展開元ディレクトリ / ログは含めない。Pages artifact ではない。
+      - name: Upload assembled /v2 preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: morning-delivery-v2-pages-preview
+          path: ${{ runner.temp }}/p43b2_pages_site/v2
+          if-no-files-found: error
+          retention-days: 14
