@@ -64,6 +64,9 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  # v4.76 P4-3b2c: producer artifact の cross-run 参照・取得に必要な最小権限のみ追加。
+  # 他の権限は一切広げない（write 系の追加はゼロ）。
+  actions: read
 
 # 1日最大12回（通常6＋回復6）の実行が同時多発しても commit/push 競合を避けるため直列化する。
 # schedule イベントでは inputs が存在しないため、event.schedule（cron文字列）を group に使う。
@@ -181,6 +184,198 @@ jobs:
             mkdir -p pages-site/history
             cp -r output/history/* pages-site/history/ 2>/dev/null || true
           fi
+
+      # ------------------------------------------------------------------
+      # v4.76 P4-3b2c: Morning Delivery `/v2` 並走公開（OPTION A）。
+      #
+      # Pages deployment は **whole-site 置換**であるため、`/v2` だけを deploy する
+      # 経路は作れない（legacy root が消える）。よって既存の単一 Pages deployment を
+      # そのまま使い、`upload-pages-artifact` の**直前**に `/v2` を接ぎ木する。
+      # **2 本目の Pages writer / deployer は作らない。**
+      #
+      # legacy 配信を守るため、`/v2` の取得・検証は pages-site を**一切触らずに**行い、
+      # 期待された失敗（材料が無い / 古い / b2a が拒否）は typed result として
+      # safe-skip する。pages-site へ書き込むのは graft step だけで、その後の検証は
+      # 厳格（失敗＝ LEGACY_FAILURE ＝ deploy させない）。
+      # 公開内容の権威は凍結 P4-3b2a のままで、ここでは再検証も複製もしない。
+      # ------------------------------------------------------------------
+
+      # 接ぎ木前の legacy tree を byte 単位で記録する（この step は厳格）。
+      - name: Capture the legacy Pages manifest before /v2
+        id: p43b2c_before
+        run: |
+          set -euo pipefail
+          python -X utf8 scripts/p43b2c_pages_manifest.py build \
+            --root pages-site \
+            --output "${RUNNER_TEMP}/p43b2c_manifest_before.json"
+          # 凍結 Compass pilot と同一の導出（runner の UTC 日付をそのまま使わない）。
+          echo "jst_today=$(python -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat())')" >> "$GITHUB_OUTPUT"
+          echo "now_utc=$(python -c 'from datetime import datetime, timezone; print(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))')" >> "$GITHUB_OUTPUT"
+
+      # 本番契約で producer artifact を選ぶ。期待された失敗では exit 0 し、
+      # 分類は result に出る（legacy 配信を落とさない）。
+      # **TRUST_BASELINE は promotion 時に main 上の承認済み producer commit を入れる。**
+      # 空のままなら production mode は CONFIGURATION_INVALID で fail closed し、
+      # legacy だけが publish される（＝ promotion 前の意図した状態）。
+      - name: Select a trusted producer artifact for /v2
+        id: p43b2c_select
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          P43B2C_TRUST_BASELINE: ""
+        run: |
+          set -uo pipefail
+          set +e
+          python -X utf8 scripts/p43b2c_select_producer.py \
+            --mode production \
+            --producer-branch main \
+            --trust-baseline "${P43B2C_TRUST_BASELINE}" \
+            --eligible-events push,workflow_dispatch \
+            --attempt-policy first-attempt-only
+          rc=$?
+          set -e
+          if [ "${rc}" -ne 0 ]; then
+            echo "result=V2_INTERNAL_ERROR" >> "$GITHUB_OUTPUT"
+            echo "reason_code=SELECTOR_CRASHED" >> "$GITHUB_OUTPUT"
+            echo "::warning::/v2 selector exited ${rc}; publishing the legacy site only."
+          fi
+
+      # 選定できたときだけ取得する。取得失敗は legacy 配信を落とさず、
+      # 次 step が outcome を見て typed result へ落とす（blanket な握り潰しはしない）。
+      - name: Download the selected producer artifact
+        id: p43b2c_download
+        if: steps.p43b2c_select.outputs.result == 'SELECTED'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ steps.p43b2c_select.outputs.artifact_id }}
+          run-id: ${{ steps.p43b2c_select.outputs.selected_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/p43b2c_download
+
+      # 展開形の確認 → 凍結 b2a で隔離組み立て → 鮮度判定。**pages-site には触れない。**
+      # b2a の staging は destination.parent へ作られるため、宛先を pages-site/v2 には
+      # しない（残骸が公開されうる）。runner.temp の隔離 staging root を使う。
+      - name: Validate and stage /v2 outside the pages site
+        id: p43b2c_stage
+        if: steps.p43b2c_select.outputs.result == 'SELECTED'
+        env:
+          ARTIFACT_NAME: ${{ steps.p43b2c_select.outputs.artifact_name }}
+          ARTIFACT_CREATED_AT: ${{ steps.p43b2c_select.outputs.artifact_created_at }}
+          DOWNLOAD_OUTCOME: ${{ steps.p43b2c_download.outcome }}
+          JST_TODAY: ${{ steps.p43b2c_before.outputs.jst_today }}
+          NOW_UTC: ${{ steps.p43b2c_before.outputs.now_utc }}
+        run: |
+          set -uo pipefail
+          stage="${RUNNER_TEMP}/p43b2c_stage"
+          mkdir -p "${stage}"
+          if [ "${DOWNLOAD_OUTCOME}" != "success" ]; then
+            echo "result=V2_INTERNAL_ERROR" >> "$GITHUB_OUTPUT"
+            echo "reason_code=DOWNLOAD_FAILED" >> "$GITHUB_OUTPUT"
+            echo "::warning::/v2 artifact download did not succeed; publishing the legacy site only."
+            exit 0
+          fi
+          set +e
+          python -X utf8 - <<'PY' > "${stage}/wrapper.txt" 2>&1
+          import os, pathlib, sys
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "p43b2c_download"
+          expected = os.environ["ARTIFACT_NAME"]
+          entries = sorted(p.name for p in root.iterdir()) if root.is_dir() else []
+          problems = []
+          if not expected or "/" in expected or expected in (".", ".."):
+              problems.append("selector did not provide a usable artifact name")
+          elif not root.is_dir():
+              problems.append("download root does not exist")
+          elif len(entries) != 1:
+              problems.append(f"download root must hold exactly 1 entry, found {len(entries)}")
+          elif entries[0] != expected:
+              problems.append("download root entry is not the selected artifact name")
+          elif not (root / expected).is_dir():
+              problems.append("the expected wrapper entry is not a directory")
+          print(f"p43b2c download root entry names: {entries}")
+          for problem in problems:
+              print(f"wrapper shape rejected: {problem}")
+          sys.exit(1 if problems else 0)
+          PY
+          wrapper_rc=$?
+          cat "${stage}/wrapper.txt"
+          if [ "${wrapper_rc}" -ne 0 ]; then
+            echo "result=V2_REJECTED" >> "$GITHUB_OUTPUT"
+            echo "reason_code=WRAPPER_SHAPE" >> "$GITHUB_OUTPUT"
+            echo "::warning::/v2 artifact wrapper shape was rejected; publishing the legacy site only."
+            exit 0
+          fi
+          python -X utf8 -m src.intelligence.reports.pages_parallel \
+            --artifact-dir "${RUNNER_TEMP}/p43b2c_download/${ARTIFACT_NAME}" \
+            --v2-destination "${stage}/v2" \
+            --jst-today "${JST_TODAY}" \
+            --index-template docs/pages/v2_index.html > "${stage}/b2a.txt" 2>&1
+          cat "${stage}/b2a.txt"
+          printf '{"artifact_created_at": "%s"}\n' "${ARTIFACT_CREATED_AT}" > "${stage}/selection.json"
+          python -X utf8 scripts/p43b2c_v2_gate.py \
+            --selection "${stage}/selection.json" \
+            --b2a-output "${stage}/b2a.txt" \
+            --now-utc "${NOW_UTC}" \
+            --jst-today "${JST_TODAY}" \
+            --output "${stage}/gate.json"
+          set -e
+          result="$(python -X utf8 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["result"])' "${stage}/gate.json")"
+          reason="$(python -X utf8 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["reason_code"])' "${stage}/gate.json")"
+          echo "result=${result}" >> "$GITHUB_OUTPUT"
+          echo "reason_code=${reason}" >> "$GITHUB_OUTPUT"
+          if [ "${result}" != "PASS" ]; then
+            echo "::warning::/v2 was not published (${result} / ${reason}); publishing the legacy site only."
+          fi
+
+      # **pages-site へ書き込む唯一の step。** ここから先の失敗は致命（deploy させない）。
+      - name: Graft the validated /v2 into the pages site
+        if: steps.p43b2c_stage.outputs.result == 'PASS'
+        run: |
+          set -euo pipefail
+          python -X utf8 scripts/p43b2c_graft_v2.py \
+            --staging-v2 "${RUNNER_TEMP}/p43b2c_stage/v2" \
+            --pages-site pages-site \
+            --gate "${RUNNER_TEMP}/p43b2c_stage/gate.json" \
+            --output "${RUNNER_TEMP}/p43b2c_grafted.json"
+
+      # legacy が 1 byte も変わっていないこと・/v2 の形・tree 衛生を実測する。
+      # `/v2` の採否に関わらず必ず走り、失敗すれば deploy へ進ませない。
+      - name: Verify the legacy Pages tree is unchanged
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.p43b2c_stage.outputs.result }}" = "PASS" ]; then
+            python -X utf8 scripts/p43b2c_pages_manifest.py verify \
+              --root pages-site \
+              --before "${RUNNER_TEMP}/p43b2c_manifest_before.json" \
+              --expect-v2 present \
+              --grafted "${RUNNER_TEMP}/p43b2c_grafted.json"
+          else
+            python -X utf8 scripts/p43b2c_pages_manifest.py verify \
+              --root pages-site \
+              --before "${RUNNER_TEMP}/p43b2c_manifest_before.json" \
+              --expect-v2 absent
+          fi
+          python -X utf8 scripts/p43b2c_pages_manifest.py hygiene --root pages-site
+
+      # 採否とその理由を job summary へ残す（秘密値・絶対 path は出さない）。
+      - name: Record the /v2 publication status
+        if: always()
+        env:
+          SELECT_RESULT: ${{ steps.p43b2c_select.outputs.result }}
+          SELECT_REASON: ${{ steps.p43b2c_select.outputs.reason_code }}
+          STAGE_RESULT: ${{ steps.p43b2c_stage.outputs.result }}
+          STAGE_REASON: ${{ steps.p43b2c_stage.outputs.reason_code }}
+        run: |
+          {
+            echo "### Morning Delivery /v2 並走公開（P4-3b2c beta）"
+            echo ""
+            echo "- 選定: ${SELECT_RESULT:-SKIPPED} (${SELECT_REASON:-none})"
+            echo "- 公開判定: ${STAGE_RESULT:-SKIPPED} (${STAGE_REASON:-none})"
+            if [ "${STAGE_RESULT:-}" = "PASS" ]; then
+              echo "- ✅ /v2 を今回の Pages artifact へ含めました"
+            else
+              echo "- ⏭️ /v2 は今回含めていません（legacy の配信は通常どおり継続）"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3

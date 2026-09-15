@@ -337,11 +337,19 @@ def test_producer_generates_no_html() -> None:
 # --- 22〜23: 既存の凍結資産を変更していないこと ---------------------------------------
 
 def test_legacy_production_workflow_is_untouched_by_b1() -> None:
+    """b1 の成果物・pilot・artifact 名が本番 workflow へ漏れていないこと。
+
+    P4-3b2c で `/v2` 並走公開が**監督者承認のうえ**本番 workflow へ入ったため、
+    かつての「`p43` を一切含まない」という広い禁止は b2c まで巻き込んでしまう。
+    ここで固定すべきなのは **b1 が本番へ漏れていないこと**なので、b1 固有の
+    token に絞る（`output/v2` への永続化禁止は据え置く）。b2c 側の契約は
+    `tests/intelligence/test_pages_integration.py` が別途固定する。
+    """
     text = LEGACY_WORKFLOW.read_text(encoding="utf-8")
-    for forbidden in ("p43", "delivery_pilot", "morning-delivery", "morning_brief",
-                      "output/v2"):
+    for forbidden in ("p43b1", "p43b2b", "delivery_pilot", "morning-delivery",
+                      "morning_brief", "output/v2"):
         assert forbidden not in text, \
-            f"b1 は本番 workflow を変更しない（b2 で別途承認）: {forbidden}"
+            f"b1 は本番 workflow を変更しない（b2c のみ別途承認）: {forbidden}"
     assert "cp output/latest_market_brief.html pages-site/index.html" in text, \
         "legacy の Pages 導線は現状のまま"
     assert set((_load(LEGACY_WORKFLOW).get("jobs") or {})) == {

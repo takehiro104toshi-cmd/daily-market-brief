@@ -1,0 +1,232 @@
+# P4-3b2c 並走公開 full Pages preview（Phase 4 P4-3b2c / 監督者必須Gate）
+#
+# 本番 Pages へ deploy する**前**の最後の人間検分 gate。deploy される tree そのものを
+# 組み立て、**公開せずに**ひとつの通常 artifact として持ち出す。
+#
+#   legacy Pages tree の再現 → 接ぎ木前 manifest → producer artifact 選定（preview mode）
+#     → artifact id で download → 実測 wrapper 形の確認 → 凍結 P4-3b2a で隔離組み立て
+#     → 鮮度 gate → 名前指定の /v2 接ぎ木 → legacy 不変の実測 → tree 衛生
+#     → full-pages-site-preview を upload
+#
+# **deploy しない。** GitHub Pages 専用の action（site artifact の upload / deploy /
+# 設定）を一切呼ばず、Pages 権限も OIDC 権限も持たない。使うのは通常の artifact upload
+# だけである。リポジトリの `output/` には書かず、commit も push もせず、notifier も
+# `main.py` も呼ばない。legacy tree は runner.temp 上に再現し、作業領域を workspace
+# へ置かない。
+#
+# 本番の公開経路は `daily-market-brief.yml` **1 本のみ**であり、この workflow は
+# その代替でも 2 本目の Pages writer でもない。
+#
+# schedule は未設定。push は専用 trigger file 1 本にのみ反応する reachability 手段であり、
+# 本番スケジュールではない。**trigger file は監督者の承認まで作成しない**ため、
+# 現時点でこの workflow は workflow_dispatch 以外では発火しない。
+name: p43b2c-pages-preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p43b2c_preview_trigger"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: p43b2c-pages-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    # legacy tree の複製（数百 file）と artifact 受け渡しのみ。b2a も b2c script も
+    # 標準ライブラリだけで動くため pip install が不要。実測見積りに対する妥当な上限。
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 本番 `Prepare GitHub Pages site` と**同じ手順**で legacy tree を再現する。
+      # 宛先は runner.temp であり、リポジトリの pages-site / output は触らない。
+      - name: Reproduce the legacy Pages tree in an isolated root
+        id: legacy
+        run: |
+          set -euo pipefail
+          site="${RUNNER_TEMP}/p43b2c_preview_site"
+          mkdir -p "${site}"
+          cp output/latest_market_brief.html "${site}/index.html"
+          if [ -d output/history ]; then
+            mkdir -p "${site}/history"
+            cp -r output/history/* "${site}/history/" 2>/dev/null || true
+          fi
+          python -X utf8 scripts/p43b2c_pages_manifest.py build \
+            --root "${site}" \
+            --output "${RUNNER_TEMP}/p43b2c_preview_before.json"
+          echo "jst_today=$(python -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat())')" >> "$GITHUB_OUTPUT"
+          echo "now_utc=$(python -c 'from datetime import datetime, timezone; print(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))')" >> "$GITHUB_OUTPUT"
+
+      # preview mode（feature branch と検証 baseline を**明示的に**渡す）。
+      # production mode へ暗黙に切り替わることはない。
+      - name: Select a producer artifact for the preview
+        id: select
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          set +e
+          python -X utf8 scripts/p43b2c_select_producer.py \
+            --mode preview \
+            --producer-branch claude/investment-intelligence-phase0-rvdplu \
+            --trust-baseline a2a6222 \
+            --eligible-events push,workflow_dispatch \
+            --attempt-policy first-attempt-only
+          rc=$?
+          set -e
+          if [ "${rc}" -ne 0 ]; then
+            echo "result=V2_INTERNAL_ERROR" >> "$GITHUB_OUTPUT"
+            echo "reason_code=SELECTOR_CRASHED" >> "$GITHUB_OUTPUT"
+            echo "::warning::preview selector exited ${rc}; previewing the legacy site only."
+          fi
+
+      - name: Download the selected producer artifact
+        id: download
+        if: steps.select.outputs.result == 'SELECTED'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ steps.select.outputs.artifact_id }}
+          run-id: ${{ steps.select.outputs.selected_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/p43b2c_download
+
+      # 本番と同じ配線: 展開形の確認 → 凍結 b2a で隔離組み立て → 鮮度判定。
+      # b2a の staging は destination.parent へ作られるため、宛先を preview site 内には
+      # しない（残骸が preview へ混ざりうる）。
+      - name: Validate and stage /v2 outside the preview site
+        id: stage
+        if: steps.select.outputs.result == 'SELECTED'
+        env:
+          ARTIFACT_NAME: ${{ steps.select.outputs.artifact_name }}
+          ARTIFACT_CREATED_AT: ${{ steps.select.outputs.artifact_created_at }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          JST_TODAY: ${{ steps.legacy.outputs.jst_today }}
+          NOW_UTC: ${{ steps.legacy.outputs.now_utc }}
+        run: |
+          set -uo pipefail
+          stage="${RUNNER_TEMP}/p43b2c_stage"
+          mkdir -p "${stage}"
+          if [ "${DOWNLOAD_OUTCOME}" != "success" ]; then
+            echo "result=V2_INTERNAL_ERROR" >> "$GITHUB_OUTPUT"
+            echo "reason_code=DOWNLOAD_FAILED" >> "$GITHUB_OUTPUT"
+            echo "::warning::preview artifact download did not succeed."
+            exit 0
+          fi
+          set +e
+          python -X utf8 - <<'PY' > "${stage}/wrapper.txt" 2>&1
+          import os, pathlib, sys
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "p43b2c_download"
+          expected = os.environ["ARTIFACT_NAME"]
+          entries = sorted(p.name for p in root.iterdir()) if root.is_dir() else []
+          problems = []
+          if not expected or "/" in expected or expected in (".", ".."):
+              problems.append("selector did not provide a usable artifact name")
+          elif not root.is_dir():
+              problems.append("download root does not exist")
+          elif len(entries) != 1:
+              problems.append(f"download root must hold exactly 1 entry, found {len(entries)}")
+          elif entries[0] != expected:
+              problems.append("download root entry is not the selected artifact name")
+          elif not (root / expected).is_dir():
+              problems.append("the expected wrapper entry is not a directory")
+          print(f"p43b2c download root entry names: {entries}")
+          for problem in problems:
+              print(f"wrapper shape rejected: {problem}")
+          sys.exit(1 if problems else 0)
+          PY
+          wrapper_rc=$?
+          cat "${stage}/wrapper.txt"
+          if [ "${wrapper_rc}" -ne 0 ]; then
+            echo "result=V2_REJECTED" >> "$GITHUB_OUTPUT"
+            echo "reason_code=WRAPPER_SHAPE" >> "$GITHUB_OUTPUT"
+            echo "::warning::preview artifact wrapper shape was rejected."
+            exit 0
+          fi
+          python -X utf8 -m src.intelligence.reports.pages_parallel \
+            --artifact-dir "${RUNNER_TEMP}/p43b2c_download/${ARTIFACT_NAME}" \
+            --v2-destination "${stage}/v2" \
+            --jst-today "${JST_TODAY}" \
+            --index-template docs/pages/v2_index.html > "${stage}/b2a.txt" 2>&1
+          cat "${stage}/b2a.txt"
+          printf '{"artifact_created_at": "%s"}\n' "${ARTIFACT_CREATED_AT}" > "${stage}/selection.json"
+          python -X utf8 scripts/p43b2c_v2_gate.py \
+            --selection "${stage}/selection.json" \
+            --b2a-output "${stage}/b2a.txt" \
+            --now-utc "${NOW_UTC}" \
+            --jst-today "${JST_TODAY}" \
+            --output "${stage}/gate.json"
+          set -e
+          result="$(python -X utf8 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["result"])' "${stage}/gate.json")"
+          reason="$(python -X utf8 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["reason_code"])' "${stage}/gate.json")"
+          echo "result=${result}" >> "$GITHUB_OUTPUT"
+          echo "reason_code=${reason}" >> "$GITHUB_OUTPUT"
+          if [ "${result}" != "PASS" ]; then
+            echo "::warning::preview /v2 was not grafted (${result} / ${reason})."
+          fi
+
+      - name: Graft the validated /v2 into the preview site
+        if: steps.stage.outputs.result == 'PASS'
+        run: |
+          set -euo pipefail
+          python -X utf8 scripts/p43b2c_graft_v2.py \
+            --staging-v2 "${RUNNER_TEMP}/p43b2c_stage/v2" \
+            --pages-site "${RUNNER_TEMP}/p43b2c_preview_site" \
+            --gate "${RUNNER_TEMP}/p43b2c_stage/gate.json" \
+            --output "${RUNNER_TEMP}/p43b2c_grafted.json"
+
+      # legacy 不変・/v2 の形・tree 衛生を実測する（検分者が読む証跡）。
+      - name: Verify the preview tree and emit evidence
+        run: |
+          set -euo pipefail
+          site="${RUNNER_TEMP}/p43b2c_preview_site"
+          if [ "${{ steps.stage.outputs.result }}" = "PASS" ]; then
+            python -X utf8 scripts/p43b2c_pages_manifest.py verify \
+              --root "${site}" \
+              --before "${RUNNER_TEMP}/p43b2c_preview_before.json" \
+              --expect-v2 present \
+              --grafted "${RUNNER_TEMP}/p43b2c_grafted.json"
+          else
+            python -X utf8 scripts/p43b2c_pages_manifest.py verify \
+              --root "${site}" \
+              --before "${RUNNER_TEMP}/p43b2c_preview_before.json" \
+              --expect-v2 absent
+          fi
+          python -X utf8 scripts/p43b2c_pages_manifest.py hygiene --root "${site}"
+
+      - name: Record the preview status
+        if: always()
+        env:
+          SELECT_RESULT: ${{ steps.select.outputs.result }}
+          SELECT_REASON: ${{ steps.select.outputs.reason_code }}
+          STAGE_RESULT: ${{ steps.stage.outputs.result }}
+          STAGE_REASON: ${{ steps.stage.outputs.reason_code }}
+        run: |
+          {
+            echo "### P4-3b2c full Pages preview（deploy しない）"
+            echo ""
+            echo "- 選定: ${SELECT_RESULT:-SKIPPED} (${SELECT_REASON:-none})"
+            echo "- 公開判定: ${STAGE_RESULT:-SKIPPED} (${STAGE_REASON:-none})"
+            echo "- Pages deploy: 行っていません（preview artifact のみ）"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # **Pages artifact ではない通常 artifact。** 検分後に破棄してよい。
+      - name: Upload the full Pages preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-pages-site-preview
+          path: ${{ runner.temp }}/p43b2c_preview_site
+          if-no-files-found: error
+          retention-days: 14

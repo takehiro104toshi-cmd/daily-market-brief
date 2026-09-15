@@ -98,7 +98,18 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
           `artifact-ids` 指定が artifact 名の wrapper ディレクトリを作るという**実測**を
           得て、凍結 b2a が fail closed で正しく拒否した記録（この 2 件が
           `412981f` の是正根拠である）。
-        - b2c 本番 Pages 統合 — **LOCKED**（`main` への到達手段が未決）
+        - b2c 本番 Pages 統合 — **実装済み / 検証待ち（IMPLEMENTED / VALIDATION PENDING）**:
+          OPTION A（既存の単一 Pages deployment に `/v2` を接ぎ木）。
+          `.github/workflows/daily-market-brief.yml`（feature branch copy のみ）＋
+          `.github/workflows/p43b2c-pages-preview.yml`（deploy しない検分 gate）＋
+          `scripts/p43b2c_select_producer.py` / `p43b2c_pages_manifest.py` /
+          `p43b2c_v2_gate.py` / `p43b2c_graft_v2.py`。
+          鮮度 beta 凍結値: artifact 24 時間 / session 3 暦日（祝日カレンダー無し）。
+          no-valid-v2 は Policy A（legacy のみ publish・古い v2 を残さない）。
+          仕様は `docs/databank/PAGES_PARALLEL_PUBLICATION_SPEC.md`。
+          **未了**: preview workflow の実 run / 監督者検分 / production trust baseline
+          （main 上の承認済み producer commit）の決定 / main promotion /
+          初回の実 parallel Pages deployment。**main へは merge も push もしていない。**
       - P4-3b3 通知経路 / P4-3b4 root 切替 — 未着手
 
 ## Phase 5 — Prediction Journal

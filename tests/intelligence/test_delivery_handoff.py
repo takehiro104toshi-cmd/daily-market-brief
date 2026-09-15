@@ -638,8 +638,14 @@ def test_import_boundary_and_legacy_workflow_are_unchanged() -> None:
             ')') in boundary
     assert "p43b2b" not in boundary, "境界テストへ例外を作らない"
     legacy = LEGACY_WORKFLOW.read_text(encoding="utf-8")
-    for forbidden in ("p43b2b", "p43b1", "pages_parallel", "output/v2", "download-artifact"):
+    # P4-3b2c で `/v2` 並走公開が**監督者承認のうえ**本番 workflow へ入った。
+    # b2b 自身が本番へ漏れていないことと、`output/v2` へ永続化しないことは据え置く。
+    # `pages_parallel` / `download-artifact` は b2c 経路でのみ現れてよい。
+    for forbidden in ("p43b2b", "p43b1", "output/v2"):
         assert forbidden not in legacy, forbidden
+    for b2c_only in ("pages_parallel", "download-artifact"):
+        if b2c_only in legacy:
+            assert "p43b2c" in legacy, f"{b2c_only} は b2c 経路でのみ許される"
     assert "cp output/latest_market_brief.html pages-site/index.html" in legacy
 
 

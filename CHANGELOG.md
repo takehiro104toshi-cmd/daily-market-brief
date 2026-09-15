@@ -4,6 +4,66 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.76 (2026-09-15) — Add P4-3b2c Morning Delivery /v2 parallel Pages publication (Phase 4 P4-3b2c)
+
+検証済み Morning Delivery を legacy Pages site を保ったまま `/v2` として並走公開する
+経路を実装した（OPTION A）。**本 gate では Actions を 1 度も起動せず、Pages へ deploy せず、
+main へ merge / push もしていない。** root 切替・通知経路は対象外（P4-3b4 / P4-3b3）。
+
+GitHub Pages の deployment は **site 全体の置換**である（action metadata と
+リポジトリ自身の挙動の両方で確認）。したがって `/v2` 専用の deploy 経路は作れず、
+**既存の単一 Pages deployment に `/v2` を接ぎ木する**形を採る。
+
+### 追加
+
+- `scripts/p43b2c_select_producer.py`【新規】— 本番公開向けの producer run / artifact 選定。
+  凍結 b2b selector の**定数を複写せず**、実証済みの信頼原則を明示的な本番契約として
+  書き直した。mode は production / preview で構造的に分かれ、暗黙に落ちない
+  （`github.ref` から branch / baseline を推測しない）。production は branch `main` と
+  **明示 trust baseline** の両方を要求し、検証専用 baseline `a2a6222` を拒否する。
+  event policy は明示リスト（語彙に `schedule` を含むため将来の cron で trust を
+  書き換えずに済む。beta では渡さない）。attempt policy は
+  `first-attempt-only`（既定）と `verified-attempt`（attempt 開始時刻との前後関係で
+  帰属を**実際に確かめられた場合だけ**通す。確かめられなければ fail closed）。
+- `scripts/p43b2c_pages_manifest.py`【新規】— manifest の作成・比較と tree 構造衛生。
+  entry は `(相対 POSIX path, sha256, byte 数)` で path 昇順。symlink と path escape を
+  拒否し、dot 残骸を検出する。**歴史的な file 数を固定しない**（history は毎日増える）。
+- `scripts/p43b2c_v2_gate.py`【新規】— 鮮度と typed 分類のみ。
+  artifact 24 時間 / session 3 暦日（監督者凍結値）。**祝日カレンダーを実装しない。**
+  時計を読まず、`now_utc` / `jst_today` は呼び出し側が明示的に渡す。
+- `scripts/p43b2c_graft_v2.py`【新規】— 承認済み 5 file を**論理名で 1 つずつ** copy する
+  唯一の書き込み経路。wildcard / 再帰探索 / `glob` を使わず、symlink・6 file 目・欠落・
+  サブディレクトリ・dot 残骸・宛先既存を拒否し、copy 後に byte 照合する。
+- `.github/workflows/p43b2c-pages-preview.yml`【新規】— **deploy しない** full Pages preview。
+  権限は `contents: read` / `actions: read` のみで、Pages 専用 action を呼ばない。
+  通常の artifact `full-pages-site-preview`（retention 14 日）を 1 本だけ出す。
+  **trigger file は作っていないため自動発火しない。**
+- `tests/intelligence/test_pages_integration.py`【新規】構造ガード 121 件。
+  実 GitHub API を呼ばず、mock 応答と temp tree のみで検査する。
+- `docs/databank/PAGES_PARALLEL_PUBLICATION_SPEC.md`【新規】仕様。
+- `config.yaml` に `pages_parallel_publication`（運用上の見取り図。
+  実際に効く定数との一致はテストが機械的に固定する）。
+
+### 改善
+
+- `.github/workflows/daily-market-brief.yml`（**feature branch copy のみ・main 未反映**）—
+  legacy Pages 準備と `upload-pages-artifact` の**間**へ任意の `/v2` 経路を挿入した。
+  取得・検証は `pages-site` に一切触れずに行い、書き込むのは graft step だけ。
+  その後の検証は厳格で、失敗すれば deploy へ進ませない。
+  権限追加は **`actions: read` のみ**（write 系の追加はゼロ）。
+  既存の schedule（cron 12 本）・concurrency・report 生成・git 永続化・legacy Pages 準備・
+  Pages artifact upload・deploy job・notifier 挙動は**いずれも無変更**。
+- `docs/databank/LIVE_RUN_CLOSEOUT_PROTOCOL.md` ＋
+  `tests/intelligence/test_live_run_closeout.py` — preview workflow を待機上限表
+  （10 分 → 12 分）と `::P43B2C_*::` marker 表へ登録。完全一致 assertion は弱めていない。
+
+### 修正
+
+- b2a の staging は `destination.parent` 配下に作られるため、宛先を `pages-site/v2` に
+  直接向けない設計にした。runner 強制終了時に `.v2.tmp-*` が pages-site へ残り、
+  `upload-pages-artifact` の除外（`.git` / `.github` のみ）をすり抜けて公開されうる。
+  b2a は `${RUNNER_TEMP}` の隔離 staging へ組み立て、PASS 後に接ぎ木する。
+
 ## v4.75 (2026-09-15) — Fix P4-3b2b download shape to the observed artifact wrapper (Phase 4 P4-3b2b)
 
 実 run `34958591500` で **`actions/download-artifact@v4` の `artifact-ids` 指定は

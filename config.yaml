@@ -1117,3 +1117,30 @@ compass_formal_review:
     cooldown_eligible_docs: 0                # cooldown なし
     new_decision_state: false                # 新 Decision state を作らない
     automatic_decision: false                # progression は Decision を書かない
+
+# ------------------------------------------------------------------------------
+# Phase 4 P4-3b2c: Morning Delivery `/v2` 並走公開（beta・監督者凍結値）
+#
+# 実際に判定へ使う定数は stdlib のみで動く CI utility 側にあり
+# （`scripts/p43b2c_v2_gate.py` / `scripts/p43b2c_select_producer.py`）、
+# ここはその**運用上の単一の見取り図**である。両者が食い違わないことは
+# `tests/intelligence/test_pages_integration.py` が機械的に固定する。
+# 値の変更は監督者決定事項（勝手に緩めない）。
+# ------------------------------------------------------------------------------
+pages_parallel_publication:
+  enabled_beta: true                     # `/v2` を並走公開する（root 切替は P4-3b4）
+  v2_dirname: "v2"                       # legacy root の下に置く唯一の新ディレクトリ
+  published_file_count: 5                # 凍結 P4-3b2a が認める公開 file 数ちょうど
+  freshness:
+    max_artifact_age_hours: 24           # producer artifact の実年齢の上限
+    max_session_lag_days: 3              # JST 当日と session_date の暦日差の上限
+    market_holiday_calendar: false       # 祝日カレンダーは実装しない（明示）
+  producer:
+    workflow: "p43b1-morning-delivery-producer.yml"
+    artifact_name: "morning-delivery-v2"
+    production_branch: "main"            # 本番公開が受け入れる唯一の producer branch
+    eligible_events: ["push", "workflow_dispatch"]   # beta では schedule を有効化しない
+    attempt_policy: "first-attempt-only"             # rerun 帰属が確立できなければ fail closed
+    production_trust_baseline: ""        # promotion 時に main 上の承認済み commit を入れる
+  no_valid_v2_policy: "LEGACY_ONLY"      # Policy A: 古い v2 を残さず placeholder も作らない
+  repository_persistence: false          # output/v2 へ永続化しない（P4-3a の凍結を維持）
