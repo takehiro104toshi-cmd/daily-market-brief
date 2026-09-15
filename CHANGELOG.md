@@ -4,6 +4,50 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.68 (2026-09-15) — Add Market Signal real-data validation path (Phase 4 P4-2)
+
+P4-2 Market Signal を実データ（Actions が構築する Market Bank）で端から端まで検証する
+**読み取り専用**の経路を追加した。P4-1 は CLOSED / FROZEN のまま一切変更していない。
+
+    Market Bank → 既存 Compass pipeline → 既存 MorningBrief
+      → build_market_signal(MorningBrief) → MarketSignal
+
+### 追加
+
+- `src/intelligence/reports/market_signal_pilot.py`【新規】— P4-2 専用 pilot。
+  - P4-1C pilot（`reports/pilot.py`）とは**別モジュール**。凍結済み P4-1 を一切変更しない。
+  - 入力取得は Phase 3-C の `compass.pilot.load_pilot_inputs()` を共有（ingestion を
+    二重実装しない・日付規則を発明しない）。session は既存 latest-available semantics。
+  - `MarketSignal` は `build_morning_brief()` が返した実 brief からのみ組む。
+    direction も confidence も独立に計算しない。
+  - **renderer を呼ばない。** 顧客向け Markdown を生成も変更もせず、バッジも header も
+    出さない（`renders_customer_markdown: false`）。
+  - marker: `::P42_HEAD::` / `::P42_INPUT::` / `::P42_BRIEF::` / `::P42_SIGNAL::` /
+    `::P42_BINDING::` / `::P42_SAFETY::` / `::P42_END::`。
+  - `::P42_BINDING::` は provenance（brief_id / session_date / reference_session）に加え、
+    **凍結写像表 `LEVEL_BY_STATE` / `UNAVAILABLE_BY_DIRECTION` を引き直して**整合を検証する。
+  - 保護 8 subtree（compass / compass_decisions / formal_review / compass_research /
+    compass_replay / compass_corpus / knowledge/compass_dna / reports）を before/after で
+    照合し、変化または binding 違反があれば FAILED を出して **exit 1**。
+- `tests/intelligence/test_market_signal_pilot.py`【新規】43 件。実 pipeline 経路 /
+  unavailable 経路 / binding 全 true / 書き込みゼロ / 保護 subtree 不変 / 保護 subtree が
+  変化したときの失敗 / P4-1 非改変 / 顧客 Markdown 非生成 / governance・legacy・Phase 5・
+  外部記事基盤・生成モデルの import ゼロ / 機密非出力 / 決定論 / 同一 brief → 同一 signal_id /
+  未知構造状態の fail closed / P4-1C pilot が未変更であること。
+- `.github/workflows/p2d-market-pilot.yml`: step を **1 つだけ**追加
+  （P4-1C の直後・Phase 3.5 の前）。`INTELLIGENCE_DATA_ROOT` は既存 step と同じ
+  `${{ runner.temp }}/intelligence_data`。`continue-on-error` は使わない。
+
+### 変更なし（明示）
+
+- P4-1 の成果物（`reports/model.py` / `morning_brief.py` / `render_markdown.py` /
+  `pilot.py`）は無変更。MorningBrief schema 0.2.0・`brief_id` の挙動・P4-1C marker も不変。
+- `src/intelligence/reports/market_signal.py`（v4.67 の凍結済み意味論）は無変更。
+- `docs/databank/MARKET_SIGNAL_SPEC.md` は無変更（実装で矛盾は見つからなかった）。
+- roadmap の P4-2 は `[ ]` のまま（監督者 closeout まで完了としない）。
+- `.github/p2d_market_trigger` 無変更（本更新では Actions run を起動しない）。
+- 既存 step の変更なし。P4-1C の位置も変えない。`config.yaml` 無変更。
+
 ## v4.67 (2026-09-15) — Add Market Signal five-level projection (Phase 4 P4-2 v0.1.0)
 
 検証済み `MorningBrief` を 5 段階の方向シグナルへ射影する決定論的な純関数を追加した。

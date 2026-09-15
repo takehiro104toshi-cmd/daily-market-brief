@@ -77,6 +77,14 @@ jobs:
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
         run: python -X utf8 -m src.intelligence.reports.pilot
+      # Phase 4 P4-2: Market Signal。検証済み MorningBrief だけを入力に 5 段階の方向
+      # シグナルへ射影する（方向も確度も再計算しない）。read-only（signal store も
+      # product file も作らず、凍結済み顧客 Markdown を生成も変更もしない）。
+      # 保護subtreeをbefore/afterで照合し、変化・binding 違反があればexit 1。
+      - name: Phase 4 P4-2 Market Signal real-data pilot (read-only)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+        run: python -X utf8 -m src.intelligence.reports.market_signal_pilot
       # Phase 3.5: Japan Market Internals。J-Quants Light の daily bars（date指定・
       # 1 session=1リクエスト）・security master・investor-types（週次）から
       # universe / breadth / turnover / sector / size / flow を集計し、Fact Layer・
