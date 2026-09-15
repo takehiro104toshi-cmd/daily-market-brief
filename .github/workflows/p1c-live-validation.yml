@@ -1,0 +1,41 @@
+# P1-C Live Validation（Phase 1-C / 監督者承認済みの最小live接続確認）
+#
+# - 開発環境はegress遮断のため、実接続確認のみをActions runnerで行う。
+# - 対象はfeature branchのtriggerファイル更新時のみ（Legacy本番workflowとは独立。
+#   mainへは影響しない）。1ソース=1リクエスト・bulk ingestionなし。
+# - Secretsは一切使わない（認証必須ソースはキー無しの401挙動を記録するだけ）。
+name: p1c-live-validation
+
+on:
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p1c_live_validation_trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p1c-live-validation
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install minimal deps
+        run: pip install pyyaml
+      - name: Run minimal live validation (no bulk ingestion, no secrets)
+        run: |
+          IDS=$(sed -n 's/^ids: *//p' .github/p1c_live_validation_trigger | head -1)
+          if [ -n "$IDS" ]; then
+            python -m src.intelligence.ingestion.live_validation --ids "$IDS"
+          else
+            python -m src.intelligence.ingestion.live_validation
+          fi

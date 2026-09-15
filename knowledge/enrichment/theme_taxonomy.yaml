@@ -1,0 +1,335 @@
+# =============================================================================
+# Theme Taxonomy（Phase 2-E / versioned knowledge asset・taxonomy foundation）
+# =============================================================================
+# 位置づけ:
+# - 既存 knowledge/theme_relations/themes.yaml（v1.1.0・ja label 30種）を正本として
+#   監査した上で、enrichment用に**安定slug**・**階層foundation**・**多信号マッチ規則**を
+#   付与した分類語彙。既存ファイルは変更しない（ja_labelで対応付け）。
+# - 本格Theme Graph（重み・方向）はPhase 6。ここではparent/child/relatedの表現まで。
+#
+# マッチ規則（THEME MATCHING安全則）:
+# - strong_signals … 1つの出現でタグ付け可（テーマ固有性の高い語句）
+# - weak_signals   … 単独では**絶対にタグ付けしない**（"power"だけでPower確定は禁止）。
+#                    同一テーマのsignal（strong/weak問わず）が**2つ以上**共起した場合のみ
+# - exclude_terms  … 共起した場合タグ付けを抑止（例: nuclear weapons→原子力発電テーマ抑止）
+# - 大文字小文字: ASCII語は大文字小文字を区別しない（ただし"AI"等の全大文字略語は
+#   大文字表記のみマッチ——一般語"ai"への誤爆防止）。日本語はそのまま部分一致。
+#
+# provenance: 本taxonomyによる分類は RULE_BASED / classifier=theme_rule_matcher。
+
+id: enrichment_theme_taxonomy
+version: "1.0.0"
+description: >-
+  記事分類用テーマ語彙（slug・階層・多信号マッチ規則・既存ja label対応・
+  tank slug対応）。Phase 2-E taxonomy foundation。
+source: >-
+  knowledge/theme_relations/themes.yaml v1.1.0の監査＋監督者P2-E指示の現行重要テーマ
+  （AI/Semiconductors/Data Center/Power/Grid/Nuclear/Defense/Robotics/
+  Optical Communication/CPO/Critical Minerals/Shipbuilding/India/Space/
+  Autonomous Driving/Finance/Pharma）＋tank歴史コーパスの語彙
+status: active
+
+themes:
+  - slug: ai
+    ja_label: "AI"            # theme_relations/themes.yaml対応
+    tank_slugs: [ai]          # LegacyAnnotation比較用（ground truthではない）
+    parent: null
+    related: [semiconductors, data_center, robotics, quantum, cybersecurity]
+    strong_signals: ["generative AI", "artificial intelligence", "生成AI", "人工知能",
+                     "AI chip", "AI chips", "AI boom", "AI race", "AI model", "AI models",
+                     "AI infrastructure", "AI spending", "AI demand", "AI startup",
+                     "ChatGPT", "chatbot", "large language model", "LLM"]
+    weak_signals: ["AI"]      # 単独では付けない（2信号目が必要）
+    exclude_terms: []
+
+  - slug: semiconductors
+    ja_label: "半導体"
+    tank_slugs: [semiconductor]
+    parent: null
+    related: [ai, data_center, critical_minerals]
+    strong_signals: ["semiconductor", "semiconductors", "chipmaker", "chip maker",
+                     "半導体", "半導体製造装置", "foundry", "wafer",
+                     "lithography", "chip plant", "chip factory", "chip industry"]
+    weak_signals: ["chip", "chips"]
+    exclude_terms: []
+
+  - slug: data_center
+    ja_label: "データセンター"   # durable_themesに存在（themes一覧には未定義→本taxonomyが定義）
+    tank_slugs: []
+    parent: ai
+    related: [power, optical_communication, semiconductors]
+    strong_signals: ["data center", "data centers", "datacenter", "データセンター",
+                     "hyperscaler", "hyperscale"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: power
+    ja_label: "電力"
+    tank_slugs: [electric_power]
+    parent: null
+    related: [ai, data_center, grid, nuclear, gx]
+    strong_signals: ["power plant", "power plants", "electricity", "power grid",
+                     "電力", "発電", "送配電", "power supply", "power demand",
+                     "electric utility", "utilities"]
+    weak_signals: ["power", "energy"]   # "power"単独タグ付けは禁止（テスト固定）
+    exclude_terms: []
+
+  - slug: grid
+    ja_label: ""              # 既存catalogに単独labelなし（新設・電力の子）
+    tank_slugs: []
+    parent: power
+    related: [power, gx]
+    strong_signals: ["power grid", "electric grid", "grid operator", "送電網",
+                     "transmission lines", "grid infrastructure"]
+    weak_signals: ["grid"]
+    exclude_terms: []
+
+  - slug: nuclear
+    ja_label: "核融合"        # 近似（既存は核融合のみ。原子力発電labelは未定義→新設寄り）
+    tank_slugs: []
+    parent: power
+    related: [power, gx]
+    strong_signals: ["nuclear power", "nuclear plant", "nuclear reactor", "reactors",
+                     "原子力", "原発", "SMR", "small modular reactor", "核融合", "fusion power"]
+    weak_signals: ["nuclear", "reactor"]
+    exclude_terms: ["nuclear weapon", "nuclear weapons", "nuclear program",
+                    "nuclear talks", "核兵器", "核開発"]  # 兵器・外交文脈は原子力(電力)にしない
+
+  - slug: defense
+    ja_label: "防衛"
+    tank_slugs: [defense]
+    parent: null
+    related: [space, cybersecurity, geopolitics, shipbuilding]
+    strong_signals: ["defense spending", "defence spending", "military", "防衛",
+                     "防衛費", "防衛装備", "weapons", "missile defense", "NATO",
+                     "defense ministry", "defense contractor", "arms"]
+    weak_signals: ["defense", "defence"]
+    exclude_terms: []
+
+  - slug: robotics
+    ja_label: "ロボット"
+    tank_slugs: []
+    parent: null
+    related: [ai, autonomous_driving]
+    strong_signals: ["robot", "robots", "robotics", "ロボット", "humanoid", "自動化", "省人化"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: optical_communication
+    ja_label: ""              # 新設（データセンターの子・監督者指定テーマ）
+    tank_slugs: []
+    parent: data_center
+    related: [data_center, semiconductors]
+    strong_signals: ["optical communication", "optical transceiver", "photonics",
+                     "光通信", "光トランシーバー", "silicon photonics", "optical fiber network"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: cpo
+    ja_label: ""              # 新設（光通信の子）
+    tank_slugs: []
+    parent: optical_communication
+    related: [optical_communication, semiconductors]
+    strong_signals: ["co-packaged optics", "コパッケージ"]
+    weak_signals: ["CPO"]     # chief product officer等と衝突→単独では付けない
+    exclude_terms: []
+
+  - slug: critical_minerals
+    ja_label: "資源"          # 既存「資源」への粗い対応（themes.yaml en_aliases踏襲）
+    tank_slugs: [rare_earth]
+    parent: null
+    related: [semiconductors, ev, gx]
+    strong_signals: ["critical minerals", "rare earth", "rare earths", "rare-earth",
+                     "レアアース", "レアメタル", "重要鉱物", "lithium", "cobalt", "鉱物資源"]
+    weak_signals: ["minerals", "mining"]
+    exclude_terms: []
+
+  - slug: shipbuilding
+    ja_label: ""              # 新設（監督者指定）
+    tank_slugs: []
+    parent: null
+    related: [defense]
+    strong_signals: ["shipbuilding", "shipyard", "shipbuilder", "造船"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: india
+    ja_label: ""              # 新設（市場・地域テーマ。country entityとは別次元）
+    tank_slugs: []
+    parent: null
+    related: []
+    strong_signals: ["India", "Indian economy", "インド"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: space
+    ja_label: "宇宙"
+    tank_slugs: [space]
+    parent: null
+    related: [defense, quantum]
+    strong_signals: ["space launch", "satellite", "satellites", "rocket", "宇宙", "衛星",
+                     "ロケット", "orbital", "spacecraft"]
+    weak_signals: ["space"]
+    exclude_terms: []
+
+  - slug: autonomous_driving
+    ja_label: "自動運転"
+    tank_slugs: []
+    parent: null
+    related: [ai, ev, robotics]
+    strong_signals: ["self-driving", "autonomous driving", "autonomous vehicle",
+                     "autonomous vehicles", "robotaxi", "自動運転", "driverless"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: finance
+    ja_label: "金融"
+    tank_slugs: [banking, insurance]
+    parent: null
+    related: [rates_monetary, fx]
+    strong_signals: ["banking", "banks", "銀行", "金融機関", "lender", "lenders",
+                     "insurer", "insurance company", "asset manager", "hedge fund"]
+    weak_signals: ["bank", "金融"]
+    exclude_terms: ["central bank", "Bank of Japan", "Bank of England"]  # 中銀はrates_monetary側
+
+  - slug: pharma
+    ja_label: "医療"          # 近似対応（既存は医療。創薬・医薬はその部分集合）
+    tank_slugs: [healthcare]
+    parent: null
+    related: []
+    strong_signals: ["pharmaceutical", "pharmaceuticals", "drugmaker", "drug maker",
+                     "医薬品", "創薬", "pharma", "FDA approval", "clinical trial", "biotech"]
+    weak_signals: ["drug", "drugs"]
+    exclude_terms: ["drug trafficking", "drug cartel", "drug smuggling"]
+
+  - slug: gx
+    ja_label: "GX"
+    tank_slugs: []
+    parent: null
+    related: [power, ev, nuclear, critical_minerals]
+    strong_signals: ["decarbonization", "carbon neutral", "net zero", "net-zero",
+                     "脱炭素", "カーボンニュートラル", "renewable energy", "solar power",
+                     "wind power", "clean energy"]
+    weak_signals: ["climate", "renewable"]
+    exclude_terms: []
+
+  - slug: ev
+    ja_label: "EV"
+    tank_slugs: []
+    parent: null
+    related: [battery, autonomous_driving, critical_minerals]
+    strong_signals: ["electric vehicle", "electric vehicles", "電気自動車", "EV maker",
+                     "EV sales", "EV market", "EV battery", "EV plant", "EV lineup"]
+    weak_signals: ["EV", "EVs"]
+    exclude_terms: []
+
+  - slug: battery
+    ja_label: "蓄電池"
+    tank_slugs: []
+    parent: null
+    related: [ev, power, critical_minerals]
+    strong_signals: ["battery", "batteries", "蓄電池", "車載電池", "energy storage",
+                     "battery plant"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: quantum
+    ja_label: "量子"
+    tank_slugs: []
+    parent: null
+    related: [ai, semiconductors, cybersecurity]
+    strong_signals: ["quantum computing", "quantum computer", "quantum computers",
+                     "量子コンピュータ", "量子計算"]
+    weak_signals: ["quantum"]
+    exclude_terms: []
+
+  - slug: cybersecurity
+    ja_label: "サイバーセキュリティ"
+    tank_slugs: [cyber]
+    parent: null
+    related: [ai, defense]
+    strong_signals: ["cybersecurity", "cyberattack", "cyber attack", "ransomware",
+                     "サイバー攻撃", "サイバーセキュリティ", "hacking", "hackers", "data breach"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: rates_monetary
+    ja_label: "金利"
+    tank_slugs: [rates, monetary_policy]
+    parent: null
+    related: [finance, fx, inflation]
+    strong_signals: ["interest rate", "interest rates", "rate hike", "rate cut",
+                     "monetary policy", "利上げ", "利下げ", "金融政策", "policy rate",
+                     "bond yields", "Treasury yields", "central bank"]
+    weak_signals: ["rates", "yields"]
+    exclude_terms: []
+
+  - slug: fx
+    ja_label: "為替"
+    tank_slugs: [fx]
+    parent: null
+    related: [rates_monetary]
+    strong_signals: ["exchange rate", "currency market", "円安", "円高", "為替",
+                     "weaker yen", "stronger yen", "dollar-yen", "ドル円"]
+    weak_signals: ["currency", "yen", "dollar"]
+    exclude_terms: []
+
+  - slug: geopolitics
+    ja_label: ""              # 新設（tank頻出領域・themes.yaml unmapped_tank_slugs該当）
+    tank_slugs: [geopolitics, diplomacy_war, ukraine, us_iran_middle_east, north_korea, taiwan, sanctions]
+    parent: null
+    related: [defense, trade_policy, energy]
+    strong_signals: ["geopolitical", "ceasefire", "sanctions", "airstrike", "air strikes",
+                     "invasion", "truce", "戦争", "停戦", "制裁", "military strike",
+                     "war in", "missile attack", "bombing", "空爆", "地政学"]
+    weak_signals: ["war", "conflict", "tensions"]
+    exclude_terms: ["trade war", "price war", "bidding war"]  # 比喩のwarを除外
+
+  - slug: trade_policy
+    ja_label: ""              # 新設（tariffs/us_china等のtank頻出領域）
+    tank_slugs: [tariffs, us_china]
+    parent: null
+    related: [geopolitics, supply_chain_theme]
+    strong_signals: ["tariff", "tariffs", "trade deal", "trade war", "trade talks",
+                     "関税", "通商", "export controls", "export restrictions", "trade agreement"]
+    weak_signals: ["trade"]
+    exclude_terms: []
+
+  - slug: supply_chain_theme
+    ja_label: "物流"          # 近似（既存は物流。供給網はその隣接）
+    tank_slugs: [logistics, shipping]
+    parent: null
+    related: [trade_policy, semiconductors]
+    strong_signals: ["supply chain", "supply chains", "サプライチェーン", "供給網",
+                     "supply disruption", "shortage of"]
+    weak_signals: ["shortage", "logistics"]
+    exclude_terms: []
+
+  - slug: crypto
+    ja_label: ""              # 新設（コーパス頻出・Yahoo Finance系）
+    tank_slugs: [crypto]
+    parent: null
+    related: [finance]
+    strong_signals: ["Bitcoin", "bitcoin", "cryptocurrency", "crypto", "Ethereum",
+                     "ビットコイン", "暗号資産", "stablecoin", "digital asset"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: inflation
+    ja_label: ""              # 新設（tank unmapped頻出）
+    tank_slugs: [inflation]
+    parent: null
+    related: [rates_monetary]
+    strong_signals: ["inflation", "consumer prices", "インフレ", "物価上昇", "cost of living"]
+    weak_signals: []
+    exclude_terms: []
+
+  - slug: energy
+    ja_label: ""              # 新設（石油ガス。電力(power)と区別）
+    tank_slugs: [oil, natural_gas]
+    parent: null
+    related: [geopolitics, gx, power]
+    strong_signals: ["oil prices", "crude oil", "OPEC", "natural gas", "LNG", "原油",
+                     "oil and gas", "oil market", "oil production"]
+    weak_signals: ["oil", "gas"]
+    exclude_terms: []

@@ -1,0 +1,120 @@
+# =============================================================================
+# Event Type Taxonomy＋判定規則（Phase 2-E / versioned knowledge asset）
+# =============================================================================
+# - event typeは「記事が報じている出来事の種類」の分類であり、Factではない
+#   （CLASSIFICATION IS NOT FACT——「decision: EARNINGS種の記事」と
+#   「NVIDIAが売上を発表したというclaim」は別物。後者はP2-EではやらないFact層）。
+# - 判定はheadline/summaryの高precisionフレーズ規則のみ（RULE_BASED）。
+#   規則に合致しない記事は**未分類のまま**（OTHERで埋めない——正直なunclassified率）。
+# - phrases: 1つの出現で判定（テーマと違い多信号は要求しない——フレーズ自体を
+#   イベント固有性の高いものに限定してprecisionを確保する）。
+# - exclude_terms: 共起した場合は判定を抑止。
+# - 大文字小文字: ASCIIは不区別（全大文字略語のみ区別）。日本語は部分一致。
+#
+# time_horizon_rules: 記事の投資影響時間軸の**高確信規則のみ**（本格impact分析は後段）。
+
+id: enrichment_event_types
+version: "1.0.0"
+description: "イベント種別taxonomy＋rule-based判定フレーズ＋time horizon高確信規則"
+source: "監督者P2-E指示のevent type候補16種＋tankコーパス頻出表現の監査"
+status: active
+
+event_types:
+  - type: EARNINGS
+    phrases: ["earnings", "quarterly results", "quarterly profit", "net profit",
+              "net income", "posts profit", "posts loss", "full-year profit",
+              "決算", "四半期利益", "純利益", "beats estimates", "misses estimates",
+              "revenue rose", "revenue fell", "profit rose", "profit fell",
+              "profit jumps", "profit falls"]
+    exclude_terms: []
+  - type: GUIDANCE
+    phrases: ["raises forecast", "cuts forecast", "raises guidance", "cuts guidance",
+              "lowers guidance", "raises outlook", "cuts outlook", "full-year outlook",
+              "profit forecast", "業績予想", "上方修正", "下方修正", "見通しを引き上げ",
+              "見通しを引き下げ"]
+    exclude_terms: []
+  - type: MA
+    phrases: ["acquisition", "acquires", "to acquire", "merger", "takeover", "buyout",
+              "agrees to buy", "bid for", "bid to buy", "買収", "合併", "TOB",
+              "merger deal"]
+    exclude_terms: []
+  - type: CAPEX
+    phrases: ["capital expenditure", "capex", "to invest", "investment plan",
+              "billion investment", "new plant", "new factory", "build a plant",
+              "builds plant", "new chip factory", "new chip plant",
+              "設備投資", "新工場", "工場建設", "plans to build",
+              "expand production", "増産投資"]
+    exclude_terms: []
+  - type: PRODUCT
+    phrases: ["unveils", "unveiled", "product launch", "launches new",
+              "new model", "新製品", "新型", "発売", "releases new"]
+    exclude_terms: ["missile", "rocket launch", "space launch"]  # 軍事・宇宙のlaunchと区別
+  - type: REGULATION
+    phrases: ["antitrust", "regulator", "regulators", "regulatory approval",
+              "crackdown", "規制当局", "独占禁止", "規制強化", "court rules",
+              "lawsuit", "sues", "fined", "罰金"]
+    exclude_terms: []
+  - type: MONETARY_POLICY
+    phrases: ["rate cut", "rate hike", "rate cuts", "rate hikes",
+              "cuts interest rates", "raises interest rates", "cut interest rates",
+              "raise interest rates", "cuts rates", "raises rates", "hikes rates",
+              "interest rate decision", "policy meeting", "FOMC", "holds rates",
+              "keeps rates", "利上げ", "利下げ", "金融政策決定会合", "政策金利",
+              "quantitative easing", "quantitative tightening"]
+    exclude_terms: []
+  - type: FISCAL_POLICY
+    phrases: ["tax cut", "tax cuts", "tax hike", "stimulus package", "spending bill",
+              "budget deficit", "fiscal policy", "補正予算", "減税", "増税", "財政出動",
+              "government spending"]
+    exclude_terms: []
+  - type: MACRO_DATA
+    phrases: ["CPI", "GDP", "inflation data", "jobs report", "unemployment rate",
+              "nonfarm payrolls", "PMI", "retail sales", "trade deficit",
+              "trade surplus", "雇用統計", "消費者物価", "国内総生産", "経済成長率",
+              "industrial production", "鉱工業生産"]
+    exclude_terms: []
+  - type: GEOPOLITICS
+    phrases: ["ceasefire", "sanctions", "airstrike", "air strikes", "missile attack",
+              "invasion", "truce", "military strike", "戦争", "停戦", "制裁",
+              "空爆", "bombing", "strikes on Iran", "war in Ukraine"]
+    exclude_terms: ["trade war", "price war", "bidding war"]
+  - type: SUPPLY_CHAIN
+    phrases: ["supply chain", "supply chains", "supply disruption", "export controls",
+              "export restrictions", "chip shortage", "サプライチェーン", "供給網",
+              "輸出規制", "shortage of"]
+    exclude_terms: []
+  - type: PRICE_MOVE
+    phrases: ["stocks rise", "stocks fall", "shares rise", "shares fall", "shares jump",
+              "shares slump", "shares surge", "shares plunge", "hits record",
+              "record high", "record low", "rally", "sell-off", "selloff",
+              "続伸", "続落", "急騰", "急落", "最高値", "年初来安値",
+              "prices surge", "prices fall", "prices jump", "prices slide",
+              "stock surges", "stock plunges", "shares tumble", "shares soar"]
+    exclude_terms: []
+  - type: IPO
+    phrases: ["IPO", "initial public offering", "goes public", "stock market debut",
+              "listing on", "新規上場", "上場承認"]
+    exclude_terms: []
+  - type: FINANCING
+    phrases: ["bond sale", "share buyback", "stock offering", "funding round",
+              "raises capital", "capital raise", "billion in bonds", "million in bonds",
+              "起債", "増資",
+              "自社株買い", "私募債", "convertible bond"]
+    exclude_terms: []
+  - type: MANAGEMENT
+    phrases: ["steps down", "resigns", "appoints", "names new CEO", "new chief executive",
+              "辞任", "社長交代", "CEO交代", "退任", "succeeds as CEO"]
+    exclude_terms: []
+  - type: OTHER
+    phrases: []   # 自動判定なし（USER / LLM由来のみ。ruleでOTHERを量産しない）
+    exclude_terms: []
+
+# 時間軸の高確信規則のみ（合致しなければtime_horizonは付けない——UNKNOWN扱い）
+time_horizon_rules:
+  - horizon: YEARS
+    patterns: ["by 203", "by 204", "through 203", "next decade", "long-term",
+               "2030年", "2035年", "2040年", "中長期", "今後10年"]
+  - horizon: MONTHS
+    patterns: ["next quarter", "来期", "来四半期", "this fiscal year", "今年度中"]
+
+time_horizon_values: [INTRADAY, DAYS, WEEKS, MONTHS, YEARS, UNKNOWN]

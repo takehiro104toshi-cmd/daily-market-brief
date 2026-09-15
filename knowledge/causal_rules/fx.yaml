@@ -1,0 +1,31 @@
+# 為替の因果ルール。Stage 1で旧config.yaml `causal_rules` からCOPY+NORMALIZE。
+# セクター名語彙は market.yaml 冒頭の注記と同じ（旧config `sectors:` キー準拠）。
+
+id: causal_rules.fx
+version: "1.0.0"
+description: "為替（円安/円高）→ セクター影響の因果ルール"
+source: "config.yaml `causal_rules`（為替）より移設。Compass DNA JP_FX_001と整合"
+status: active
+
+rules:
+  - id: CR_JPY_WEAK_001
+    trigger_keywords: ["円安"]
+    theme: "為替"
+    beneficiary_sectors: ["自動車", "重工業・防衛"]
+    negative_sectors: []
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "円安方向への動きは輸出関連の採算改善期待につながりやすい"
+    related_compass_rule: JP_FX_001
+
+  - id: CR_JPY_STRONG_001
+    trigger_keywords: ["円高"]
+    theme: "為替"
+    beneficiary_sectors: []
+    negative_sectors: ["自動車", "重工業・防衛"]
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "円高方向への動きは輸出関連の採算悪化懸念につながりやすい"
+    related_compass_rule: JP_FX_001

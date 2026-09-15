@@ -1,3 +1,11 @@
+> **【Stage 1.6 セキュリティ通知 2026-08-29】**
+> 羅針盤PDF（社外秘）はpublicリポジトリでのGit tracking禁止となりました
+> （`docs/security/CONFIDENTIAL_RESEARCH_POLICY.md`）。このフォルダのPDFは
+> tracking解除済みです（ローカルのファイル自体は残ります。このブランチを
+> pull/mergeすると作業ツリーからは消えますが、履歴書き換え実施までは
+> `git show 128f4b9 -- date/rashinban/<file>.pdf` 等で復元可能です）。
+> 今後のPDFは `research/source_docs/compass/`（.gitignore保護）へ置いてください。
+
 # data/rashinban/ — 羅針盤 学習ソース置き場（v2.6）
 
 このフォルダに岡三「羅針盤」のテキスト（**.md または .txt**）を置くと、

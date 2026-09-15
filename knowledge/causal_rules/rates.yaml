@@ -1,0 +1,31 @@
+# 金融政策・金利の因果ルール。Stage 1で旧config.yaml `causal_rules` からCOPY+NORMALIZE。
+# セクター名語彙は market.yaml 冒頭の注記と同じ（旧config `sectors:` キー準拠）。
+
+id: causal_rules.rates
+version: "1.0.0"
+description: "金融政策（利上げ/利下げ）→ セクター影響の因果ルール"
+source: "config.yaml `causal_rules`（金融政策）より移設。Compass DNA JP-US-001と整合"
+status: active
+
+rules:
+  - id: CR_RATE_HIKE_001
+    trigger_keywords: ["利上げ", "タカ派", "追加利上げ観測", "金融引き締め"]
+    theme: "金融政策"
+    beneficiary_sectors: ["金融"]
+    negative_sectors: ["情報通信・生成AI"]
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい"
+    related_compass_rule: JP_US_001   # knowledge/compass_dna/market_rules.yaml
+
+  - id: CR_RATE_CUT_001
+    trigger_keywords: ["利下げ", "ハト派", "金融緩和", "緩和的"]
+    theme: "金融政策"
+    beneficiary_sectors: ["情報通信・生成AI"]
+    negative_sectors: ["金融"]
+    durable: false
+    confidence: confirmed
+    status: active
+    note: "金利低下はグロース株のバリュエーションには追い風となる一方、金融機関の利ざやには逆風となりやすい"
+    related_compass_rule: JP_US_001

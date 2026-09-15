@@ -1,0 +1,140 @@
+# P4-3b1 Morning Delivery production producer proof（Phase 4 P4-3b1 / 監督者必須Gate）
+#
+# 目的は **producer の実証のみ**。凍結済み vNext チェーンが legacy 本番 workflow から
+# 独立して走り、P4-3a の承認済み 4 artifact を生成できることを証明する。
+#
+#   Market Bank（runner.temp）→ 凍結 Compass pipeline → MorningBrief（凍結）
+#     → Markdown（凍結 renderer）→ MarketSignal（凍結）→ MorningDelivery
+#     → 隔離 output root へ 4 artifact → Actions artifact として upload
+#
+# **公開はしない。** リポジトリの `output/v2/` へ書かず、commit も push もせず、
+# Pages を準備も deploy もせず、notifier も `main.py` も呼ばず、HTML も作らない
+# （公開経路の接続は P4-3b2 以降の bridge gate で別途承認される）。
+#
+# 本番 legacy workflow `daily-market-brief.yml` とは完全に独立している
+# （needs 依存なし・相互呼び出しなし・可変のリポジトリ出力を共有しない）。
+# 本 workflow の失敗が legacy レポート生成へ波及しないことを構造で保証する
+# （MIGRATION_PLAN §2 安全規約 4「新系の失敗が旧レポート生成を止めない」）。
+#
+# Secrets は **JQUANTS_API_KEY のみ** を runtime injection する（TOPIX の J-Quants V2
+# 認証に必要な最小限。p2d-market-pilot と同一。値はログ・URL・raw payload・
+# FetchAttempt のいずれにも出力しない。未設定なら空文字＝正常停止）。
+#
+# schedule は未設定。日次実行時刻は監督者決定事項のため、推測で cron を置かない
+# （P12-1 スケジューラ統合とは別件。docs/rebuild/REBUILD_ROADMAP.md 参照）。
+name: p43b1-morning-delivery-producer
+
+on:
+  workflow_dispatch:
+  # reachability 目的のみの feature branch 限定 trigger（既存 pilot と同一機構）。
+  # **本番スケジュールではない。** この workflow は default branch に存在しないため
+  # workflow_dispatch では run を作成できず（GitHub の仕様）、監督者が承認した
+  # live validation を起動する手段として、専用 trigger ファイルへの push だけに
+  # path を絞って置く。branch も feature branch に限定する。
+  # 恒久的な日次実行の設計は Stage 4 / P4-3b2 の運用方針レビューと P12-1 に残す。
+  push:
+    branches:
+      - claude/investment-intelligence-phase0-rvdplu
+    paths:
+      - ".github/p43b1_producer_trigger"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p43b1-morning-delivery-producer
+  cancel-in-progress: false
+
+jobs:
+  producer:
+    runs-on: ubuntu-latest
+    # 実測（p2d-market-pilot run 34927100267）: Market Bank 4分13秒＋delivery_pilot 25秒。
+    # 準備 step を含めても 6 分前後。ネットワーク遅延の余裕を見て 15 分で必ず終端させる。
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Market Bank（pyyaml / yfinance）と Security guard（pytest）の最小構成のみ。
+      - name: Install minimal deps
+        run: pip install pyyaml yfinance pytest
+      # 本番 workflow と同じ Security Guard。機密ファイル（羅針盤PDF等の
+      # CONFIDENTIAL_SOURCE・SENSITIVE_IDENTIFIER）が誤って Git tracking された状態で
+      # artifact を作らない（docs/security/DATA_CLASSIFICATION_POLICY.md）。
+      - name: Security guard (confidential tracking check)
+        run: pytest tests/intelligence/test_confidential_guard.py -q
+      # p2d-market-pilot と**同一のコマンド**で Market Bank を runner.temp へ構築する
+      # （第二の Market Bank 経路を作らない）。D-5 により毎回ゼロから再構築してよい。
+      - name: Run market data bank live pilot (1 request per series)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+        run: python -m src.intelligence.market.pilot_runner
+      # 凍結済み P4-3a pilot（D-2: 第二の production entrypoint を作らない）。
+      # Fact / Context / EvidencePackage / CompassDraft / MorningBrief / Markdown /
+      # MarketSignal はすべて delivery_pilot が in-memory で通すため、
+      # Phase 3-A / 3-B / 3-C / P4-1C / P4-2 の step を別立てしない。
+      - name: Phase 4 P4-3b1 Morning Delivery producer (isolated artifacts)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          P43_DELIVERY_OUTPUT_ROOT: ${{ runner.temp }}/p43_delivery_output/v2
+        run: python -X utf8 -m src.intelligence.reports.delivery_pilot
+      # upload 側のフィルタに依存せず、**upload 前に**承認済み 4 file ちょうどで
+      # あることを確かめる。5 file 目・HTML・SQLite・JSONL・DB・index・temp 残骸・
+      # サブディレクトリのいずれかがあれば job を失敗させる。
+      - name: Verify exactly the four approved artifacts
+        env:
+          P43_DELIVERY_OUTPUT_ROOT: ${{ runner.temp }}/p43_delivery_output/v2
+        run: |
+          set -euo pipefail
+          cd "${P43_DELIVERY_OUTPUT_ROOT}"
+          entries="$(find . -mindepth 1 | sort)"
+          count="$(printf '%s\n' "${entries}" | grep -c . || true)"
+          if [ "${count}" != "4" ]; then
+            echo "::error::approved artifact count mismatch: expected 4, got ${count}"
+            printf '%s\n' "${entries}"
+            exit 1
+          fi
+          for name in latest_morning_brief.md latest_morning_brief.json; do
+            if [ ! -f "${name}" ]; then
+              echo "::error::missing approved artifact: ${name}"
+              exit 1
+            fi
+          done
+          dated="$(ls -1 | grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}_morning_brief\.(md|json)$' || true)"
+          dated_count="$(printf '%s\n' "${dated}" | grep -c . || true)"
+          if [ "${dated_count}" != "2" ]; then
+            echo "::error::expected 2 dated artifacts, got ${dated_count}"
+            exit 1
+          fi
+          session_dates="$(printf '%s\n' "${dated}" | cut -d_ -f1 | sort -u | grep -c . || true)"
+          if [ "${session_dates}" != "1" ]; then
+            echo "::error::dated artifacts disagree on session date"
+            exit 1
+          fi
+          if find . -mindepth 1 \
+               \( -type d -o -name '.*' -o -name '*.part' -o -name '*.html' \
+                  -o -name '*.sqlite3' -o -name '*.jsonl' -o -name '*.db' \
+                  -o -name 'index*' \) | grep -q .; then
+            echo "::error::unapproved entry present in the delivery output root"
+            find . -mindepth 1 | sort
+            exit 1
+          fi
+          for name in ${dated} latest_morning_brief.md latest_morning_brief.json; do
+            if [ ! -s "${name}" ]; then
+              echo "::error::empty approved artifact: ${name}"
+              exit 1
+            fi
+          done
+          echo "approved artifact set verified: 4 files"
+      # 隔離した delivery output root **だけ**を upload する。
+      # INTELLIGENCE_DATA_ROOT（Market Bank / Compass internals / governance data）は
+      # upload しない。artifact 名は固定（timestamp・path・credential を含めない）。
+      - name: Upload Morning Delivery artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: morning-delivery-v2
+          path: ${{ runner.temp }}/p43_delivery_output/v2
+          if-no-files-found: error
+          retention-days: 14
