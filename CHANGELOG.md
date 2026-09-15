@@ -4,6 +4,75 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.69 (2026-09-15) — Add Morning Delivery packaging and parallel artifacts (Phase 4 P4-3a v0.1.0)
+
+凍結済み Phase 4 成果物を 1 つの不変な配信物へ束ね、`output/v2/` へ並走 artifact として
+出す層を追加した。**P4-1 / P4-2 は CLOSED / FROZEN のまま一切変更していない。**
+
+    MorningBrief（P4-1・凍結） + MarketSignal（P4-2・凍結） + 逐語 Markdown
+      → MorningDelivery → output/v2/ の Markdown / JSON
+
+監督者承認済み決定 D-1〜D-5 に従う。**P4-3a は P4-3 の全体ではない**——Pages routing と
+既存 notifier 接続は後続の P4-3b bridge gate に残す。
+
+### 追加
+
+- `src/intelligence/reports/delivery.py`【新規】— Morning Delivery packaging v0.1.0。
+  - `MorningDelivery`（frozen / kw-only）: `delivery_id` / `session_date` /
+    `reference_session` / `brief` / `signal` / `markdown` / `markdown_sha256` /
+    `markdown_bytes` / `formats` / `schema_version`。`brief` と `signal` は
+    **凍結成果物への不変参照**であり、分析フィールドを組み直さない。
+  - `DeliveryFormat`: `MARKDOWN` / `JSON` のみ（HTML 値も将来 placeholder も持たない）。
+  - `build_morning_delivery(brief, signal, markdown)` — 純関数。Compass も MorningBrief
+    合成も MarketSignal 写像も再実行しない。binding 3 点
+    （`brief_id` / `session_date` / `reference_session`）が食い違えば **fail closed**。
+  - **Markdown バイト保存契約**: renderer の戻り値を逐語で運ぶ。見出しも footer も id も
+    空白も末尾改行も足さない。Market Signal は P4-3a では JSON にのみ現れる。
+  - `delivery_public_payload()` / `delivery_public_json()` — **顧客向け公開 JSON**。
+    `MorningBrief.as_dict()` / `MarketSignal.as_dict()` を丸ごと出さず、`PUBLIC_KEYS`
+    9 key ＋ `PUBLIC_SIGNAL_KEYS` 3 key の明示的な射影だけを出す。
+    `FORBIDDEN_PUBLIC_SUBSTRINGS` を最終防壁として走査し、内部語彙の混入は fail closed。
+  - `PUBLIC_UNAVAILABLE_REASONS` — 公開してよい固定理由 6 種のみ（内部自由文は出さない）。
+  - `delivery_payload()` / `canonical_delivery()` / `make_delivery_id()` — 既存 `content_id`
+    規約、prefix `delivery_`。Markdown 本文・日本語ラベル・path・時刻を同一性から除く。
+  - `UnmappedDeliveryState` — 未承認 format / digest 不一致 / 公開不可理由などで fail closed。
+- `src/intelligence/reports/delivery_emit.py`【新規】— artifact emitter（**唯一の書き込み層**）。
+  - `output/v2/` の承認済み 4 file のみ:
+    `YYYY-MM-DD_morning_brief.{md,json}` / `latest_morning_brief.{md,json}`。
+  - temp file → `os.replace` による atomic 置換。失敗時に `.part` を残さない。
+  - 置換前に全バイトを用意し、直列化段階の失敗が 1 file も差し替えないようにする。
+    **4 file 一括の原子性は保証しない**ことを docstring と仕様書に明記した
+    （POSIX が複数ファイルのトランザクションを提供しないため）。
+  - canonical store を作らない（JSONL append-only / SQLite / index いずれも無し）。
+- `tests/intelligence/test_morning_delivery.py`【新規】57 件。
+- `tests/intelligence/test_morning_delivery_emit.py`【新規】30 件。
+- `docs/databank/MORNING_DELIVERY_SPEC.md`【新規】— P4-3a Morning Delivery v0.1.0 凍結仕様
+  （役割 / 入力 / モデル / binding / Markdown バイト保存 / 公開 JSON / artifact 名 /
+  同一性 / atomic write / 機密 / governance 隔離 / legacy・notifier 隔離 /
+  Phase 5 境界 / Phase 11・12 境界 / P4-3b bridge の繰り延べ）。
+
+### 改善
+
+- `docs/rebuild/REBUILD_ROADMAP.md`: P4-2 を `[x]` 完了・凍結として記録
+  （実装 `15f9462` / 検証経路 `98bdb75` / 最終実データ検証 Actions run `34917668250` PASS /
+  Market Signal schema 0.1.0 / `MARKET_SIGNAL_SPEC.md`）。
+
+### 変更なし（明示）
+
+- P4-1 / P4-2 の成果物（`reports/model.py` / `morning_brief.py` / `render_markdown.py` /
+  `pilot.py` / `market_signal.py` / `market_signal_pilot.py`）は無変更。
+  MorningBrief schema **0.2.0**、MarketSignal schema **0.1.0** のまま。
+- 依存は `MorningBrief`・`MarketSignal` → `MorningDelivery` の一方向のみ。
+- `LEGACY_FORBIDDEN_PREFIXES` を緩和せず、`test_import_boundary.py` に例外も作らない。
+  依存の向きは **new intelligence → files**（notifier コードへは向かわない）。
+- legacy 成果物（`output/latest_market_brief.*` / `output/history/**`）に触れない。
+  Pages deployment route も `daily-market-brief.yml` も `notifiers/**` も `main.py` も無変更。
+- HTML / PWA / service worker / manifest / offline cache / Push / スケジューラ /
+  Cloudflare 変更は実装しない（P4-3b 以降・Phase 11 / 12）。
+- `delivery_pilot.py` は作らない。`.github/workflows/p2d-market-pilot.yml` と
+  `.github/p2d_market_trigger` は無変更（Actions run を起動しない）。
+- roadmap の P4-3 は `[ ]` のまま。`config.yaml` 無変更。
+
 ## v4.68 (2026-09-15) — Add Market Signal real-data validation path (Phase 4 P4-2)
 
 P4-2 Market Signal を実データ（Actions が構築する Market Bank）で端から端まで検証する

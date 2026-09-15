@@ -64,7 +64,10 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
 - [x] P4-1 (M) 30秒版/3分版/詳細版の3段組版 — **完了・凍結（2026-09-14）**: 実装 `56cf51a` /
       最終実データ検証 Actions run `34908731914` **PASS**。`src/intelligence/reports/`
       （`model.py` schema 0.2.0 / `morning_brief.py` / `render_markdown.py` / `pilot.py`）
-- [ ] P4-2 (S) Market Signal（強気〜弱気5段階）をルール評価結果から算出
+- [x] P4-2 (S) Market Signal（5段階の方向シグナル）— **完了・凍結（2026-09-15）**: 実装 `15f9462` /
+      検証経路 `98bdb75` / 最終実データ検証 Actions run `34917668250` **PASS**。
+      `src/intelligence/reports/market_signal.py`（Market Signal schema 0.1.0）＋
+      `market_signal_pilot.py`。仕様は `docs/databank/MARKET_SIGNAL_SPEC.md`
 - [ ] P4-3 (S) 配信: 既存Pages/通知経路への接続（旧notifiers再利用）
 
 ## Phase 5 — Prediction Journal
