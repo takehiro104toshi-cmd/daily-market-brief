@@ -948,13 +948,46 @@ def test_preview_uses_preview_mode_and_does_not_write_the_repository() -> None:
     assert "p43b2c_preview_site" in body, "preview tree は runner.temp に作る"
 
 
-def test_preview_trigger_file_is_not_activated() -> None:
-    """機構は用意するが、本 gate では発火させない。"""
+def test_preview_trigger_is_scoped_and_inert() -> None:
+    """起動経路は専用 trigger file 1 本だけで、その中身は実行されない。
+
+    Gate 3（監督者承認済みの no-deploy preview 実 run）で trigger file を作った。
+    以降の恒久的な不変条件は「存在しないこと」ではなく、**inert であること**と
+    **その path でこの workflow **しか**発火しないこと**である（b2b と同じ規律）。
+    """
     preview = workflow(PREVIEW_WORKFLOW)
     triggers = preview.get("on", preview.get(True))
     assert set(triggers) == {"workflow_dispatch", "push"}
+    assert triggers["push"]["branches"] == ["claude/investment-intelligence-phase0-rvdplu"]
     assert triggers["push"]["paths"] == [".github/p43b2c_preview_trigger"]
-    assert not PREVIEW_TRIGGER.exists(), "trigger file を作らない（起動しない）"
+    assert set(triggers["push"]) == {"branches", "paths"}, sorted(triggers["push"])
+    assert "schedule" not in triggers, "preview に cron を置かない"
+
+    if PREVIEW_TRIGGER.exists():
+        body = PREVIEW_TRIGGER.read_text(encoding="utf-8")
+        assert 0 < len(body) < 1024
+        for forbidden in ("api_key", "secret", "password", "bearer", "$(", "`",
+                          "curl ", "python ", "rm ", "http://", "https://"):
+            assert forbidden not in body.lower(), forbidden
+    assert ".github/p43b2c_preview_trigger" not in run_bodies(PREVIEW_WORKFLOW, "preview"), \
+        "workflow は trigger file の内容を読まない"
+
+
+def test_only_the_preview_workflow_fires_on_its_trigger_path() -> None:
+    """trigger file の更新で本番・producer・b2b が巻き添えで動かないこと。"""
+    target = ".github/p43b2c_preview_trigger"
+    firing = []
+    for path in WORKFLOW_DIR.glob("*.yml"):
+        data = workflow(path)
+        raw = data.get("on", data.get(True)) or {}
+        push = raw.get("push") if isinstance(raw, dict) else None
+        paths = (push or {}).get("paths") if isinstance(push, dict) else None
+        if paths and target in paths:
+            firing.append(path.name)
+    assert firing == [PREVIEW_WORKFLOW.name], firing
+    for other in ("daily-market-brief.yml", "p43b1-morning-delivery-producer.yml",
+                  "p43b2b-delivery-handoff.yml"):
+        assert other not in firing, other
 
 
 def test_preview_is_registered_for_closeout() -> None:
