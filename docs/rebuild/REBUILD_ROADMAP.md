@@ -107,9 +107,20 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
           鮮度 beta 凍結値: artifact 24 時間 / session 3 暦日（祝日カレンダー無し）。
           no-valid-v2 は Policy A（legacy のみ publish・古い v2 を残さない）。
           仕様は `docs/databank/PAGES_PARALLEL_PUBLICATION_SPEC.md`。
-          **未了**: preview workflow の実 run / 監督者検分 / production trust baseline
-          （main 上の承認済み producer commit）の決定 / main promotion /
-          初回の実 parallel Pages deployment。**main へは merge も push もしていない。**
+          Gate 3（no-deploy full Pages preview）**PASS（2026-09-15）**:
+          guard `ff70be8` / trigger `95a65bc` / run `34974303473` success（全 11 step）/
+          artifact `10398702881` `full-pages-site-preview`（276 file・retention 14 日）/
+          full suite 2927 passed。artifact age 6.459h・session lag 0 日で**鮮度契約を満たし、
+          `/v2` の実地包含を証明**した（fail-safe 経路ではない）。
+          Gate 4（証跡再検証）**PASS**: legacy manifest digest `345783b0…3814d3`（271 file）と
+          `v2/index.html` digest `11152525…17be2` を **git から独立に再計算して一致**を確認。
+          ただし artifact zip 実体は本セッションの egress policy によりダウンロードできず、
+          **zip の直接展開検査は未実施**（監督者側での取得に委ねる）。
+          **未了**: production trust baseline（main 上の承認済み commit）の決定 /
+          main promotion / 初回の実 parallel Pages deployment。
+          **main へは merge も push もしていない。** promotion 計画は
+          `docs/databank/PAGES_PARALLEL_PUBLICATION_SPEC.md` §20（allowlist 方式・
+          producer closure 134 file の実測を含む）。
       - P4-3b3 通知経路 / P4-3b4 root 切替 — 未着手
 
 ## Phase 5 — Prediction Journal

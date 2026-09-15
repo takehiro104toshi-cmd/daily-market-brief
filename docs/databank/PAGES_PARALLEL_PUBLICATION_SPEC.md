@@ -311,3 +311,194 @@ cross-run artifact handoff（P4-3b2b で実証済み）と単一 Pages 組み立
 | `::P43B2C_GRAFT::` / `::P43B2C_GRAFT_REJECTED::` | graft helper |
 
 marker はいずれも**秘密値・絶対 path を含まない設計**である。
+
+---
+
+# 19. Gate 3 / Gate 4 evidence（2026-09-15）
+
+| 項目 | 値 |
+|---|---|
+| 実装 | `7c892d4` |
+| preview guard 強化 | `ff70be8` |
+| preview trigger | `95a65bc` |
+| preview run | `34974303473`（push / attempt 1 / **success** / 全 11 step 実行） |
+| preview artifact | `10398702881` `full-pages-site-preview`（276 file / 18,629,863 bytes / retention 14 日） |
+| full suite | **2927 passed** |
+| Gate 3 | **PASS**（Case A — `/v2` の実地包含を証明。fail-safe 経路ではない） |
+| Gate 4 | **PASS（証跡再導出による）**。下記の retrieval 制約を参照 |
+
+Gate 3 実測: artifact age 6.459h（上限 24h）/ session lag 0 日（上限 3 暦日）/
+legacy manifest digest `345783b0…3814d3` が接ぎ木前後で一致 / `/v2` ちょうど 5 file /
+tree 衛生 0 findings / Pages deploy ゼロ。
+
+## 19.1 Gate 4 で独立に再導出した値
+
+run の marker を信用せず、**git から再計算**して突き合わせた:
+
+| 対象 | 方法 | 結果 |
+|---|---|---|
+| legacy manifest digest（271 file） | `95a65bc` の `output/` から本番と同一手順で tree を再構成し manifest を再計算 | `345783b0…3814d3` **完全一致** |
+| `v2/index.html` digest | 凍結テンプレート `docs/pages/v2_index.html` の sha256（b2a は verbatim copy し byte 一致を検証する） | `11152525…17be2` **完全一致** |
+| legacy tree 構造・衛生 | 再構成 tree に対し `hygiene` を実行 | top level は `index.html` と `history/` の 2 つのみ / 46 date dir / 271 file すべて `.html` / `legacy.html` なし / 入れ子 `index.html` なし / symlink なし / dot entry なし / 禁止拡張子なし / findings 0 |
+
+`latest_morning_brief.md|json` と `2026-09-15_morning_brief.md|json` の digest
+（`60f1da5f…f1c1` / `de9550c0…9284`）は producer artifact の実体を要するため本環境では
+独立再計算できない。ただし **2 つの独立した run**（P4-3b2b `34963135973` と
+P4-3b2c `34974303473`）が同一値を報告しており、相互検証されている。
+
+## 19.2 artifact retrieval の制約（記録）
+
+preview artifact の zip 実体は `*.blob.core.windows.net` 上にあり、本セッションの
+egress policy がこのホストへの接続を拒否する（署名付き URL・GitHub API の redirect の
+いずれも同一ホストへ着地する）。artifact の**内容を返す MCP tool も存在しない**。
+
+したがって **zip そのものの展開検査は実施できていない**。上記 19.1 は同等の保証を
+目指した独立再導出であって、zip の直接検査の置き換えではない。zip 実体の検分は
+監督者側でのダウンロードに委ねる（2026-09-29 まで取得可能）。
+
+---
+
+# 20. 本番 promotion 計画（設計のみ・未実行）
+
+## 20.1 実測した branch 乖離
+
+| 項目 | 値 |
+|---|---|
+| `origin/main` | `3b0e183`（2026-09-15 12:04 UTC） |
+| feature HEAD | `95a65bc` |
+| merge-base | `34f7f98`（2026-08-28） |
+| feature → main 先行 | 130 commit |
+| main → feature 先行 | **103 commit（すべて bot の `Add daily market brief`）** |
+| main 側が触った path | `output/` 142 file ＋ `data/` 18 file のみ |
+| feature 側が `output/` `data/` を触った量 | **0 file** |
+| **両側で変更が重なる file** | **0 件** |
+
+main には merge-base 以降、**人手の production 変更が 1 件も無い**。
+競合は起きないが、**merge すれば 130 commit と 352 file 規模の開発資産が本番へ入る**。
+
+## 20.2 promotion 方式の比較
+
+| | A 通常 merge | B squash | C cherry-pick | **D allowlist promotion commit** |
+|---|---|---|---|---|
+| legacy `output/`/`data/` 保全 | 安全（重なり 0） | 安全 | 条件付き | **安全（触らない）** |
+| 競合リスク | 低 | 低 | **高**（18 日分の path に対し断片適用） | **無し** |
+| trust ancestry | 保たれる | **破壊**（feature commit が main の祖先でなくなる） | 断片化 | 新 baseline を定義（下記） |
+| rollback | merge revert（巨大） | revert（巨大） | 困難 | **1 commit の revert** |
+| 監査性 | 低（130 commit） | 中 | 低 | **最高（1 diff）** |
+| 本番へ入る無関係資産 | **352 file ＋ docs/knowledge 全般** | 同左 | 中〜大 | **allowlist のみ** |
+| 研究・機密隣接資産の混入 | corpus / corpus_research / shadow_review / decision / formal_review / evaluation が入る | 同左 | 可能性あり | **入らない** |
+| 進み続ける main との相性 | 良 | 良 | 悪 | **良（毎回 latest main 上に再構築）** |
+
+**B は本件では有害**である。squash すると `a2a6222` も feature の全 commit も main の
+祖先でなくなり、compare ベースの trust 判定が `diverged` に倒れる。
+
+**推奨: D（allowlist から作る専用 promotion commit）。**
+実装手段は repo-native（`git checkout origin/main -b promo` →
+`git checkout 95a65bc -- <allowlist>` → 1 commit）。
+
+## 20.3 production runtime closure（実測）
+
+**b2a だけが本番面だという以前の前提は誤りだった。** `/v2` が本番で成立するには
+**producer artifact が本番に存在**しなければならず、producer の closure が支配的である。
+
+| closure | first-party file 数 |
+|---|---|
+| 凍結 b2a 公開境界 | **8**（`pages_parallel` / `delivery` / `delivery_emit` / `market_signal` / `reports.model` / `compass.model` / `core.ids` / `core.time`） |
+| `market.pilot_runner` | 66 |
+| `reports.delivery_pilot` | 127 |
+| **producer union** | **133** |
+| **producer ＋ b2a union** | **134** |
+| feature branch の `src/intelligence` 総数 | 352 |
+
+（注: 以前の報告で b2a closure を 5 file としたが、正しくは **8 file** である。）
+
+producer closure に**含まれる** 15 package: `compass` `context` `core` `databank`
+`enrichment` `evidence` `evidence_qa` `facts` `ingestion` `internals` `market`
+`normalization` `reports` `review` `sources`。
+
+producer closure から**除外される** 17 package（本番実行に不要）: `corpus`
+`corpus_research` `decision` `entities` `evaluation` `formal_review` `jquants_ops`
+`mobile_intake` `news` `personalization` `pipeline` `predictions` `replay`
+`screening` `shadow_review` `themes` `thesis`。
+
+→ Compass PDF corpus・governance・Decision 記録・research 機構は**本番 closure の外側**に
+自然に落ちる。allowlist 方式ならこれらは本番へ入らない。
+
+third-party 依存は **`pyyaml` と `yfinance` の 2 つだけ**（producer workflow の
+`pip install pyyaml yfinance pytest` と一致）。secret は **`JQUANTS_API_KEY` のみ**。
+producer の permissions は `contents: read` のみで、**リポジトリ書き込みは 0 箇所**。
+出力は `runner.temp` 配下のみ（`INTELLIGENCE_DATA_ROOT` / `P43_DELIVERY_OUTPUT_ROOT`）。
+
+`knowledge/compass_dna/market_rules.yaml`（6,320 bytes）と
+`knowledge/market_series/core_series.yaml`（27,267 bytes）は **main に存在しない**ため
+promotion が必要。
+
+## 20.4 production trust baseline の確定手順
+
+baseline は **promotion commit が存在してからでなければ確定できない**。
+したがって promotion は 2 段階にする。
+
+- **P1（dormant promotion）**: allowlist を latest `origin/main` 上へ 1 commit で載せる。
+  `P43B2C_TRUST_BASELINE` は**空のまま**。production mode は
+  `CONFIGURATION_INVALID` → `V2_INTERNAL_ERROR` で safe-skip し、**legacy は通常どおり
+  publish される**。`/v2` は出ない。ここで本番 workflow が無害であることを実地確認する。
+- **P2（activation）**: `P43B2C_TRUST_BASELINE` を **P1 の SHA** に設定する 1 行 commit。
+  以降の producer run の `head_sha` は P1 の子孫なので compare は `ahead` を返し続ける。
+
+baseline に **`a2a6222` を使わない**（production mode が明示的に拒否する）。
+存在しない SHA を先に決め打ちしない。未レビューの main commit を焼き込まない。
+
+rollback 時: P2 を revert すれば baseline が空に戻り `/v2` だけが止まる。
+将来 main が squash / rebase されて P1 が祖先でなくなった場合は compare が `diverged` に
+倒れ **fail closed（legacy のみ）** になる。これは安全側の挙動であり、
+復旧は baseline の貼り替えで行う。
+
+## 20.5 main 前進への対処
+
+promotion は「pin した `origin/main` の SHA の上に構築 → push 直前に再 fetch →
+SHA が変わっていたら**作り直す**」を必須とする。stale な main に対して黙って適用しない。
+
+`git push origin HEAD:main` は main が進んでいれば non-fast-forward で**失敗する**。
+これを検知手段として使い、失敗したら latest main から allowlist を再適用して作り直す。
+allowlist は `output/` `data/` を一切含まないため、作り直しは機械的で安全である。
+
+## 20.6 producer scheduling（設計のみ・実装しない）
+
+producer には本番 cron が無く、artifact 鮮度上限は 24 時間である。
+
+legacy は 1 日 6 スロット（07:30 / 09:10 / 11:30 / 12:40 / 15:40 / 17:20 JST）。
+**JST 06:50 頃に 1 日 1 回**走らせれば、同日の全スロットが artifact 年齢 11 時間以内に
+収まる（最も遅い 17:20 スロットでも約 10.5 時間）。これが beta の最小方針である。
+workflow chaining（`workflow_run`）は trigger 依存を増やすため採らない。
+
+**結合した必須変更**: 現在 production selector へ渡している
+`--eligible-events push,workflow_dispatch` には **`schedule` が含まれていない**。
+producer に cron を付けるなら、同時に `--eligible-events push,workflow_dispatch,schedule`
+へ変更しなければ、scheduled producer run はすべて「event is not eligible」で拒否され
+`/v2` は永久に出ない。語彙自体は既に `schedule` を許容しているため trust ロジックの
+書き換えは不要である。
+
+最終的な scheduler 統合は **P12-1 の所有**であり、上記は acceptance period のための
+暫定方針にとどめる。
+
+## 20.7 preview trigger の扱い
+
+`.github/p43b2c_preview_trigger` は**開発 branch の inert な検証インフラとして残す**。
+本 gate では削除しない。**production allowlist には含めない**（本番に trigger file を
+置かない）。preview workflow 自体は allowlist に含めることを推奨する——push trigger が
+feature branch 限定なので本番では自動発火せず、`workflow_dispatch` による no-deploy
+検証手段として本番側でも有用だからである。preview trigger を本番スケジューリング機構に
+転用してはならない。
+
+## 20.8 test guard の依存（要決定）
+
+`tests/intelligence/test_pages_integration.py` は凍結 b2b 資産
+（`scripts/p43b2b_select_run.py` と `.github/workflows/p43b2b-delivery-handoff.yml`）の
+存在を assert する。両者は**検証専用**で本番 runtime ではない。選択肢は 2 つ:
+
+- (a) b2b の 2 file も allowlist に含める（guard を 1 文字も変えずに済む。両 workflow は
+  read-only・非 deploy。ただし `workflow_dispatch` が本番側で可視になる）
+- (b) promotion 時に guard を改変して b2b 資産の assertion を条件付きにする
+  （本番面は最小になるが、**promotion のタイミングでテストを弱める**ことになる）
+
+**(a) を推奨**する。promotion の瞬間にテストを弱めないことを優先する。

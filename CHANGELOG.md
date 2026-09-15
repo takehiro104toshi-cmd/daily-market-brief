@@ -4,6 +4,45 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.77 (2026-09-15) — Record P4-3b2c Gate 3/Gate 4 evidence and the production promotion plan
+
+administrative / 設計のみ。コード・workflow・trigger は 1 行も変更していない。
+Actions は起動せず、Pages へ deploy せず、main へ merge も push もしていない。
+
+### 追加
+
+- `docs/databank/PAGES_PARALLEL_PUBLICATION_SPEC.md` §19 — Gate 3 / Gate 4 の証跡。
+  実装 `7c892d4` / guard `ff70be8` / trigger `95a65bc` / run `34974303473` /
+  artifact `10398702881` / 2927 passed。Gate 3 は **Case A**（鮮度充足・`/v2` 実地包含）。
+- 同 §19.1 — **run marker を信用せず git から再計算**した独立検証:
+  legacy manifest digest `345783b0…3814d3`（271 file）と `v2/index.html` digest
+  `11152525…17be2` がいずれも**完全一致**。legacy tree は top level 2 entry・46 date dir・
+  271 file すべて `.html`・`legacy.html` なし・入れ子 `index.html` なし・symlink なし・
+  dot entry なし・禁止拡張子なし・衛生 findings 0。
+- 同 §19.2 — artifact zip 実体は `*.blob.core.windows.net` 上にあり本セッションの
+  egress policy が拒否するため、**zip の直接展開検査は未実施**である旨を明記。
+- 同 §20 — 本番 promotion 計画（設計のみ・未実行）。branch 乖離の実測、promotion 方式
+  A〜D の比較と **D（allowlist promotion commit）の推奨**、production runtime closure の
+  実測、trust baseline の 2 段階確定手順、main 前進への対処、producer scheduling の
+  暫定方針、preview trigger の扱い、test guard 依存の要決定事項。
+
+### 改善
+
+- `docs/rebuild/REBUILD_ROADMAP.md` — P4-3b2c に Gate 3 PASS / Gate 4 PASS を記録。
+  **CLOSED にはしていない**（P4-3 全体も未完のまま）。
+
+### 修正
+
+- production runtime closure の実測により、以前の報告の 2 点を訂正した。
+  - 凍結 b2a の first-party closure は **5 file ではなく 8 file**
+    （`compass.model` / `core.ids` / `core.time` を含む）。
+  - **「b2a が本番面である」という前提が誤り**だった。`/v2` が本番で成立するには本番
+    producer artifact が必要であり、producer closure は **133 file**（b2a と合わせて
+    **134 file** / `src/intelligence` 352 file 中）である。promotion surface は
+    以前の見積りより大きい。research・governance 系 17 package（`corpus` /
+    `corpus_research` / `shadow_review` / `decision` / `formal_review` / `evaluation` ほか）
+    は closure の外側であり、allowlist 方式なら本番へ入らない。
+
 ## v4.76 (2026-09-15) — Add P4-3b2c Morning Delivery /v2 parallel Pages publication (Phase 4 P4-3b2c)
 
 検証済み Morning Delivery を legacy Pages site を保ったまま `/v2` として並走公開する
