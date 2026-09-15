@@ -159,7 +159,7 @@ def test_download_pins_run_id_and_token_and_isolated_path() -> None:
 
 def test_extraction_directory_is_isolated_and_checked_empty() -> None:
     assert "p43b2_artifact" in executable_text()
-    assert 'test -z "$(ls -A "${ARTIFACT_DIR}")"' in run_bodies(), \
+    assert 'test -z "$(ls -A "${RUNNER_TEMP}/p43b2_artifact")"' in run_bodies(), \
         "展開前に隔離ディレクトリが空であることを確かめる"
 
 
@@ -173,8 +173,26 @@ def test_frozen_b2a_cli_is_invoked() -> None:
 
 
 def test_v2_destination_is_runner_temp_and_named_v2() -> None:
-    assert '"${PAGES_SITE}/v2"' in run_bodies()
-    assert str((job().get("env") or {}).get("PAGES_SITE", "")).startswith("${{ runner.temp }}/")
+    assert '"${RUNNER_TEMP}/p43b2_pages_site/v2"' in run_bodies()
+    upload = step_using("actions/upload-artifact@v4").get("with") or {}
+    assert str(upload.get("path")).startswith("${{ runner.temp }}/")
+
+
+def test_runner_context_is_never_used_at_job_level() -> None:
+    """`jobs.<id>.env` は runner context を受け付けない（invalid workflow file になる）。
+
+    実測: この規約を破った版は job ゼロのまま conclusion=failure の run を作った。
+    shell では runner 既定の `RUNNER_TEMP` を使い、`runner.*` 式は step の
+    `with` / `env` に限る（既存 workflow もすべてその形）。
+    """
+    for name, spec in (workflow().get("jobs") or {}).items():
+        assert "runner." not in yaml.safe_dump(spec.get("env") or {}), name
+        for key in ("runs-on", "timeout-minutes", "concurrency", "container", "services"):
+            assert "runner." not in str(spec.get(key, "")), (name, key)
+    for other in WORKFLOW_DIR.glob("*.yml"):
+        data = yaml.safe_load(other.read_text(encoding="utf-8")) or {}
+        for name, spec in (data.get("jobs") or {}).items():
+            assert "runner." not in yaml.safe_dump(spec.get("env") or {}), (other.name, name)
 
 
 def test_jst_date_is_derived_like_the_frozen_pilot() -> None:

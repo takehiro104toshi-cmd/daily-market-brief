@@ -40,9 +40,6 @@ jobs:
     # artifact 受け渡しのみ。b2a も selector も標準ライブラリだけで動くため pip install が不要。
     # 実測見積り 2 分未満に対する妥当な上限。
     timeout-minutes: 5
-    env:
-      ARTIFACT_DIR: ${{ runner.temp }}/p43b2_artifact
-      PAGES_SITE: ${{ runner.temp }}/p43b2_pages_site
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -63,16 +60,16 @@ jobs:
         id: prepare
         run: |
           set -euo pipefail
-          mkdir -p "${ARTIFACT_DIR}" "${PAGES_SITE}/history"
-          printf '<html>synthetic legacy root</html>\n' > "${PAGES_SITE}/index.html"
-          printf '<html>synthetic history sentinel</html>\n' > "${PAGES_SITE}/history/sentinel.html"
+          mkdir -p "${RUNNER_TEMP}/p43b2_artifact" "${RUNNER_TEMP}/p43b2_pages_site/history"
+          printf '<html>synthetic legacy root</html>\n' > "${RUNNER_TEMP}/p43b2_pages_site/index.html"
+          printf '<html>synthetic history sentinel</html>\n' > "${RUNNER_TEMP}/p43b2_pages_site/history/sentinel.html"
           {
-            echo "root_digest=$(sha256sum "${PAGES_SITE}/index.html" | cut -d' ' -f1)"
-            echo "history_digest=$(sha256sum "${PAGES_SITE}/history/sentinel.html" | cut -d' ' -f1)"
+            echo "root_digest=$(sha256sum "${RUNNER_TEMP}/p43b2_pages_site/index.html" | cut -d' ' -f1)"
+            echo "history_digest=$(sha256sum "${RUNNER_TEMP}/p43b2_pages_site/history/sentinel.html" | cut -d' ' -f1)"
           } >> "$GITHUB_OUTPUT"
           # 凍結 Compass pilot と同一の導出（runner の UTC 日付をそのまま使わない）。
           echo "jst_today=$(python -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat())')" >> "$GITHUB_OUTPUT"
-          test -z "$(ls -A "${ARTIFACT_DIR}")" || { echo "::error::artifact dir not empty"; exit 1; }
+          test -z "$(ls -A "${RUNNER_TEMP}/p43b2_artifact")" || { echo "::error::artifact dir not empty"; exit 1; }
 
       # 選定した artifact を **id 指定**で取り出す（名前一致に依存しない）。
       # pattern / merge-multiple は使わない。zip digest は action 既定で検証される。
@@ -91,8 +88,8 @@ jobs:
         run: |
           set -euo pipefail
           python -X utf8 -m src.intelligence.reports.pages_parallel \
-            --artifact-dir "${ARTIFACT_DIR}" \
-            --v2-destination "${PAGES_SITE}/v2" \
+            --artifact-dir "${RUNNER_TEMP}/p43b2_artifact" \
+            --v2-destination "${RUNNER_TEMP}/p43b2_pages_site/v2" \
             --jst-today "${{ steps.prepare.outputs.jst_today }}" \
             --index-template docs/pages/v2_index.html
 
@@ -102,14 +99,14 @@ jobs:
         env:
           ROOT_DIGEST_BEFORE: ${{ steps.prepare.outputs.root_digest }}
           HISTORY_DIGEST_BEFORE: ${{ steps.prepare.outputs.history_digest }}
-          SESSION_HINT: ${{ steps.select.outputs.head_sha }}
         run: |
           set -euo pipefail
           python -X utf8 - <<'PY'
           import hashlib, json, os, pathlib, sys
 
-          site = pathlib.Path(os.environ["PAGES_SITE"])
-          artifact_dir = pathlib.Path(os.environ["ARTIFACT_DIR"])
+          temp = pathlib.Path(os.environ["RUNNER_TEMP"])
+          site = temp / "p43b2_pages_site"
+          artifact_dir = temp / "p43b2_artifact"
           v2 = site / "v2"
 
           def digest(path):
