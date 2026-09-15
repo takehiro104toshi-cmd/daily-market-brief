@@ -69,6 +69,14 @@ Phase 1完了条件: 実フィード数本からEvidenceRecord(JSONL)が毎日�
       `src/intelligence/reports/market_signal.py`（Market Signal schema 0.1.0）＋
       `market_signal_pilot.py`。仕様は `docs/databank/MARKET_SIGNAL_SPEC.md`
 - [ ] P4-3 (S) 配信: 既存Pages/通知経路への接続（旧notifiers再利用）
+      - P4-3a Morning Delivery packaging / artifact — **完了・凍結（2026-09-15）**:
+        実装 `03e62d5` / 検証経路 `aa5373f` / 最終実データ検証 Actions run
+        `34927100267` **PASS**。`src/intelligence/reports/delivery.py` ＋
+        `delivery_emit.py`（Morning Delivery schema 0.1.0）＋ `delivery_pilot.py`。
+        仕様は `docs/databank/MORNING_DELIVERY_SPEC.md`
+      - P4-3b bridge（production producer / Pages 並走 route / 通知経路 / root 切替）—
+        **IN PROGRESS**。b1 producer proof のみ実装済み
+        （`.github/workflows/p43b1-morning-delivery-producer.yml`・公開はしない）
 
 ## Phase 5 — Prediction Journal
 

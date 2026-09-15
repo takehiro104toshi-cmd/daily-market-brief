@@ -63,6 +63,7 @@ Automated Closeout が待機する **live validation / pilot workflow** の上�
 | `p2a-e2e-pilot.yml` | 10 | 12分 |
 | `p2d-market-pilot.yml` | 25 | 27分 |
 | `p2h-jquants-light.yml` | 20 | 22分 |
+| `p43b1-morning-delivery-producer.yml` | 15 | 17分 |
 
 `tests/intelligence/test_live_run_closeout.py` が、これらのworkflowの全jobに
 `timeout-minutes` が宣言されていること（＝待機上限が計算可能であること）と、
@@ -95,6 +96,7 @@ jobには `timeout-minutes` が無い（`deploy-pages` は20分）。CLAUDE.md�
 | Phase 3-A Fact | `::P3A_INPUT/FACTS/REPLAY/SNAPSHOT/QUERY/QUALITY::` |
 | Phase 3-B Context | `::P3B_INPUT/CONTEXTS/SNAPSHOT/TOP/ALIGNMENT/QUERY::` |
 | Phase 3-B pre-flight | `::P3B_JQFACT::` |
+| Phase 4 P4-3a / P4-3b1 Morning Delivery | `::P43_HEAD/INPUT/BRIEF/SIGNAL/DELIVERY/ARTIFACTS/BINDING/SAFETY/END::` |
 
 marker行はいずれも**秘密値を含まない設計**（`tests/intelligence/
 test_secret_hygiene.py` が固定）。ログをそのまま報告へ貼ってよい。

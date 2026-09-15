@@ -4,6 +4,50 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.71 (2026-09-15) — Add P4-3b1 Morning Delivery production producer (Phase 4 P4-3b1)
+
+凍結済み vNext チェーンが legacy 本番 workflow から**独立して**走り、P4-3a の承認済み
+4 artifact を生成できることを実証する producer workflow を追加した。**公開はしない**
+（リポジトリ `output/v2` へ書かず、commit / push / Pages / 通知のいずれも行わない）。
+P4-1 / P4-2 / P4-3a の実装・semantics は無変更。`src/intelligence/` の変更はゼロ。
+
+    Market Bank（runner.temp）→ 凍結 delivery_pilot → 隔離 output root へ 4 artifact
+      → 4 file ちょうどの検証 → Actions artifact として upload
+
+### 追加
+
+- `.github/workflows/p43b1-morning-delivery-producer.yml`【新規】— P4-3b1 producer。
+  - trigger は **`workflow_dispatch` のみ**。日次 cron は監督者決定事項のため置かない。
+  - `timeout-minutes: 15`（実測約 6 分に対する妥当な余裕）。
+  - `permissions: contents: read` のみ（`pages` / `id-token` を持たない）。
+  - Market Bank は p2d-market-pilot と**同一コマンド**（第二の経路を作らない）。
+  - producer は凍結済み `src.intelligence.reports.delivery_pilot` を再利用
+    （第二の production entrypoint を作らない）。Phase 3-A / 3-B / 3-C / P4-1C / P4-2 の
+    step は別立てしない（delivery_pilot が in-memory で通すため）。
+  - 本番と同じ機密ガード（`test_confidential_guard.py`）を artifact 生成前に実行。
+  - **upload 前に承認済み 4 file ちょうどであることを検証**し、5 file 目・HTML・
+    SQLite・JSONL・DB・index・`.part` 残骸・サブディレクトリがあれば job を失敗させる。
+  - upload は隔離 delivery root のみ（`INTELLIGENCE_DATA_ROOT` は upload しない）。
+    artifact 名は固定 `morning-delivery-v2`（timestamp・path・credential を含めない）。
+- `tests/intelligence/test_morning_delivery_bridge.py`【新規】— b1 の構造ガード。
+  workflow の起動条件・隔離・artifact 契約に加え、「b1 がしないこと」
+  （リポジトリ出力 / git / Pages / 通知 / HTML / legacy workflow 変更 /
+  import 境界の緩和）をすべて静的に固定する。
+
+### 改善
+
+- `tests/intelligence/test_live_run_closeout.py` / `docs/databank/LIVE_RUN_CLOSEOUT_PROTOCOL.md`
+  — 新 workflow を Automated Closeout の追跡対象へ登録（待機上限 15 分 → 17 分）。
+  完全一致 assertion は弱めていない。evidence 用 `::P43_*::` marker 行も追記。
+- `docs/rebuild/REBUILD_ROADMAP.md` — P4-3a を CLOSED / FROZEN として sub-note 化
+  （実装 `03e62d5` / 検証経路 `aa5373f` / 最終実データ検証 run `34927100267` PASS /
+  Morning Delivery schema 0.1.0 / 仕様 `docs/databank/MORNING_DELIVERY_SPEC.md`）。
+  **P4-3 自体は `[ ]` のまま**。P4-3b bridge は IN PROGRESS と明記。
+
+### 修正
+
+- なし（既存 semantics の変更はない）。
+
 ## v4.70 (2026-09-15) — Add Morning Delivery real-data validation path (Phase 4 P4-3a)
 
 P4-3a の配信物 packaging と artifact 書き出しを実データ（Actions が構築する Market Bank）で
