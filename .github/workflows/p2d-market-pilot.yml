@@ -85,6 +85,17 @@ jobs:
         env:
           INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
         run: python -X utf8 -m src.intelligence.reports.market_signal_pilot
+      # Phase 4 P4-3a: Morning Delivery。凍結済み MorningBrief + MarketSignal + 逐語
+      # Markdown を 1 つの配信物へ束ね、**隔離した runner.temp 配下**へ承認済み 4 artifact
+      # （dated/latest の .md と .json）を実書き出しして検証する。
+      # リポジトリの output/v2 へは書かない（出力先未指定なら fail closed）。
+      # Pages・通知・legacy 成果物には触れない（接続は P4-3b bridge gate）。
+      # 保護subtreeをbefore/afterで照合し、変化・想定外 file・binding 違反があればexit 1。
+      - name: Phase 4 P4-3a Morning Delivery real-data pilot (isolated artifacts)
+        env:
+          INTELLIGENCE_DATA_ROOT: ${{ runner.temp }}/intelligence_data
+          P43_DELIVERY_OUTPUT_ROOT: ${{ runner.temp }}/p43_delivery_output/v2
+        run: python -X utf8 -m src.intelligence.reports.delivery_pilot
       # Phase 3.5: Japan Market Internals。J-Quants Light の daily bars（date指定・
       # 1 session=1リクエスト）・security master・investor-types（週次）から
       # universe / breadth / turnover / sector / size / flow を集計し、Fact Layer・

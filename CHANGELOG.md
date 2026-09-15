@@ -4,6 +4,55 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.70 (2026-09-15) — Add Morning Delivery real-data validation path (Phase 4 P4-3a)
+
+P4-3a の配信物 packaging と artifact 書き出しを実データ（Actions が構築する Market Bank）で
+端から端まで検証する経路を追加した。**検証は隔離した runner.temp 配下へ書き、
+リポジトリの `output/v2/` には書かない。** P4-1 / P4-2 / P4-3a semantics は無変更。
+
+    Market Bank → 既存 Compass pipeline → MorningBrief（凍結）
+      → Markdown（凍結 renderer） → MarketSignal（凍結）
+      → MorningDelivery → 隔離 output root へ 4 artifact
+
+### 追加
+
+- `src/intelligence/reports/delivery_pilot.py`【新規】— P4-3a 専用 pilot。
+  - **出力先は明示指定必須**。`P43_DELIVERY_OUTPUT_ROOT` か `--output-dir` を要求し、
+    未指定なら `DeliveryOutputNotConfigured` で **fail closed**
+    （`DEFAULT_OUTPUT_DIR` を参照せず、リポジトリ既定へ黙って落ちない）。
+  - `MorningDelivery` は **この run が生成した brief / signal / Markdown** からのみ組む。
+    packaging も組版も方向・確度の算出も再実装せず、公開関数を再利用する。
+  - marker: `::P43_HEAD::` / `INPUT` / `BRIEF` / `SIGNAL` / `DELIVERY` / `ARTIFACTS` /
+    `BINDING` / `SAFETY` / `END`。Markdown 本文も claim 本文も stdout へ出さない。
+  - `::P43_BINDING::` は Compass → Brief → Signal → Delivery → 公開 JSON の連鎖 20 項目を
+    検証する。artifact の実バイト列が凍結 Markdown / 公開 JSON と一致することも確認する。
+  - **safety は 2 ゾーン**: 保護 8 subtree は不変（ZONE 1）、変更が許されるのは隔離
+    output root のみ（ZONE 2）。想定外 file・保護 subtree 変化・binding 違反で **exit 1**。
+  - artifact の報告は**論理ファイル名のみ**（絶対 path を出さない）。
+- `tests/intelligence/test_morning_delivery_pilot.py`【新規】57 件。
+  出力先 fail-closed / 経路 end-to-end / binding 連鎖 / 4 artifact ちょうど /
+  公開 JSON の key 集合と実バイト列 leak sweep / 助言語なし / 2 ゾーン safety /
+  想定外 file と保護 subtree 変化での失敗 / emitter 例外の伝播 / 機密非出力 /
+  legacy・notifier・governance・Phase 5・外部記事基盤・生成モデルの import ゼロ /
+  凍結モジュール非参照。
+- `.github/workflows/p2d-market-pilot.yml`: step を **1 つだけ**追加
+  （P4-2 の直後・Phase 3.5 の前）。`INTELLIGENCE_DATA_ROOT` は既存と同じ
+  `${{ runner.temp }}/intelligence_data`、artifact は
+  `${{ runner.temp }}/p43_delivery_output/v2` へ隔離。`continue-on-error` は使わない。
+
+### 変更なし（明示）
+
+- P4-1 / P4-2 / P4-3a の実装（`model.py` / `morning_brief.py` / `render_markdown.py` /
+  `pilot.py` / `market_signal.py` / `market_signal_pilot.py` / `delivery.py` /
+  `delivery_emit.py`）は無変更。MorningBrief schema 0.2.0、MarketSignal schema 0.1.0、
+  MorningDelivery schema 0.1.0 のまま。
+- `docs/databank/MORNING_DELIVERY_SPEC.md` は無変更（検証実装で矛盾は見つからなかった）。
+- roadmap の P4-3 は `[ ]` のまま（完了としない）。
+- `.github/p2d_market_trigger` 無変更（本更新では Actions run を起動しない）。
+- `daily-market-brief.yml` / Pages artifact 準備 / `deploy-pages` / `notifiers/**` /
+  `main.py` / legacy output routing / リポジトリ `output/v2` は無変更（P4-3b は LOCKED）。
+- 既存 step の変更なし。P4-1C / P4-2 の位置も変えない。`config.yaml` 無変更。
+
 ## v4.69 (2026-09-15) — Add Morning Delivery packaging and parallel artifacts (Phase 4 P4-3a v0.1.0)
 
 凍結済み Phase 4 成果物を 1 つの不変な配信物へ束ね、`output/v2/` へ並走 artifact として
