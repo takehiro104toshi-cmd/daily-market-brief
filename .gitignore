@@ -10,3 +10,19 @@ pages-site/
 
 # ローカル実行時のログ
 *.log
+
+# 社外秘（CONFIDENTIAL_SOURCE）: 羅針盤PDFはpublicリポジトリでtracking禁止
+date/rashinban/*.pdf
+
+# 研究用の社外秘資料はpublicリポジトリへコミットしない（README除く）
+research/source_docs/*
+!research/source_docs/compass
+research/source_docs/compass/*
+!research/source_docs/compass/README.md
+
+# Cloudflare識別子（SENSITIVE_IDENTIFIER）: tracking禁止（.example は追跡を維持）
+cloudflare/private-insight-wrangler.toml
+cloudflare/.wrangler/
+
+# vNext（Investment Intelligence OS）の実行時生成データはgit管理しない
+data/vnext/
