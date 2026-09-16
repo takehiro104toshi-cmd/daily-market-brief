@@ -755,6 +755,6 @@ pages_parallel_publication:
     production_branch: "main"            # 本番公開が受け入れる唯一の producer branch
     eligible_events: ["push", "workflow_dispatch"]   # beta では schedule を有効化しない
     attempt_policy: "first-attempt-only"             # rerun 帰属が確立できなければ fail closed
-    production_trust_baseline: ""        # promotion 時に main 上の承認済み commit を入れる
+    production_trust_baseline: "29c3beaf0c32c56ab5c4129aee89dbd1e06aec8b"        # promotion 時に main 上の承認済み commit を入れる
   no_valid_v2_policy: "LEGACY_ONLY"      # Policy A: 古い v2 を残さず placeholder も作らない
   repository_persistence: false          # output/v2 へ永続化しない（P4-3a の凍結を維持）

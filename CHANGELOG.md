@@ -4,6 +4,37 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.79 (2026-09-16) — P2 P4-3b2c production trust baseline の有効化
+
+P1（v4.78・commit `29c3bea`）で dormant 搬入した P4-3b2c 公開面を、production
+trust anchor を設定して**有効化**する。本エントリは **P2 のみ**を記録する
+（R0 と P1 は v4.78 に記録済みで、その記述は変更しない）。
+
+### 改善
+
+- **production trust anchor = P1 の SHA `29c3beaf0c32c56ab5c4129aee89dbd1e06aec8b`**。
+  本番 workflow の `P43B2C_TRUST_BASELINE` と `config.yaml` の policy mirror
+  `production_trust_baseline` が、同一の anchor を指す。
+- **本番 guard を P1 dormant-state 不変条件から P2 active-state 不変条件へ明示的に遷移**。
+  `test_production_trust_baseline_is_empty` を廃し、
+  `test_production_trust_baseline_is_the_approved_anchor`（非空・40 桁 hex・
+  検証専用 baseline 拒否・承認 anchor と完全一致）と
+  `test_config_trust_baseline_mirrors_the_workflow_anchor`（workflow と config が
+  同一 anchor）を置く。「空 or 承認 SHA」という曖昧な不変条件にはしない。
+  P1 の dormancy 契約は git 履歴・P1 commit・P1 の live evidence が引き続き記録する。
+- **producer は unscheduled のまま**。schedule を持たず、push trigger は feature
+  branch に限定され、main 上では自動発火しない。Pages 権限も持たない。
+- **本 commit の時点で production-eligible な producer artifact は存在しない**
+  （producer は main 上で 1 度も実行されていない）。
+- したがって **`/v2` は自動的には現れない**。`/v2` は、信頼できる適格な artifact が
+  存在するときにだけ公開される。存在しない間、本番は
+  `V2_UNAVAILABLE / NO_TRUSTED_ARTIFACT` を返し legacy のみを publish する。
+- **v2 が利用できないとき legacy が引き続き唯一の正**であり、配信は阻害されない。
+- **root cutover は行わない**。`/v2` は legacy root の配下へ接ぎ木される設計で、
+  Pages の artifact / deploy は従来どおり 1 本ずつ。notifier 挙動も不変。
+- rollback は本 commit の revert 1 手。baseline が空へ戻り guard も P1 契約へ
+  自動復帰し、`/v2` だけが止まる（R0 と P1 は影響を受けない）。
+
 ## v4.78 (2026-09-16) — R0 機密ソース tracking 是正（landed）＋ P1 P4-3b2c dormant promotion
 
 > **版番号に関する開示（重要）**

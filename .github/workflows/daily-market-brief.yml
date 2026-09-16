@@ -221,7 +221,7 @@ jobs:
         id: p43b2c_select
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          P43B2C_TRUST_BASELINE: ""
+          P43B2C_TRUST_BASELINE: "29c3beaf0c32c56ab5c4129aee89dbd1e06aec8b"
         run: |
           set -uo pipefail
           set +e

@@ -19,6 +19,7 @@ live-run closeout レジストリ）に依存するため、**本番 bundle に�
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -43,6 +44,11 @@ FEATURE_BRANCH = "claude/investment-intelligence-phase0-rvdplu"
 
 B2C_SCRIPTS = ("p43b2c_select_producer", "p43b2c_pages_manifest",
                "p43b2c_v2_gate", "p43b2c_graft_v2")
+
+#: P2 で承認された**本番 trust anchor**（landed P1 commit）。本番はこの 1 値しか受けない。
+APPROVED_TRUST_ANCHOR = "29c3beaf0c32c56ab5c4129aee89dbd1e06aec8b"
+#: 検証専用 baseline（feature branch 用）。本番が縛られてはならない。
+VALIDATION_ONLY_BASELINE = "a2a6222"
 
 #: 本番 runtime の入口（producer 2 本 ＋ publication 1 本）
 RUNTIME_ENTRY_POINTS = ("src.intelligence.market.pilot_runner",
@@ -209,13 +215,41 @@ def test_production_permissions_add_only_actions_read() -> None:
         "contents": "write", "pages": "write", "id-token": "write", "actions": "read"}
 
 
-def test_production_trust_baseline_is_empty() -> None:
+def _declared_trust_baseline() -> str:
+    """本番 workflow が宣言している trust baseline を取り出す（未宣言は fail closed）。"""
     for step in steps(PRODUCTION_WORKFLOW, "generate-report"):
         env = step.get("env") or {}
         if "P43B2C_TRUST_BASELINE" in env:
-            assert env["P43B2C_TRUST_BASELINE"] == "", env["P43B2C_TRUST_BASELINE"]
-            return
+            return env["P43B2C_TRUST_BASELINE"]
     pytest.fail("P43B2C_TRUST_BASELINE is not declared in the production workflow")
+
+
+def test_production_trust_baseline_is_the_approved_anchor() -> None:
+    """P2 ACTIVE state の不変条件。
+
+    P1 の dormancy 契約（baseline == ""）は git 履歴・P1 commit・P1 の live evidence
+    が記録しており、ここでは**現在の本番状態**だけを検証する。曖昧な
+    「空 or 承認 SHA」は許さない。
+    """
+    baseline = _declared_trust_baseline()
+    assert baseline, "P2 ACTIVE では trust baseline を空にできない"
+    assert re.fullmatch(r"[0-9a-f]{40}", baseline), baseline
+    assert not baseline.startswith(VALIDATION_ONLY_BASELINE), (
+        "本番 trust を検証専用 baseline へ縛らない")
+    assert baseline == APPROVED_TRUST_ANCHOR, baseline
+
+
+def test_config_trust_baseline_mirrors_the_workflow_anchor() -> None:
+    """policy mirror（config）と実行系（workflow）が同一 anchor を指すこと。"""
+    producer = yaml.safe_load(CONFIG.read_text(encoding="utf-8")).get(
+        "pages_parallel_publication", {}).get("producer", {})
+    assert "production_trust_baseline" in producer, (
+        "config に production_trust_baseline が宣言されていない")
+    mirrored = producer["production_trust_baseline"]
+    assert mirrored, "P2 ACTIVE では config mirror を空にできない"
+    assert mirrored == APPROVED_TRUST_ANCHOR, mirrored
+    assert mirrored == _declared_trust_baseline(), (
+        "workflow と config の trust anchor が一致しない")
 
 
 def test_production_uses_production_mode_without_the_validation_baseline() -> None:
