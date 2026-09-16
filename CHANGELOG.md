@@ -4,6 +4,51 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.81 (2026-09-16) — 公開 unavailable 語彙の境界修正（内部 abstain 詳細の漏れ出し）
+
+production producer の**修正後の再実行** **run 35081366821**
+（`workflow_dispatch` / branch=main / head=`9ae0d42` / attempt=1）が失敗した。
+本エントリはその是正のみを記録する（trust anchor と P2 契約は変更しない）。
+
+### 修正
+
+- **前回の修正は成功している**。`python -m` 依存の取りこぼし（v4.80）は解消され、
+  market data bank live pilot は 10m22s かけて **success**、16/16 系列取得成功、
+  `::P2D_PERSISTENCE:: ok=true / fresh_process=true / mismatch []` まで到達した。
+  `No module named src.intelligence.market.persistence_check` は再現していない。
+- **新しい独立した欠陥**が 2 steps 先で発生した。Morning Delivery producer が
+  公開 JSON を組み立てる時点で
+  `UnmappedDeliveryState: unavailable reason is not publishable: 'no_counter_material'`
+  を送出し exit 1。市場データ側の不具合ではない。
+- **根本原因**: `market_signal._safe_reason()` が理由の**形**（snake_case）だけを
+  検査していたため、Compass 内部の abstain 詳細（`no_counter_material` など）が
+  承認済み fallback へ落ちずに配信面へ素通りしていた。配信側の公開語彙
+  `PUBLIC_UNAVAILABLE_REASONS` は 6 値の閉じた契約であり、内部詳細は非公開語彙
+  なので fail closed で停止した（配信側の判断は正しい）。
+- `_safe_reason()` を**承認語彙による正規化**へ変更。承認語彙でない候補は形が
+  妥当でも呼び出し側が指定した承認済み fallback へ決定論的に写像する。実在する
+  内部 abstain 理由 **10 値すべて**が `draft_abstained` へ正規化される。
+  branch ごとの意味は fallback が保持し、`draft_not_usable` /
+  `tier3_unavailable` / `no_outlook` / `direction_mixed` / `direction_uncertain`
+  は従来どおり（無関係な状態を 1 つの理由へ潰さない）。
+- **公開語彙は不変**。`PUBLIC_UNAVAILABLE_REASONS` に内部詳細を 1 つも追加しない。
+  `delivery.py` の fail closed（`UnmappedDeliveryState`）も**弱めない**——境界の
+  後で未承認値を注入すれば今も停止することを test で拘束する。
+- **語彙境界の専用回帰ガードを新設**（`tests/intelligence/test_public_unavailable_vocabulary.py`）。
+  昇格済み Compass 経路から `abstain_reason` へ到達しうる内部理由を AST で実測し、
+  その 1 つ 1 つを本物の `build_market_signal()` に通して承認語彙になることを要求する
+  （`no_counter_material` を 1 件だけ試すのではない）。構造ガード
+  `test_p43b2c_production_bundle.py` は変更しない。
+- **trust anchor は不変**（`29c3beaf0c32c56ab5c4129aee89dbd1e06aec8b`）。
+  producer workflow・スケジュール・Pages 構成・single deployer・config はいずれも
+  変更しない。**producer は unscheduled のまま**。
+- 失敗した run 35081366821 は **artifact を 1 件も生成していない**
+  （`morning-delivery-v2` なし）。公開も root cutover も発生しておらず、legacy は
+  影響を受けていない。
+- 本エントリは producer の**復旧を主張しない**。復旧は、別途承認される新規の
+  one-shot dispatch が成功して初めて確認される（frozen first-attempt-only により、
+  失敗した run の再実行は適格にならない）。
+
 ## v4.80 (2026-09-16) — P1 bundle 完全性の修正（`python -m` 依存の取りこぼし）
 
 production producer の初回本番実行 **run 35078193591**

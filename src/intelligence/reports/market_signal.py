@@ -26,7 +26,7 @@ import json
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Mapping, Optional
+from typing import Dict, Mapping, Optional, Tuple
 
 from ..compass.model import Confidence, OutlookDirection, QualityVerdict
 from ..core.ids import content_id
@@ -41,6 +41,15 @@ R_TIER3_UNAVAILABLE = "tier3_unavailable"
 R_NO_OUTLOOK = "no_outlook"
 R_DIRECTION_MIXED = "direction_mixed"
 R_DIRECTION_UNCERTAIN = "direction_uncertain"
+
+#: 配信面へ出してよい unavailable 理由の**閉じた語彙**。
+#: `delivery.PUBLIC_UNAVAILABLE_REASONS` と同一集合でなければならない（依存は
+#: MorningBrief → MarketSignal → MorningDelivery の一方向なので、ここから
+#: delivery を import せず、同値であることを test で拘束する）。
+APPROVED_UNAVAILABLE_REASONS: Tuple[str, ...] = (
+    R_DRAFT_NOT_USABLE, R_DRAFT_ABSTAINED, R_TIER3_UNAVAILABLE,
+    R_NO_OUTLOOK, R_DIRECTION_MIXED, R_DIRECTION_UNCERTAIN,
+)
 
 #: unavailable 理由の形（P4-1 の表示側と同じ規約。自由文を持ち込まない）
 _SAFE_REASON = re.compile(r"\A[a-z0-9_]{1,64}\Z")
@@ -184,8 +193,23 @@ def make_signal_id(payload: Mapping[str, object]) -> str:
 
 
 def _safe_reason(candidate: str, fallback: str) -> str:
-    """機械可読な理由だけを引き継ぐ（自由文・内部語彙を顧客側へ運ばない）。"""
-    return candidate if _SAFE_REASON.match(candidate or "") else fallback
+    """**承認語彙の理由だけ**を引き継ぐ（内部詳細を顧客側へ運ばない）。
+
+    以前は形（snake_case）だけを見ていたため、`no_counter_material` のような
+    *形は正しいが公開語彙ではない* Compass 内部の abstain 詳細がそのまま配信面へ
+    渡り、公開 JSON 生成が `UnmappedDeliveryState` で落ちていた
+    （production producer run 35081366821）。
+
+    内部詳細は内部に留め、顧客へは「どの状態なので方向を出さないか」だけを
+    出す。承認語彙でない候補は——形が妥当であっても——呼び出し側が指定した
+    **承認済み fallback** へ決定論的に正規化する。branch ごとの意味は
+    fallback が保つので、無関係な状態が 1 つの理由へ潰れることはない。
+
+    公開語彙そのものを広げない。delivery 側の fail closed も弱めない。
+    """
+    if fallback not in APPROVED_UNAVAILABLE_REASONS:
+        raise UnmappedSignalState(f"fallback reason is not approved: {fallback!r}")
+    return candidate if candidate in APPROVED_UNAVAILABLE_REASONS else fallback
 
 
 def _build(*, brief: MorningBrief, available: bool, level: Optional[SignalLevel],
