@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.82 (2026-09-16) — 顧客向け Morning Brief「提示できない理由」の表示語彙修正
+
+実機（iPhone）での表示レビューで、公開 `/v2` の Morning Brief Markdown に Compass
+内部の abstain 詳細 `no_counter_material` がそのまま出ていることが確認された。
+本エントリはその表示面の是正のみを記録する（意味論・公開 JSON・P4-3b2c 契約は
+いずれも変更しない）。
+
+### 修正
+
+- **根本原因**: `render_markdown._unavailable()` が理由の**形**（snake_case）だけを
+  見て表示を許可していた。v4.81 で data 境界に対して塞いだのと同じ
+  「format を vocabulary と取り違える」欠陥が、1 層上の表示面に残っていた。
+- **閉じた表示対応表 `REASON_JA` を追加**。production 経路から
+  `BriefTier*.unavailable_reason` へ到達しうる内部理由 **13 値すべて**に、承認済みの
+  顧客向け日本語（S1 材料不足 / S2 反対材料の規律 / S3 根拠不足）を明示的に割り当てる。
+  値は承認済みの 3 文だけで、自由文も市場の見立ても作らない。
+- **未知の理由は生値を出さない**。対応表に無い理由は汎用文
+  「本日はこの区分を提示できません。」へ落ちる（表示は fail closed、配信は止めない）。
+  到達しうる理由が写像漏れのまま増えた場合は test が build を落とす。
+- **重複表示の抑制**。同じ説明が 3 区分に繰り返されないよう、2 度目以降は短い中立表現
+  「本日はこの区分の提示を見送ります。」にする。**描画 1 回の中だけの局所状態**で行い、
+  tier の可否・内部 `unavailable_reason`・`MorningBrief`・projection は一切変更しない。
+- 理由を差し込む表示テンプレートと、表示可否を形だけで判定していた正規表現を削除した
+  （同じ誤りを再び招かないため）。方向・確度・対象期間・次元・充足状況の既存対応表と
+  `UnmappedDisplayValue` の fail closed はそのまま維持する。
+- **意味論は不変**: 同一入力に対する `brief_id` / `signal_id` / `MorningBrief` 意味
+  payload / `MarketSignal` 意味 payload / 内部 `unavailable_reason` / 公開 unavailable
+  語彙（6 値）/ artifact 4 file 契約 / `/v2` 5 file topology / selector・trust・
+  freshness 定数 / legacy 出力は**すべて変更なし**。
+- **内容由来で変わるもの**（契約 drift ではない）: 描画後の Markdown bytes、
+  `markdown_sha256`、`markdown_bytes`、およびそれらから導出される `delivery_id`。
+- P4-3b2c は CLOSED / FROZEN のまま。producer は unscheduled のまま。trust anchor
+  （`29c3beaf0c32c56ab5c4129aee89dbd1e06aec8b`）・config・スケジュール・Pages 構成・
+  single deployer・workflow はいずれも変更しない。feature branch への同期は行わない。
+- 本エントリは P4 Presentation Review の完了を主張しない。公開面への反映は、別途承認
+  される新規の producer 実行と自然 consumer 実行を経て初めて確認される。
+
 ## v4.81 (2026-09-16) — 公開 unavailable 語彙の境界修正（内部 abstain 詳細の漏れ出し）
 
 production producer の**修正後の再実行** **run 35081366821**

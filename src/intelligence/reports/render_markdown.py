@@ -17,11 +17,15 @@ customer-safe テキスト）を**そのまま**表示する。逐語 `text` は
 
 構造化された値（方向・確度・対象期間・次元キー・充足状況）は、**明示的な対応表**だけで
 日本語ラベルへ置き換える。対応表に無い値は捏造せず `UnmappedDisplayValue` で fail closed。
+
+「提示できない理由」も同じ規律に従う。内部の機械可読 reason は model 側にそのまま残し、
+表示面では `REASON_JA` の**閉じた対応表**だけを通して顧客向け日本語へ写像する。
+生の内部語彙は顧客向け Markdown へ出さない（表に無い理由は汎用文へ落とす）。
 """
 from __future__ import annotations
 
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional, Set
 
 from .model import BriefPoint, BriefTier2, BriefTier3, MorningBrief
 
@@ -47,10 +51,15 @@ L_HORIZON = "対象期間"
 
 #: 提示できないときの固定表記（市場コメントを代わりに書かない）
 UNAVAILABLE = "（この区分は本日提示できません）"
-UNAVAILABLE_WITH_REASON = "（この区分は本日提示できません。理由: {reason}）"
+#: 同じ説明を繰り返さないための短い中立表現（2 区分目以降）
+SHORT_UNAVAILABLE = "本日はこの区分の提示を見送ります。"
 
-#: 理由として表示してよい形（契約語彙のみ。例外文や自由文は出さない）
-_SAFE_REASON = re.compile(r"\A[a-z0-9_]{1,64}\Z")
+#: 顧客向けの「出せない理由」表現。**承認済みの 4 文だけ**を使い、自由文を作らない。
+#: 市場の見立てを代わりに述べないこと（見送る事実だけを述べる）。
+S1_MATERIAL_NOT_ASSEMBLED = "本日は判断の材料が十分に揃わなかったため、この区分の提示を見送ります。"
+S2_COUNTER_MATERIAL = "本日は反対材料を十分に確認できないため、一方向に偏った見通しの提示は見送ります。"
+S3_GROUNDING_INSUFFICIENT = "本日は根拠が確認できた内容が残らなかったため、この区分の提示を見送ります。"
+S4_GENERIC = "本日はこの区分を提示できません。"
 #: 行頭の `#` は節構造を壊すため escape する（表示文字は変わらない）
 _LEADING_HASH = re.compile(r"\A(\s*)#")
 
@@ -94,6 +103,29 @@ STATUS_JA: Dict[str, str] = {
     "LIMITED_USE": "限定的に利用",
     "NOT_ENTITLED": "取得対象外",
 }
+#: 内部の機械可読 reason → 顧客向け表現（**閉じた対応表**）。
+#: 内部語彙（`no_counter_material` など）は `MorningBrief` 側にそのまま残し、
+#: 表示面ではここでだけ承認済みの日本語へ写像する。表に無い理由は生値を出さず
+#: `S4_GENERIC` へ落とす（表示は fail closed、配信そのものは止めない）。到達しうる
+#: 理由が写像漏れのまま増えた場合は test が build を落とす。
+REASON_JA: Dict[str, str] = {
+    # 材料そのものが揃っていない
+    "empty_evidence_package": S1_MATERIAL_NOT_ASSEMBLED,
+    "no_lead_context": S1_MATERIAL_NOT_ASSEMBLED,
+    "lead_context_not_fresh": S1_MATERIAL_NOT_ASSEMBLED,
+    "no_claims": S1_MATERIAL_NOT_ASSEMBLED,
+    "draft_not_usable": S1_MATERIAL_NOT_ASSEMBLED,
+    # 反対材料が確認できないので一方向に語らない（規律であって不足ではない）
+    "no_counter_material": S2_COUNTER_MATERIAL,
+    "no_grounded_counter_case": S2_COUNTER_MATERIAL,
+    # 候補はあったが根拠付きで残らなかった
+    "no_grounded_headline": S3_GROUNDING_INSUFFICIENT,
+    "no_grounded_why": S3_GROUNDING_INSUFFICIENT,
+    "no_grounded_risk": S3_GROUNDING_INSUFFICIENT,
+    "no_grounded_outlook": S3_GROUNDING_INSUFFICIENT,
+    "no_grounded_points": S3_GROUNDING_INSUFFICIENT,
+    "one_liner_unavailable": S3_GROUNDING_INSUFFICIENT,
+}
 
 
 def _label(mapping: Dict[str, str], value: str, kind: str) -> str:
@@ -135,19 +167,33 @@ def _bullets(points: "tuple[BriefPoint, ...]") -> List[str]:
     return out
 
 
-def _unavailable(reason: str) -> str:
-    """理由は契約語彙のときだけ出す（内部例外文を出さないための fail-closed）。"""
-    if reason and _SAFE_REASON.match(reason):
-        return UNAVAILABLE_WITH_REASON.format(reason=reason)
-    return UNAVAILABLE
+def _unavailable(reason: str, stated: Optional[Set[str]] = None) -> str:
+    """出せない区分の表記。**内部語彙は決して顧客面へ出さない。**
+
+    以前は理由の**形**（snake_case）だけを見て表示を許可していたため、Compass 内部の
+    abstain 詳細 `no_counter_material` がそのまま公開 /v2 の Markdown に出ていた。
+    ここでは `REASON_JA` の閉じた対応表だけを通し、表に無い理由は生値ではなく
+    `S4_GENERIC` へ落とす。
+
+    `stated` を渡すと **描画 1 回の中だけ**で重複を抑制する（同じ説明を 3 区分に
+    繰り返さない）。2 度目以降は `SHORT_UNAVAILABLE` になる。これは表示だけの処理で、
+    tier の可否も内部 `unavailable_reason` も `MorningBrief` も変えない。
+    """
+    message = UNAVAILABLE if not reason else REASON_JA.get(reason, S4_GENERIC)
+    if stated is None:
+        return message
+    if message in stated:
+        return SHORT_UNAVAILABLE
+    stated.add(message)
+    return message
 
 
-def _tier2_block(tier2: BriefTier2) -> List[str]:
+def _tier2_block(tier2: BriefTier2, stated: Set[str]) -> List[str]:
     body: List[str] = []
     if tier2.available:
         body.extend(_bullets(tier2.points))
     else:
-        body.append(_unavailable(tier2.unavailable_reason))
+        body.append(_unavailable(tier2.unavailable_reason, stated))
     coverage: List[str] = []
     coverage.extend(_bullets(tier2.coverage))
     status = dict(tier2.dimension_status)
@@ -163,9 +209,9 @@ def _tier2_block(tier2: BriefTier2) -> List[str]:
     return body
 
 
-def _tier3_block(tier3: BriefTier3) -> List[str]:
+def _tier3_block(tier3: BriefTier3, stated: Set[str]) -> List[str]:
     if not tier3.available or tier3.outlook is None:
-        return [_unavailable(tier3.unavailable_reason)]
+        return [_unavailable(tier3.unavailable_reason, stated)]
     outlook = tier3.outlook
     body: List[str] = [
         f"**{L_DIRECTION}**: {_label(DIRECTION_JA, outlook.direction, 'direction')} ／ "
@@ -183,6 +229,8 @@ def _tier3_block(tier3: BriefTier3) -> List[str]:
 
 def render_morning_brief_markdown(brief: MorningBrief) -> str:
     """`MorningBrief` を Markdown 文字列へ描画する（純関数・同じ brief → 同じ bytes）。"""
+    # 重複抑制は**この描画の中だけ**の局所状態。brief にも module にも持たせない。
+    stated: Set[str] = set()
     lines: List[str] = [f"# {H_TITLE}（{brief.session_date}）", ""]
 
     lines.append(f"## {H_TIER1}")
@@ -190,16 +238,16 @@ def render_morning_brief_markdown(brief: MorningBrief) -> str:
     if brief.tier1.available and brief.tier1.display_text:
         lines.extend(_paragraph(brief.tier1.display_text))
     else:
-        lines.append(_unavailable(brief.tier1.unavailable_reason))
+        lines.append(_unavailable(brief.tier1.unavailable_reason, stated))
     lines.append("")
 
     lines.append(f"## {H_TIER2}")
     lines.append("")
-    lines.extend(_tier2_block(brief.tier2))
+    lines.extend(_tier2_block(brief.tier2, stated))
     lines.append("")
 
     lines.append(f"## {H_TIER3}")
     lines.append("")
-    lines.extend(_tier3_block(brief.tier3))
+    lines.extend(_tier3_block(brief.tier3, stated))
 
     return "\n".join(lines).rstrip("\n") + "\n"
