@@ -4,6 +4,58 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.83 (2026-09-16) — Phase 5 一回限りの TOPIX research acquisition driver（取得はまだ行わない）
+
+Phase 5 の `NEUTRAL_RANGE` band は、リポジトリが意図的に閾値を定義していないため
+（`context/model.py`: `MAGNITUDE_CATEGORIES_ENABLED = False`「正当化できる閾値が
+現時点のデータからは得られない」）、TOPIX の実データ分布を測ってから監督者が決める。
+その測定に必要な実データがこの環境に 1 件も無いため（Market Bank は producer の
+`runner.temp` へ毎回ゼロから再構築され永続化されない設計）、**production から完全に
+隔離された one-time research dataset** を取得するための driver だけを搬入する。
+
+### 追加 — Phase 5 research acquisition driver（offline 実装のみ）
+
+- `src/intelligence/predictions/topix_research_acquire.py` を追加する。到達してよい
+  endpoint は `/v2/indices/bars/daily/topix` と `/v2/markets/calendar` の **2 つだけ**で、
+  他 provider（yfinance / stooq / treasury_gov / mof_japan）を 1 つも登録しないため
+  構造的に到達できない。`pilot_runner` も呼ばない。
+- **第二の J-Quants client を作らない。HTTP も ingest も再実装しない。** 既存の
+  `JQuantsV2TopixProvider` / `JQuantsV2Client` / `MarketBankStore` / `ingest` /
+  `derive_per_series` / `tokyo_calendar` をそのまま再利用する。
+- **暗黙の production fallback を持たない。** `--research-root`（絶対 path）/
+  `--start-date` / `--end-date` はすべて必須で、`data_root()` を読まない。
+  リポジトリ配下・`data/vnext`・`output`・`docs`・`knowledge`・`.git` は拒否し、
+  既存ディレクトリは空のときだけ許可する（非空は `NON_EMPTY_RESEARCH_ROOT`）。
+  誤指定はネットワークアクセス前に fail closed。
+- **期間を driver 自身が計算しない**（10 年を内部で作らない）。研究条件が実行ログから
+  再現できるよう、start / end は常に明示引数で受け取る。
+- credential は `JQUANTS_API_KEY` の runtime injection のみ。CLI 引数にも file にも
+  log にも URL にも載せない。未設定ならネットワーク 0 回・ディレクトリ作成 0 回で停止する。
+- 既存 provider の **20 page 安全上限を変更しない**。上限へ到達したら truncation を
+  否定できないため、期間を勝手に短縮も分割もせず
+  `RESEARCH_WINDOW_EXCEEDS_EXISTING_PAGINATION_CONTRACT` で停止する。
+- 営業日判定は J-Quants 取引カレンダーの**実測検証済み区分だけ**で行う。weekday 演算へ
+  フォールバックしない（検証できなければ fail closed）。
+- 取得後、成功扱いする前に 13 項目を検証する（観測件数 / 合成 source 混入 /
+  provider identity / 重複 trading_date / close 欠測 / 非正 close / カレンダー検証 /
+  session gap / weekday fallback / raw close からの独立再計算と derived `return_1d` の
+  一致 / secret 漏れ / repository 書き込み / production data root 書き込み）。
+  1 つでも失敗すれば `ACQUISITION_VALIDATION_FAILED` とし、測定へ進まない。
+- `tests/intelligence/test_topix_research_acquire.py` を追加する（34 tests・すべて
+  offline。HTTP は注入した fake のみで実 API を使わない）。production isolation
+  （legacy journal / publication / Pages / governance / Compass DNA / workflow /
+  producer / `data_root` fallback への非依存）も機械的に固定する。
+
+### 未実施（本エントリは取得を主張しない）
+
+- **J-Quants API へのアクセスは 1 回も行っていない。** 実データ取得・分布測定・
+  threshold 決定・Entry Contract の記述・P5-1 / P5-2 実装はいずれも未着手。
+- production 面は一切変更していない。workflow・`config.yaml`・trust anchor・
+  Compass DNA・Pages・`/v2`・producer スケジュールはすべて不変。`predictions` は
+  production runtime closure から到達しない研究 subsystem のままである。
+
+pytest: 558 passed（production-derived suite 524 ＋ 新規 research driver guard 34）
+
 ## v4.82 (2026-09-16) — 顧客向け Morning Brief「提示できない理由」の表示語彙修正
 
 実機（iPhone）での表示レビューで、公開 `/v2` の Morning Brief Markdown に Compass
