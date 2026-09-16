@@ -95,8 +95,69 @@ def _module_path(module: str) -> Path | None:
     return package if package.is_file() else None
 
 
+def _dash_m_targets(tree: ast.AST) -> set[str]:
+    """`python -m <module>` の <module> を **構文位置**で取り出す。
+
+    list / tuple literal の要素がちょうど `"-m"` であり、その**直後**の要素が
+    `src.` で始まる文字列定数であるときだけ依存とみなす。文字列本文の走査や
+    動的推論は行わない（決定的・自己完結・実行なし）。
+    """
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.List, ast.Tuple)):
+            continue
+        elements = node.elts
+        for index, element in enumerate(elements[:-1]):
+            if not (isinstance(element, ast.Constant) and element.value == "-m"):
+                continue
+            following = elements[index + 1]
+            if (isinstance(following, ast.Constant)
+                    and isinstance(following.value, str)
+                    and following.value.startswith("src.")):
+                found.add(following.value)
+    return found
+
+
+def reachable_dash_m_targets() -> set[str]:
+    """本番 closure 内の module が `python -m` で起動する project module 名。"""
+    targets: set[str] = set()
+    seen: set[str] = set()
+    queue = list(RUNTIME_ENTRY_POINTS)
+    while queue:
+        module = queue.pop()
+        if module in seen:
+            continue
+        path = _module_path(module)
+        if path is None:
+            continue
+        seen.add(module)
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        discovered = _dash_m_targets(tree)
+        targets |= discovered
+        queue.extend(discovered)
+        package = module if path.name == "__init__.py" else module.rsplit(".", 1)[0]
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                if node.level:
+                    base = package
+                    for _ in range(node.level - 1):
+                        base = base.rsplit(".", 1)[0]
+                    target = f"{base}.{node.module}" if node.module else base
+                else:
+                    target = node.module or ""
+                if target.startswith("src."):
+                    queue.append(target)
+            elif isinstance(node, ast.Import):
+                queue.extend(a.name for a in node.names if a.name.startswith("src."))
+    return targets
+
+
 def runtime_closure() -> set[str]:
-    """本番 3 入口から到達する first-party module の集合（相対 POSIX path）。"""
+    """本番 3 入口から到達する first-party module の集合（相対 POSIX path）。
+
+    import 到達性に加え、`python -m <module>` による明示的な module 実行も辿る
+    （import されないため import closure だけでは取りこぼす）。
+    """
     seen: set[str] = set()
     queue = list(RUNTIME_ENTRY_POINTS)
     while queue:
@@ -108,7 +169,9 @@ def runtime_closure() -> set[str]:
             continue
         seen.add(module)
         package = module if path.name == "__init__.py" else module.rsplit(".", 1)[0]
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        queue.extend(_dash_m_targets(tree))
+        for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 if node.level:
                     base = package
@@ -318,6 +381,53 @@ def test_production_runtime_closure_excludes_every_research_subsystem() -> None:
         reached = sorted(p for p in closure
                          if p.startswith(f"src/intelligence/{package}/"))
         assert reached == [], (package, reached[:3])
+
+
+def test_runtime_closure_includes_every_python_dash_m_target() -> None:
+    """`python -m <module>` で起動される project module も bundle に無ければならない。
+
+    import されないため import closure には現れず、P1 の allowlist 導出はこれを
+    取りこぼした。production producer run 35078193591 はその結果
+    `No module named src.intelligence.market.persistence_check` で落ちている。
+    認識した target が未搬入なら **fail closed**。
+    """
+    targets = reachable_dash_m_targets()
+    assert targets, "python -m target が 1 つも検出されない（規則が壊れている）"
+    missing = sorted(target for target in targets if _module_path(target) is None)
+    assert missing == [], missing
+
+
+def test_dash_m_rule_recognises_a_project_module_target() -> None:
+    tree = ast.parse('cmd = [sys.executable, "-m", "src.pkg.mod", "--flag"]')
+    assert _dash_m_targets(tree) == {"src.pkg.mod"}
+
+
+def test_dash_m_rule_ignores_unrelated_subprocess_commands() -> None:
+    """project module 以外を起動する subprocess は依存にしない。"""
+    for source in ('subprocess.run(["git", "status", "--porcelain"])',
+                   'subprocess.run(["pytest", "-q", "tests"])',
+                   'cmd = [sys.executable, "-m", "pytest", "-q"]',
+                   'cmd = [sys.executable, "-m", "pip", "install", "src.pkg"]'):
+        assert _dash_m_targets(ast.parse(source)) == set(), source
+
+
+def test_dash_m_rule_ignores_arbitrary_strings_containing_dash_m() -> None:
+    """本文に "-m" を含むだけの文字列から依存を捏造しない。"""
+    for source in ('note = "run python -m src.pkg.mod by hand"',
+                   'cmd = ["sh", "-c", "python -m src.pkg.mod"]',
+                   'flags = ["--mode", "-m"]',
+                   'doc = """python -m src.pkg.mod"""'):
+        assert _dash_m_targets(ast.parse(source)) == set(), source
+
+
+def test_dash_m_completeness_fails_closed_for_an_absent_target() -> None:
+    """認識済み target が bundle に無いとき、検査は必ず落ちる。"""
+    present = "src.intelligence.market.persistence_check"
+    absent = "src.intelligence.market.__p43b2c_absent_fixture__"
+    assert _module_path(present) is not None, present
+    assert _module_path(absent) is None, absent
+    assert sorted(t for t in {present} if _module_path(t) is None) == []
+    assert sorted(t for t in {present, absent} if _module_path(t) is None) == [absent]
 
 
 def test_production_runtime_closure_touches_no_confidential_tree() -> None:

@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.80 (2026-09-16) — P1 bundle 完全性の修正（`python -m` 依存の取りこぼし）
+
+production producer の初回本番実行 **run 35078193591**
+（`workflow_dispatch` / branch=main / head=`ce8d08c` / attempt=1）が失敗した。
+本エントリはその是正のみを記録する（trust anchor と P2 契約は変更しない）。
+
+### 修正
+
+- **根本原因**: `src/intelligence/market/pilot_runner.py` は永続化ゲートを
+  `python -m src.intelligence.market.persistence_check` として **subprocess 起動**する。
+  P1 の runtime allowlist は **import closure**（AST の import / from-import）から
+  導出しており、import されないこの依存を取りこぼしていた。結果として
+  `src/intelligence/market/persistence_check.py` が production main に存在せず、
+  producer は `No module named src.intelligence.market.persistence_check` で
+  exit 1 した。市場データ取得自体は 16/16 系列 success・全 fetch HTTP 200 で、
+  取得ロジックの不具合ではない。
+- `src/intelligence/market/persistence_check.py` を production main へ搬入
+  （本番 runtime 面 140 → 141 ファイル）。
+- **production bundle guard を拡張**し、`python -m <module>` による明示的な
+  module 実行を runtime 依存の完全性検査に含めた。list / tuple literal の要素が
+  ちょうど `"-m"` で直後が `src.` で始まる文字列定数のときだけ依存とみなす
+  決定的規則で、文字列本文の走査・動的推論・discovered module の実行は行わない。
+  認識した target が未搬入なら fail closed。既存の import closure 検査は保持する。
+- **trust anchor は不変**（`29c3beaf0c32c56ab5c4129aee89dbd1e06aec8b`）。
+  P2 の active-state 契約・producer workflow・スケジュール・Pages 構成・
+  single deployer はいずれも変更しない。**producer は unscheduled のまま**。
+- 失敗した run は **artifact を 1 件も生成していない**（`morning-delivery-v2` なし）。
+  公開も root cutover も発生していない。legacy は影響を受けていない。
+- 本エントリは producer の復旧を主張しない。復旧は、別途承認される
+  **新規の one-shot dispatch** が成功して初めて確認される
+  （frozen first-attempt-only により、失敗した run の再実行は適格にならない）。
+
 ## v4.79 (2026-09-16) — P2 P4-3b2c production trust baseline の有効化
 
 P1（v4.78・commit `29c3bea`）で dormant 搬入した P4-3b2c 公開面を、production
