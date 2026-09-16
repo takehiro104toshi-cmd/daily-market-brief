@@ -4,6 +4,53 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.78 (2026-09-16) — R0 機密ソース tracking 是正（landed）＋ P1 P4-3b2c dormant promotion
+
+> **版番号に関する開示（重要）**
+> v4.7〜v4.77 は **feature branch 上で維持されている開発版エントリ**であり、
+> **production main のリリースとして解釈してはならない**。main の CHANGELOG は
+> v4.6 の次に本 v4.78 が続く。
+> 本 v4.78 エントリが記録するのは、実際に production main へ landed した次の
+> **2 件のみ**である。
+> 1. R0 セキュリティ是正（SHA `e384bb2`）
+> 2. P1 dormant production promotion
+> それ以外の feature branch 上の機能は、本エントリでは main へ持ち込まれない。
+
+本エントリは**別々の 2 つの変更**を記録する。両者を 1 つの変更として扱わないこと。
+
+### 修正 — R0（セキュリティ是正・commit `e384bb2`・landed 済み）
+
+- 機密ソースの **forward tracking 是正**。承認済みの CONFIDENTIAL_SOURCE 10 件と
+  SENSITIVE_IDENTIFIER 2 件の Git tracking を index-only で解除し、再追加を防ぐ
+  `.gitignore` 保護規則を追記した（挿入のみ・16 行）。
+- **現在および将来の tracking 露出は解消**した。production main の tracked
+  機密ファイルはゼロであり、保護規則により再追加もされない。
+- **Git 履歴の露出は未解消**。R0 は履歴を書き換えておらず、過去 commit の blob は
+  到達可能なまま残る。履歴側の除去（**H0**）は
+  `docs/security/HISTORY_REMEDIATION_EXECUTION.md` §5 の独立した作業として継続中で
+  あり、**完了していない**。
+- ディスク上の原本は削除していない。ただし当該パスを tracking 中の他クローンでは、
+  pull 時に作業ツリーから当該ファイルが消える。
+
+### 追加 — P1（P4-3b2c dormant production promotion）
+
+- Morning Delivery `/v2` の並走公開面を production main へ搬入する。ただし本 commit
+  では **dormant（休眠）**であり、公開挙動は一切変わらない。
+- `P43B2C_TRUST_BASELINE` は **空文字のまま**。空 baseline のとき selector は
+  `V2_INTERNAL_ERROR / CONFIGURATION_INVALID` で安全に skip し exit 0 を返すため、
+  legacy の配信は阻害されない。**`/v2` は有効化されない。**
+  trust baseline の有効化は将来の独立した変更（**P2**）であり、本 commit には含まれない。
+- **legacy が引き続き唯一の正（authoritative）**。root の切り替え（**cutover は行わない**）。
+  `/v2` は legacy root の配下へ接ぎ木される設計で、Pages の artifact / deploy は
+  従来どおり 1 本だけ。
+- 搬入物: `src/intelligence/**` の runtime closure（entry point 3 つから再計算した
+  140 ファイル）、`scripts/p43b2c_*.py` の CI utility 4 本、producer / 検証支援 /
+  preview の workflow 3 本、`config.yaml` の `pages_parallel_publication` policy
+  section、`knowledge/` の参照リソース 2 件、公開用静的アセット 1 件、
+  governance ドキュメント 2 件、production guard テスト。
+- producer・preview・検証支援の各 workflow は **main 上では発火しない**
+  （schedule なし・push trigger は feature branch へ限定・Pages 権限なし）。
+
 ## v4.6 (2026-07-20) — Rashinban Private Insight Vault（private記事の転送・入力UI・Future Outlook）
 
 レポート画面から気になった記事本文を貼り付けてData Tankの非公開領域へ転送し、
