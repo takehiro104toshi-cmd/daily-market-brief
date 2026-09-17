@@ -7,7 +7,8 @@
   に `predictions` が含まれ、production runtime closure がここへ import 到達
   しないことを機械的に固定している）。Pages / publication / producer /
   governance / Compass DNA のいずれにも依存しない。
-- 現在の内容: Phase 5 Entry Contract A0.7 の **ONE-TIME RESEARCH driver** のみ。
+- 現在の内容: Phase 5 Entry Contract の **research 用 module のみ**
+  （A0.7 一回限りの TOPIX 取得 driver / A0.5R offline の neutral-band 測定 runner）。
   P5-1 Prediction Journal / P5-2 Automatic Evaluation は**未実装**であり、
   監督者の Entry Contract 凍結を待つ。
 """

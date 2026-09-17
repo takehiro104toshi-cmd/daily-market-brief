@@ -4,6 +4,46 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.84 (2026-09-17) — Phase 5 TOPIX neutral-band 分布測定 runner（offline・threshold は決めない）
+
+A0.7B-R2 で取得した隔離 research dataset（J-Quants v2 / 2021-09-17〜2026-09-17 /
+TOPIX 観測 1,223 件・derived return_1d 1,222 件）を入力に、TOPIX の実現 close-to-close
+日次 return 分布と候補 band ごとの UP / RANGE / DOWN 件数を**機械的に数える** runner を
+搬入する。監督者決定 N-2（`NEUTRAL_RANGE` band）の材料であり、**threshold の選択・推奨・
+最適化は行わない**。
+
+### 追加 — `src/intelligence/predictions/topix_neutral_band_measure.py`
+
+- 入力の権威は research root の `acquisition.json` と canonical `observations.jsonl` だけ。
+  J-Quants / legacy journal / MarketSignal / CompassDraft / 公開 `/v2` / 代替 source は読まない。
+  ネットワーク module を import しない（runner 自身が実行時に検査する）。
+- **research root は読むだけ。** SQLite index を開かず canonical JSONL を直接読む。実行前後で
+  root 配下全 file の sha256 が一致することを runner が検証する（`research_root_unmodified`）。
+- realized_return = `close(session) / close(previous Tokyo trading session) - 1`（Decimal・
+  **分類前に丸めない**）。derived `return_1d` は同じ式・同じ丸めで独立再計算し厳密一致を要求する。
+- 分類は `UP: r > +X` / `RANGE: -X <= r <= +X`（**閉区間**）/ `DOWN: r < -X`。正式候補
+  ±0.20 / 0.30 / 0.40 / 0.50% と文脈用 ±0.10 / 0.60 / 0.75 / 1.00% を同じ表で出す。
+- 分布統計（N / 範囲 / mean / median / 標本 stdev / mean|r| / min / max / |r| の P25・P50・
+  P75・P90・P95）。percentile は **nearest-rank**（補間なし）、method 名を出力へ記録する。
+- 年別表（端の年は PARTIAL・内側は FULL）と、FULL 年だけの RANGE% min / max / spread。
+  記述のみで、年安定性に対する最適化は行わない。
+- 取得 marker と実データが食い違えば黙って続けない（件数・範囲・provider・derived 一致・
+  合計保存・secret 不在など 19 項目を検証し、1 つでも落ちれば `MEASUREMENT_VALIDATION_FAILED`）。
+  監督者承認値は `--expect-*` で明示 pin する（runner が期待値を作らない）。
+- 出力は `::P5_TOPIX_NEUTRAL_BAND::{json}` ＋ 人間可読表。絶対 path・credential・
+  顧客向け文言・推奨・MarketSignal 成績を含まない。任意の `--output` は research root 外・
+  リポジトリ外・未存在 file のみ。
+- `tests/intelligence/test_topix_neutral_band_measure.py`（26 tests・決定論的 fixture のみ）。
+  境界の閉区間性・丸めない Decimal・nearest-rank・年別 PARTIAL/FULL・件数保存・取得 marker
+  不一致と derived 不一致の fail closed・read-only・決定論・production 非依存を固定する。
+
+### 未実施
+
+- threshold の決定・Entry Contract 記述・P5-1 / P5-2・production 連携・Windows 実行は
+  いずれも行っていない。Phase 4・workflow・config・production data root は不変。
+
+pytest: 587 passed（production-derived suite 524 ＋ research driver guard 37 ＋ 測定 runner guard 26）
+
 ## v4.83 (2026-09-16) — Phase 5 一回限りの TOPIX research acquisition driver（取得はまだ行わない）
 
 Phase 5 の `NEUTRAL_RANGE` band は、リポジトリが意図的に閾値を定義していないため
