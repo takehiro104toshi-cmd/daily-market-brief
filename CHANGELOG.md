@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.85 (2026-09-17) — Phase 5 Entry Contract の凍結（documentation only）
+
+Phase 4 の閉幕（`PHASE_4_COMPLETE / CLOSED / FROZEN`）、Phase 5 Entry Contract A0 監査、
+A0.7B-R2 の TOPIX 実データ取得（J-Quants v2・2021-09-17〜2026-09-17・観測 1,223 件）、
+A0.5R の分布実測（realized returns 1,222 件・19 検証すべて true）を経て、監督者が
+N-1〜N-6 を凍結した。本エントリはその**文書化のみ**であり、実装を含まない。
+
+### 追加 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- **N-1 identity**: `prediction_id` は表示非依存の prediction semantics から content-address する。
+  `brief_id` / `signal_id` は provenance reference として保持するが hash payload に含めない。
+  `delivery_id` を identity に使わない。
+- **N-2 realized outcome**: target = TOPIX、`close(session) / close(前取引 session) − 1` を
+  Decimal で丸めずに分類。`UP > +0.30%` / `NEUTRAL_RANGE −0.30%〜+0.30%（閉区間）` /
+  `DOWN < −0.30%`。版識別子 `topix_neutral_band:1.0.0`。経験的根拠（|return| nearest-rank
+  P25 = 0.299648%、±0.30% で NEUTRAL_RANGE 25.20%、FULL 年の spread 5.19pp）を provenance
+  として記録。**MarketSignal の成績は閾値決定に使っていない。** 歴史的 realized_return は
+  版変更で書き戻さない。
+- **N-3 integrity**: 新しい hash chain を作らない（content ID ＋ 追記専用 ＋ 既存 backup manifest）。
+- **N-4 target**: 評価対象は TOPIX のみ。Phase 4 MarketSignal の意味論は不変。
+- **N-5 horizon**: 1 東京取引 session の close-to-close。取引カレンダーを検証し、weekday
+  演算へフォールバックしない。検証不能なら DEFER。
+- **N-6 runtime**: P5-1 は OFFLINE から。repository-commit persistence を追加せず、公開 `/v2`
+  に結合しない。runtime 同居は別の認可 gate。
+- source 分類（STABLE_INPUT / REFERENCE_ONLY / DO_NOT_COUPLE）、PredictionRecord の field 分類、
+  abstention の意味論（棄権は coverage から消えず・NEUTRAL_RANGE にも方向予測にもならない）、
+  point-in-time の意味論（不変・追記専用・DEFER・supersede・live/replay 分離）、persistence
+  契約（`<data_root>/predictions/*.jsonl`・legacy journal を権威にしない・同一日付上書きなし）、
+  INTERNAL ONLY 境界、Phase の順序（P5-1A → P5-1B → P5-1C → P5-2 → P5-3）を凍結。
+- 凍結決定から導いた明確化 3 点を「監督者確認事項」として明示（§11）。
+
+### 未実施
+
+- P5-1A（PredictionRecord schema ＋ identity 設計）以降は着手していない。
+- Phase 4 コード・workflow・`config.yaml`・Compass DNA・公開 artifact・production data root は
+  いずれも不変。J-Quants 再取得・閾値再測定も行っていない。
+
 ## v4.84 (2026-09-17) — Phase 5 TOPIX neutral-band 分布測定 runner（offline・threshold は決めない）
 
 A0.7B-R2 で取得した隔離 research dataset（J-Quants v2 / 2021-09-17〜2026-09-17 /
