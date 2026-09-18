@@ -4,6 +4,59 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.90 (2026-09-18) — Phase 5 P5-2A EvaluationRecord schema ＋ outcome contract
+
+P5-1（CLOSED / FROZEN）の上に、**不変の評価記録 object だけ**を凍結した。EvaluationStore /
+`evaluations.jsonl`・TOPIX 取得・取引カレンダー照会・return 計算・自動評価・較正・正誤判定・
+runtime 統合・公開出力は**含まない**。P5-1 実装・P4・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/evaluation_record.py`
+
+- `EvaluationRecord`（frozen）: A identity 入力（`schema_version` = `evaluation_record:0.1.0` /
+  `prediction_id` / `target` / `reference_session` / `session_date` / `classification_version` /
+  `status` / `realized_return` / `realized_outcome` / `defer_reason` / `supersedes_evaluation_id`）、
+  B provenance（closes・observation id・source・schema 版・`SessionVerification`）、
+  C audit（`created_at`）。hit / miss / accuracy / score・予測 level の複製・表示文字列は存在しない。
+- realized_return は Decimal（float / NaN / Infinity 拒否・丸めない）。`canonical_decimal` は
+  context 非依存で末尾ゼロだけを落とす平文十進（`0.0100`→`0.01`、`-0`→`0`、`1E-7`→`0.0000001`、
+  40 桁保持）。同値の表現は同じ evaluation_id。`from_dict` は非 canonical 文字列を拒否。
+- 分類 `topix_neutral_band:1.0.0`: UP > +0.003 / RANGE −0.003..+0.003（閉区間）/ DOWN < −0.003
+  （Decimal 比較）。realized の区分名は予測 level と分けて `RANGE`（境界不変）。
+- 状態機械: EVALUATED（return・outcome・closes・検証済み `SessionVerification` 必須、outcome は
+  分類と一致）/ DEFERRED（return・outcome 無し、defer_reason 6 値のいずれか必須）。
+  DEFERRED は RANGE でも零 return でも「予測 unavailable」でもない。棄権を理由に DEFERRED にしない。
+- `SessionVerification`（既存 `CalendarValidation` と同じ実測検証の要約 ＋ 検証済み session /
+  直前 session）。EVALUATED では validated かつ session_date / reference_session と一致を要求。
+- 訂正は `supersedes_evaluation_id` を持つ新しい record（新 id）。自己 supersession・不正 id 拒否。
+  in-place 変更・「最新が勝つ」・chain 走査は無い。
+- `created_at` は呼び出し側が明示（identity 外）。module は現在時刻を読まない。
+- 依存: `core.ids` / `core.time` / `prediction_record`（prefix 定数）と stdlib のみ。
+
+### 追加 — `tests/intelligence/test_evaluation_record.py`（162 tests）
+
+- gate §20 の 50 項目（境界 ±0.003 の閉区間、Decimal canonical 化 15 パターン、同値表現の
+  同一 id、負の零、極小値、float / NaN / Infinity 拒否、prediction_id / target / session 検証、
+  EVALUATED / DEFERRED の矛盾拒否、分類不一致拒否、3 版分離、golden id ＋ hashlib 独立再計算、
+  created_at / provenance 非依存、意味論依存、supersession、不変性、偽造 id、未知 field、
+  round-trip、禁止概念、依存境界、LIVE / REPLAY、棄権と DEFERRED の分離、datetime.now 不在）
+  ＋ `SessionVerification` 不変条件・strict parse。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §14「P5-2A EvaluationRecord schema ＋ outcome contract」を追加（目的・target / horizon・
+  Decimal・分類・状態機械・defer 理由・session 証拠・provenance・identity 分類・supersession・
+  較正との分離・依存境界）。N-1〜N-6 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py`（テストのみ）
+
+- P5-1D が固定していた predictions package のファイル一覧に `evaluation_record.py` を加えた
+  （「runner / CLI を追加していない」という検査意図は不変）。P5-1 の実装 3 module と専用テストは
+  無変更。
+
+### 未実施
+
+- P5-2B（追記専用 evaluation journal / store）以降は着手していない。
+
 ## v4.89 (2026-09-18) — Phase 5 P5-1D Prediction Journal end-to-end OFFLINE 検証（P5-1 完了）
 
 P5-1A / P5-1B / P5-1C を 1 つの系として検証する gate。新機能・runtime 統合・CLI は追加せず、

@@ -435,7 +435,8 @@ def test_p5_remains_unreachable_from_the_p4_production_entrypoints() -> None:
 def test_no_validation_runner_or_cli_was_added() -> None:
     package = REPO_ROOT / "src" / "intelligence" / "predictions"
     assert sorted(p.name for p in package.glob("*.py")) == [
-        "__init__.py", "prediction_ingest.py", "prediction_record.py", "prediction_store.py",
+        "__init__.py", "evaluation_record.py",            # P5-2A（object のみ。runner / CLI ではない）
+        "prediction_ingest.py", "prediction_record.py", "prediction_store.py",
         "topix_neutral_band_measure.py", "topix_research_acquire.py",
     ]
     for name in ("prediction_ingest.py", "prediction_record.py", "prediction_store.py"):

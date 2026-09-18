@@ -492,3 +492,74 @@ outcome / 評価との結合は無い。
 
 **P5-1 status: CLOSED / FROZEN（監督者受理待ち）。** P5-2 以降は着手していない。
 
+---
+
+## 14. P5-2A EvaluationRecord schema ＋ outcome contract（`evaluation_record.py`）
+
+N-1〜N-6 を変えない。P5-2A が凍結したのは**評価 object だけ**であり、store（P5-2B）・TOPIX /
+カレンダー参照・return 計算・自動評価・較正・正誤判定は含まない。
+
+- **目的**: PredictionRecord は「予測時に系が何と言ったか」、EvaluationRecord は「その不変の予測に
+  ついて、検証済み outcome / 証拠 context のもとで後からなされた評価」。outcome が届いても
+  PredictionRecord は変更せず、可変の評価 field を付けない。`prediction_id` で参照し複製しない。
+- **target / horizon（N-4 / N-5）**: TOPIX（`index:topix.close.closing.tokyo`）のみ。
+  `reference_session` の close → `session_date` の close の 1 検証済み東京取引 session
+  close-to-close。open-to-close・intraday・翌々 session・暦日・weekday 演算は表現しない。
+- **realized_return（N-2）**: `close(session_date) / close(reference_session) − 1` を Decimal で
+  保持（float 不可・分類前に丸めない・連続値を必ず保存）。canonical 直列化は context 非依存で
+  末尾ゼロだけを落とした指数なしの平文十進（`0.0100`→`0.01`、`-0`→`0`、`1E-7`→`0.0000001`、
+  NaN / Infinity 拒否、桁を落とさない）。`from_dict` は非 canonical 文字列を拒否する。
+- **分類 `topix_neutral_band:1.0.0`**: `UP: r > +0.003` / `RANGE: −0.003 <= r <= +0.003`（閉区間）/
+  `DOWN: r < −0.003`。比較は Decimal。**N-2 の表で `NEUTRAL_RANGE` と書かれた realized の区分は
+  記録上 `RANGE` で表す**（予測 level の `NEUTRAL_RANGE` と語彙を分けるため。境界・意味は不変）。
+  予測 level（5 値）と realized outcome（3 値）は別概念であり、正誤 / hit / miss / accuracy /
+  score / direction_correct は本 record に存在しない（後続の較正 gate が定義する）。
+- **status**: `EVALUATED`（検証済み証拠が揃い、連続 return ＋ 分類を表現できる）/ `DEFERRED`
+  （予測は存在するが権威ある評価を現時点で完了できない）。DEFERRED は RANGE でも不正解でも
+  零 return でも「予測が unavailable」でもない。deferred を黙って除外しない。
+  EVALUATED: realized_return・realized_outcome・reference_close・target_close・
+  session_verification 必須、defer_reason 無し、outcome は return の分類と一致。
+  DEFERRED: return / outcome 無し、defer_reason 必須。矛盾は fail closed。
+- **defer_reason（6 値・snake_case）**: `calendar_unverified` / `reference_session_unverified`
+  （N-5 の (a)(b) を立証できない）/ `reference_close_unavailable` / `target_close_unavailable` /
+  `observation_invalid` / `source_unsupported`。
+- **予測 availability と outcome evaluability は別**: unavailable な予測も TOPIX の outcome を
+  持ちうる。棄権を理由に DEFERRED にせず、棄権の正誤も決めない（`available` を複製しない）。
+- **session 検証の証拠（§10 / §11-1）**: `SessionVerification`（既存 `CalendarValidation` と同じ
+  実測検証の要約: `calendar_source_id` / `trading_divisions` / `checked_dates` / `agreements` /
+  `disagreement_count` ＋ `verified_session` / `verified_previous_session`）。EVALUATED では
+  `validated`（checked > 0・食い違い 0）かつ `verified_session == session_date` かつ
+  `verified_previous_session == reference_session` を要求。schema は `reference_session <
+  session_date` のみを見て、隣接性はこの証拠で担保する。
+- **provenance / audit**: `reference_close` / `target_close`（Decimal canonical）/
+  `reference_observation_id` / `target_observation_id`（market `Observation.observation_id`）/
+  `source_id` / `market_schema_version` / `session_verification`。`created_at` は評価時刻の
+  audit metadata で identity に入らない（呼び出し側が明示。module は現在時刻を読まない）。
+  顧客表示文字列・PredictionRecord の複製・巨大な evidence blob は持たない。
+- **identity（field 分類）**:
+
+  | 分類 | field |
+  |---|---|
+  | A. identity 入力（hash に含める） | `schema_version`（`evaluation_record:0.1.0`）、`prediction_id`、`target`、`reference_session`、`session_date`、`classification_version`、`status`、`realized_return`（canonical）、`realized_outcome`、`defer_reason`、`supersedes_evaluation_id` |
+  | B. provenance（hash 外） | `reference_close`、`target_close`、`reference_observation_id`、`target_observation_id`、`source_id`、`market_schema_version`、`session_verification` |
+  | C. audit（hash 外） | `created_at` |
+  | D. 導出（保存しない） | identity payload、canonical 文字列、`is_deferred`、`is_correction` |
+  | E. 存在しない | hit / miss / correct / accuracy / score / win / loss / direction_correct、予測 level・confidence・available・origin の複製、label / display_text / delivery_id / Markdown / HTML / path |
+
+  `evaluation_id = "eval_" + SHA-256(A の 11 key を昇順・compact・UTF-8 で直列化)[:24]`
+  （`core.ids.content_id`。新しい hash chain ではない ＝ N-3）。`created_at` や provenance を
+  変えても同じ id、意味論のどれか 1 つを変えれば別 id。同値の Decimal 表現（`0.01` / `0.0100`）
+  は同じ id。LIVE / REPLAY は `prediction_id` が既に区別するため第二の origin を持たない。
+- **訂正 / supersession（§7）**: 歴史的 EvaluationRecord は書き換えない。市場データの訂正は
+  `supersedes_evaluation_id` で前の評価を参照する**新しい** EvaluationRecord（新しい id）で表す。
+  原評価は supersedes 無し。`supersedes_evaluation_id` は identity に含める（同じ数値へ再評価
+  されても訂正は必ず新しい id を得る。参照は `Observation.revision_of` と同じ provenance link）。
+  自己 supersession・不正な id 形式は拒否。「最新が勝つ」の判定と chain 走査は store /
+  analytics（後続 gate）に属し、record model には無い。
+- **3 つの版概念**: `prediction_record:0.1.0`（予測 record schema）/ `evaluation_record:0.1.0`
+  （評価 record schema）/ `topix_neutral_band:1.0.0`（realized outcome 分類規則）は別物。
+- **依存境界**: import は `core.ids` / `core.time` / `prediction_record`（`PREDICTION_ID_PREFIX`
+  のみ）と stdlib。market store / TOPIX 取得 / tokyo_calendar / J-Quants / PredictionStore /
+  較正 / P4 pipeline / 公開 renderer / 通知 / legacy journal を参照しない。network も
+  filesystem 書き込みも無い。
+
