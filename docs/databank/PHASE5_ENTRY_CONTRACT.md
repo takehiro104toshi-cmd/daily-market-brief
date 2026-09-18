@@ -212,6 +212,41 @@ P5-1 は公開 artifact から予測を再構成せず、**producer run 内の `
 
 具体的 schema・field 名・正規化規則は **P5-1A** で設計する（本書は分類と原則のみ）。
 
+### 5.1 P5-1A で確定した schema と identity（`prediction_record:0.1.0`）
+
+P5-1A（`src/intelligence/predictions/prediction_record.py`）が上表の分類を field 名へ写した
+結果を記録する。**上表の分類・N-1〜N-6 を変えない**（明確化のみ）。
+
+| 分類 | field |
+|---|---|
+| A. identity 入力（**hash に含める**） | `schema_version`（`prediction_record:0.1.0`）、`session_date`、`reference_session`、`origin`（`LIVE` / `REPLAY`）、`available`、`level`、`confidence`、`horizon`、`unavailable_reason` |
+| B. provenance（hash に含めない） | `brief_id`、`signal_id`、`package_id`、`draft_id`、`morning_brief_schema_version`、`market_signal_schema_version` |
+| C. audit metadata（hash に含めない） | `recorded_at`（上表の `created_at`）、`cutoff`、`principle_refs`、`market_principle_version`、`outlook_rule_version`（P4 `CompassOutlook.rule_version` の写し。outlook を持たない記録では空） |
+| D. 導出（保存しない） | identity payload、canonical 文字列、`is_abstention`（`= not available`） |
+| E. 存在しない（受け取る引数も無い） | `delivery_id`、`markdown_sha256`、`label` / `display_text` / 本文 / Markdown / HTML、realized outcome、評価状態、`topix_neutral_band` 版、市場観測 |
+
+identity（N-1）の直列化契約:
+
+- payload は A の **9 key だけ**。key 昇順、`json.dumps(sort_keys=True, separators=(",", ":"),
+  ensure_ascii=False)`、UTF-8 bytes を SHA-256 し、`prediction_id = "pred_" + 先頭 24 hex`
+  （`core.ids.content_id` と同一機構。新しい hash chain ではない ＝ N-3）。
+- 欠落は空文字で表し JSON null を使わない。`level` は enum 値文字列（unavailable では `""`）、
+  `available` は JSON true/false、`origin` は `LIVE` / `REPLAY`。
+- `schema_version` は PredictionRecord 自身の版であり、N-2 の分類版 `topix_neutral_band:1.0.0`
+  とは別概念。分類版は EvaluationRecord（P5-2）に属し、PredictionRecord には置かない。
+
+状態機械（P4 `build_market_signal` の写し。矛盾は拒否し正規化しない）:
+
+- `available == true`: `level` ∈ 5 値、`confidence` ∈ 3 値、`horizon` ∈ 既知（現在
+  `next_tokyo_session` のみ）、`(level, confidence)` は P4 `LEVEL_BY_STATE` の値域 7 組のみ、
+  `unavailable_reason == ""`。
+- `available == false`: `level` 無し、`unavailable_reason` ∈ 6 値。`direction_mixed` /
+  `direction_uncertain` のときだけ outlook の `confidence` / `horizon` を保持し、それ以外は両方空。
+
+schema-local 検証と verified-calendar 検証の分離: schema は `reference_session < session_date`
+（ISO 日付）までを検証する。「直前の**検証済み**東京取引 session であること」（§11-1）は
+P5-2 の verified-calendar 境界で検証し、schema は暦を持たず weekday 演算を行わない。
+
 ---
 
 ## 6. abstention（棄権）の意味論
@@ -304,14 +339,15 @@ P5-2 実装直前に 1 回 live 再確認する（データ面は `CURRENT_PLAN_
 
 ## 11. 監督者確認事項（凍結決定から導いた明確化）
 
-本書の記述のうち、N-1〜N-6 の文言を**補う形で導いた**ものを列挙する。監督者の確認により
-凍結が完成する。異議があれば本書を改訂する（Claude Code は実装で先取りしない）。
+本書の記述のうち、N-1〜N-6 の文言を**補う形で導いた**ものを列挙する。3 点とも P5-1A gate で
+監督者が **LOCKED** とした（確認済み。以後は §12 の手続きでのみ改訂する）。
 
-1. N-5 検証項目 (b): `reference_session` が `session_date` の直前の取引 session でない記録は
-   DEFER とする（多日 return を 1 session return として評価しない）。
-2. N-2 の版識別子文字列 `topix_neutral_band:1.0.0` とその構成要素。
-3. §6: `available == true` かつ `level == NEUTRAL_RANGE` は方向評価の対象（realized が
-   NEUTRAL_RANGE なら的中）。
+1. **LOCKED** — N-5 検証項目 (b): `reference_session` は `session_date` の**直前の検証済み
+   東京取引 session**でなければならない。そうでない記録は DEFER とする（多日 return を
+   1 session return として評価しない）。
+2. **LOCKED** — N-2 の版識別子文字列 `topix_neutral_band:1.0.0` とその構成要素。
+3. **LOCKED** — §6: `available == true` かつ `level == NEUTRAL_RANGE` は棄権ではなく方向評価の
+   対象（realized が NEUTRAL_RANGE なら的中）。
 
 ---
 

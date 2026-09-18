@@ -4,6 +4,54 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.86 (2026-09-18) — Phase 5 P5-1A PredictionRecord schema ＋ 決定論的 identity
+
+Entry Contract（v4.85）の §11 明確化 3 点を監督者が LOCKED とし、P5-1A として
+「1 件の point-in-time 予測観測」の型と identity だけを凍結した。persistence（P5-1B）・
+ingestion（P5-1C）・EvaluationRecord / TOPIX 参照（P5-2）・較正（P5-3）・runtime 統合・
+公開出力は**含まない**。本番 runtime closure・Phase 4 コード・workflow・Pages・config は不変。
+
+### 追加 — `src/intelligence/predictions/prediction_record.py`
+
+- `PredictionRecord`（frozen dataclass）: field を A identity 入力（`schema_version` /
+  `session_date` / `reference_session` / `origin` / `available` / `level` / `confidence` /
+  `horizon` / `unavailable_reason`）、B provenance（`brief_id` / `signal_id` / `package_id` /
+  `draft_id` / source schema 版）、C audit（`recorded_at` / `cutoff` / `principle_refs` /
+  `market_principle_version` / `outlook_rule_version`）に分類。表示文字列・`delivery_id`・
+  realized outcome・評価状態・閾値版の field は**存在しない**（受け取る引数も無い）。
+- 決定論的 identity（N-1）: A の 9 key だけを key 昇順・compact・UTF-8 の JSON へ直列化し
+  SHA-256 先頭 24 hex を `pred_` に付ける（`core.ids.content_id` と同一機構。新 hash chain なし）。
+  `brief_id` / `signal_id` / `recorded_at` を変えても同じ ID、意味論のどれか 1 つ
+  （LIVE / REPLAY を含む）を変えれば別 ID。
+- fail closed: P4 凍結語彙（5 level / 3 confidence / 6 unavailable reason / 既知 horizon）の外、
+  P4 が生成しえない `(level, confidence)` 組、available / unavailable の矛盾、
+  `reference_session >= session_date`、非 ISO 日付、naive datetime、偽造 `prediction_id`、
+  未知 field を `InvalidPredictionRecord` で拒否。正規化・推測をしない。
+- schema 版 `prediction_record:0.1.0`（N-2 の分類版 `topix_neutral_band:1.0.0` とは別概念）。
+- `as_dict` / `from_dict` の決定論的 round-trip（JSON 互換・secret / 表示文字列を含まない）。
+- 依存境界: `compass.model` / `core.ids` / `core.time` / `reports.market_signal` /
+  `reports.model` のみ。network / store / calendar / J-Quants / persistence を import しない。
+
+### 追加 — `tests/intelligence/test_prediction_record.py`（145 tests）
+
+- golden canonical 文字列と、hashlib による独立再計算での ID 一致。
+- provenance / audit 差分 → 同一 ID、意味論差分（全 level・confidence・reason・origin・
+  session）→ 別 ID、payload 水準で `horizon` / `schema_version` も hash に入ること。
+- 矛盾状態・語彙外・順序違反・naive datetime・偽造 ID・未知 field・表示 / outcome kwargs の拒否。
+- 不変性、round-trip、P4 語彙との整合（`LEVEL_BY_STATE` 値域 7 組、
+  `delivery.PUBLIC_UNAVAILABLE_REASONS`、`CompassConfig.outlook_horizon`）、依存境界、
+  本番 closure 非到達（`predictions` は `EXCLUDED_PACKAGES`）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §5.1 を追加（P5-1A の field 対応表・identity 直列化契約・状態機械・schema-local と
+  verified-calendar 検証の分離）。§5 の分類と N-1〜N-6 は変更していない。
+- §11 の 3 点を **LOCKED** と明記（(1) は「直前の**検証済み**東京取引 session」の文言）。
+
+### 未実施
+
+- P5-1B（追記専用 journal / store）以降は着手していない。
+
 ## v4.85 (2026-09-17) — Phase 5 Entry Contract の凍結（documentation only）
 
 Phase 4 の閉幕（`PHASE_4_COMPLETE / CLOSED / FROZEN`）、Phase 5 Entry Contract A0 監査、
