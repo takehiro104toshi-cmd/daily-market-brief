@@ -302,6 +302,47 @@ P5-2 の verified-calendar 境界で検証し、schema は暦を持たず weekda
 - `<data_root>` は `data/vnext`（`.gitignore` 済み）を既定とするが、P5-1 offline 段階では
   明示指定 root を要求し、暗黙の production fallback を持たない（研究 driver と同じ規律）。
 
+### 8.1 P5-1B で確定した journal の storage 契約（`prediction_store.py`）
+
+上の §8 と N-1〜N-6 を変えない。P5-1B が確定した具体を記録する。
+
+- **JSONL が唯一の権威。** `<data_root>/predictions/predictions.jsonl`。in-memory index は
+  開くたび／`reload()` で JSONL から全再構築する導出物。P5-1B は SQLite index を作らない
+  （作る場合も §8 のとおり再構築可能な導出物にとどめる）。
+- **data_root は呼び出し側が明示する。** `core.paths` の既定値・環境変数・config へ fallback
+  しない。repository path・production root・research root をコードに持たない。読むだけでは
+  ディレクトリを作らず、初回 append で親ディレクトリを作る。Git 操作・network を持たない。
+- **journal 直列化**（identity 直列化とは別の関心事）: `PredictionRecord.as_dict()` を
+  key 昇順・`separators=(",", ":")`・`ensure_ascii=False`・UTF-8・`\n` 終端の 1 行にする。
+  表示文字列・machine path・secret は schema 上存在しない。
+- **append 意味論**:
+
+  | 状態 | 結果 |
+  |---|---|
+  | 未知 `prediction_id` | 1 行だけ追記 → `APPENDED`（`wrote_line = true`） |
+  | 既知 id ＋ canonical 行が byte 一致 | 書かない → `ALREADY_PRESENT`（`wrote_line = false`） |
+  | 既知 id ＋ いずれかの field が異なる（provenance / audit を含む） | `PredictionConflict`（fail closed。merge・更新・2 行目追記をしない） |
+
+  N-1 により provenance / audit は id に入らない。従って **同じ id は冪等の十分条件ではなく**、
+  保存済み canonical 行との完全一致を要求する。
+- **物理重複**: journal に同じ `prediction_id` の行が 2 つあれば、内容が同一でも権威 load は
+  `PHYSICAL_DUPLICATE_IDENTICAL` / `PHYSICAL_DUPLICATE_CONFLICTING` で失敗する（append API が
+  冪等である以上、物理重複は履歴 / 手動の破損を意味する）。既存 store（compass / ledger）は
+  set で黙って畳むが、Phase 5 はその慣行を継承しない（§8「黙って読み飛ばさない」）。
+- **load の fail closed**: 不正 JSON / 空行 / 非 object / 未知 field / schema 違反 /
+  偽造・失効 id / 非 canonical 行 / 終端改行の無い最終行 / 非 UTF-8 は
+  `PredictionJournalCorrupt`（行番号・理由コード付き）。黙って skip・dedup・修復・
+  migration-on-read・mutation-on-read をしない。破損 journal から部分結果を返さない。
+- **書き込み規律**: 親ディレクトリ作成 → `open("a", encoding="utf-8", newline="\n")` →
+  1 行 1 write → `flush()` → `os.fsync()`。既存 store（identity_ledger / normalization /
+  raw_store）と同じ最小規律。hash chain / transaction / lock service を持ち込まない（N-3）。
+- **SINGLE WRITER**: 同時書き込みの直列化は未対応。開いてから（または最後の append から）
+  journal の byte 長が変わっていれば append 前に `ConcurrentModificationDetected` で
+  fail closed する（検知であって排他ではない）。runtime 同時実行は別の認可 gate。
+- **point-in-time**: 追記後の行は渡した PredictionRecord そのもの。後の provenance 変更は
+  行を更新しない。新 schema 版は自身の contract で新しい行を追記する。
+  「最新が勝つ」「1 日 1 行」を持たない。LIVE / REPLAY・同一 session の複数予測は共存する。
+
 ---
 
 ## 9. INTERNAL ONLY 境界

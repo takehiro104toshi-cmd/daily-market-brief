@@ -9,7 +9,8 @@
   governance / Compass DNA のいずれにも依存しない。
 - 現在の内容: Phase 5 Entry Contract の research 用 module
   （A0.7 一回限りの TOPIX 取得 driver / A0.5R offline の neutral-band 測定 runner）と、
-  P5-1A の `prediction_record`（不変の PredictionRecord schema ＋ 決定論的 identity。
-  persistence / ingestion / 評価は含まない）。
-  P5-1B 追記専用 journal / P5-1C ingestion / P5-2 Automatic Evaluation は**未実装**。
+  P5-1A の `prediction_record`（不変の PredictionRecord schema ＋ 決定論的 identity）、
+  P5-1B の `prediction_store`（`<data_root>/predictions/predictions.jsonl` への追記専用
+  journal。ingestion / 評価は含まない）。
+  P5-1C ingestion / P5-2 Automatic Evaluation は**未実装**。
 """

@@ -4,6 +4,52 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.87 (2026-09-18) — Phase 5 P5-1B 追記専用 PredictionStore（JSONL journal）
+
+P5-1A（v4.86）で凍結した PredictionRecord の**永続化層だけ**を実装した。P4 出力の
+ingestion（P5-1C）・EvaluationRecord / `evaluations.jsonl`・TOPIX / 取引カレンダー評価・
+較正・runtime producer・Actions・Pages / 公開出力は**含まない**。本番 runtime closure・
+Phase 4 コード・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/prediction_store.py`
+
+- `PredictionStore(data_root)`: `<data_root>/predictions/predictions.jsonl` を唯一の権威と
+  する追記専用 journal。data_root は呼び出し側が明示（`core.paths` / 環境変数 / config への
+  fallback なし）。読むだけではディレクトリを作らない。
+- append 意味論: 未知 id → `APPENDED`（1 行追記）、既知 id ＋ canonical 行 byte 一致 →
+  `ALREADY_PRESENT`（書かない）、既知 id ＋ provenance / audit を含むいずれかの field 差 →
+  `PredictionConflict`（fail closed。merge・更新・2 行目追記なし）。`AppendResult` は
+  `wrote_line` と物理行番号を持つ。
+- journal 直列化（identity 直列化とは別）: `as_dict()` を key 昇順・compact・UTF-8・`\n`
+  終端の 1 行に。
+- 権威 load は fail closed: 不正 JSON / 空行 / 非 object / 未知 field / schema 違反 /
+  偽造・失効 id / 非 canonical 行 / 終端改行の無い最終行 / 非 UTF-8 / 物理重複（同一内容でも）
+  を `PredictionJournalCorrupt`（行番号＋理由コード 9 種）で拒否。skip・dedup・修復・
+  migration-on-read をしない。
+- 書き込み規律: 親 dir 作成 → `open("a", newline="\n")` → 1 write → `flush` → `fsync`
+  （既存 ledger / normalization store と同じ最小規律。hash chain / transaction / lock なし）。
+- SINGLE WRITER: 開いてからの byte 長変化を append 前に検知し
+  `ConcurrentModificationDetected` で fail closed（検知であり排他ではない）。
+- 最小 read API: `iter_records()`（物理行順）/ `get()` / `in` / `len()` / `reload()`。
+  日付 key・「最新が勝つ」・dedup を持たない。SQLite / network / git を持たない。
+
+### 追加 — `tests/intelligence/test_prediction_store.py`
+
+- gate §14 の 30 項目（初回 append・冪等・bytes 不変・provenance / audit 差の fail closed・
+  同一 session / LIVE-REPLAY 共存・NEUTRAL_RANGE / 棄権の保存・round-trip・破損 8 種・
+  追記専用経路・prefix bytes 保存・JSONL 権威・SQLite / network / git 非依存・本番非到達・
+  outcome field 不在・single-writer 境界・caller-controlled root・secret / path 非直列化）
+  ＋ 空 / 不在 journal・write 規律（fsync 1 回）・result 語彙。すべて `tmp_path` 隔離。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §8.1 を追加（JSONL 権威・append / 冪等 / conflict 意味論・物理重複規則・load の
+  fail closed・書き込み規律・single-writer 境界・point-in-time）。§8 と N-1〜N-6 は不変。
+
+### 未実施
+
+- P5-1C（offline P4 → PredictionRecord ingestion）以降は着手していない。
+
 ## v4.86 (2026-09-18) — Phase 5 P5-1A PredictionRecord schema ＋ 決定論的 identity
 
 Entry Contract（v4.85）の §11 明確化 3 点を監督者が LOCKED とし、P5-1A として
