@@ -4,6 +4,34 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.93 (2026-09-18) — Phase 5 P5-2D Evaluation end-to-end OFFLINE 検証（P5-2 完了）
+
+P5-2A / P5-2B / P5-2C を 1 つの系として検証する gate。新機能・runtime 統合・CLI は追加せず、
+テストを唯一の検証 artifact とした。P5-2A/B/C に欠陥は見つからず、修正パッチは無い。
+
+### 追加 — `tests/intelligence/test_evaluation_e2e.py`（38 tests）
+
+- happy path A–Q を 1 本の E2E（PredictionRecord → カレンダー証拠 → TOPIX Observation →
+  `evaluate_and_append` → EVALUATED / APPENDED → Decimal return と分類の一致 → 物理 1 行 →
+  instance 破棄 → 権威 reload → 同一 record / id / provenance → 同じ証拠での再評価
+  ALREADY_PRESENT・bytes 不変）。
+- outcome state（UP / 境界 RANGE 3 点 / DOWN と各境界のすぐ外側）の reload 後の連続 return 保存、
+  予測 state 非依存（方向 / NEUTRAL_RANGE / 棄権）、週末＋祝日 gap のカレンダー証明、
+  calendar / previous session の DEFERRED journal、欠落 / 無効 / 未対応 source の DEFERRED journal、
+  凍結 defer 優先順位の順序非依存と reload、複数記録 journal の再起動、engine 境界からの冪等、
+  created_at / provenance の conflict、A→B→C 訂正 chain、DEFERRED→EVALUATED 履歴、破損 8 種の
+  fail closed、process 再起動、predictions.jsonl 非依存（closure 18 module）、point-in-time /
+  look-ahead 境界、single-writer 検知、P5-2A/B/C 整合監査、runner / CLI 不在。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §17「P5-2 完了検証（P5-2D）」を追加（検証結果・完了監査・P5-2 status CLOSED / FROZEN
+  監督者受理待ち）。N-1〜N-6・§14〜§16 は不変。
+
+### 未実施
+
+- P5-3A（Calibration contract ＋ metrics specification）以降は着手していない。
+
 ## v4.92 (2026-09-18) — Phase 5 P5-2C OFFLINE 評価 engine
 
 凍結 PredictionRecord ＋ 東京カレンダー証拠 ＋ TOPIX close 観測 → 凍結 EvaluationRecord を

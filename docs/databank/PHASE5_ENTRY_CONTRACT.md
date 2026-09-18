@@ -661,3 +661,36 @@ N-1〜N-6・§14（EvaluationRecord）・§15（EvaluationStore）を変えな�
   PredictionRecord / MorningBrief / MarketSignal / CompassDraft / P5-1 module のいずれも engine を
   import しない。
 
+---
+
+## 17. P5-2 完了検証（P5-2D）
+
+P5-2A（EvaluationRecord）・P5-2B（EvaluationStore）・P5-2C（evaluation_engine）を 1 つの系として
+OFFLINE で検証した（`tests/intelligence/test_evaluation_e2e.py`。隔離 root のみ、凍結 builder の
+PredictionRecord・既存 `Observation`・カレンダー行の fixture のみ、実データ・network・Windows
+作業なし）。検証したのは**市場 outcome** の journal であり、予測の正誤・較正は扱っていない。
+
+| 検証項目 | 結果 |
+|---|---|
+| E2E 経路 | PredictionRecord → `CalendarEvidence`（週末＋祝日を含む実測検証）→ TOPIX `Observation` → `evaluate_and_append` → EVALUATED / `APPENDED` → `realized_return == close(session) / close(reference) − 1`（固定 Decimal context）→ 分類は §14 の権威と一致 → 物理 1 行 → instance 破棄 → 新しい store の権威 reload → 同一 EvaluationRecord / 同一 id / provenance・audit 完全一致 → 同じ証拠・同じ created_at で engine 境界から再評価 → `ALREADY_PRESENT`・bytes 変化 0 |
+| outcome state | UP / RANGE（+0.30% 境界・零・−0.30% 境界）/ DOWN と各境界のすぐ外側が engine → record → JSONL → reload を通って連続 return のまま保存され、再分類 drift が無い |
+| 予測 state 非依存 | available 方向 / available NEUTRAL_RANGE / 棄権の 3 予測が同じ証拠から同じ realized outcome の EVALUATED になる（id は prediction_id で分かれる）。採点はしない |
+| カレンダー | 09-18（金）→ 09-22（火）の gap が供給されたカレンダー証拠だけで EVALUATED（weekday / timedelta 演算は engine の実行内容に無い）。カレンダー検証不能 → `calendar_unverified`、直前 session 不一致 → `reference_session_unverified` が journal され reload で保存される |
+| DEFERRED の journal | reference / target close 欠落・無効観測・未対応 source の DEFERRED がすべて journal に載り、reload 後も defer_reason・保持された provenance が同一。DEFERRED は RANGE にならず coverage から消えない |
+| defer 優先順位 | 複数問題を同時に含む証拠を shuffle しても §16 の順序で同じ理由になり、journal / reload 後も同じ理由 |
+| 複数記録 / 再起動 | EVALUATED・DEFERRED・複数 prediction_id・複数 session・訂正 chain を含む journal が再起動後も物理順・件数・`get` を保ち、date / prediction の overwrite が無く旧評価が残る。正確な再評価は `ALREADY_PRESENT`、新規は `APPENDED` |
+| 冪等 / conflict | 同じ入力の再評価は `ALREADY_PRESENT`（bytes 不変、再構築後も同じ）。created_at 差・observation id 差（identity 外）は `EvaluationConflict`（bytes / 元の行不変・reload 成功・2 行目なし） |
+| 訂正 / supersession | A → B（supersedes A、訂正 close）→ C（supersedes B）の chain が append され、A は byte 単位で不変、物理順 A B C、同一 subject、reload で全件保存。「最新 / 現在」の解決は無い |
+| DEFERRED → EVALUATED | target close 欠落で DEFERRED の A を、後から揃った証拠で B（EVALUATED、supersedes A）として append。A は DEFERRED のまま両方残る |
+| 破損 | 正常 journal の隔離コピーに対し、不正 JSON / 終端切れ / 偽造 id / 物理重複（同一・矛盾）/ dangling supersession / subject 不一致 supersession / 非 canonical 行 → 新しい store は `EvaluationJournalCorrupt`。修復・skip・dedup・部分 load なし |
+| 分離 / point-in-time | predictions.jsonl を開かず変更しない（壊れた隣の journal に影響されない）。P5-2 三 module の runtime import closure は 18 module（core / market.model / tokyo_calendar / prediction_record 経由の compass.model・reports）に閉じ、`prediction_store` / `prediction_ingest` を含まない。PredictionRecord は評価の前後で不変。P4 本番 closure および reports / compass / context / market / facts のどの module も evaluation_* に到達しない |
+| single-writer | 外部 writer の追記後の古い index からの評価は `ConcurrentModificationDetected`。lock は追加していない。**P5-2 は SINGLE WRITER のまま** |
+
+完了監査（読み取りのみ）: target（`index:topix.close.closing.tokyo`）・session 契約（検証済み直前
+session）・Decimal return・分類（`topix_neutral_band:1.0.0`）・DEFERRED の意味論と 6 理由・
+defer 優先順位・provenance・supersession（append・前任存在・同一 subject）・冪等 / conflict・
+single-writer は P5-2A / P5-2B / P5-2C と本書 §14〜§16 の間で一致している。P5-1 は anchor
+`6c28151` から不変。予測の正誤 / 較正の意味論は存在しない。
+
+**P5-2 status: CLOSED / FROZEN（監督者受理待ち）。** P5-3 以降は着手していない。
+
