@@ -563,3 +563,49 @@ N-1〜N-6 を変えない。P5-2A が凍結したのは**評価 object だけ**�
   較正 / P4 pipeline / 公開 renderer / 通知 / legacy journal を参照しない。network も
   filesystem 書き込みも無い。
 
+---
+
+## 15. P5-2B 追記専用 evaluation journal / store（`evaluation_store.py`）
+
+N-1〜N-6・§14（EvaluationRecord）を変えない。P5-2B は**永続化層だけ**であり、評価 engine・
+PredictionRecord → EvaluationRecord の自動化・TOPIX / カレンダー / J-Quants 参照・return 計算・
+較正・「現在の評価」の解決・runtime 統合は含まない。
+
+- **`evaluations.jsonl` が唯一の権威。** `<data_root>/predictions/evaluations.jsonl`。
+  predictions.jsonl（PredictionStore）とは**別の**追記専用の権威で、EvaluationStore は
+  predictions.jsonl を開かず、PredictionStore を import せず、PredictionRecord を変更も補強も
+  しない（参照は `prediction_id` のみ。参照先の存在確認は後続の評価 engine / E2E 境界の責務）。
+- **data_root は呼び出し側が明示**（既定・環境変数・config・production / research root への
+  fallback なし）。読むだけではディレクトリもファイルも作らない。
+- **append / 冪等 / conflict**（P5-1B §8.1 と同じ規律）: 未知 `evaluation_id` → 1 行追記
+  `APPENDED` / 既知 id ＋ canonical 行 byte 一致 → `ALREADY_PRESENT`（書かない）/ 既知 id ＋
+  いずれかの field 差（provenance・created_at・observation id・closes・session 検証を含む）→
+  `EvaluationConflict`（fail closed。merge・更新・DEFERRED の EVALUATED への書き換え・
+  2 行目追記なし）。同じ id だけでは冪等の十分条件ではない。
+- **supersession は append であって update ではない。** 訂正 record は
+  `supersedes_evaluation_id` を持つ新しい物理行として追記され、前の行は物理的にも論理的にも
+  変更されない（inactive mark・可変 status なし）。数値・outcome・closes・status の変化は
+  要求しない（同じ数値への訂正も正当な履歴）。DEFERRED → EVALUATED / EVALUATED → EVALUATED /
+  DEFERRED → DEFERRED の履歴を許す。
+- **前任存在規則**: append 時・権威 load 時ともに、前任 record が**同じ journal に物理的に先行して
+  存在**しなければならない（dangling / forward reference は `SupersessionRejected` /
+  `DANGLING_SUPERSESSION`）。後方参照しか許さないため cycle は成立しない。
+- **同一 subject 規則**: 前任と `prediction_id` / `target` / `reference_session` /
+  `session_date` / `classification_version` が一致しなければならない
+  （`INCOMPATIBLE_SUPERSESSION`）。supersession を汎用 link にしない。
+- **物理順が歴史**: `iter_records()` は物理行順。session / created_at / id で並べ替えず、
+  latest / current / resolve / evaluated_only / by_outcome の API を持たない。
+- **journal 直列化**: `EvaluationRecord.as_dict()` を key 昇順・compact・UTF-8・`\n` 終端の
+  1 行に。Decimal は §14 の canonical 表現のまま（再丸め・再分類・outcome 再計算をしない）。
+  権威 load は `EvaluationRecord.from_dict()` を通る。
+- **load の fail closed**（理由コード 11 種）: 非 UTF-8 / 終端切れ / 空行 / 不正 JSON / 非 object /
+  schema 違反・偽造 id・未知 field / 非 canonical 行 / 物理重複（同一・矛盾）/ dangling
+  supersession / subject 不一致 supersession → `EvaluationJournalCorrupt`。skip・修復・dedup・
+  reorder・migration-on-read・部分 load なし。
+- **書き込み規律**: 初回 append でのみ親 dir 作成 → `open("a", newline="\n")` → 1 write →
+  `flush` → `fsync`。truncate / replace / rename / unlink / repository commit / hash chain /
+  transaction なし。
+- **SINGLE WRITER**: 外部要因で journal の byte 長が変わっていれば append 前に
+  `ConcurrentModificationDetected` で fail closed（検知であり排他ではない）。`reload()` で
+  権威から再構築。runtime での直列化は後続 gate。
+

@@ -436,6 +436,7 @@ def test_no_validation_runner_or_cli_was_added() -> None:
     package = REPO_ROOT / "src" / "intelligence" / "predictions"
     assert sorted(p.name for p in package.glob("*.py")) == [
         "__init__.py", "evaluation_record.py",            # P5-2A（object のみ。runner / CLI ではない）
+        "evaluation_store.py",                            # P5-2B（追記専用 store。runner / CLI ではない）
         "prediction_ingest.py", "prediction_record.py", "prediction_store.py",
         "topix_neutral_band_measure.py", "topix_research_acquire.py",
     ]

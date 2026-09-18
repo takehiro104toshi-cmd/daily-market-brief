@@ -14,6 +14,8 @@
   journal）、P5-1C の `prediction_ingest`（in-process の凍結 MorningBrief ＋ MarketSignal ＋
   生成 context を PredictionRecord へ**写す** offline adapter。再計算・評価は含まない）、
   P5-2A の `evaluation_record`（不変の EvaluationRecord schema ＋ identity ＋ realized outcome
-  契約。TOPIX 参照・カレンダー照会・return 計算・store・較正は含まない）。
-  P5-2B evaluation store / P5-2C 自動評価 / P5-3 較正は**未実装**。
+  契約。TOPIX 参照・カレンダー照会・return 計算・較正は含まない）、P5-2B の
+  `evaluation_store`（`<data_root>/predictions/evaluations.jsonl` への追記専用 journal。
+  supersession は append であり前の行を変更しない。評価 engine・「現在の評価」の解決は含まない）。
+  P5-2C offline 評価 engine / P5-3 較正は**未実装**。
 """

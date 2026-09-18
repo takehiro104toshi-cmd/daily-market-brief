@@ -4,6 +4,53 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.91 (2026-09-18) — Phase 5 P5-2B 追記専用 EvaluationStore（evaluations.jsonl）
+
+P5-2A（凍結）の EvaluationRecord の**永続化層だけ**を実装した。評価 engine・PredictionRecord →
+EvaluationRecord の自動化・TOPIX / カレンダー / J-Quants 参照・return 計算・較正・「現在の評価」の
+解決・runtime 統合・公開出力は**含まない**。P5-1 / P5-2A の実装・P4・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/evaluation_store.py`
+
+- `EvaluationStore(data_root)`: `<data_root>/predictions/evaluations.jsonl` を唯一の権威とする
+  追記専用 journal（predictions.jsonl とは別の権威。PredictionStore を import せず
+  predictions.jsonl を開かない）。読むだけではディレクトリを作らない。
+- append 意味論（P5-1B と同じ規律）: 未知 id → `APPENDED`、既知 id ＋ canonical 行 byte 一致 →
+  `ALREADY_PRESENT`、既知 id ＋ provenance / created_at を含むいずれかの field 差 →
+  `EvaluationConflict`（fail closed）。
+- supersession は append であって update ではない: 訂正は `supersedes_evaluation_id` を持つ
+  新しい物理行、前の行は不変。前任が同じ journal に物理的に先行して存在し（dangling / forward
+  reference は `SupersessionRejected` / `DANGLING_SUPERSESSION`）、`prediction_id` / `target` /
+  `reference_session` / `session_date` / `classification_version` が一致すること
+  （`INCOMPATIBLE_SUPERSESSION`）を append 時・load 時に要求。数値の変化は要求しない。
+  DEFERRED → EVALUATED / EVALUATED → EVALUATED / DEFERRED → DEFERRED の履歴を許す。
+- 権威 load は fail closed（理由コード 11 種）。物理順を保存し、latest / current / resolve の
+  API を持たない。`open("a", newline="\n")` → 1 write → `flush` → `fsync`。SINGLE WRITER
+  （外部変更は `ConcurrentModificationDetected`）。SQLite / hash chain / transaction / network /
+  git なし。
+
+### 追加 — `tests/intelligence/test_evaluation_store.py`（53 tests）
+
+- gate §18 の 70 項目（不在 journal・append / 冪等 / conflict・決定論的直列化・reload・物理順・
+  共存・A→B→C の supersession chain と prefix bytes・DEFERRED→EVALUATED 等の履歴・同数値訂正・
+  dangling / forward / cross-prediction / session / classification 不一致の拒否・自己 supersession・
+  破損 10 種・skip / 修復 / migration 不在・latest-wins 不在・prefix 保存・fsync 規律・
+  single-writer・caller-controlled root・evaluations.jsonl のみ生成・predictions.jsonl 非アクセス・
+  PredictionStore 非 import・禁止依存・JSONL 権威・SQLite / hash chain / transaction 不在・
+  EvaluationRecord 権威）。すべて `tmp_path` 隔離。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §15「P5-2B 追記専用 evaluation journal / store」を追加。N-1〜N-6・§14 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `evaluation_store.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-2C（offline 評価 engine）以降は着手していない。
+
 ## v4.90 (2026-09-18) — Phase 5 P5-2A EvaluationRecord schema ＋ outcome contract
 
 P5-1（CLOSED / FROZEN）の上に、**不変の評価記録 object だけ**を凍結した。EvaluationStore /
