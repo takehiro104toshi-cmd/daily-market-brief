@@ -609,3 +609,55 @@ PredictionRecord → EvaluationRecord の自動化・TOPIX / カレンダー / J
   `ConcurrentModificationDetected` で fail closed（検知であり排他ではない）。`reload()` で
   権威から再構築。runtime での直列化は後続 gate。
 
+---
+
+## 16. P5-2C OFFLINE 評価 engine（`evaluation_engine.py`）
+
+N-1〜N-6・§14（EvaluationRecord）・§15（EvaluationStore）を変えない。engine が評価するのは
+**市場 outcome** であり、予測の正誤（hit / miss / accuracy / score / 5 level → 3 state の写像）は
+定義しない（較正は P5-3）。network・J-Quants・filesystem 探索・現在時刻に触れない純関数である。
+
+- **評価式**: `realized_return = close(session_date) / close(reference_session) − 1` を Decimal で
+  計算する（算術 context は `prec 28 / ROUND_HALF_EVEN` に固定し、呼び出し側の context に依存
+  しない）。分類は §14 の `classify_realized_return`（`topix_neutral_band:1.0.0`）に委ね、engine は
+  閾値定数を持たない。連続 return はそのまま EvaluationRecord に保存される。
+- **権威となる入力境界**:
+  - 予測 = 凍結 `PredictionRecord`（`prediction_id` / `session_date` / `reference_session`）。
+  - カレンダー証拠 = `CalendarEvidence`（J-Quants `/markets/calendar` 由来の行 ＋ source id ＋
+    信頼する区分値。既定 `("1",)`）。検証は既存 `market.tokyo_calendar` の `validate_divisions`
+    （供給された TOPIX raw 観測の**全日付**と区分値を突き合わせる実測検証）と `trading_days` で
+    行い、結果を情報を落とさず `SessionVerification` へ写す。`verified_session` は session_date が
+    検証済み取引日のときだけ、`verified_previous_session` はカレンダー範囲内でその直前の取引日が
+    存在するときだけ埋まる。**weekday 演算・金→月の推定・`reference_session < session_date` だけ
+    からの推定はしない。** 観測が 1 つも無ければ実測検証は成立しない（calendar_unverified）。
+  - 市場証拠 = 既存 `market.model.Observation`（`series_id == index:topix.close.closing.tokyo`、
+    `kind == raw`）。session は `trading_date` の**完全一致**で選ぶ（nearest / forward fill /
+    backward fill / 補間 / latest close は無い）。改定は既存の権威 `latest_revisions()` で解決し、
+    それでも同一 session に複数残れば曖昧として defer する。別 index・derived 観測は候補にならない。
+- **支持する source / schema**: `source_id == "jquants"`（本番 TOPIX 取り込みの provider id。
+  NO PROXY SUBSTITUTION）、`Observation.schema_version == core.types.SCHEMA_VERSION`。reference と
+  target の source / schema は一致しなければならない（provenance は 1 つの coherent な source）。
+- **defer の優先順位（凍結。同じ入力なら証拠 list の順序に関わらず同じ理由）**:
+  1. `source_unsupported` 2. `calendar_unverified` 3. `reference_session_unverified`
+  4. `observation_invalid`（未解決の複数観測 / 欠測値 / 非正 / 非有限 / entity・metric・unit の
+  矛盾 / `valid_until` 失効）5. `reference_close_unavailable` 6. `target_close_unavailable`。
+  1 つの canonical な理由だけを記録する。
+- **予測の availability は前提条件ではない**: unavailable / 棄権の予測も、証拠が揃えば EVALUATED
+  （coverage 分析のための市場 outcome）。available NEUTRAL_RANGE も通常の outcome 評価を受ける。
+  予測の state は realized outcome の計算に影響しない。
+- **provenance**: EVALUATED は closes / observation id / source / schema / SessionVerification を
+  観測から写す。DEFERRED は検証結果と、支持・妥当性検査を通った側の証拠を §14 の状態機械が許す
+  範囲で保持する（`reference_close_unavailable` では reference 側を、`target_close_unavailable` では
+  target 側を空にする。source 未対応では市場 provenance を持たない）。`created_at` は呼び出し側が
+  明示する（engine は現在時刻を読まない）。
+- **矛盾 / 改定**: 観測日と session の不一致、別系列 / derived、同一 session の未解決重複、非有限値は
+  決定論的に defer。「最新が勝つ」は発明しない。訂正データの自動探索はしない。
+- **supersession の入力**: 任意の `supersedes_evaluation_id` を凍結 EvaluationRecord へ渡すだけ
+  （前の評価の自動探索・chain 解決なし）。存在と同一 subject の検証は §15 の store が行う。
+- **store との相互作用**: `evaluate_and_append` は `evaluate_prediction` → `EvaluationStore.append`
+  を呼ぶだけの薄い helper（`APPENDED` / `ALREADY_PRESENT` / `EvaluationConflict` /
+  `SupersessionRejected` をそのまま伝播）。純粋な評価に store は不要。
+- **look-ahead 汚染の禁止**: engine は評価専用の下流であり、P4 本番 closure から到達せず、
+  PredictionRecord / MorningBrief / MarketSignal / CompassDraft / P5-1 module のいずれも engine を
+  import しない。
+

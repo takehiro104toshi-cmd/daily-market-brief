@@ -4,6 +4,54 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.92 (2026-09-18) — Phase 5 P5-2C OFFLINE 評価 engine
+
+凍結 PredictionRecord ＋ 東京カレンダー証拠 ＋ TOPIX close 観測 → 凍結 EvaluationRecord を
+決定論的に生成する**offline 純関数**を実装した。評価するのは市場 outcome のみで、予測の正誤・
+較正・network / J-Quants 取得・runtime 統合・公開出力は**含まない**。P5-1 / P5-2A / P5-2B の
+実装・P4・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/evaluation_engine.py`
+
+- `evaluate_prediction(prediction, calendar_evidence, market_evidence, *, created_at,
+  supersedes_evaluation_id="")` と薄い `evaluate_and_append(store, …)`。
+- 入力境界: 凍結 `PredictionRecord`、`CalendarEvidence`（J-Quants カレンダー行 ＋ source id ＋
+  区分値）、既存 `market.model.Observation`（TOPIX raw、`trading_date` 完全一致、改定は既存
+  `latest_revisions` で解決）。第二の市場 schema を作らない。
+- カレンダー検証は既存 `validate_divisions` / `trading_days` を使い、供給された TOPIX 観測の全日付と
+  区分値を実測で突き合わせて `SessionVerification` へ写す。weekday 演算・金→月推定なし。
+- realized return は `prec 28 / ROUND_HALF_EVEN` 固定 context の Decimal で計算し、分類は P5-2A の
+  凍結 helper に委ねる（閾値定数を持たない）。
+- 支持 source は `jquants`、schema は `core.types.SCHEMA_VERSION`。reference / target の source と
+  schema は一致必須。
+- defer 優先順位（凍結）: source_unsupported → calendar_unverified → reference_session_unverified →
+  observation_invalid → reference_close_unavailable → target_close_unavailable。証拠 list の順序に
+  依存しない。DEFERRED でも通った側の証拠を保持する。
+- unavailable / 棄権の予測も証拠が揃えば EVALUATED（棄権を理由に DEFERRED にしない）。
+- `created_at` / `supersedes_evaluation_id` は呼び出し側が明示。現在時刻・filesystem・環境変数・
+  network・git に触れない。P4 本番 closure から到達不能。
+
+### 追加 — `tests/intelligence/test_evaluation_engine.py`（57 tests）
+
+- gate §21 の 70 項目（EVALUATED・Decimal 算術・境界 5 点・丸め無し・週末＋祝日 gap・weekday
+  fallback 不在・calendar / previous session / closes / invalid / source の defer・重複 / 改定・
+  nearest / fill / 補間の不在・棄権と NEUTRAL_RANGE の評価・予測 state 非依存・created_at 明示・
+  provenance 写し・凍結 target / 版・決定論・優先順位・順序非依存・supersedes 透過・store helper・
+  DEFERRED ≠ RANGE・禁止概念・純粋性・P4 非到達・下流専用・source object 不変・矛盾 / NaN・
+  ambient decimal context 非依存）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §16「P5-2C OFFLINE 評価 engine」を追加。N-1〜N-6・§14・§15 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `evaluation_engine.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-2D（Evaluation end-to-end offline 検証）以降は着手していない。
+
 ## v4.91 (2026-09-18) — Phase 5 P5-2B 追記専用 EvaluationStore（evaluations.jsonl）
 
 P5-2A（凍結）の EvaluationRecord の**永続化層だけ**を実装した。評価 engine・PredictionRecord →

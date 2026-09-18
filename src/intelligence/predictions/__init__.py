@@ -16,6 +16,8 @@
   P5-2A の `evaluation_record`（不変の EvaluationRecord schema ＋ identity ＋ realized outcome
   契約。TOPIX 参照・カレンダー照会・return 計算・較正は含まない）、P5-2B の
   `evaluation_store`（`<data_root>/predictions/evaluations.jsonl` への追記専用 journal。
-  supersession は append であり前の行を変更しない。評価 engine・「現在の評価」の解決は含まない）。
-  P5-2C offline 評価 engine / P5-3 較正は**未実装**。
+  supersession は append であり前の行を変更しない。「現在の評価」の解決は含まない）、P5-2C の
+  `evaluation_engine`（PredictionRecord ＋ カレンダー証拠 ＋ TOPIX 観測 → EvaluationRecord の
+  offline 純関数。市場 outcome のみを評価し、予測の正誤・較正・network を含まない）。
+  P5-2D end-to-end offline 検証 / P5-3 較正は**未実装**。
 """
