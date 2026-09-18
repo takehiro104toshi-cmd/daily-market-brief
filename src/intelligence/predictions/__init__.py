@@ -11,6 +11,7 @@
   （A0.7 一回限りの TOPIX 取得 driver / A0.5R offline の neutral-band 測定 runner）と、
   P5-1A の `prediction_record`（不変の PredictionRecord schema ＋ 決定論的 identity）、
   P5-1B の `prediction_store`（`<data_root>/predictions/predictions.jsonl` への追記専用
-  journal。ingestion / 評価は含まない）。
-  P5-1C ingestion / P5-2 Automatic Evaluation は**未実装**。
+  journal）、P5-1C の `prediction_ingest`（in-process の凍結 MorningBrief ＋ MarketSignal ＋
+  生成 context を PredictionRecord へ**写す** offline adapter。再計算・評価は含まない）。
+  P5-1D end-to-end offline 検証 / P5-2 Automatic Evaluation は**未実装**。
 """

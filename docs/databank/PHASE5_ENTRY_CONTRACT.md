@@ -247,6 +247,68 @@ schema-local 検証と verified-calendar 検証の分離: schema は `reference_
 （ISO 日付）までを検証する。「直前の**検証済み**東京取引 session であること」（§11-1）は
 P5-2 の verified-calendar 境界で検証し、schema は暦を持たず weekday 演算を行わない。
 
+### 5.2 P5-1C で確定した P4 → PredictionRecord の source 境界と対応表（`prediction_ingest.py`）
+
+**P5-1C は P4 意味論を写す。評価も再計算もしない（COPY, DO NOT ANALYZE）。**
+§5 / §5.1 の分類と N-1〜N-6 を変えない。
+
+権威となる P4 意味論 source（調査結果）:
+
+```
+reports/delivery_pilot.main():
+    result = run_pipeline(...)                      # PipelineResult(draft, package, ...)
+    brief  = build_morning_brief(result.draft, result.package)
+    signal = build_market_signal(brief)
+```
+
+MorningBrief と MarketSignal が**両方揃うのはこの in-process 境界だけ**である。P4 は
+`persists_canonical_intelligence: False` で、`brief.as_dict()` / `signal.as_dict()` を内部
+artifact に書かない。公開 `/v2` JSON は level / confidence / horizon を含まず、pilot の
+stdout row は表示 `label` を含み confidence / horizon を欠く。従って P5-1C の入力は
+**in-process の凍結オブジェクト**（MorningBrief・MarketSignal・CompassDraft・EvidencePackage）
+であり、公開 JSON・顧客 Markdown / HTML・表示ラベル・通知 payload・Pages artifact を source に
+しない（逆写像 parser を持たない）。安定した offline artifact は現状存在しないため CLI /
+file format を発明せず、runtime / artifact への handoff は後続の認可 gate に属する。
+
+| PredictionRecord field | P4 source | 種別 |
+|---|---|---|
+| `session_date` / `reference_session` | `MorningBrief`（signal / draft / package と一致を要求） | 直接コピー |
+| `available` / `level` / `confidence` / `horizon` / `unavailable_reason` | `MarketSignal` をそのまま（正規化しない） | 直接コピー |
+| `brief_id` / `package_id` / `draft_id` | `MorningBrief` | 直接コピー |
+| `signal_id` | `MarketSignal` | 直接コピー |
+| `morning_brief_schema_version` / `market_signal_schema_version` | 各 object の `schema_version`（未対応版は fail closed。migrate しない） | 直接コピー |
+| `recorded_at` | `CompassDraft.generated_at`（P4 生成時刻。`run_pipeline(now=…)` が必ず設定する。無ければ拒否し、ingestion 時刻で代用しない） | 不変 source object 経由 |
+| `cutoff` | `EvidencePackage.cutoff`（look-ahead 境界。aware 必須） | 不変 source object 経由 |
+| `principle_refs` | `MorningBrief.tier3.principle_refs` | 直接コピー |
+| `market_principle_version` | `MorningBrief.points` の非空 `market_principle_version`（高々 1 種。複数混在は矛盾として拒否。無ければ空） | 直接コピー |
+| `outlook_rule_version` | `CompassDraft.outlook.rule_version`（outlook 無しは空） | 不変 source object 経由 |
+| `origin` | 呼び出し側が `PredictionOrigin` を明示（既定値・推定なし） | 呼び出し側指定 |
+
+回復不能な field は**無い**（BLOCKER なし）。
+
+cross-object 整合（すべて fail closed・修復しない・「最新」を使わない・日付だけで結合しない）:
+`signal.brief_id == brief.brief_id`、`draft.draft_id == brief.draft_id`、
+`package.package_id == brief.package_id == draft.package_id`、signal / draft / package の
+`session_date` / `reference_session` が brief と一致、brief_id / signal_id の content-address
+再検証、schema 版、`draft.verdict` / `draft.generator` の一致、`brief.tier3.outlook` と
+`draft.outlook` の direction / confidence / horizon の一致。
+
+state のコピー: `available == true` は level / confidence / horizon をそのまま
+（NEUTRAL_RANGE は available のまま、棄権ではない）。`available == false` も journal に載せる
+（coverage から消さない）。`direction_mixed` / `direction_uncertain` は P4 が保持する
+confidence / horizon をそのまま写し、他の unavailable は両方空のまま。unavailable を
+NEUTRAL_RANGE にしない。
+
+依存境界: `compass.evidence_package` を import しない（その closure は context.snapshot →
+context.builders / facts へ広がる）。EvidencePackage は `package_id / session_date /
+reference_session / cutoff` の 4 属性だけを Protocol で受け、真正性は brief / draft との
+id・session 一致で担保する。`build_market_signal` / `build_morning_brief` / `run_pipeline` /
+市場観測 / TOPIX / 取引カレンダー / J-Quants / EvaluationRecord / `topix_neutral_band` /
+較正 / network / git / 公開・配信 module を参照しない。
+
+store との相互作用: 凍結 `PredictionStore.append` をそのまま使う（`APPENDED` /
+`ALREADY_PRESENT`。`PredictionConflict` は握り潰さず伝播）。
+
 ---
 
 ## 6. abstention（棄権）の意味論

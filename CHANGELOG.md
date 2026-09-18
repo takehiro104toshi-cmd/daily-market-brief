@@ -4,6 +4,53 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.88 (2026-09-18) — Phase 5 P5-1C OFFLINE P4 → PredictionRecord ingestion adapter
+
+P5-1A / P5-1B で凍結した PredictionRecord / PredictionStore へ、**既に生成された** P4 意味論
+（MorningBrief ＋ MarketSignal ＋ 生成 context）を**写す**境界だけを実装した
+（COPY, DO NOT ANALYZE）。MarketSignal / MorningBrief / outlook の再計算・市場観測 / TOPIX /
+取引カレンダー参照・採点・較正・EvaluationRecord・runtime producer 統合・Actions・Pages /
+公開出力は**含まない**。本番 runtime closure・Phase 4 コード・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/prediction_ingest.py`
+
+- 権威 source の特定: MorningBrief と MarketSignal が両方揃うのは
+  `delivery_pilot.main()` の in-process 境界（`build_morning_brief(draft, package)` →
+  `build_market_signal(brief)`）だけ。P4 は内部 artifact に両者を書かず、公開 `/v2` JSON は
+  level / confidence / horizon を含まない。よって adapter は in-process の凍結オブジェクトを
+  入力とし、公開 JSON / Markdown / HTML / 表示ラベル / 通知 payload を source にしない。
+  安定した offline artifact が無いため CLI / file format は発明しない（handoff は後続 gate）。
+- `validate_sources` / `build_prediction_record` / `ingest_prediction`（A 検証 → B 構築 →
+  C 凍結 store append）。`origin` は `PredictionOrigin` の明示必須（既定値・推定なし）。
+- field 対応: session は MorningBrief、signal 5 field は MarketSignal をそのまま、
+  `recorded_at` は `CompassDraft.generated_at`（P4 生成時刻。無ければ拒否し ingestion 時刻で
+  代用しない）、`cutoff` は `EvidencePackage.cutoff`、`principle_refs` は tier3、
+  `market_principle_version` は brief.points の非空版（高々 1 種）、`outlook_rule_version` は
+  `draft.outlook.rule_version`。回復不能な field は無い。
+- cross-object 整合を fail closed: `signal.brief_id == brief.brief_id`、draft / package の id、
+  session 一致、brief_id / signal_id の content-address 再検証、schema 版、verdict /
+  generator、brief.tier3.outlook と draft.outlook の一致。日付だけで結合しない。
+- unavailable も journal に載せ、NEUTRAL_RANGE は available のまま、`direction_mixed` /
+  `direction_uncertain` の confidence / horizon は P4 のまま写す。
+- `compass.evidence_package` を import せず（closure が context.builders / facts へ広がる）、
+  EvidencePackage は 4 属性の Protocol で受ける。`PredictionConflict` は伝播（握り潰さない）。
+
+### 追加 — `tests/intelligence/test_prediction_ingest.py`（74 tests）
+
+- gate §17 の 45 項目（コピー意味論・cross-object 整合・schema 版・origin・truthful
+  recorded_at / cutoff / 版・store 相互作用・禁止依存 13 種・権威・非変更・決定論・矛盾状態
+  15 パターン）＋ 実 EvidencePackage の受理・source 境界宣言。P4 自身の `make_brief_id` /
+  `build_market_signal` で作った本物の frozen object と `tmp_path` 隔離 store だけを使う。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §5.2 を追加（P4 source 境界・field 対応表・cross-object 整合・state コピー・依存境界・
+  store 相互作用）。§5 / §5.1 / §8.1 と N-1〜N-6 は不変。
+
+### 未実施
+
+- P5-1D（Prediction Journal end-to-end offline 検証）以降は着手していない。
+
 ## v4.87 (2026-09-18) — Phase 5 P5-1B 追記専用 PredictionStore（JSONL journal）
 
 P5-1A（v4.86）で凍結した PredictionRecord の**永続化層だけ**を実装した。P4 出力の
