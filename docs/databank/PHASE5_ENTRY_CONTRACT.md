@@ -460,3 +460,35 @@ P5-2 実装直前に 1 回 live 再確認する（データ面は `CURRENT_PLAN_
 - Phase 5 実装が本書の契約に収まらないと判明した場合、実装を進めずに停止し、改訂提案を出す。
 - 本書は Phase 4 コード・Compass DNA・governance record・production data root・workflow を
   一切変更しない（documentation only）。
+
+---
+
+## 13. P5-1 完了検証（P5-1D）
+
+P5-1A（PredictionRecord）・P5-1B（PredictionStore）・P5-1C（prediction_ingest）を 1 つの系として
+OFFLINE で検証した（`tests/intelligence/test_prediction_journal_e2e.py`。隔離 root のみ、
+P4 自身の凍結 builder で作った合成オブジェクトのみ、実データ・network・Windows 作業なし）。
+
+| 検証項目 | 結果 |
+|---|---|
+| E2E 経路 | 凍結 P4 意味論（MorningBrief ＋ MarketSignal ＋ CompassDraft ＋ EvidencePackage）→ `ingest_prediction` → PredictionRecord → `PredictionStore.append` → `predictions.jsonl` → **新しい store による権威 reload** → 元と同一の PredictionRecord（prediction_id・provenance・audit すべて一致、journal bytes は canonical のまま） |
+| state coverage | available 方向・available NEUTRAL_RANGE・unavailable（direction_mixed / draft_abstained）× LIVE / REPLAY の 8 通りが再起動後も同じ state のまま。NEUTRAL_RANGE は available、unavailable は unavailable、`unavailable_reason` と P4 由来の confidence / horizon が保存される。8 通りの id はすべて相異なる |
+| 複数記録 / 再起動 | 3 session・同一 session の別意味論・REPLAY を含む journal が、再起動後も物理順・件数・`get` の一致を保ち、date-based overwrite が起きない。in-memory state を捨て JSONL だけから再構築した後、正確な再投入は `ALREADY_PRESENT`、新規は `APPENDED` |
+| 冪等性 | 同じ source object ＋ 同じ origin ＋ 同じ audit / provenance を **ingestion 境界から** 再投入 → `ALREADY_PRESENT`、bytes 不変（再起動後も同じ） |
+| conflict の fail closed | 同じ prediction_id で provenance（別 projection → brief_id / signal_id）または audit（recorded_at / cutoff / outlook_rule_version）が異なる再投入 → `PredictionConflict`。bytes 不変・権威 reload 成功・元の記録無傷・2 行目なし |
+| 破損の fail closed | 正常 journal の隔離コピーに対し、不正 JSON / 終端切れ / 偽造 id / 物理重複（同一・矛盾）/ 非 canonical 行 → 新しい store は `PredictionJournalCorrupt`。修復・skip・部分 load なし |
+| single-writer 境界 | 別 writer が追記した後の古い index からの append は `ConcurrentModificationDetected`。lock は追加していない。**P5-1 は SINGLE WRITER のまま**であり、runtime での直列化は後続 gate |
+| point-in-time | reload 後の `recorded_at == CompassDraft.generated_at`、`cutoff == EvidencePackage.cutoff`、principle_refs / market_principle_version / outlook_rule_version / 4 つの id が source と一致。検証実行時刻は identity にも保存 audit にも入らない |
+| 依存独立 | P5-1 三 module の runtime import closure は 13 module（`compass.model` / `core.ids` / `core.time` / `reports.model` / `reports.market_signal` / `predictions.*`）のみ。J-Quants / network / market store / TOPIX / 取引カレンダー / `topix_neutral_band` / EvaluationRecord / 較正 / Pages・公開 renderer / 通知 / git / legacy `investment_journal` に到達しない。P4 本番 entrypoint の closure に `predictions` は現れない（`EXCLUDED_PACKAGES`） |
+
+完了監査（読み取りのみ）: PredictionRecord の field / state 規則、PredictionStore の等価 / conflict
+規則、prediction_ingest の source 対応、本書 §5 / §5.1 / §5.2 / §8 / §8.1 の間に矛盾は無い。
+§7「rerun: prediction_id 既知なら冪等」は §8.1「canonical 行の完全一致で冪等、差があれば
+conflict」により精密化されており矛盾しない。§3「CompassDraft を予測の権威として読まない」は
+P5-1C が draft を audit metadata（generated_at / outlook.rule_version）と整合検査にのみ使い、
+予測意味論は MarketSignal からだけ写すことで満たされている。P4 の `outlook_horizon` は
+config.yaml に override が無く既定 `next_tokyo_session` であり、`KNOWN_HORIZONS` と一致する。
+outcome / 評価との結合は無い。
+
+**P5-1 status: CLOSED / FROZEN（監督者受理待ち）。** P5-2 以降は着手していない。
+

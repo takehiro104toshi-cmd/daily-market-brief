@@ -4,6 +4,36 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.89 (2026-09-18) — Phase 5 P5-1D Prediction Journal end-to-end OFFLINE 検証（P5-1 完了）
+
+P5-1A / P5-1B / P5-1C を 1 つの系として検証する gate。新機能・runtime 統合・CLI は追加せず、
+テストを唯一の検証 artifact とした。P5-1A/B/C に欠陥は見つからず、修正パッチは無い。
+
+### 追加 — `tests/intelligence/test_prediction_journal_e2e.py`（28 tests）
+
+- happy path A–L を 1 本の E2E（available / LIVE → APPENDED → 物理 1 行 → instance 破棄 →
+  新しい store の権威 reload → 同一 PredictionRecord / 同一 id / provenance・audit 完全一致 →
+  canonical bytes → ingestion 境界からの再投入 ALREADY_PRESENT・bytes 不変）。
+- state coverage: available 方向 / NEUTRAL_RANGE / direction_mixed / draft_abstained ×
+  LIVE / REPLAY の 8 通りが再起動後も同じ state・相異なる id。
+- 複数記録 journal（3 session・同一 session の別意味論・REPLAY）の物理順 / 件数 / get の保存と
+  date-based overwrite の不在、再起動 → 正確な再投入 ALREADY_PRESENT → 新規 APPENDED → 再 reload。
+- ingestion 境界からの冪等性と conflict（provenance / recorded_at / cutoff /
+  outlook_rule_version）の fail closed（bytes 不変・reload 成功・元記録無傷）。
+- 正常 journal の隔離コピーに対する破損 6 種の fail closed（修復・skip・部分 load なし）。
+- single-writer 検知（lock 追加なし）、point-in-time（保存 audit は source 由来で検証時刻を
+  含まない）、runtime import closure が 13 module に閉じること、P4 本番 closure から
+  `predictions` へ到達しないこと、validation runner / CLI を追加していないこと。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §13「P5-1 完了検証（P5-1D）」を追加（検証結果・完了監査・P5-1 status CLOSED / FROZEN
+  監督者受理待ち）。N-1〜N-6 と §5 / §8 系は不変。
+
+### 未実施
+
+- P5-2A（EvaluationRecord schema ＋ outcome contract）以降は着手していない。
+
 ## v4.88 (2026-09-18) — Phase 5 P5-1C OFFLINE P4 → PredictionRecord ingestion adapter
 
 P5-1A / P5-1B で凍結した PredictionRecord / PredictionStore へ、**既に生成された** P4 意味論
