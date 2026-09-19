@@ -28,7 +28,7 @@ from enum import Enum
 from typing import Callable, Dict, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 from ..core.time import ensure_aware
-from .fingerprint import identity_core_fingerprint, semantic_fingerprint
+from .fingerprint import identity_core_fingerprint, identity_core_unchanged, semantic_fingerprint
 from .model import (SINGLE_PERIOD_FRAMES, CreationMethod, EntityRef, EvidenceAttachment, EvidenceAuthorityClass,
                     EvidenceRole, EvidenceTimeQuality, GovernanceEventType, MechanismCertainty, MetadataField,
                     ThemeGovernanceEvent, ThemeMetadataRecord, ThemeModelError, ThemeObservation, ThemeRootRecord,
@@ -375,20 +375,35 @@ def _failure(root_id: str, cutoff: datetime, status: ResolutionStatus, root: Opt
         derived=None, dereference=())
 
 
+def _declaring_events(index: _Index, root_id: str, cutoff: datetime) -> Dict[str, ThemeGovernanceEvent]:
+    """T で可視な、root_id を result root として宣言する governance event。2 つ以上は履歴として不可能
+    （A3 §7 RESULT_ROOT_REDECLARED）: latest-wins で選ばず INVALID_HISTORY。"""
+    declaring = {e.event_id: e for e in index.events.values() if e.recorded_at <= cutoff and root_id in e.result_roots}
+    if len(declaring) > 1:
+        raise _Invalid(Diagnostic("RESULT_ROOT_REDECLARED", "root", root_id,
+                                  "more than one eligible event declares this result root", tuple(sorted(declaring))))
+    return declaring
+
+
 def _resolve(index: _Index, root_id: str, cutoff: datetime, dereference: Optional[UpstreamLookup]) -> ThemeResolution:
     root = index.roots.get(root_id)
-    if root is None:
-        return _failure(root_id, cutoff, ResolutionStatus.NO_STATE, None,
-                        (Diagnostic("UNKNOWN_ROOT", "root", root_id, "no RootRecord in the history"),))
-    if root.created_at > cutoff:
-        declaring = {e.event_id: e for e in index.events.values()
-                     if e.recorded_at <= cutoff and root_id in e.result_roots}
-        failure = _failure(root_id, cutoff, ResolutionStatus.NO_STATE, None,
-                           (Diagnostic("ROOT_AFTER_CUTOFF", "root", root_id, "root created after the cutoff"),))
-        if declaring:   # 宣言 event は T で可視だが root はまだ無い ＝ その時点で未完了だった事実
+    if root is None or root.created_at > cutoff:
+        # T に RootRecord が無い。T で可視な governance event が宣言済みの result root なら、「宣言済み・未作成」という
+        # T 時点の事実だけから PENDING_EVENT ＋ lineage を再構成する（A3 §9 / §13、A4c §32）。後日の RootRecord /
+        # genesis は参照しないので、journal が完成した後に同じ T を解決しても結果は変わらない。
+        declaring = _declaring_events(index, root_id, cutoff)
+        if declaring:
+            failure = _failure(root_id, cutoff, ResolutionStatus.NO_STATE, None,
+                               (Diagnostic("ROOT_AFTER_CUTOFF", "root", root_id,
+                                           "result root declared at the cutoff but not yet created",
+                                           tuple(sorted(declaring))),))
             pending = tuple(PendingDiagnostic("PENDING_EVENT", event_id, (root_id,)) for event_id in sorted(declaring))
-            failure = _replace_pending(failure, pending, _lineage(root_id, declaring))
-        return failure
+            return _replace_pending(failure, pending, _lineage(root_id, declaring))
+        if root is None:   # 宣言も無い root id ＝ 未知
+            return _failure(root_id, cutoff, ResolutionStatus.NO_STATE, None,
+                            (Diagnostic("UNKNOWN_ROOT", "root", root_id, "no RootRecord in the history"),))
+        return _failure(root_id, cutoff, ResolutionStatus.NO_STATE, None,
+                        (Diagnostic("ROOT_AFTER_CUTOFF", "root", root_id, "root created after the cutoff"),))
     eligible_events = {e.event_id: e for e in index.events.values()
                        if e.recorded_at <= cutoff and (root_id in e.subject_roots or root_id in e.result_roots)}
     _check_root_origin(root, index, cutoff)
@@ -419,6 +434,10 @@ def _resolve(index: _Index, root_id: str, cutoff: datetime, dereference: Optiona
             if predecessor is not None and predecessor.root_id != root_id:
                 raise _Invalid(Diagnostic("WRONG_ROOT_PREDECESSOR", "observation", obs.observation_id,
                                           "predecessor belongs to another root", (predecessor.observation_id,)))
+            if predecessor is not None and not identity_core_unchanged(predecessor, obs):   # A3 §23（store を経ない履歴も）
+                raise _Invalid(Diagnostic("IDENTITY_CORE_CHANGED", "observation", obs.observation_id,
+                                          "identity core differs from the predecessor within one root",
+                                          (predecessor.observation_id,)))
     if root.genesis_observation_id not in eligible_obs:
         raise _Invalid(Diagnostic("GENESIS_NOT_VISIBLE", "observation", root_id,
                                   "observations exist at the cutoff but the declared genesis does not"))

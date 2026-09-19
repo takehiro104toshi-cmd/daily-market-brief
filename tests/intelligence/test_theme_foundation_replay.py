@@ -72,9 +72,8 @@ def test_shuffled_history_gives_identical_resolutions(world: World) -> None:
 
 # ---------------------------------------------------------------- §7 future leakage
 
-#: BLOCKER A4D-3: 宣言済みだが RootRecord が未作成の result root を解決すると、resolver は UNKNOWN_ROOT を返し
-#: PENDING_EVENT / lineage を付けない。後日 RootRecord が書かれると同じ T で PENDING_EVENT / lineage が現れる
-#: （後の record が過去 T の診断を変える）。state facet は不変。下の strict xfail に固定する。
+#: A4D-3（A4d.1 で修正）: 宣言済み・未作成の result root は、後日 RootRecord / genesis が書かれても同じ T では
+#: 同じ結果（PENDING_EVENT ＋ lineage ＋ ROOT_AFTER_CUTOFF）を返す。
 A4D_3_KEYS = {("C", "merge_declared_incomplete"), ("C", "merge_root_declared_genesis_missing")}
 
 
@@ -84,21 +83,24 @@ def test_every_later_stage_leaves_earlier_checkpoints_unchanged(world: World) ->
     compared = 0
     for stage in world.stage_order:
         for key, snapshot in world.snapshots[stage].items():
-            if key in A4D_3_KEYS and stage in ("merge_declared", "merge_root"):
-                continue                                                          # A4D-3（別 test で xfail 固定）
             assert knowable_digest(snapshot) == knowable_digest(final[key]), (stage, key)
+            if key in A4D_3_KEYS:
+                assert snapshot == final[key], (stage, key)                      # 宣言済み result root は診断まで完全一致
             if snapshot.status is not ResolutionStatus.NO_STATE:
                 assert snapshot == final[key], (stage, key)                      # state があるものは完全一致
             compared += 1
     assert compared > 300
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKER A4D-3: resolver reports PENDING_EVENT / lineage for a declared result root "
-                                       "only once its RootRecord exists, so a later RootRecord changes the diagnostics at an "
-                                       "earlier cutoff")
 def test_declared_result_root_diagnostics_do_not_depend_on_later_root_record(world: World) -> None:
-    for key in sorted(A4D_3_KEYS):
-        assert knowable_digest(world.snapshots["merge_declared"][key]) == knowable_digest(world.resolve(*key))
+    """各 checkpoint を最初に観測できた stage（root 未作成 / genesis 未記録）の結果 ＝ 完成 journal での結果。
+    A4d では xfail の中で 2 つ目の key が KeyError（stage 取り違え）になっていたため、stage を明示して比較する。"""
+    first_stage = {key: next(s for s in world.stage_order if key in world.snapshots[s]) for key in A4D_3_KEYS}
+    assert first_stage == {("C", "merge_declared_incomplete"): "merge_declared",
+                           ("C", "merge_root_declared_genesis_missing"): "merge_root"}
+    for key, stage in sorted(first_stage.items()):
+        assert knowable_digest(world.snapshots[stage][key]) == knowable_digest(world.resolve(*key))
+        assert world.snapshots[stage][key] == world.resolve(*key)                # 完全一致（診断・pending・lineage 含む）
 
 
 @pytest.mark.parametrize("later_stage,root_key,checkpoint", [
@@ -109,8 +111,7 @@ def test_declared_result_root_diagnostics_do_not_depend_on_later_root_record(wor
     ("mapping", "A", "taxonomy_added"),                            # future mapping recorded_at
     ("merge_declared", "A", "retirement_reversed"),                # future merge declaration
     ("merge_declared", "C", "before_merge"),
-    pytest.param("merge_root", "C", "merge_declared_incomplete",
-                 marks=pytest.mark.xfail(strict=True, reason="BLOCKER A4D-3 (see above)")),   # future completion of PENDING (root)
+    ("merge_root", "C", "merge_declared_incomplete"),                # future completion of PENDING (root)
     ("merge_completed", "C", "merge_root_declared_genesis_missing"),   # future completion of PENDING (genesis)
     ("merge_completed", "A", "merge_declared_incomplete"),
 ])

@@ -34,6 +34,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Mapping, Optional, Tuple, Union
 
+from .fingerprint import identity_core_unchanged
 from .model import (CreationMethod, EvidenceAllocation, GovernanceEventType, MetadataField, ThemeGovernanceEvent,
                     ThemeMetadataRecord, ThemeModelError, ThemeObservation, ThemeRootRecord, ThemeSeriesMapping,
                     canonical_json, canonical_line)
@@ -71,6 +72,7 @@ HISTORY_REASONS: Tuple[str, ...] = (
     "RESULT_ROOT_ALREADY_EXISTS", "RESULT_ROOT_REDECLARED", "GOVERNANCE_REFERENCE_MISSING", "MISSING_PREVIOUS_EVENT",
     "MALFORMED_REVERSAL", "ALLOCATION_VIOLATION", "METADATA_PREDECESSOR_MISSING", "MISSING_PREVIOUS_METADATA",
     "MAPPING_PREDECESSOR_MISSING", "MAPPING_CONSEQUENCE_UNKNOWN", "NON_CANONICAL_RECORD", "INVALID_TYPE",
+    "IDENTITY_CORE_CHANGED",
 )
 
 
@@ -496,6 +498,11 @@ class ThemeStore:
         if predecessor.recorded_at > obs.recorded_at:
             self._reject(for_append, "NON_MONOTONIC_RECORDED_AT", "observation recorded before its predecessor",
                          authority="observations", line_number=line_number)
+        if not identity_core_unchanged(predecessor, obs):     # A2 §2.3 / A3 §7 §19: 置換は新 root（SUPERSEDED_BY_ROOT）
+            self._reject(for_append, "IDENTITY_CORE_CHANGED",
+                         "identity core (subject / driver / channel / domain) differs from the predecessor; "
+                         "a same-root revision cannot cross the identity boundary (NEW_ROOT_REQUIRED)",
+                         authority="observations", line_number=line_number)
         children = self._obs_children.get(obs.previous_observation_id, [])
         if children:
             if for_append:
@@ -542,7 +549,6 @@ class ThemeStore:
         roots = self._authorities["roots"].entries
         observations = self._authorities["observations"].entries
         events = self._authorities["governance"].entries
-        metadata = self._authorities["metadata"].entries
         for root_id in event.subject_roots:
             entry = roots.get(root_id)
             if entry is None:
@@ -560,19 +566,9 @@ class ThemeStore:
             if declared_by is not None and declared_by != event.event_id:
                 self._reject(for_append, "RESULT_ROOT_REDECLARED", f"{root_id} is already declared by {declared_by}",
                              authority="governance", line_number=line_number)
-        related_store = metadata if event.event_type is GovernanceEventType.METADATA_CORRECTION_APPROVED else observations
-        for related_id in event.related_observations:
-            entry = related_store.get(related_id)
-            if entry is None:
-                self._reject(for_append, "GOVERNANCE_REFERENCE_MISSING", f"related record {related_id} is not stored",
-                             authority="governance", line_number=line_number)
-            if entry.record.root_id not in event.subject_roots:
-                self._reject(for_append, "GOVERNANCE_REFERENCE_MISSING",
-                             f"related record {related_id} belongs to a root outside the event's subjects",
-                             authority="governance", line_number=line_number)
-            if event.recorded_at < entry.record.recorded_at:
-                self._reject(for_append, "NON_MONOTONIC_RECORDED_AT", "approval recorded before the approved record",
-                             authority="governance", line_number=line_number)
+        if event.event_type is not GovernanceEventType.METADATA_CORRECTION_APPROVED:
+            self._validate_event_related(event, observations, for_append, line_number)
+        # METADATA_CORRECTION_APPROVED の related record は metadata（load 順で後続の authority）なので第 2 pass で検査する
         previous_roots = {root for root, _ in event.previous_event_ids}
         for root_id, previous_id in event.previous_event_ids:
             entry = events.get(previous_id)
@@ -638,8 +634,25 @@ class ThemeStore:
                              authority="governance", line_number=line_number)
             seen_keys[key] = item.source_observation_id
 
+    def _validate_event_related(self, event: ThemeGovernanceEvent, related_store: Dict[str, _Entry], for_append: bool,
+                                line_number: int) -> None:
+        """related record（observation または metadata）は既存・subject root 所属・event より前に記録されていること。"""
+        for related_id in event.related_observations:
+            entry = related_store.get(related_id)
+            if entry is None:
+                self._reject(for_append, "GOVERNANCE_REFERENCE_MISSING", f"related record {related_id} is not stored",
+                             authority="governance", line_number=line_number)
+            if entry.record.root_id not in event.subject_roots:
+                self._reject(for_append, "GOVERNANCE_REFERENCE_MISSING",
+                             f"related record {related_id} belongs to a root outside the event's subjects",
+                             authority="governance", line_number=line_number)
+            if event.recorded_at < entry.record.recorded_at:
+                self._reject(for_append, "NON_MONOTONIC_RECORDED_AT", "approval recorded before the approved record",
+                             authority="governance", line_number=line_number)
+
     def _validate_event_results(self, event: ThemeGovernanceEvent, for_append: bool, line_number: int) -> None:
-        """第 2 pass: 既に存在する result root は、この event を origin として作られたものでなければならない。"""
+        """第 2 pass: 既に存在する result root は、この event を origin として作られたものでなければならない。
+        METADATA_CORRECTION_APPROVED の related metadata（後続 authority）もここで検査する（load 順は不変。A3 §3 / §9）。"""
         roots = self._authorities["roots"].entries
         for root_id in event.result_roots:
             entry = roots.get(root_id)
@@ -647,6 +660,8 @@ class ThemeStore:
                 self._reject(for_append, "RESULT_ROOT_REDECLARED",
                              f"{root_id} exists with origin {entry.record.origin_event_id!r}, not {event.event_id}",
                              authority="governance", line_number=line_number)
+        if event.event_type is GovernanceEventType.METADATA_CORRECTION_APPROVED:
+            self._validate_event_related(event, self._authorities["metadata"].entries, for_append, line_number)
 
     def _validate_metadata(self, record: ThemeMetadataRecord, for_append: bool, line_number: int) -> None:
         roots = self._authorities["roots"].entries

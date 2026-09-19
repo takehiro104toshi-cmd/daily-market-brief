@@ -15,7 +15,7 @@ from src.intelligence.themes.resolver import (
 from src.intelligence.themes.revision import revise_observation
 from src.intelligence.themes.store import ThemeStore
 from tests.intelligence.test_theme_model import (
-    FACT_A, ROOT_A, ROOT_C, attachment, condition, event, limitation, mapping, mechanism, metadata, observation,
+    FACT_A, ROOT_A, ROOT_B, ROOT_C, attachment, condition, event, limitation, mapping, mechanism, metadata, observation,
     provenance, root_record, scope, subject,
 )
 from tests.intelligence.test_theme_store import SimulatedCrash, interrupt_after
@@ -71,12 +71,15 @@ def test_merge_crash_stages_are_visible_through_the_resolver(world: World) -> No
     assert world.resolve("C", "merge_completed").status is ResolutionStatus.RESOLVED
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKER A4D-3: declared-but-uncreated result root resolves to UNKNOWN_ROOT without "
-                                       "PENDING_EVENT / lineage (only the subject roots show the pending declaration)")
 def test_declared_but_uncreated_result_root_shows_pending_event(world: World) -> None:
+    """A4D-3（A4d.1 で修正）: 宣言済み・未作成の result root は T で PENDING_EVENT ＋ 宣言由来 lineage を持つ。"""
     declared_c = world.snapshots["merge_declared"][("C", "merge_declared_incomplete")]
     assert declared_c.status is ResolutionStatus.NO_STATE and [p.kind for p in declared_c.pending] == ["PENDING_EVENT"]
     assert [l.kind.value for l in declared_c.lineage] == ["MERGE_OF"]
+    assert declared_c.root is None and declared_c.observation is None
+    assert declared_c.pending[0].subject_id == world.ids["C.event"] and declared_c.pending[0].missing == (ROOT_C,)
+    assert declared_c.lineage[0].related_roots == (ROOT_A, ROOT_B)
+    assert declared_c == world.resolve("C", "merge_declared_incomplete")            # 完成後の journal でも同じ T は同じ結果
 
 
 @pytest.mark.parametrize("builder_name,writes,result_index,result_pending", [
@@ -106,7 +109,9 @@ def test_split_and_successor_partial_completion_e2e(tmp_path: Path, builder_name
     assert result_view.status is ResolutionStatus.NO_STATE
     if result_pending is not None:                                    # root あり genesis なし: result 側も PENDING を示す
         assert [p.kind for p in result_view.pending] == result_pending
-    # result_pending is None（root 未作成）の result 側 PENDING は BLOCKER A4D-3（strict xfail に固定）
+    else:                                                             # root 未作成: 宣言だけから PENDING_EVENT（A4D-3 修正）
+        assert [p.kind for p in result_view.pending] == ["PENDING_EVENT"] and result_view.root is None
+        assert [l.related_roots for l in result_view.lineage] == [(subject_root,)]
     assert authority_bytes(root) == frozen
     resumed = O.execute_declaration(ThemeStore.open(root), plan)
     assert resumed.status is O.OperationStatus.COMPLETE
@@ -115,10 +120,8 @@ def test_split_and_successor_partial_completion_e2e(tmp_path: Path, builder_name
     assert resolve_at_data_root(root, subject_root, times["event"] + timedelta(minutes=1)).pending[0].kind == "PENDING_EVENT"
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKER A4D-1: A3 §7 / §23 assign IDENTITY_CORE_CHANGED to the persistence "
-                                       "boundary, but the store accepts an observation whose identity core differs from "
-                                       "its predecessor (only the pure revision helper enforces it)")
 def test_store_rejects_identity_core_change_within_a_root(tmp_path: Path) -> None:
+    """A4D-1（A4d.1 で修正）: identity core の置換は canonical authority 境界（append）で IDENTITY_CORE_CHANGED。"""
     from src.intelligence.themes.store import ThemeAppendRejected
     from src.intelligence.themes.model import ThemeObservation
     from src.intelligence.themes.fingerprint import identity_core_fingerprint

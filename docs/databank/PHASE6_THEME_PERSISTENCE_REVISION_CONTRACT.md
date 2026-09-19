@@ -750,3 +750,20 @@ derived 非保存・破損 fail closed を E2E で検証した。不変条件 1�
 
 次 gate: **BLOCKER 修正 gate（A4D-1 / A4D-2 / A4D-3。store.py / resolver.py の最小修正 ＋ 当該 xfail の解除）**。
 修正後に A4d の freeze 判定を再実行する。
+
+## 34. 修正状態（P6-A4d.1 BLOCKER remediation。契約の意味論は変更していない）
+
+A4d の BLOCKER 3 件を、§33 の最小修正候補どおり `store.py` / `resolver.py` だけで修正した。model / fingerprint /
+qualification / revision / operations は diff 0。schema version・語彙 version・canonical payload・既存 id・root id 意味論・
+authority file 名・load 順・既存 journal bytes は不変（migration なし）。A4d の strict xfail 5 件は通常 PASS に変換し、
+回帰 test を `tests/intelligence/test_theme_foundation_remediation.py`（27 test）に追加した。
+
+| 項目 | 修正 |
+|---|---|
+| A4D-1 | `store._validate_observation_chain`: 非 genesis observation は predecessor と `identity_core_unchanged` でなければ append 拒否（APPEND_REJECTED/IDENTITY_CORE_CHANGED）、load では INVALID_HISTORY/IDENTITY_CORE_CHANGED（authority ＋ 行番号）。`HISTORY_REASONS` に code 追加。resolver `_resolve` も eligible observation の predecessor と比較し INVALID_HISTORY（診断 IDENTITY_CORE_CHANGED、related ＝ predecessor id）。semantic 変更（scope / consequence / limitation / evidence 追加等）は従来どおり同一 root の revision。勝者選択・自動 successor 化はしない（§19 の SUPERSEDED_BY_ROOT 経路のみ） |
+| A4D-2 | `_validate_event` の related record 検査を `_validate_event_related` に切り出し、METADATA_CORRECTION_APPROVED（related ＝ metadata）は第 2 pass `_validate_event_results` で検査する。load 順 roots → observations → governance → metadata → mappings は不変。append 時は両 pass が走るため挙動不変。参照先不在 / 別 root / 承認が記録より前は append 拒否・load INVALID_HISTORY。record 種別違いは model（INVALID_RECORD_ID）で拒否、bytes 改変は STORE_CORRUPTION |
+| A4D-3 | resolver `_resolve`: RootRecord が T に無い（履歴に無い / T 後に作成）場合、T で可視な宣言 event（`root_id ∈ result_roots`）を `_declaring_events` で集め、宣言があれば NO_STATE ＋ 診断 ROOT_AFTER_CUTOFF（§23「T が root 作成前」。related ＝ 宣言 event id）＋ PENDING_EVENT ＋ 宣言由来 lineage を返す。root / observation は None、後日の RootRecord / genesis は参照しない。宣言の無い root id は従来どおり UNKNOWN_ROOT。同じ result root を 2 つ以上の eligible event が宣言する履歴は latest-wins で選ばず INVALID_HISTORY/RESULT_ROOT_REDECLARED |
+| 検証 | A4d 全体（代表 world・checkpoint・再起動 / 別 process・byte replay・shuffle・future leakage・crash / PENDING・fork 隔離・correction / revision・merge / split / successor・carried・上流改訂・derived・破損）を再実行し全 PASS。xfail 0・skip 増加 0。宣言済み result root の同じ T の結果は journal 完成前後で `ThemeResolution` 完全一致 |
+| 不変条件 | 31 / 65 / 83 を BLOCKED → PROVEN、75 の A4D-2 注記を解消（BLOCKED 0）。DEFERRED 23 / 76 / 85 は未着手（本 gate の対象外） |
+| 判定 | P6_A4D_1_BLOCKER_REMEDIATION_VALIDATED。Foundation freeze の宣言は MAIN 監督が A4d ＋ A4d.1 を確認して行う |
+

@@ -4,23 +4,30 @@ A1（1〜25）/ A2（26〜60）/ A3（61〜97）の不変条件と、それを�
 
 status の語彙: **PROVEN**（test で証明）/ **STRUCTURAL**（field / 語彙 / import が存在しないことで構造的に保証。専用 test は
 その不在を固定）/ **DEFERRED**（後続 phase の責務）/ **NOT_APPLICABLE**。これに加え、A4d の E2E で見つかった
-contract / implementation mismatch に関わる行は **BLOCKED**（証明できていない。修正 gate まで PROVEN と書かない）とする。
+contract / implementation mismatch に関わる行は **BLOCKED**（証明できていない。修正 gate まで PROVEN と書かない）とした。
+A4d.1（remediation gate）で 3 件を修正し、修正後に本当に証明できた行だけ BLOCKED → PROVEN へ変更した（現在 BLOCKED 0）。
 
 layer: MODEL（A4a）/ STORE（A4b）/ RESOLVER（A4c）/ E2E（A4d）/ FUTURE。test 名の module 略号:
 model ＝ test_theme_model、ident ＝ test_theme_identity、evid ＝ test_theme_evidence、gov ＝ test_theme_governance_model、
 bnd ＝ test_theme_import_boundary、store ＝ test_theme_store、corr ＝ test_theme_store_corruption、
 ops ＝ test_theme_store_operations、res ＝ test_theme_resolver、fac ＝ test_theme_resolver_facets、
-e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail ＝ test_theme_foundation_failures。
+e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail ＝ test_theme_foundation_failures、
+rem ＝ test_theme_foundation_remediation（A4d.1）。
 
-## A4d で見つかった BLOCKER（凍結 runtime は未変更。strict xfail で再現を固定）
+## A4d で見つかった BLOCKER（A4d.1 で修正済み。A4d 時点では runtime 無変更・strict xfail で再現を固定していた）
 
 | id | 事象 | 契約 | 再現 test | 最小修正候補 | 影響範囲 |
 |---|---|---|---|---|---|
-| **A4D-1** | store が identity core（driver / channel / domain / subject）の置換を同一 root の revision として **受理**する（`ThemeObservation.build` で直接組んだ observation を append できる。純 helper `revise_observation` だけが拒否） | A3 §7（append で IDENTITY_CORE_CHANGED を拒否）、§23（load で INVALID_HISTORY）、A2 §2.3 | fail::test_store_rejects_identity_core_change_within_a_root | `store._validate_observation_chain` の非 genesis 分岐で `identity_core_fingerprint(predecessor) != identity_core_fingerprint(obs)` なら `_reject(..., "IDENTITY_CORE_CHANGED")`（`from .fingerprint import identity_core_fingerprint`。約 6 行）。resolver `_resolve` にも同じ検査を INVALID_HISTORY として追加（約 6 行）。`HISTORY_REASONS` に code 追加 | store.py / resolver.py のみ。canonical bytes・id・A4a 不変。boundary test の許可 import に `.fingerprint` は既にある。store test 1 本追加 |
-| **A4D-2** | METADATA_CORRECTION_APPROVED（related record が metadata id）を含む store が **再 open できない**（load 順 roots → observations → governance → metadata のため、governance の intra 検査で metadata がまだ無く GOVERNANCE_REFERENCE_MISSING ＝ INVALID_HISTORY）。append 自体は受理される | A3 §3（固定 load 順）と §10（METADATA_CORRECTION_APPROVED は metadata を参照）の組合せ。後続 authority への参照は cross pass で検査すべき（A4b §31 の 2 pass 方針） | e2e::test_metadata_correction_approval_survives_reload | `_validate_event` の related_observations 検査を、METADATA_CORRECTION_APPROVED の場合だけ `_validate_event_results`（cross pass）へ移す（約 10 行）。append 時は両 pass が走るので挙動不変 | store.py のみ。既存 test 不変。corruption test 1 本追加 |
-| **A4D-3** | 宣言済みだが RootRecord が **未作成**の result root を解決すると UNKNOWN_ROOT で PENDING_EVENT / lineage が付かない。後日 RootRecord が書かれると同じ T で ROOT_AFTER_CUTOFF ＋ PENDING_EVENT ＋ lineage になる ＝ T より後の record が過去 T の診断を変える | A3 §13（T 後の record は結果に影響しない）、A4c §32（result root 側でも PENDING_EVENT を返す） | rep::test_declared_result_root_diagnostics_do_not_depend_on_later_root_record、fail::test_declared_but_uncreated_result_root_shows_pending_event、rep::test_future_record_matrix[merge_root-C-merge_declared_incomplete] | resolver `_resolve` の `root is None` 分岐でも、T で eligible な宣言 event（root_id ∈ result_roots）を集めて PENDING_EVENT ＋ lineage を付ける（ROOT_AFTER_CUTOFF 分岐と同じ約 6 行） | resolver.py のみ。state facet は不変（診断のみ） |
+| **A4D-1** | store が identity core（driver / channel / domain / subject）の置換を同一 root の revision として **受理**する（`ThemeObservation.build` で直接組んだ observation を append できる。純 helper `revise_observation` だけが拒否） | A3 §7（append で IDENTITY_CORE_CHANGED を拒否）、§23（load で INVALID_HISTORY）、A2 §2.3 | fail::test_store_rejects_identity_core_change_within_a_root（A4d.1 で PASS）、rem::test_a4d1_* | `store._validate_observation_chain` の非 genesis 分岐で `identity_core_fingerprint(predecessor) != identity_core_fingerprint(obs)` なら `_reject(..., "IDENTITY_CORE_CHANGED")`（`from .fingerprint import identity_core_fingerprint`。約 6 行）。resolver `_resolve` にも同じ検査を INVALID_HISTORY として追加（約 6 行）。`HISTORY_REASONS` に code 追加 | store.py / resolver.py のみ。canonical bytes・id・A4a 不変。boundary test の許可 import に `.fingerprint` は既にある。store test 1 本追加 |
+| **A4D-2** | METADATA_CORRECTION_APPROVED（related record が metadata id）を含む store が **再 open できない**（load 順 roots → observations → governance → metadata のため、governance の intra 検査で metadata がまだ無く GOVERNANCE_REFERENCE_MISSING ＝ INVALID_HISTORY）。append 自体は受理される | A3 §3（固定 load 順）と §10（METADATA_CORRECTION_APPROVED は metadata を参照）の組合せ。後続 authority への参照は cross pass で検査すべき（A4b §31 の 2 pass 方針） | e2e::test_metadata_correction_approval_survives_reload（A4d.1 で PASS）、rem::test_a4d2_* | `_validate_event` の related_observations 検査を、METADATA_CORRECTION_APPROVED の場合だけ `_validate_event_results`（cross pass）へ移す（約 10 行）。append 時は両 pass が走るので挙動不変 | store.py のみ。既存 test 不変。corruption test 1 本追加 |
+| **A4D-3** | 宣言済みだが RootRecord が **未作成**の result root を解決すると UNKNOWN_ROOT で PENDING_EVENT / lineage が付かない。後日 RootRecord が書かれると同じ T で ROOT_AFTER_CUTOFF ＋ PENDING_EVENT ＋ lineage になる ＝ T より後の record が過去 T の診断を変える | A3 §13（T 後の record は結果に影響しない）、A4c §32（result root 側でも PENDING_EVENT を返す） | rep::test_declared_result_root_diagnostics_do_not_depend_on_later_root_record、fail::test_declared_but_uncreated_result_root_shows_pending_event、rep::test_future_record_matrix[merge_root-C-merge_declared_incomplete]（いずれも A4d.1 で PASS）、rem::test_a4d3_* | resolver `_resolve` の `root is None` 分岐でも、T で eligible な宣言 event（root_id ∈ result_roots）を集めて PENDING_EVENT ＋ lineage を付ける（ROOT_AFTER_CUTOFF 分岐と同じ約 6 行） | resolver.py のみ。state facet は不変（診断のみ） |
 
-いずれも凍結 file の変更を要するため A4d では修正せず、BLOCKER_FOUND として報告する。
+A4d では凍結 file の変更を要するため修正せず BLOCKER_FOUND として報告した。A4d.1 で上表の最小修正候補どおり
+`store.py` / `resolver.py` だけを修正し（model / fingerprint / qualification / revision / operations は diff 0）、strict xfail 5 件を
+通常 PASS に変換、回帰 test を `tests/intelligence/test_theme_foundation_remediation.py`（27 test）に追加した。
+A4D-3 の宣言済み・未作成 result root は A3 §23 の「T が root 作成前」＝ ROOT_AFTER_CUTOFF（related ＝ 宣言 event id）を返し、
+後日 RootRecord / genesis が書かれても同じ T の `ThemeResolution` は完全一致する。schema / canonical id / 語彙 / load 順 /
+authority file 名 / 既存 journal bytes は不変。
 
 ## A1 — semantic authority（1〜25）
 
@@ -61,7 +68,7 @@ e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail 
 | 28 | observation id は IDENTITY / SEMANTIC のみから | MODEL | ident::test_observation_identity_payload_keys_and_golden, model::test_observation_id_excludes_provenance_and_recorded_at | PROVEN | golden vector 固定 |
 | 29 | 同一 id 異 bytes ＝ conflict、同一 bytes ＝ 冪等 | STORE | store::test_same_id_different_bytes_is_conflict_even_for_non_identity_fields, store::test_exact_idempotency_same_id_same_bytes | PROVEN | |
 | 30 | root は evidence 蓄積・metadata・class・scope 改訂を通じて不変 | E2E | e2e::test_a2_identity_evidence_traceability, ident::test_revise_observation_allows_same_root_changes_from_a2_table | PROVEN | |
-| 31 | identity core の置換は同一 root の revision として書けない | MODEL / STORE | ident::test_revise_observation_rejects_identity_core_changes, fail::test_store_rejects_identity_core_change_within_a_root（xfail） | **BLOCKED** | 純 helper は拒否するが store は受理する（A4D-1） |
+| 31 | identity core の置換は同一 root の revision として書けない | MODEL / STORE / RESOLVER | ident::test_revise_observation_rejects_identity_core_changes, fail::test_store_rejects_identity_core_change_within_a_root, rem::test_a4d1_identity_core_change_is_rejected_at_append, rem::test_a4d1_preexisting_identity_core_break_is_rejected_on_reopen, rem::test_a4d1_synthetic_history_resolver_returns_invalid_history | PROVEN | 純 helper・store append（IDENTITY_CORE_CHANGED）・load（INVALID_HISTORY）・resolver（INVALID_HISTORY）の 4 層で拒否（A4d.1）。semantic 変更は引き続き可（rem::test_a4d1_allowed_semantic_revision_is_still_accepted） |
 | 32 | fingerprint 一致 ≠ identity、自動 merge なし | MODEL | ident::test_fingerprint_equality_is_not_identity_and_no_merge_helper_exists | PROVEN | |
 | 33 | merge / split は理由・actor 付き governance 事象、root は削除されない | STORE / E2E | ops::test_merge_declaration_first_and_order_is_enforced, e2e::test_merge_semantics_e2e, e2e::test_split_semantics_e2e | PROVEN | |
 | 34 | 1 root に genesis 1 つ、fork は UNRESOLVED | STORE / RESOLVER | corr::test_second_mismatching_genesis_and_wrong_root_predecessor, res::test_observation_fork_is_unresolved, fail::test_observation_fork_only_breaks_the_semantic_facet | PROVEN | |
@@ -100,7 +107,7 @@ e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail 
 | 62 | 記録済み observation の bytes は変化しない | E2E | e2e::test_correction_and_revision_are_new_history_with_old_bytes_intact, e2e::test_merge_semantics_e2e | PROVEN | |
 | 63 | metadata 変更は semantic revision を生まない | E2E | e2e::test_checkpoints_metadata_mapping_governance | PROVEN | |
 | 64 | semantic revision は predecessor を上書きしない | STORE / E2E | store::test_predecessor_rules, e2e::test_checkpoints_revision_delayed_evidence_and_upstream | PROVEN | |
-| 65 | 点時刻状態は cutoff 以後の record を用いない | RESOLVER / E2E | rep::test_every_later_stage_leaves_earlier_checkpoints_unchanged, rep::test_future_record_matrix | **BLOCKED** | state facet は全 checkpoint で証明済み。未作成 result root の診断だけが後の RootRecord に依存（A4D-3） |
+| 65 | 点時刻状態は cutoff 以後の record を用いない | RESOLVER / E2E | rep::test_every_later_stage_leaves_earlier_checkpoints_unchanged, rep::test_future_record_matrix, rep::test_declared_result_root_diagnostics_do_not_depend_on_later_root_record, rem::test_a4d3_future_completion_leaves_historical_result_exactly_unchanged | PROVEN | 全 checkpoint で state facet ＋ 診断 / pending / lineage が後段 stage と完全一致（宣言済み result root を含む。A4d.1）。RootRecord 不在 / T 後作成の区別（UNKNOWN_ROOT / ROOT_AFTER_CUTOFF）は A3 §13 step 1 の規定 |
 | 66 | T 前に知られ T 後に付与された evidence は T に現れない | RESOLVER / E2E | res::test_delayed_attachment_is_invisible_before_it_was_attached, e2e::test_checkpoints_revision_delayed_evidence_and_upstream | PROVEN | |
 | 67 | T 前に付与され T 後の evidence_time は T に現れない | RESOLVER | res::test_evidence_view_checks_both_times_independently | STRUCTURAL | model 上は不可能（evidence_time ≤ attached_at）。独立検査を固定 |
 | 68 | fork は file 順で解決されない | RESOLVER | res::test_max_recorded_at_and_physical_order_are_not_winners, corr::test_fork_on_disk_is_diagnosed_not_resolved | PROVEN | |
@@ -110,7 +117,7 @@ e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail 
 | 72 | merge は旧 root / observation / governance 履歴を保持 | E2E | e2e::test_merge_semantics_e2e, fac::test_merge_before_and_after | PROVEN | |
 | 73 | split は元 root を保持 | E2E | e2e::test_split_semantics_e2e | PROVEN | |
 | 74 | 上流 evidence の改訂は Theme 履歴を書き換えない | E2E | e2e::test_upstream_supersession_changes_only_dereference_status | PROVEN | |
-| 75 | correction は新しい履歴を作る | E2E | e2e::test_correction_and_revision_are_new_history_with_old_bytes_intact | PROVEN | METADATA_CORRECTION_APPROVED の再 open は A4D-2 |
+| 75 | correction は新しい履歴を作る | E2E | e2e::test_correction_and_revision_are_new_history_with_old_bytes_intact, e2e::test_metadata_correction_approval_survives_reload, rem::test_a4d2_reopen_succeeds, rem::test_a4d2_read_only_reopen_and_audit_succeed | PROVEN | METADATA_CORRECTION_APPROVED を含む journal の再 open（writable / read-only / audit / resolver 入口）は A4d.1 で証明。load 順は不変 |
 | 76 | SQLite は derived のみ | FUTURE | bnd::test_no_io_network_clock_random_store_or_resolver_in_theme_sources | DEFERRED | index 未実装。canonical だけで解決できることは replay で証明 |
 | 77 | rebuild は network / 現在時刻を必要としない | E2E | rep::test_byte_level_replay_reproduces_authorities_and_results, bnd::* | PROVEN | |
 | 78 | canonical data は repository の外、既定 fallback なし | STORE | store::test_explicit_data_root_required_and_no_repository_fallback | PROVEN | |
@@ -118,7 +125,7 @@ e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail 
 | 80 | governance の曖昧は UNRESOLVED として明示 | RESOLVER / E2E | fac::test_governance_fork_is_isolated_to_the_governance_facet, fail::test_governance_fork_only_breaks_the_governance_facet | PROVEN | |
 | 81 | metadata の曖昧は当該 field の UNRESOLVED | RESOLVER / E2E | fac::test_label_fork_does_not_break_semantic_state, fail::test_label_fork_only_breaks_the_label_facet | PROVEN | |
 | 82 | latest-wins resolver は存在しない | RESOLVER | res::test_max_recorded_at_and_physical_order_are_not_winners, store::test_no_resolver_or_latest_api, res::test_status_vocabularies_are_distinct_and_no_convenience_api | PROVEN | |
-| 83 | root-breaking な semantic 変更は別 root | MODEL / E2E | e2e::test_successor_semantics_e2e, ident::test_revise_observation_rejects_identity_core_changes | **BLOCKED** | successor 経路は証明済み。store が黙った置換を拒否しない（A4D-1） |
+| 83 | root-breaking な semantic 変更は別 root | MODEL / STORE / E2E | e2e::test_successor_semantics_e2e, ident::test_revise_observation_rejects_identity_core_changes, fail::test_store_rejects_identity_core_change_within_a_root, rem::test_a4d1_explicit_successor_new_root_path_remains_valid | PROVEN | successor 経路（SUPERSEDED_BY_ROOT → 新 root → genesis）は有効のまま、同一 root 内の黙った置換は store / resolver が拒否（A4d.1） |
 | 84 | T 以後の merge / split / successor / 訂正は T の結果を変えない | E2E | rep::test_every_later_stage_leaves_earlier_checkpoints_unchanged, rep::test_future_record_matrix, e2e::test_checkpoints_retired_reversed_and_merge | PROVEN | state facet。診断の A4D-3 は 65 参照 |
 | 85 | index の削除 / 再構築は canonical の結果を変えない | FUTURE | — | DEFERRED | index 未実装 |
 | 86 | genesis は root ごとに 1 つ、RootRecord が id を固定 | STORE | store::test_genesis_validation, corr::test_second_mismatching_genesis_and_wrong_root_predecessor | PROVEN | |
@@ -127,7 +134,7 @@ e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail 
 | 89 | predecessor は同一 root・同一 authority 内に物理先行 | STORE | store::test_predecessor_rules, corr::test_second_mismatching_genesis_and_wrong_root_predecessor | PROVEN | |
 | 90 | governance event は observation を改変せず、承認は新 observation を指す | E2E | gov::test_correction_approvals_reference_the_approved_records, e2e::test_correction_and_revision_are_new_history_with_old_bytes_intact | PROVEN | |
 | 91 | 結果 root は宣言 event を origin に持ち、宣言なしに存在しない | STORE | ops::test_merge_declaration_first_and_order_is_enforced, corr::test_result_root_without_declaring_event_is_invalid_history, ops::test_result_root_cannot_be_redeclared_or_created_as_candidate | PROVEN | |
-| 92 | 未完了操作は明示状態、自動 rollback / 補完なし | STORE / RESOLVER / E2E | ops::test_merge_crash_boundaries, ops::test_split_crash_boundaries, ops::test_successor_crash_boundaries, fail::test_candidate_crash_pending_resume_e2e, fail::test_split_and_successor_partial_completion_e2e | PROVEN | subject root 側と store `pending()` で証明。未作成 result root 側の resolver 表示は A4D-3 |
+| 92 | 未完了操作は明示状態、自動 rollback / 補完なし | STORE / RESOLVER / E2E | ops::test_merge_crash_boundaries, ops::test_split_crash_boundaries, ops::test_successor_crash_boundaries, fail::test_candidate_crash_pending_resume_e2e, fail::test_split_and_successor_partial_completion_e2e | PROVEN | subject root 側・store `pending()`・未作成 result root 側の resolver 表示（rem::test_a4d3_absent_result_root_with_visible_declaration_is_pending_event、A4d.1）で証明 |
 | 93 | 再構成は純関数（同一 bytes・root・T → 同一出力） | RESOLVER / E2E | res::test_same_bytes_root_cutoff_give_same_result_and_input_order_is_irrelevant, rep::test_shuffled_history_gives_identical_resolutions, e2e::test_restart_in_a_separate_process_matches | PROVEN | |
 | 94 | RootRecord は current_* を持たない | MODEL | model::test_root_record_field_inventory_has_no_current_state | STRUCTURAL | |
 | 95 | DERIVED は canonical 行に含まれない | E2E | e2e::test_derived_values_are_recomputed_and_never_stored | PROVEN | |
@@ -138,14 +145,14 @@ e2e ＝ test_theme_foundation_e2e、rep ＝ test_theme_foundation_replay、fail 
 
 | status | 件数 | 番号 |
 |---|---|---|
-| PROVEN | 78 | 上表の PROVEN 行（1–3, 7–11, 13–14, 16–22, 24–30, 32–34, 36–51, 53, 56–59, 61–64, 66, 68–75, 77–82, 84, 86–93, 95, 97） |
+| PROVEN | 81 | 上表の PROVEN 行（1–3, 7–11, 13–14, 16–22, 24–34, 36–51, 53, 56–59, 61–66, 68–75, 77–84, 86–93, 95, 97） |
 | STRUCTURAL | 13 | 4, 5, 6, 12, 15, 35, 52, 54, 55, 60, 67, 94, 96 |
 | DEFERRED | 3 | 23, 76, 85 |
-| BLOCKED | 3 | 31（A4D-1）, 65（A4D-3）, 83（A4D-1）。A4D-2 は 75 の注記（correction 自体は PROVEN、METADATA_CORRECTION_APPROVED を含む store の再 open が未証明） |
+| BLOCKED | 0 | （A4d 時点の 31 / 65 / 83 は A4d.1 で PROVEN へ。75 の A4D-2 注記も解消） |
 | NOT_APPLICABLE | 0 | — |
 | 合計 | 97 | — |
 
-（正確な内訳は各行の status 列が正。92 は PROVEN だが A4D-3 の注記を持つ。）
+（正確な内訳は各行の status 列が正。BLOCKED 0 は Foundation freeze の必要条件。freeze 宣言は MAIN 監督が行う。）
 
 ## 契約 traceability（A1 / A2 / A3 → E2E / structural proof）
 

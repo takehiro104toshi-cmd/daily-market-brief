@@ -214,8 +214,8 @@ def correction_world(root: Path):
     label2 = metadata(root_id=ROOT_Q, value=("Yen weakness / input cost",), previous_metadata_id=label1.metadata_id,
                       recorded_at=times["label2"], reason="typo")
     store.append_metadata(label2)
-    # NOTE: METADATA_CORRECTION_APPROVED は BLOCKER A4D-2（store の load 順で再 open 不能）のため本 world には入れない。
-    #       再現は test_metadata_correction_approval_survives_reload（strict xfail）に固定する。
+    # NOTE: METADATA_CORRECTION_APPROVED の再 open は test_metadata_correction_approval_survives_reload と
+    #       test_theme_foundation_remediation で検証する（A4D-2。A4d.1 で修正）。
     store = ThemeStore.open(root)
     corrected = attachment(FACT_A, attached=times["role"], role=EvidenceRole.CONTRADICTS, provenance=ProvenanceClass.HUMAN,
                            asserted_by="reviewer:r1", note="direction was misread")
@@ -271,9 +271,8 @@ def test_correction_and_revision_are_new_history_with_old_bytes_intact(tmp_path:
     assert res(times["role_ok"] + H1).observation.observation_id == r["role_obs"].observation_id   # revert 前の T は訂正状態
 
 
-@pytest.mark.xfail(strict=True, reason="BLOCKER A4D-2: store validates METADATA_CORRECTION_APPROVED related metadata in "
-                                       "the intra pass although metadata loads after governance; a valid history cannot be reopened")
 def test_metadata_correction_approval_survives_reload(tmp_path: Path) -> None:
+    """A4D-2（A4d.1 で修正）: METADATA_CORRECTION_APPROVED を含む canonical journal は固定 load 順のまま再 open できる。"""
     root = tmp_path / "q2"
     store = ThemeStore.initialize(root)
     genesis = observation(root_id=ROOT_Q, recorded_at=day(0, 1))
@@ -288,7 +287,7 @@ def test_metadata_correction_approval_survives_reload(tmp_path: Path) -> None:
                      related_observations=(label2.metadata_id,), reason="typo fixed", recorded_at=day(2, 1))
     store.append_governance(approval)                                          # append は受理される
     frozen = authority_bytes(root)
-    reopened = ThemeStore.open(root, read_only=True)                          # ← ここで INVALID_HISTORY になる（欠陥）
+    reopened = ThemeStore.open(root, read_only=True)                          # A4d では INVALID_HISTORY になっていた
     assert reopened.counts()["governance"] == 1 and authority_bytes(root) == frozen
     res = resolve_at_data_root(root, ROOT_Q, day(3))
     assert res.governance.effective_event_type is GovernanceEventType.METADATA_CORRECTION_APPROVED

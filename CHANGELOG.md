@@ -4,6 +4,47 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.06 (2026-09-19) — Phase 6 P6-A4d.1 Theme foundation BLOCKER 修正
+
+A4d で発見した contract / implementation の不一致 3 件（A4D-1 / A4D-2 / A4D-3）を、`src/intelligence/themes/store.py` と
+`resolver.py` だけの最小修正で解消した。model / fingerprint / qualification / revision / operations は無変更。
+schema version・語彙 version・canonical payload・既存 id・authority file 名・load 順・既存 journal bytes は不変（migration なし）。
+P4 production bundle・P5 凍結 source / test は無変更。
+
+### 修正
+
+- A4D-1: 同一 root 内で identity core（subject / driver / channel / domain）が変わる observation を store が受理していた。
+  `store._validate_observation_chain` で predecessor と `identity_core_unchanged` を比較し、append は
+  IDENTITY_CORE_CHANGED で拒否、既存 file 内の違反は load で INVALID_HISTORY。resolver も同じ不変条件を検査し
+  INVALID_HISTORY を返す（勝者選択・自動 successor 化なし）。semantic 変更は引き続き同一 root の revision。
+- A4D-2: METADATA_CORRECTION_APPROVED（related record ＝ metadata）を含む journal が固定 load 順のため再 open できなかった。
+  related record 検査を `_validate_event_related` に切り出し、metadata 参照は第 2 pass（cross authority）で検査する。
+  load 順・append 時の検査・governance の canonical bytes / id は不変。参照先不在 / 別 root / 時刻逆行は引き続き fail closed。
+- A4D-3: 宣言済みだが RootRecord 未作成の result root を解決すると UNKNOWN_ROOT だけで PENDING_EVENT / lineage が付かず、
+  後日の RootRecord が過去 T の診断を変えていた。resolver `_resolve` は T で可視な宣言 event を集め、宣言があれば
+  NO_STATE ＋ ROOT_AFTER_CUTOFF（related ＝ 宣言 event）＋ PENDING_EVENT ＋ 宣言由来 lineage を返す（root / observation は None、
+  未来の RootRecord / genesis を参照しない）。宣言の無い root id は従来どおり UNKNOWN_ROOT。同じ result root の二重宣言は
+  RESULT_ROOT_REDECLARED として INVALID_HISTORY。
+
+### 追加 — tests/intelligence
+
+- `test_theme_foundation_remediation.py`（27 test）: A4D-1（driver / channel / domain / subject の append 拒否、semantic
+  revision の受理、既存 file の違反の再 open 拒否、synthetic history の INVALID_HISTORY、successor 経路の有効性）、
+  A4D-2（append / 再 open / read-only 再 open / audit、参照先不在・別 root・種別違い・時刻逆行の fail closed、bytes 不変）、
+  A4D-3（merge / split / successor の未作成 result root の PENDING_EVENT ＋ lineage、完了後の同一 T の完全一致、宣言前 /
+  未宣言 root の UNKNOWN_ROOT、宣言前の lineage 非漏洩、二重宣言の INVALID_HISTORY）。
+
+### 改善
+
+- A4d の strict xfail 5 件を通常 test に戻し、assertion を強化（宣言済み result root の診断・pending・lineage の完全一致、
+  後段 stage 比較から A4D-3 key の除外を撤去）。`test_declared_result_root_diagnostics_do_not_depend_on_later_root_record`
+  は xfail 下で 2 つ目の key が KeyError（stage 取り違え）になっていたため、各 checkpoint を最初に観測できた stage を
+  明示して比較するよう修正。
+- `docs/databank/PHASE6_THEME_FOUNDATION_INVARIANT_MATRIX.md`: 31 / 65 / 83 を BLOCKED → PROVEN、75 / 92 の注記を更新
+  （PROVEN 81 / STRUCTURAL 13 / DEFERRED 3 / BLOCKED 0）。
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §34 に A4d.1 の修正状態を追記（契約の意味論は変更していない）。
+- full suite 1590 passed（xfail 0 / skip 0）。
+
 ## v5.05 (2026-09-19) — Phase 6 P6-A4d Theme foundation E2E 検証（BLOCKER_FOUND）
 
 A1〜A4c が canonical journal を通じて 1 つの system として動くことを E2E で検証した gate。runtime source
