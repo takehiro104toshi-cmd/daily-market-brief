@@ -15,13 +15,14 @@ from tests.intelligence.test_theme_import_boundary import ALLOWED_CLOSURE as THE
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / "src" / "intelligence" / "theme_intelligence"
 THEMES_DIR = REPO_ROOT / "src" / "intelligence" / "themes"
-MODULES = ("__init__", "model", "change")
+MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle")
 ALLOWED_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "typing"}
-ALLOWED_RELATIVE = {"..themes.model", "..themes.qualification", "..themes.resolver", ".model"}
+ALLOWED_RELATIVE = {"..themes.model", "..themes.qualification", "..themes.resolver", ".model", ".lifecycle_model"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
-    "src.intelligence.theme_intelligence.change"}
+    "src.intelligence.theme_intelligence.change", "src.intelligence.theme_intelligence.lifecycle_model",
+    "src.intelligence.theme_intelligence.lifecycle"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
@@ -30,10 +31,13 @@ FORBIDDEN_SOURCE_TOKENS = ("sqlite", "open(", "Path(", "read_bytes(", "read_text
                            ".now(", "utcnow", "time.time", "random.", "secrets.", "os.path", "subprocess", "yaml.",
                            "data/vnext", "INTELLIGENCE_DATA_ROOT", "data_root", "jsonl", ".write(", "fsync",
                            "ThemeStore", "append_", "reload(", "initialize(", "content_id(", "new_root_id",
-                           "latest_wins", "def latest", "def current", "def active", "def state_at", "float(")
+                           "latest_wins", "def latest", "def current", "def active", "def state_at", "float(",
+                           # P6-B2（L-5）: P5 / 較正 / 価格 / production authority を lifecycle 入力にしない
+                           "calibration", "prediction", "MarketSignal", "MorningBrief", "CompassDraft", "price",
+                           "momentum", "market_return", "formal_review")
 LIFECYCLE_TOKENS = ("EMERGING", "ACCELERATING", "MATURE", "WEAKENING", "STRONG", "WEAK", "BULLISH", "BEARISH",
                     "WINNING", "LOSING", "DORMANT", "ESTABLISHED", "PROMOTED", "DEMOTED", "score", "rank", "weight",
-                    "confidence", "BUY", "SELL", "target_price")
+                    "confidence", "BUY", "SELL", "target_price", "HOT", "COLD", "CONVICTION", "tier")
 
 
 def test_package_contains_only_authorized_modules() -> None:
@@ -56,12 +60,13 @@ def test_modules_import_only_the_pure_read_only_foundation_surface() -> None:
 def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> None:
     code = ("import sys\n"
             "import src.intelligence.theme_intelligence.model, src.intelligence.theme_intelligence.change\n"
+            "import src.intelligence.theme_intelligence.lifecycle_model, src.intelligence.theme_intelligence.lifecycle\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
     closure = set(proc.stdout.split())
     assert closure <= ALLOWED_CLOSURE, closure - ALLOWED_CLOSURE
-    assert "src.intelligence.theme_intelligence.change" in closure
+    assert {"src.intelligence.theme_intelligence.change", "src.intelligence.theme_intelligence.lifecycle"} <= closure
     assert not any(token in m for m in closure for token in ("compass", "reports", "predictions", "internals", "context"))
 
 
@@ -103,3 +108,12 @@ def test_change_module_does_not_reimplement_store_or_resolver_semantics() -> Non
     assert "def resolve(" not in source and "def _resolve(" not in source and "class ThemeHistory" not in source
     assert "source_origin_groups" not in source and "independent_origin_count" not in source   # diversity は DerivedView を比較
     assert "resolve(" in source and "compare_resolutions" in source
+
+
+def test_lifecycle_module_uses_foundation_results_without_recounting() -> None:
+    """P6-B2 §7: independent origin / counted attachment / qualification / flag は Foundation の結果を参照する。"""
+    source = executable_source(PACKAGE_DIR / "lifecycle.py")
+    for token in ("source_origin_groups", "independent_origin_count(", "evaluate_qualification(", "counted_attachments(",
+                  "has_source_diversity", "has_temporal_diversity", "compare_resolutions", "ThemeChangeSet"):
+        assert token not in source, token
+    assert "derived.qualification" in source and "has_contradicting_evidence" in source

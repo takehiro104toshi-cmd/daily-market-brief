@@ -4,6 +4,40 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.09 (2026-09-19) — Phase 6 P6-B2 Theme lifecycle view 実装
+
+Foundation の `ThemeResolution` 1 つから 2 層の lifecycle snapshot（governance 層 ＋ evidence 層）を導く純 derived 層を
+`src/intelligence/theme_intelligence/` に追加した（監督者決定 L-1〜L-8）。Foundation 7 file・B1 runtime（`change.py` /
+`model.py`）・P4・P5 は無変更。journal・content id・config.yaml・workflow を持たない。B1 ChangeSet は入力にしない
+（lifecycle ＝ snapshot、ChangeSet ＝ delta）。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `lifecycle_model.py`: `GovernanceLifecycleState`（UNREVIEWED / ACCEPTED / REJECTED / RETIRED / MERGED / SPLIT / SUPERSEDED /
+  UNRESOLVED / NOT_AVAILABLE）、`EvidenceConditionFlag`（NO_VISIBLE_EVIDENCE / HAS_CONTEXT_ONLY / HAS_SUPPORT / SINGLE_SOURCE /
+  MULTI_SOURCE / SINGLE_EVIDENCE_DATE / MULTI_DATE / QUALIFIES / CONTESTED / INVALIDATION_EVIDENCE_PRESENT / STALE）、
+  `LifecycleViewStatus`（AVAILABLE / PARTIALLY_AVAILABLE / UNAVAILABLE）、`EvidenceConditionStatus`（EVALUATED / UNRESOLVED /
+  NOT_EVALUATED）、`LifecyclePolicy`（`stale_after_days`、既定 90 calendar days、`theme_lifecycle_policy:0.1.0`）、
+  `ThemeLifecycleView`（`theme_lifecycle_view:0.1.0` / `theme_lifecycle_model:0.1.0`、policy 値を結果に保持）。
+  勢い・方向・投資判断・総合評価・score / rank / tier の語は無い。
+- `lifecycle.py`: `derive_lifecycle(resolution, *, policy, governance_events=None)`。governance 層は Foundation の
+  `governance.status` / effective event / lineage だけから決める（独自 latest-wins なし。EVENT_REVERSED は resolver の
+  畳み込み結果を使う。correction event が terminal のときは渡された governance event で chain を遡り、無ければ fail
+  closed。merge / split / successor の result root は origin event だけでは UNREVIEWED）。evidence 層は Foundation の
+  `DerivedView` / `EvidenceView` を再 count せず参照。STALE は最新 dated counted evidence の日付から cutoff の日付までの
+  calendar 日数が `stale_after_days` 以上（89 日 false / 90 日 true）。dated counted evidence 0 件は STALE を付けず診断
+  STALE_NOT_EVALUABLE_NO_DATED_EVIDENCE。NO_STATE / INVALID_HISTORY / STORE_CORRUPTION は UNAVAILABLE、governance または
+  semantic の UNRESOLVED は PARTIALLY_AVAILABLE、metadata / mapping の UNRESOLVED は影響なし。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_lifecycle.py`（41 test。matrix 1〜37 ＋ 失敗入力）。
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（lifecycle module の import 境界と
+  closure、P5 / 較正 / 価格 / production authority token の不在、Foundation 結果の再 count 禁止）。
+- `docs/databank/PHASE6_THEME_LIFECYCLE_CONTRACT.md`（snapshot vs delta、2 層分離、governance state、evidence flag、
+  freshness policy と STALE 境界、qualification 再利用、contradiction / invalidation、partial availability、
+  NO_STATE / UNRESOLVED、除外、要確認事項、versioning、import 境界、tests）。
+
 ## v5.08 (2026-09-19) — Phase 6 P6-B1 Theme change detection 実装
 
 Theme Foundation（凍結、anchor `12847bf`）の上に Theme Intelligence layer `src/intelligence/theme_intelligence/` を新設し、
