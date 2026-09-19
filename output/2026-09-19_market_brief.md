@@ -159,8 +159,8 @@
   本日の関連見出し: 0件／本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
 - **GX** ★☆☆☆☆（フェーズ: 減速期 ／ 継続性: 限定的）
   本日の関連見出し: 0件／本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
-- **DX** ★★☆☆☆（フェーズ: 黎明期 ／ 継続性: 中程度）
-  本日の関連見出し: 1件／本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
+- **DX** ★☆☆☆☆（フェーズ: 減速期 ／ 継続性: 限定的）
+  本日の関連見出し: 0件／本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
 - **防衛** ★★★☆☆（フェーズ: 成熟期 ／ 継続性: 高い）
   本日の関連見出し: 0件／防衛予算の拡大方針は、防衛関連の受注環境改善につながりやすい
 - **宇宙** ★☆☆☆☆（フェーズ: 減速期 ／ 継続性: 限定的）
@@ -233,7 +233,7 @@
   関連セクター: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI ／ 関連銘柄: 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC、など
 - **電力**: 15/100（減速）— 継続性の高い構造的テーマに位置づけられています、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
 - **GX**: 0/100（減速）— 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
-- **DX**: 6/100（減速）— 本日1件の関連見出しが確認されています、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
+- **DX**: 0/100（減速）— 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
 - **防衛**: 45/100（加速）— 既存の因果チェーン（causal_rules）にも該当します、継続性の高い構造的テーマに位置づけられています、関連セクター・関連銘柄も確認できるため、サプライチェーンへの波及も期待しやすいと考えられます、Future Intelligenceのテーマ評価は★★★☆☆・成熟期です。
   関連セクター: 重工業・防衛 ／ 関連銘柄: 川崎重工業
 - **宇宙**: 0/100（減速）— 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
@@ -347,12 +347,11 @@
   普及状況: 分析材料不足
   競争環境: 分析材料不足 ／ 参入障壁: 分析材料不足
   主なリスク: 分析材料不足
-- **DX**［AI分析］（現在フェーズ: 黎明期）
-  市場ステージ: AI分析: 現在のフェーズは「黎明期」と推定されます。本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
-  普及状況: AI分析: 話題化が始まっている段階で、実際の普及状況を示す材料はまだ限定的と考えられます。
-  競争環境: 分析材料不足: 競争環境を推定できる関連銘柄情報が確認できていません。 ／ 参入障壁: 分析材料不足: 参入障壁を推定できる業種情報が確認できていません。
-  主なリスク: 分析材料不足: リスク要因を推定できる材料が確認できていません。
-  判断根拠: 本日の関連見出し1件
+- **DX**［分析材料不足］（現在フェーズ: 分析材料不足）
+  市場ステージ: 分析材料不足
+  普及状況: 分析材料不足
+  競争環境: 分析材料不足 ／ 参入障壁: 分析材料不足
+  主なリスク: 分析材料不足
 - **防衛**［AI分析］（現在フェーズ: 成熟期）
   市場ステージ: AI分析: 現在のフェーズは「成熟期」と推定されます。防衛予算の拡大方針は、防衛関連の受注環境改善につながりやすい
   普及状況: AI分析: 構造的なテーマに位置づけられますが、本日時点で活用状況を示す具体的な材料は確認できていません。
@@ -574,13 +573,12 @@
   根拠: 国家戦略メモ該当
 
 ##### DX
-- Momentum: 6/100（減速）
-- Lifecycle: 黎明期 ／ 継続性: 中程度
+- Momentum: 0/100（減速）
+- Lifecycle: 減速期 ／ 継続性: 限定的
 - 関連テーマ: AI、サイバーセキュリティ、物流、SaaS
 - Catalyst［AI分析］: 現時点では明確な加速要因は確認できていません（判断材料不足）
-- Risk［AI分析］: 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと／一過性の話題に留まり、構造的テーマとして定着しない可能性／金利動向・規制動向など外部環境の変化
-- Confidence: 8%
-  根拠: ニュースあり
+- Risk［AI分析］: 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと／一過性の話題に留まり、構造的テーマとして定着しない可能性／テーマの成熟・鈍化に伴う材料出尽くし感／金利動向・規制動向など外部環境の変化
+- Confidence: 0%
 
 ##### 防衛
 - Momentum: 45/100（加速）
@@ -873,9 +871,9 @@
 #### 次に来る業界（本日のモメンタム順）
 1. **AI**（関連見出し31件）— AI関連の設備投資拡大は、半導体・データセンター運営主体・電力設備（変圧器・電気工事）・電線・冷却部材など、周辺サプライチェーン全体へ波及しやすい
 2. **為替**（関連見出し2件）— 円安方向への動きは輸出関連の採算改善期待につながりやすい
-3. **DX**（関連見出し1件）— 本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
-4. **サイバーセキュリティ**（関連見出し1件）— 本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
-5. **金利**（関連見出し1件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+3. **サイバーセキュリティ**（関連見出し1件）— 本日の関連ニュースの傾向から注目が集まっているテーマと考えられます。
+4. **金利**（関連見出し1件）— 金利上昇は金融機関の利ざや改善に追い風となる一方、グロース株には割引率上昇を通じた逆風となりやすい
+5. **広告**（関連見出し1件）— クラウド・スマートフォン関連需要の拡大は、プラットフォーム企業や半導体需要への波及につながりやすい
 
 #### サプライチェーン分析
 - AI → 半導体・電子部品 → 電機・電線・素材 → 電力・インフラ → 情報通信・生成AI → 東京エレクトロン → ニデック → ソニーグループ → NVIDIA → TSMC → など
@@ -937,7 +935,7 @@
 - ★★★☆☆ **半導体**（成熟期）
 - ★★★☆☆ **電力**（成熟期）
 - ★☆☆☆☆ **GX**（減速期）
-- ★★☆☆☆ **DX**（黎明期）
+- ★☆☆☆☆ **DX**（減速期）
 - ★★★☆☆ **防衛**（成熟期）
 - ★☆☆☆☆ **宇宙**（減速期）
 - ★☆☆☆☆ **量子**（減速期）
@@ -1574,8 +1572,8 @@
 > 半年〜10年の時間軸で、どのテーマをどの時間軸で見るべきかを整理するブロックです。
 
 #### 中長期テーマ
-- **半年:** AI、DX、サイバーセキュリティ、金利、為替、広告、住宅
-- **1年:** AI、DX、サイバーセキュリティ、金利、為替、広告、住宅
+- **半年:** AI、サイバーセキュリティ、金利、為替、広告、住宅
+- **1年:** AI、サイバーセキュリティ、金利、為替、広告、住宅
 - **3年:** AI、半導体、電力、防衛、資源
 - **5年:** AI、半導体、電力、防衛、資源
 - **10年:** AI、半導体、電力、防衛、資源
@@ -1883,18 +1881,6 @@
 - **崩れる条件［AI分析］:** 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと、一過性の話題に留まり、構造的テーマとして定着しない可能性、テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 水インフラ → 中東などの政策的な重点分野として位置づけが強まること → 市場シグナル上、資金が向かいやすい地合いが続くこと → 食料・資源への波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
-##### DX（Confidence 8%・Momentum 6/100）
-- **現在何が起きているか:** 本日1件の関連見出しが確認されています、Future Intelligenceのテーマ評価は★★☆☆☆・黎明期です。
-- **今後起こりそうな変化［AI分析］:** 本日時点で確認できる加速要因（Catalyst）がないため、分析材料不足です（新たな予測は行いません）。
-- **恩恵を受ける業界:** 分析材料不足
-- **恩恵企業:** 分析材料不足
-- **二次的恩恵企業（関連テーマ経由）:** 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC
-- **まだ注目されにくい企業（因果チェーン2段階先）:** ソフトバンクグループ、日本電信電話、リクルートホールディングス、Microsoft、Amazon
-- **投資期間:** 半年・1年
-- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化
-- **崩れる条件［AI分析］:** 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと、一過性の話題に留まり、構造的テーマとして定着しない可能性、金利動向・規制動向など外部環境の変化
-- **投資仮説まとめ:** DX → 現時点では明確な加速要因は確認できていません（判断材料不足） → AI・サイバーセキュリティ・物流・SaaSへの波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
-
 ##### GX（Confidence 5%・Momentum 0/100）
 - **現在何が起きているか:** 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
 - **今後起こりそうな変化［AI分析］:** Catalyst「日本、EU、中東などの政策的な重点分野として位置づけが強まること」が実現する場合、「GX」関連の需要・物色が広がりやすくなる可能性があります（既存シグナルの機械的な整理であり、断定ではありません）。
@@ -1990,6 +1976,18 @@
 - **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化、半導体市況、EV需要動向
 - **崩れる条件［AI分析］:** 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと、一過性の話題に留まり、構造的テーマとして定着しない可能性、テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
 - **投資仮説まとめ:** 自動運転 → インドなどの政策的な重点分野として位置づけが強まること → AI・半導体・物流・EVへの波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
+
+##### DX（Confidence 0%・Momentum 0/100）
+- **現在何が起きているか:** 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
+- **今後起こりそうな変化［AI分析］:** 本日時点で確認できる加速要因（Catalyst）がないため、分析材料不足です（新たな予測は行いません）。
+- **恩恵を受ける業界:** 分析材料不足
+- **恩恵企業:** 分析材料不足
+- **二次的恩恵企業（関連テーマ経由）:** 東京エレクトロン、ニデック、ソニーグループ、NVIDIA、TSMC
+- **まだ注目されにくい企業（因果チェーン2段階先）:** ソフトバンクグループ、日本電信電話、リクルートホールディングス、Microsoft、Amazon
+- **投資期間:** 分析材料不足
+- **監視指標:** Theme Momentum Scoreの推移、関連ニュース件数の変化
+- **崩れる条件［AI分析］:** 本日時点でTheme Momentum Scoreが低く、話題化の停滞が意識されやすいこと、一過性の話題に留まり、構造的テーマとして定着しない可能性、テーマの成熟・鈍化に伴う材料出尽くし感、金利動向・規制動向など外部環境の変化
+- **投資仮説まとめ:** DX → 現時点では明確な加速要因は確認できていません（判断材料不足） → AI・サイバーセキュリティ・物流・SaaSへの波及 → 関連需要の増加を通じて、収益機会につながる可能性があると考えられます（将来の株価・業績を保証するものではありません）
 
 ##### 核融合（Confidence 0%・Momentum 0/100）
 - **現在何が起きているか:** 本日時点では目立った関連ニュースは確認されていません、Future Intelligenceのテーマ評価は★☆☆☆☆・減速期です。
@@ -2180,7 +2178,7 @@ NYダウ下落
 | ドル指数（DXY） | 100.22 | +0.00% | ☆☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 100.30 | -1.58% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,424.90 | +0.57% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 81,059.10 | +6.09% | ★★★ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 81,183.99 | +0.35% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2963,8 +2961,8 @@ NYダウ下落
 ### 今日の雑談（相場以外の公開ニュース）
 
 - 「台風 太平洋側で道路への影響予想」（Yahoo!ニュース トピックス）
-- 「対露制裁法が成立 トランプ氏署名」（Yahoo!ニュース トピックス）
 - 「AIで誤情報 米軍に一時緊張走る」（Yahoo!ニュース トピックス）
+- 「OpenAI 安保理でAI安全策説明へ」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3203,14 +3201,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-19/a-goldman-m-a-banker-helped-bring-the-olympics-to-los-angeles)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/audio/2026-09-19/odd-lots-goldman-s-sykes-on-the-2028-olympics-deal-podcast)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-19/bolivia-eliminates-diesel-subsidy-after-imf-loan-approval-mu7ydf34)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-19/blackstone-sees-india-nearing-tipping-point-for-foreign-capital)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-18/china-s-fiscal-pullback-stretches-into-august-as-spending-slumps)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-19/south-korea-s-justice-minister-nominee-withdraws-after-reshuffle)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-09-19/mark-walter-s-lieutenants-give-prosecutors-firsthand-accounts)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-18/wall-street-week-india-s-growth-test-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-18/-370-home-alone-sundae-on-the-plaza-s-menu-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-09-18/joopiter-head-of-sales-on-michael-jordan-jersey-auction-video)
 - [CNBC Top News](https://www.cnbc.com/2026/09/18/trump-white-house-ban-msnow-cnn-politico.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/18/trump-greenland-denmark-military-deal.html)
 - [CNBC Top News](https://www.cnbc.com/2026/09/19/underwater-war-sea-drones-defense-tech.html)
@@ -3251,14 +3249,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/advanced-flower-capital-director-leonard-tannenbaum-buys-87500-in-stock-93CH-4908063)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/aflacs-masatoshi-koide-sells-156-million-in-common-stock-93CH-4908062)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/deutsche-bank-sees-cautious-positioning-despite-market-resilience-93CH-4908060)
 - [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-trapped-in-76k81k-rectangle-live-breakout-levels-93CH-4898873)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/metropolitan-bank-director-fredston-sells-178180-in-stock-93CH-4908059)
 - [Investing.com News](https://www.investing.com/news/company-news/california-judge-blocks-part-of-tiktoks-400-million-privacy-settlement-4908058)
 - [Investing.com News](https://www.investing.com/news/economy-news/saudi-alerts-sound-as-yemen-fighting-puts-key-oil-shipping-routes-under-pressure-4908056)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/ptc-therapeutics-director-schmertzler-sells-135m-shares-93CH-4908055)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/pagaya-director-tami-rosen-sells-173348-of-pgy-shares-93CH-4908054)
-- [Investing.com News](https://www.investing.com/news/economy-news/china-opens-probes-into-four-online-travel-booking-platforms-4908053)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-90-sec-issues-innovation-exemption-facilitate-trading-tokenized-nms-stock-request-comment)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-89-sec-proposes-rescission-shareholder-proposal-rule-reforms-proxy-solicitation-process)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-88-sec-grants-exemptive-relief-certain-inline-xbrl-filing-or-submission-requirements)
@@ -3292,6 +3290,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinDesk](https://www.coindesk.com/daybook-us/2026/09/18/xrp-on-the-brink-of-a-golden-cross-as-focus-switches-to-altcoins)
 - [CoinDesk](https://www.coindesk.com/markets/2026/09/18/layer-2-and-defi-tokens-lead-broad-crypto-advance-as-post-fed-hike-nerves-fade)
 - [CoinDesk](https://www.coindesk.com/markets/2026/09/18/bitcoin-weathers-september-storm-as-rate-hikes-and-clarity-act-setback-test-bulls)
+- [CoinTelegraph](https://cointelegraph.com/news/hong-kong-jails-former-banker-over-16b-false-credit-cryptocurrency-bribes-report?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/coinbase-files-to-bring-single-stock-perpetual-futures-to-us-market?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/binance-expands-tradfi-push-with-247-foreign-exchange-perpetuals?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
@@ -3299,23 +3298,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/cftc-submits-crypto-market-regulation-plan-for-white-house-review?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-hits-81k-as-us-bond-yields-rebound-on-global-oil-woes?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/banks-double-eu-mica-crypto-register-esma?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/ethereum-institutional-support-ethlabs-reduce-ethereum-block-times?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/evolution-petroleum-epm-big-rebound-024349343.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/why-arm-stock-popped-today-023237661.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/millicom-tigo-profit-plunged-84-024848938.html)
-- [Yahoo Finance US](https://finance.yahoo.com/healthcare/articles/jazz-pharmaceuticals-jazz-places-820m-025614927.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/amer-sports-went-beating-raising-030024343.html)
-- [Yahoo Finance US](https://finance.yahoo.com/energy/articles/apa-corp-apa-cuts-rigs-030926250.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/progressive-stock-buy-sell-hold-023500694.html)
-- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/merchant-supplier-massive-upside-guggenheim-015950441.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/commodities/articles/charles-schwabs-sonders-favors-commodities-034400371.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/world-indices/articles/asian-shares-mostly-rise-cheered-032549542.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/sec-greenlights-tokenized-stocks-clarity-040100321.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/articles/student-loan-debt-weighs-heavily-040100133.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/generac-soars-2-4b-deal-040100644.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/outlook-cloudy-fed-rate-hike-040100680.html)
+- [Yahoo Finance US](https://finance.yahoo.com/small-business/articles/selling-ria-retirement-strategy-mind-040200124.html)
+- [Yahoo Finance US](https://finance.yahoo.com/markets/options/articles/why-retirement-savers-don-t-040300321.html)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595810?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595796?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595808?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595800?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595813?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595820?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595819?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595811?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595812?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6595798?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
