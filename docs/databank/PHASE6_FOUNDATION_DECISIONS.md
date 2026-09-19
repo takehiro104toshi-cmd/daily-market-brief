@@ -259,3 +259,6 @@ D0 は本書で解決済み。
 - P6-A2 の結果: Family B（D5 / D6 / D9 / D15 / D19 / D17 evidence 側）は `PHASE6_THEME_IDENTITY_EVIDENCE_CONTRACT.md`
   で凍結（`P6_A2_THEME_IDENTITY_EVIDENCE_CONTRACT_FROZEN`）。本書 §11 の Family B 行は解決済み。D17 の再構成側と
   D7 / D8 は Family C に残る。次 gate は P6-A3（Family C: persistence ＋ revision contract）。
+- P6-A3 の結果: Family C（D7 / D8 / D17 全体）は `PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` で凍結
+  （`P6_A3_THEME_PERSISTENCE_REVISION_CONTRACT_FROZEN`）。本書 §11 の Family C 行は解決済み。契約 gate（A0〜A3）は
+  完了。次 gate は P6-A4a Theme model（`src/intelligence/themes/` の model module のみ。§7 の import 制限）。

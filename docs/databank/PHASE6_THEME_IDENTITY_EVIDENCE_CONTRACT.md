@@ -550,3 +550,7 @@ CONTEXT・DERIVED_INTERPRETIVE・PROPOSAL_ONLY・LLM_PROPOSAL role・MISSING 時
 ## 23. 次 gate
 
 **P6-A3 Theme Persistence ＋ Revision Contract**（Family C）。本書は P6-A3 の入力である。
+
+P6-A3 の結果: Family C（D7 / D8 / D17 全体）は `PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` で凍結
+（`P6_A3_THEME_PERSISTENCE_REVISION_CONTRACT_FROZEN`）。本書 §22 の A3 行は解決済み。本書の identity / evidence
+意味論は変更されていない。次 gate は P6-A4a Theme model（実装）。

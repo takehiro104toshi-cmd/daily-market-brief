@@ -4,6 +4,45 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.01 (2026-09-19) — Phase 6 P6-A3 Theme persistence ＋ revision 契約（設計のみ）
+
+Family C（D7 履歴 model / D8 永続化 authority と writer model / D17 点時刻再構成の全体）を凍結した。
+**runtime source・test・package・knowledge・workflow の変更は無い。** ThemeStore / `src/intelligence/themes/` /
+discovery / lifecycle / graph / LLM は実装していない。歴史 runtime の port なし。新 hash chain は導入しない。
+
+### 追加 — `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md`
+
+- 前例監査（P5 store / resolver を floor として全面継承、Fact / Context / Compass / ArticleIdentity の破損行 skip は
+  floor 未満、歴史 Decision の hash chain は不要と判断）。
+- D7: HYBRID（不変 ThemeObservation chain ＋ 追記専用 governance event stream ＋ 追記専用 metadata 履歴 ＋ 不変
+  RootRecord ＋ version 付き mapping 記録、derived 点時刻状態）。latest-wins / 可変行 / 単一巨大 stream より安全な理由。
+- canonical authority 5 本（roots / observations / governance / metadata / series_mappings）と固定 load 順。
+  RootRecord は作成事実のみ（`genesis_observation_id` を作成時に固定、current_* 禁止）。root と genesis の論理的対、
+  PENDING_GENESIS / orphan の扱い。
+- observation chain（predecessor 厳密 1・物理先行・同一 root・recorded_at 非減少・fork を生む append は拒否・file 上の
+  fork は当該 root のみ UNRESOLVED・revert は新 observation・latest-wins なし）。canonical bytes の内訳
+  （semantic ＋ attachment ＋ provenance ＋ recorded_at を含み、DERIVED は含まない）。
+- append 検証表（byte 冪等 / CONFLICT / ROOT_NOT_FOUND / GENESIS_MISMATCH / DANGLING / WRONG_ROOT /
+  NON_TERMINAL / 時刻範囲 / 禁止 evidence / IDENTITY_CORE_CHANGED / PROHIBITED_CONTENT）。
+- D8: 追記専用 JSONL、明示 data_root（repository fallback なし）、SINGLE_WRITER、1 store が 5 authority を所有、
+  byte 長による改変検知。cross-file 原子性は「宣言が先・完了が後・宣言が id を固定・未完了は明示 PENDING」で解決
+  （transaction 機構・authority としての SQLite なし）。
+- governance event stream（field・最小 event 種別 11・root ごとの event chain）と解決規則（競合 terminal は
+  UNRESOLVED、EVENT_REVERSED）。metadata 履歴（Option A、(root, field) chain、集合 field は snapshot、field 単位の
+  UNRESOLVED）。
+- D17: 点時刻再構成の純関数（RESOLVED / NO_STATE / UNRESOLVED / INVALID_HISTORY / STORE_CORRUPTION、facet 独立、
+  evidence は evidence_time ≤ T かつ attached_at ≤ T、T 以後の record は無影響、derived は再計算）。recorded_at の
+  意味論（aware UTC、時計注入、chain 単調）。
+- revision / correction の区別と訂正例の永続化先、A2 §16 全分類の永続化先対応、上流 evidence 改訂時の不変性、
+  merge（Option B 新 root）/ split / successor の永続化、derived SQLite の境界、rebuild 決定論、schema versioning
+  （in-place migration 経路なし）、失敗状態 4 区分と code 表、単一 writer、repository / security 境界、
+  不変条件 61〜97、実装順序の推奨（A4a model / A4b store / A4c resolver / A4d E2E）。
+
+### 改善
+
+- `PHASE6_THEME_IDENTITY_EVIDENCE_CONTRACT.md` §23、`PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md` §23、
+  `PHASE6_FOUNDATION_DECISIONS.md` §14 に P6-A3 の結果（Family C 解決）を追記。意味論・決定内容は変更していない。
+
 ## v5.00 (2026-09-19) — Phase 6 P6-A2 Theme identity ＋ evidence 契約（設計のみ）
 
 Family B（D5 evidence authority / D6 identity model / D9 evidence 役割 / D15 entity 連結境界 / D19 市場確認 mapping /
