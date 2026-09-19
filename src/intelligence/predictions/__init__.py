@@ -18,6 +18,9 @@
   `evaluation_store`（`<data_root>/predictions/evaluations.jsonl` への追記専用 journal。
   supersession は append であり前の行を変更しない。「現在の評価」の解決は含まない）、P5-2C の
   `evaluation_engine`（PredictionRecord ＋ カレンダー証拠 ＋ TOPIX 観測 → EvaluationRecord の
-  offline 純関数。市場 outcome のみを評価し、予測の正誤・較正・network を含まない）。
-  P5-2D end-to-end offline 検証 / P5-3 較正は**未実装**。
+  offline 純関数。市場 outcome のみを評価し、予測の正誤・較正・network を含まない）、P5-3A の
+  `calibration_contract`（較正の分析契約: 分析用 5→3 方向写像・active evaluation resolver・
+  cohort・分母・sample disclosure・lineage。観測的 analytics であり production authority ではない。
+  journal を読む analyzer と persistence は含まない）。
+  P5-3B offline 較正 analyzer は**未実装**。
 """

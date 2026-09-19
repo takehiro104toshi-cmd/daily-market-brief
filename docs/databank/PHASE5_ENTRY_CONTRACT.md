@@ -694,3 +694,78 @@ single-writer は P5-2A / P5-2B / P5-2C と本書 §14〜§16 の間で一致し
 
 **P5-2 status: CLOSED / FROZEN（監督者受理待ち）。** P5-3 以降は着手していない。
 
+---
+
+## 18. P5-3A 較正の分析契約 ＋ metric 仕様（`calibration_contract.py`）
+
+N-1〜N-6・P5-1・P5-2 を変えない。**P5-3 は観測的 analytics であり production authority ではない。**
+PredictionRecord / EvaluationRecord / MarketSignal / Compass DNA を書き換えず、閾値・confidence を
+自動調整せず、formal-review 昇格を作らず、売買推奨・因果主張・小標本からの将来予測力の主張を
+しない。P5-3A が凍結したのは契約と純粋 helper だけで、journal を読む analyzer（P5-3B）と
+persistence は含まない。
+
+- **入力の権威**: 凍結 PredictionRecord と EvaluationRecord（および追記専用 store）のみ。P4 を
+  再実行せず、TOPIX を再計算せず、市場 / API / カレンダーに依存しない（record の iterable を受ける）。
+- **分析用の方向写像 `prediction_direction_mapping:1.0.0`**（分析専用。保存 record の 5 level は
+  畳まず、MarketSignal の意味論は不変）:
+  `UPWARD_LEAN` / `SLIGHT_UPWARD_LEAN` → predicted_direction `UP`、`NEUTRAL_RANGE` → `RANGE`、
+  `SLIGHT_DOWNWARD_LEAN` / `DOWNWARD_LEAN` → `DOWN`。これは P4 `LEVEL_BY_STATE` の方向成分
+  （UPWARD_BIAS / RANGE_BOUND / DOWNWARD_BIAS）の逆射影そのものであり（SLIGHT_* は confidence LOW の
+  差だけ）、repository の語彙と矛盾しないことをテストで固定した。
+- **active evaluation の解決 `active_evaluation_resolver:1.0.0`**: EvaluationStore は「最新 / 現在」を
+  定義しないため、分析は supersession graph の意味論で 1 つの active evaluation を決める。
+  superseded された評価は歴史的証拠として残るが通常の outcome metric の active には使わない。
+  terminal（誰にも supersede されていない）評価が 1 つだけのとき、それが active。
+  `A → B` は B、`A → B → C` は C、`A → B` かつ `A → C`（fork）は `FORK`、supersession の無い独立評価が
+  複数なら `MULTIPLE_TERMINALS`、前任が集合内に無ければ `DANGLING_SUPERSESSION`、subject 不一致は
+  `SUBJECT_MISMATCH`、同 id 別内容は `DUPLICATE_ID`。これらは active 無し・診断付きで outcome metric
+  から除外する（黙って推測しない）。**created_at で選ばない。物理的な最終行を意味の権威にしない。**
+  journal は変更しない。
+- **DEFERRED / 評価なし**: DEFERRED は realized outcome ではなく UP / RANGE / DOWN の分母に入らない。
+  coverage（`ACTIVE_EVALUATED` / `ACTIVE_DEFERRED` / `NO_EVALUATION` / `UNRESOLVED`）を別集計し、
+  DEFERRED が EVALUATED に supersede されれば active は EVALUATED。歴史的 defer 情報は診断用に残す。
+  評価 coverage の悪い較正結果はそれを可視化する。
+- **棄権**: `available == false` は wrong / RANGE / zero / DEFERRED として採点しない。予測 cohort は
+  `ALL` / `AVAILABLE` / `ABSTAINED` を黙って merge しない。棄権予測の active EVALUATED outcome は
+  棄権診断（見送った日の市場 outcome）にだけ使い、通常の方向 exact match の分母に入れない。
+- **LIVE / REPLAY**: `PredictionRecord.origin` で分離し、既定で pool しない。COMBINED headline は
+  持たない（origin の語彙にも無い）。日付から origin を推定しない。
+- **cohort 境界**: `CohortBoundary(origin, start_session, end_session)`（PredictionRecord.session_date の
+  閉区間。既定の「全履歴」は無く、EvaluationRecord.created_at は期間の定義に使わない）。同一
+  session_date の複数 prediction_id は date で dedupe せず、prediction 件数と unique session 件数を
+  両方報告する。
+- **主要 metric `directional_exact_match`**: AVAILABLE 予測 ＋ active EVALUATED outcome について
+  `predicted_direction == realized_outcome`（UPWARD_LEAN+UP・SLIGHT_UPWARD_LEAN+UP・
+  NEUTRAL_RANGE+RANGE・DOWNWARD_LEAN+DOWN は match、SLIGHT_DOWNWARD_LEAN+RANGE は非 match）。
+  歴史的 exact match 率であり、正解確率・将来精度・期待 return・skill score と呼ばない。
+  numerator / denominator を必ず併記する。
+- **5 × 3 混同行列**: 行 = 5 level（保存語彙のまま）、列 = UP / RANGE / DOWN、cell = 件数
+  （行率は分母明示のときのみ）。写像で失われる情報を保存する中核 artifact であり、単一の率に還元しない。
+- **level 条件付き outcome 分布**: level ごとの P(UP | level) / P(RANGE | level) / P(DOWN | level) は
+  経験的な歴史的頻度であり、N・origin・期間を必ず併記し、将来確率と呼ばない。
+- **連続 return の記述統計**（`ReturnSummary`）: level / confidence ごとに N・mean・median・
+  mean_abs・min・max・outcome 件数。Decimal（`prec 28 / ROUND_HALF_EVEN`、内部で丸めない）。
+  Sharpe・年率化・P&L・取引コスト・投資シミュレーションは無い（signal 較正であり backtest ではない）。
+- **confidence**: HIGH / MEDIUM / LOW を別集計（件数・評価完了率・方向 exact match 率・outcome 分布・
+  return 統計）。level × confidence の cross-tab も sample disclosure 付きで許す。HIGH が良いと
+  仮定せず測る。confidence 閾値は変えない。
+- **棄権 / 評価 coverage の metric**: total / available / abstained 件数と棄権率、active EVALUATED /
+  active DEFERRED / 評価なし件数と評価完了率。棄権と評価 coverage を混ぜない。
+- **sample disclosure `sample_disclosure:1.0.0`**: N = 0 `NO_DATA` / 1–9 `INSUFFICIENT_SAMPLE` /
+  10–29 `LIMITED_SAMPLE` / 30 以上 `REPORTABLE`。統計的有意性ではなく開示ラベル。生の件数は常に
+  示してよいが、率の解釈は disclosure を伴う。信頼区間・有意性は主張しない。
+- **分母**（`Denominator` の凍結語彙。名前を変えずに分母を変えない）:
+  `abstention_rate = abstained / total_predictions`、`evaluation_completion_rate = active_evaluated /
+  predictions_in_cohort`、`directional_exact_match_rate = exact_matches / available_with_active_evaluated`、
+  level / 棄権 / confidence の各 metric もそれぞれの分母を名指しする。
+- **lineage / 再現性**（`CalibrationLineage`）: `calibration_contract:0.1.0`・写像版・disclosure 版・
+  resolver 版・prediction / evaluation record 件数・cohort digest（prediction_id 集合の content digest）・
+  active evaluation digest（prediction ごとの active id または診断 status の digest）。訂正で新しい
+  EvaluationRecord が append されれば active digest と派生 metric は正当に変わる（旧 journal は
+  書き換えない）。hash chain ではない。
+- **数値方針**: 件数 int、率と return 統計は Decimal（`Rate` は numerator / denominator / canonical
+  value / disclosure を露出）。float を権威にしない。表示丸めは後段。
+- **依存境界**: import は PredictionRecord / EvaluationRecord / `core.ids` / `reports.market_signal`
+  （SignalLevel）と stdlib のみ。J-Quants・market Observation・tokyo_calendar・evaluation_engine・
+  store・P4 pipeline・顧客 rendering に依存しない。
+

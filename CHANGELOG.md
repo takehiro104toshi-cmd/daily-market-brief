@@ -4,6 +4,58 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.94 (2026-09-19) — Phase 5 P5-3A 較正の分析契約 ＋ metric 仕様
+
+P5-1 / P5-2（CLOSED / FROZEN）の上に、較正の**分析契約だけ**を凍結した（SPECIFICATION FIRST）。
+journal を読む analyzer（P5-3B）・persistence・P4 MarketSignal / Compass DNA / 閾値 / confidence
+の変更・runtime 統合・公開出力は**含まない**。較正は観測的 analytics であり production authority
+ではない。
+
+### 追加 — `src/intelligence/predictions/calibration_contract.py`
+
+- 分析用 5→3 方向写像 `prediction_direction_mapping:1.0.0`（UPWARD_LEAN / SLIGHT_UPWARD_LEAN → UP、
+  NEUTRAL_RANGE → RANGE、SLIGHT_DOWNWARD_LEAN / DOWNWARD_LEAN → DOWN）。P4 `LEVEL_BY_STATE` の
+  方向成分の逆射影と一致することをテストで証明。保存 record の 5 level は畳まない。
+- `directional_exact_match`（歴史的 exact match。確率・将来精度・skill score ではない）。
+- active evaluation resolver `active_evaluation_resolver:1.0.0`: supersession graph の意味論で
+  terminal 1 つを active に。fork / 独立 terminal 複数 / dangling / subject 不一致 / 同 id 別内容は
+  診断付きで除外（`ResolutionStatus`）。created_at と物理順を使わない。
+- cohort: `CohortBoundary(origin, start_session, end_session)`（session_date の閉区間、既定なし）、
+  `PredictionCohort` ALL / AVAILABLE / ABSTAINED、LIVE / REPLAY 分離（COMBINED なし）、
+  同一 session の複数予測を dedupe しない（unique session 件数を併記）。
+- coverage `EvaluationCoverage`（ACTIVE_EVALUATED / ACTIVE_DEFERRED / NO_EVALUATION / UNRESOLVED）。
+  DEFERRED は outcome の分母に入らない。棄権は採点しない。
+- 分母の凍結語彙 `Denominator` と 9 つの `MetricDefinition`（分母を名指し）、`Rate`
+  （numerator / denominator / Decimal value / disclosure）。
+- `sample_disclosure:1.0.0`（0 NO_DATA / 1–9 INSUFFICIENT_SAMPLE / 10–29 LIMITED_SAMPLE /
+  30+ REPORTABLE）。有意性・信頼区間は主張しない。
+- `OutcomeCounts` / `summarize_returns`（Decimal・prec 28 固定 context・mean / median / mean_abs /
+  min / max・Sharpe / 年率化 / P&L なし）。
+- lineage: `content_digest` / `cohort_digest` / `active_evaluation_digest` / `CalibrationLineage`
+  （版 4 種 ＋ record 件数 ＋ digest 2 種。hash chain ではない）。
+- 依存: PredictionRecord / EvaluationRecord / `core.ids` / `reports.market_signal` と stdlib のみ。
+
+### 追加 — `tests/intelligence/test_calibration_contract.py`（48 tests）
+
+- gate §24 の 60 項目（写像と版・P4 逆射影一致・exact match 定義・棄権 / DEFERRED / 評価なしの
+  cohort と分母・resolver の chain / fork / 独立 terminal / dangling / subject 不一致・created_at と
+  物理順の非使用・LIVE / REPLAY 分離・5×3 行列・rate の分子分母・level 条件付き Decimal 率・
+  confidence・棄権 / coverage・unique session と非 dedupe・cohort 境界・disclosure 閾値・生件数の
+  保持・有意性不主張・Decimal / float 非権威・digest の決定論と訂正での変化・不変性・
+  Compass DNA / 閾値 / confidence 非調整・market / calendar / engine 非依存・公開 / 取引語彙不在）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §18「P5-3A 較正の分析契約 ＋ metric 仕様」を追加。N-1〜N-6・§14〜§17 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py` / `test_evaluation_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `calibration_contract.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-3B（offline 較正 analyzer）以降は着手していない。
+
 ## v4.93 (2026-09-18) — Phase 5 P5-2D Evaluation end-to-end OFFLINE 検証（P5-2 完了）
 
 P5-2A / P5-2B / P5-2C を 1 つの系として検証する gate。新機能・runtime 統合・CLI は追加せず、
