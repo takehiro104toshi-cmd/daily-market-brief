@@ -4,6 +4,38 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.99 (2026-09-19) — Phase 6 P6-A1 Theme 意味論 ＋ authority 契約（設計のみ）
+
+Family A（D1 Theme の形式意味論 / D2 Theme vs Narrative / D3 Theme vs Context / D4 Theme vs Compass /
+D16 人間 governance）を凍結した。**runtime source・test・package・knowledge・workflow の変更は無い。**
+ThemeRecord / ThemeStore / discovery / lifecycle / graph / LLM は実装していない。歴史 runtime の port なし。
+
+### 追加 — `docs/databank/PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md`
+
+- Theme の形式定義（主題 ＋ 機構、機構確度 class の明示、scope、時間を跨ぐ持続性、evidence 参照能力、
+  反証可能性、不変履歴、内部知識としての位置）と資格判定（QUALIFIES_SEMANTICALLY / THEME_CANDIDATE_POSSIBLE /
+  DOES_NOT_QUALIFY の条件 Q1〜Q8）。
+- 「keyword の袋ではない」の凍結、意味論構成要素の分類（REQUIRED / OPTIONAL / LATER / MUST_NOT）、機構の確度
+  class（観測された連関 / 仮説 / evidence に支持された機構 / source の明示的因果主張、co-occurrence ≠ causality、
+  件数で class を上げない）、持続性の意味論（数値閾値なし、lifecycle と分離）、支持 / 反証 / limitations
+  （能力必須、反証 0 件は正当、不在 ≠ 確証、limitations 非空は reviewed の governance 要件）。
+- Theme vs Topic / Event / Context（Context は Theme ではなく DERIVED context としてのみ後日消費、Theme は Context
+  無しで存在可）/ Narrative（prose は authority ではない、Phase 7）/ Compass（Phase 6 で恒久分離）/ Prediction /
+  Recommendation の境界。
+- authority 階層 L0〜L3（Phase 6 では L3 production interpretive authority に到達不可）、人間 governance
+  Option B（自動候補 ≠ reviewed Theme ≠ Compass authority、自動 system の可 / 不可）、LLM authority 境界、
+  粒度の暫定境界（企業固有 thesis は Phase 9）、資格判定表 14 例、意味論的不変条件 25 項、既存 "theme" 語彙
+  （ThemeReference / Statement.themes / legacy config）は topic tag であって Theme ではないという衝突監査、
+  Family B / C / D の未解決事項。
+
+### 改善 — `docs/databank/PHASE6_FOUNDATION_DECISIONS.md`
+
+- §14 に P6-A1 の結果（Family A 凍結、次 gate P6-A2）を追記。他節は不変。
+
+### 未実施
+
+- P6-A2（Theme Identity ＋ Evidence Contract）以降は着手していない。
+
 ## v4.98 (2026-09-19) — Phase 6 P6-A0.5 土台 / port / 境界の決定（設計のみ）
 
 Phase 6（Theme）の P6-A0 監査（受理済み）を受け、監督者決定 F-1〜F-10 と D0（歴史資産の port 方針）を

@@ -254,3 +254,5 @@ D0 は本書で解決済み。
 - D0: **解決**（A ＝ 空。歴史 runtime source の import 無しで土台を構築する）。
 - 変更: 本書の新規作成と `CHANGELOG.md` のみ。runtime source・test・package・knowledge・workflow は無変更。
 - 次 gate: **P6-A1 Theme Semantics ＋ Authority Contract**（Family A）。本書は P6-A1 の入力である。
+- P6-A1 の結果: Family A（D1 / D2 / D3 / D4 / D16）は `PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md` で凍結
+  （`P6_A1_THEME_SEMANTICS_AUTHORITY_FROZEN`）。本書 §11 の Family A 行は解決済み。次 gate は P6-A2（Family B）。
