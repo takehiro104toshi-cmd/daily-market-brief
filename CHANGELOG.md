@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.04 (2026-09-19) — Phase 6 P6-A4c Theme point-in-time resolver 実装
+
+A3 §13（D17）の点時刻再構成を実装した。resolver は canonical history の読み取り専用の解釈器であり、authority ではない。
+lifecycle / discovery / dedup / graph / LLM / Compass・Brief・P5 連携 / SQLite / 修復 / append は含まない。
+A4a / A4b の凍結 file、P4 production bundle、P5 凍結 source / test は無変更。開発 branch を
+`claude/investment-intelligence-phase6`（A4b anchor から分岐）へ移行した。
+
+### 追加 — `src/intelligence/themes/resolver.py`
+
+- `resolve(history, root_id, cutoff)` / `resolve_from_store` / `resolve_at_data_root`（read-only）。cutoff は aware 必須。
+- eligibility（root created_at / observation・governance・metadata recorded_at / mapping recorded_at ＋ valid_from /
+  attachment evidence_time ＋ attached_at のすべて ≤ T）。T 後の record は影響しない。
+- status: RESOLVED / NO_STATE / UNRESOLVED / INVALID_HISTORY / STORE_CORRUPTION、facet 別 status
+  （NO_GOVERNANCE / NO_METADATA / NO_MAPPING / UNRESOLVED / NOT_EVALUATED）。潰さない。
+- observation chain は predecessor graph のみで解決（fork / 複数 terminal ＝ UNRESOLVED、recorded_at 最大・物理順を
+  使わない）。evidence view（visible / not_yet_attached / evidence_after_cutoff / context_without_time）。
+- governance facet（chain、EVENT_REVERSED の畳み込みで effective event、取消の取消）、lineage 注釈（MERGED_INTO /
+  MERGE_OF / SPLIT_INTO / SPLIT_FROM / SUPERSEDED_BY / SUCCESSOR_OF）、metadata field 別 facet、mapping facet
+  （並行 chain 正当、fork のみ UNRESOLVED）。facet 間で曖昧を伝播しない。
+- PENDING_GENESIS / PENDING_EVENT を T 時点の事実として診断（修復なし、後日完了は遡及しない）。
+- carried evidence lineage（origin event の配分 ＋ byte 同一 attachment）、DERIVED（fingerprint / 資格判定 /
+  DIRECTLY_EVIDENCED link）を visible evidence だけから A4a 純関数で再計算、caller 供給の upstream dereference。
+
+### 追加 — tests/intelligence
+
+- `test_theme_resolver.py` / `test_theme_resolver_facets.py`（cutoff 境界、遅延付与の非遡及、fork / latest-wins 否定、
+  PENDING の保持、決定論と入力順独立、read-only、store failure の boundary、governance / reversal / merge / split /
+  successor / metadata / mapping / lineage / dereference / facet 独立）。boundary test を resolver に拡張。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §32 に resolver の実装状態を追記。
+
 ## v5.03 (2026-09-19) — Phase 6 P6-A4b Theme canonical store 実装
 
 A3 の永続化意味論を実装した。resolver / 点時刻状態 / lifecycle / discovery / graph / SQLite / LLM / Compass・P4・P5

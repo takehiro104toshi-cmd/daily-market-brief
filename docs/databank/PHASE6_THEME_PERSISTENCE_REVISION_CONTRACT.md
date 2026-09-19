@@ -700,4 +700,32 @@ P6-A4a で **純 model 層のみ**を実装した（store / JSONL IO / resolver 
 | load の 2 pass | 固定順で 1 行ずつ parse ＋ 同一 file / 先行 authority への参照を検査（intra）、全 authority 読込後に後続 authority への参照（root の origin event、observation の carried 配分、event の result root 整合）を検査（cross）。append 時は両方を即時に検査 |
 | A4c へ | 点時刻再構成、governance / metadata / mapping の terminal 選択と UNRESOLVED 判定、EVENT_REVERSED の意味論、上流 dereference、DUPLICATE_CANDIDATE の提示。A4b は生 record の exact lookup と物理 terminal（`physical_terminal_*`）だけを提供する |
 
-次 gate: **P6-A4c Theme point-in-time resolver**（§27）。
+次 gate（A4b 時点）: P6-A4c Theme point-in-time resolver（§27）。
+
+## 32. 実装状態（P6-A4c point-in-time resolver。契約の意味論は変更していない）
+
+branch: A4c 以降は `claude/investment-intelligence-phase6`（A4b anchor `6b4bc86909c0f1101d898b31f0c518cc7daa46fd` から分岐。
+phase5 branch は同 anchor で不変）。
+
+| 項目 | 実装 |
+|---|---|
+| module | `src/intelligence/themes/resolver.py`（`theme_resolver:0.1.0`）。import は `core.time` ＋ themes の model / fingerprint / qualification / store（read-only API のみ）。closure 12 module |
+| 入力 | `ThemeHistory`（5 authority の in-memory record 集合。順序は無意味）。`ThemeHistory.from_store(store)` は `canonical_lines` から復元、`resolve_from_store` / `resolve_at_data_root`（read-only open）は書かない・reload しない |
+| API | `resolve(history, root_id, cutoff, dereference=None)`、`resolve_from_store(store, …)`、`resolve_at_data_root(data_root, …)`。current / latest / active / state_at 等の便宜 API は無い |
+| cutoff | aware 必須（naive は NAIVE_DATETIME）。root `created_at <= T`、observation / governance / metadata `recorded_at <= T`、mapping `recorded_at <= T` かつ `valid_from <= T`、attachment `evidence_time <= T` かつ `attached_at <= T`。T 後の record は結果にも診断にも現れない |
+| status | `ResolutionStatus` RESOLVED / NO_STATE / UNRESOLVED / INVALID_HISTORY / STORE_CORRUPTION（統合しない）。facet は `GovernanceStatus`（RESOLVED / NO_GOVERNANCE / UNRESOLVED / NOT_EVALUATED）、`MetadataStatus`（… NO_METADATA …）、`MappingStatus`（… NO_MAPPING …）。STORE_CORRUPTION / INVALID_HISTORY は `resolve_at_data_root` が store の fail closed を status として返す（facet は NOT_EVALUATED） |
+| observation | root 内 eligible observation だけで predecessor graph を再構成。唯一 terminal ＝ RESOLVED、0 件 ＝ NO_STATE（NOT_YET_OBSERVED）、fork / 複数 terminal / 複数 start ＝ UNRESOLVED（診断 FORK / MULTIPLE_TERMINALS / MULTIPLE_STARTS）、genesis 不一致・宣言 genesis 不可視・dangling・別 root predecessor・cycle ＝ INVALID_HISTORY。recorded_at 最大・物理順は使わない |
+| evidence view | terminal observation の attachment のうち両時点 ≤ T のみ `visible`。`not_yet_attached`（attached_at > T）、`evidence_after_cutoff`（evidence_time > T。model 上は不可能だが独立検査）、`context_without_time`（quality MISSING の CONTEXT。authoritative view 外）を分離 |
+| governance | root ごとの eligible event chain（subject event は `previous_event_ids[root]`、宣言 event は start）。唯一 terminal ＝ RESOLVED、fork / 複数 start ＝ 当該 facet のみ UNRESOLVED、無し ＝ NO_GOVERNANCE。EVENT_REVERSED は履歴を残したまま `in_force(e) = not any(in_force(r) for r in reversals_of[e])` で畳み込み、効力を持つ最後の非取消 event を `effective_event_id / effective_event_type` に返す（取消の取消も扱う）。lifecycle 状態名は導入しない |
+| lineage | eligible な MERGE / SPLIT / SUPERSEDED_BY_ROOT から MERGED_INTO / MERGE_OF / SPLIT_INTO / SPLIT_FROM / SUPERSEDED_BY / SUCCESSOR_OF を注釈として返す。旧 root の semantic observation は書き換えない |
+| metadata | (root, field) ごとに独立解決（LABEL / DESCRIPTION / TAXONOMY / ALIAS の 4 facet を常に返す）。無し ＝ NO_METADATA、fork ＝ その field だけ UNRESOLVED |
+| mapping | eligible mapping の supersession chain。並行 chain（別 series）は正当で terminal 集合を返す。同一 predecessor を 2 つ以上が supersede ＝ facet のみ UNRESOLVED。predecessor が未だ有効でない（valid_from > T）場合は start 扱い（診断 PREDECESSOR_NOT_YET_ELIGIBLE） |
+| PENDING | `pending`: PENDING_GENESIS（root は T で存在、宣言 genesis が T で不可視）、PENDING_EVENT（宣言 event は T で可視、result root または genesis が T で不可視。result root 側の解決でも返す）。修復・補完しない。後日の完了 record が T より後なら過去の結果は変わらない |
+| carried evidence | result root の attachment のうち origin event の配分に一致し source attachment と byte 同一のものを `CarriedEvidence(attachment_key, source_observation_id, source_root_id, origin_event_id)` として再構成（A4b と同じ authority。attachment schema に carried_from を追加しない） |
+| DERIVED | fingerprint（A4a `identity_core_fingerprint` / `semantic_fingerprint`）、資格判定（A4a の `counted_attachments` / `exclusion_diagnostics` / `independent_origin_count` / `evidence_date_set` / `period_frame` を **visible attachment だけ**に適用。`evaluate_qualification` と同じ合成）、DIRECTLY_EVIDENCED link、contradiction / invalidation flag。canonical に保存しない |
+| dereference | `UpstreamLookup = Callable[[EvidenceAttachment], DereferenceStatus]` を caller が供給（既定 NOT_CHECKED）。NOT_CHECKED / AVAILABLE / NOT_FOUND / SUPERSEDED / UNUSABLE / DUPLICATE_ORIGIN。resolver は何も取りに行かず、結果は canonical 再構成と別 field |
+| 決定論 | 同一 record 集合・root_id・cutoff → 同一 `ThemeResolution`（frozen dataclass 等価）。入力順の shuffle・disk からの再読込で不変（test） |
+| 純粋性 | write / repair / reload / 時計 / 乱数 / network / SQLite / Compass / Brief / P5 / legacy config なし（boundary test で token 検査、read-only open のみ） |
+| A4d へ | E2E world（fork / merge / split / successor / correction / 遅延付与 / 上流改訂 / crash / journal 連結）、replay 決定論、不変条件 1〜97 の test 対応表、derived SQLite index は A4d 以降 |
+
+次 gate: **P6-A4d Theme foundation E2E**（§27）。
