@@ -256,3 +256,6 @@ D0 は本書で解決済み。
 - 次 gate: **P6-A1 Theme Semantics ＋ Authority Contract**（Family A）。本書は P6-A1 の入力である。
 - P6-A1 の結果: Family A（D1 / D2 / D3 / D4 / D16）は `PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md` で凍結
   （`P6_A1_THEME_SEMANTICS_AUTHORITY_FROZEN`）。本書 §11 の Family A 行は解決済み。次 gate は P6-A2（Family B）。
+- P6-A2 の結果: Family B（D5 / D6 / D9 / D15 / D19 / D17 evidence 側）は `PHASE6_THEME_IDENTITY_EVIDENCE_CONTRACT.md`
+  で凍結（`P6_A2_THEME_IDENTITY_EVIDENCE_CONTRACT_FROZEN`）。本書 §11 の Family B 行は解決済み。D17 の再構成側と
+  D7 / D8 は Family C に残る。次 gate は P6-A3（Family C: persistence ＋ revision contract）。

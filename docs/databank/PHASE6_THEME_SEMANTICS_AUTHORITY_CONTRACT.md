@@ -301,3 +301,7 @@ evidence を消費する側）。`src/intelligence/__init__.py` / `MORNING_DELIV
 ## 23. 次 gate
 
 **P6-A2 Theme Identity ＋ Evidence Contract**（Family B）。本書は P6-A2 の入力である。
+
+P6-A2 の結果: Family B（D5 / D6 / D9 / D15 / D19 / D17 evidence 側）は
+`PHASE6_THEME_IDENTITY_EVIDENCE_CONTRACT.md` で凍結（`P6_A2_THEME_IDENTITY_EVIDENCE_CONTRACT_FROZEN`）。
+本書 §22 の B 行は解決済み。本書の意味論は変更されていない。次 gate は P6-A3（Family C）。

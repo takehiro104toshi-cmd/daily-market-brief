@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.00 (2026-09-19) — Phase 6 P6-A2 Theme identity ＋ evidence 契約（設計のみ）
+
+Family B（D5 evidence authority / D6 identity model / D9 evidence 役割 / D15 entity 連結境界 / D19 市場確認 mapping /
+D17 evidence 側二重時点）を凍結した。**runtime source・test・package・knowledge・workflow の変更は無い。**
+ThemeStore / 永続化 / discovery / lifecycle / graph / LLM は実装していない。歴史 runtime の port なし。
+
+### 追加 — `docs/databank/PHASE6_THEME_IDENTITY_EVIDENCE_CONTRACT.md`
+
+- 現行 primitive（Fact / Observation / SourceDocument / NewsItem / Statement）の id 導出・時点 field・lineage field の検証表。
+- 二層 identity（不透明な生成 root id ＋ 内容住所の不変 observation）。root 生成は生成 id ＋ 別途 fingerprint を採用
+  （内容導出 root は等価候補の構築上の自動 merge を招くため却下）。12 変更の root 影響分類、identity core の置換は
+  NEW_ROOT_REQUIRED（fail closed）。
+- 不変 observation の内容分類（IDENTITY / SEMANTIC・PROVENANCE・AUDIT・DERIVED。P5 の identity subset ＋ canonical
+  JSON ＋ conflict fail closed を継承）。label / description / taxonomy は observation 外の metadata。
+- evidence authority class 4 値（PRIMARY_OBSERVATIONAL / DERIVED_INTERPRETIVE / PROPOSAL_ONLY / NOT_THEME_EVIDENCE）と
+  19 種以上の kind 分類。Theme は ContextItem 無しで資格を満たせること。
+- evidence 参照の field（kind / class / revision 固有 ref_id / source origin / evidence_time（basis・quality）/
+  attached_at / role / role provenance / consequence_ref / metadata flag）。値・本文の複製禁止。
+- 二重時点 model（EVIDENCE_TIME vs ATTACHED_AT vs AUDIT）。kind ごとの evidence_time 由来（known_at / as_of /
+  published_at ＋ date_quality / event_time）。ingestion 時刻の代替禁止、MISSING は fail closed、再構成条件は両時点。
+- source 独立性（evidence item / lineage / source origin / independent source origin）、転載・派生・同一 series
+  複数日付の扱い、SOURCE DIVERSITY と TEMPORAL DIVERSITY の分離（score なし）。
+- 役割 4 値（SUPPORTS / CONTRADICTS / CONTEXT / INVALIDATES）、TRIGGER は metadata、1 attachment 1 role、role
+  provenance 3 値（RULE / HUMAN / LLM_PROPOSAL。LLM は資格に算入しない）。
+- 構造化された機構（DRIVER / TRANSMISSION_CHANNEL / AFFECTED_DOMAIN / EXPECTED_OBSERVABLE_CONSEQUENCE の型付き
+  component ＋ provenance）、確度 class は observation level に 1 つ、二段 fingerprint（identity core / semantic）と
+  除外規則、fingerprint ≠ identity・自動 merge なし。
+- entity 連結 3 class（DIRECTLY_EVIDENCED / INFERRED_EXPOSURE / TAXONOMIC_ASSOCIATION）、市場確認 mapping は別の
+  version 付き記録（Option C）、limitation / invalidation condition / contradicting evidence の区別、revision 境界
+  23 例、merge / split の明示 governance、資格判定の再述、例 14、不変条件 26〜60。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md` §23 と `docs/databank/PHASE6_FOUNDATION_DECISIONS.md`
+  §14 に P6-A2 の結果（Family B 解決）を追記。意味論・決定内容は変更していない。
+
 ## v4.99 (2026-09-19) — Phase 6 P6-A1 Theme 意味論 ＋ authority 契約（設計のみ）
 
 Family A（D1 Theme の形式意味論 / D2 Theme vs Narrative / D3 Theme vs Context / D4 Theme vs Compass /
