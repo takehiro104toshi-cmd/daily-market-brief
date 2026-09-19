@@ -4,6 +4,24 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.11 (2026-09-19) — Phase 6 P6-B4A Theme taxonomy / entity / discovery architecture audit（docs only）
+
+B4 runtime を設計する前の read-only 監査。runtime・tests・knowledge・config・workflow は無変更。Foundation・B1・B2・B3 は
+凍結のまま（FOUNDATION / B1 / B2 / B3 CHANGE_REQUIRED いずれも NO。B3.1 候補は OPTIONAL_FUTURE として列挙）。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_TAXONOMY_ENTITY_DISCOVERY_AUDIT.md`: B3 intake surface の監査（proposal id は provenance を
+  含まない ＝ rule 非依存 identity、`reason` は EVIDENCE_CANDIDATE の identity 内、knowledge pin の構造化 field 不在）、
+  TaxonomyNode / EntityRecord 案、taxonomy content の置き場所比較（推奨: `knowledge/theme_intelligence/` YAML ＋ versioned code
+  model）、entity type は Foundation `ThemeEntityKind` の部分集合 9 種（TECHNOLOGY / POLICY_PROGRAM は taxonomy / mechanism で
+  表す）、entity id は `<kind>:<slug>` 不変 token（typed_reference が identity core に入るため）、historical 資産 12 件の
+  PORT / REDESIGN / REFERENCE_ONLY / REJECT 再評価、discovery 入力 authority 表、proposal-only の出力 pipeline（自動 promotion
+  NO）、rule model、rule versioning（proposer_ref ＋ rule_version で足りる）、matching level（L1 ＋ 限定 L2、L3 は B7）、
+  mechanism assembly（template ＋ binding のみ、共起から CAUSES を作らない）、EvidenceCandidate bridge（別 gate B4E 推奨）、
+  false positive containment、source independence、PIT / time、governance 境界、機密性、package 境界、sub-gate
+  B4B / B4C / B4D / B4E、将来 test、監督者決定 D-B4-1〜10。
+
 ## v5.10 (2026-09-19) — Phase 6 P6-B3 Theme proposal journal ＋ dedup review 実装
 
 「Theme 候補」「重複候補」「人間 review decision」を Foundation とは別の append-only proposal authority
