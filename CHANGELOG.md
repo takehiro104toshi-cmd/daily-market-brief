@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.98 (2026-09-19) — Phase 6 P6-A0.5 土台 / port / 境界の決定（設計のみ）
+
+Phase 6（Theme）の P6-A0 監査（受理済み）を受け、監督者決定 F-1〜F-10 と D0（歴史資産の port 方針）を
+凍結した。**runtime source・test・package・knowledge・workflow の変更は無い。** ThemeRecord / ThemeStore /
+discovery / lifecycle / graph / LLM は実装していない。
+
+### 追加 — `docs/databank/PHASE6_FOUNDATION_DECISIONS.md`
+
+- F-1 開発土台（現 branch 継続、歴史 branch は参照のみ・merge / rebase / wholesale port 禁止）、F-2 架構位置
+  （新しい内部層。Compass / Brief / Signal / P5 に依存せず、凍結 module から import されない）、F-3 作業定義、
+  F-4 MVP 順序（identity → evidence → 支持 / 反証 → 不変履歴 → 点時刻再構成 → change 表現。discovery は後）、
+  F-5 evidence authority（PRIMARY / OBSERVATIONAL と DERIVED / INTERPRETIVE の区別）、F-6 EvidencePackage
+  非再利用、F-7 履歴原則、F-8 永続化の品質下限（P5 append-only 規律以上）、F-9 legacy theme learning の
+  precedent 除外、F-10 較正の分離。
+- D0 解決: **土台に必要な歴史 runtime port は無い**（A ＝ 空）。歴史資産 22 件を A / B / C / D に分類
+  （B: taxonomy・themes・theme_graph・entity catalog・theme_matcher・taxonomy loader・news_builder は各 gate の
+  個別認可で後日、C: causal_rules・LLM 境界・store / override・evidence jsonl_store・lifecycle / patterns /
+  review_queue・THEME_DISCOVERY_RULES（機密注意）・spec 2 本、D: corpus 結合の risk / why / regime、
+  decision / formal_review、歴史 placeholder、legacy theme_learning）。
+- 文書 evidence gap（contract first / producer later。SourceDocument / NewsItem 参照で十分）、entity gap
+  （linkage は identity より後）、taxonomy gap（独立 identity ＋ discovery 語彙。slug ＝ identity にしない）、
+  歴史 lifecycle / governance（原則のみ継承）、将来 `themes` package の import 境界（許可 model module と
+  禁止 package）、evidence authority 境界、土台 MVP の contract 目標と除外、非目標、D1〜D22 の 4 family 再編、
+  最小 guard 方針、機密 / security 点検。
+
+### 未実施
+
+- P6-A1（Theme Semantics ＋ Authority Contract）以降は着手していない。
+
 ## v4.97 (2026-09-19) — Phase 5 完了監査 / closeout
 
 Phase 5（Prediction Journal）を 1 つの chain として読み取り監査し、
