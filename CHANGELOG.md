@@ -4,6 +4,36 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.96 (2026-09-19) — Phase 5 P5-3C 較正 end-to-end OFFLINE 検証
+
+P5-3A（契約）＋ P5-3B（analyzer）を 1 つの分析系として OFFLINE で検証した（VALIDATION のみ。
+新機能・runtime 統合・persistence・実 journal 実行・較正 feedback・production tuning は含まない）。
+凍結 P5-3A / P5-3B への corrective patch は不要だった。
+
+### 追加 — `tests/intelligence/test_calibration_e2e.py`（41 tests）
+
+- 代表的な意味世界（LIVE available 14 ＋ 棄権 4、REPLAY 3、期間外 2、評価 28: chain・fork・独立
+  terminal・DEFERRED→EVALUATED・orphan・foreign）を凍結 builder のみで構築し、
+  `analyze_calibration` → `calibration_report:0.1.0` → `as_dict()` → builder / 凍結 `from_dict` からの
+  再構築 → 同一 report を証明。
+- gate §3〜§19: 件数の真実性（18 / 13 / 23 / 28 / 23 / 5）、coverage 分割 (12,1,2,3)、5×3 行列の明示
+  期待値と合計 11 = exact match 分母、一致 6 = 凍結写像で一致する cell の和、level / confidence /
+  15 cell の期待値、訂正（A→B で active・行列・return・active digest が変わり cohort digest と履歴は
+  不変。A→B→C は入力順に依らず C）、DEFERRED→EVALUATED（分母 10→11）、fork / 独立 terminal の
+  UNRESOLVED（分母不参加・shuffle 不変）、棄権 4 種（confidence 保持棄権は bucket 外）、coverage
+  分割の全 group 成立、LIVE / REPLAY 分離、disclosure 境界 N = 0/1/9/10/29/30、空 cohort、重複
+  fail closed（意味的同一 object 含む）、foreign / cohort 外の影響範囲、8 通り shuffle の byte 一致、
+  JSON / Decimal / timestamp なし直列化、入力不変、runtime import closure 14 module、P5-3A / P5-3B /
+  本書 §18〜§19 の整合監査。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §20「P5-3 完了検証（P5-3C）」を追加（PASS・監督者 freeze 待ち）。§14〜§19・N-1〜N-6 は不変。
+
+### 未実施
+
+- Phase 5 completion audit / closeout・P5-4・Phase 6 は着手していない。
+
 ## v4.95 (2026-09-19) — Phase 5 P5-3B 純粋 OFFLINE 較正 analyzer
 
 P5-3A（FROZEN）の契約を**そのまま適用する**純粋 offline analyzer を追加した。store / filesystem /

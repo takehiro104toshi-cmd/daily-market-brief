@@ -823,3 +823,41 @@ analyzer**であり、第二の metric 契約・第二の resolver・「最新�
   Pages・notification・CLI に依存しない。production runtime closure から到達しない
   （`EXCLUDED_PACKAGES` に `predictions` を維持）。
 - **未実施**: P5-3C（較正 end-to-end offline 検証）は本 gate に含まない。
+
+## 20. P5-3 完了検証（P5-3C）
+
+P5-3A（`calibration_contract`）・P5-3B（`calibration_analyzer`）を 1 つの分析系として OFFLINE で
+検証した（`tests/intelligence/test_calibration_e2e.py`。凍結 builder で作った隔離 fixture のみ、
+CLI / runner / 較正 store / 実 journal / network / market / calendar / evaluation_engine なし）。
+検証したのは**機構**であり、実績データの歴史的性能ではない。
+
+| 検証項目 | 結果 |
+|---|---|
+| E2E 経路 | 凍結 PredictionRecord 集合（LIVE 18 = available 14 ＋ 棄権 4、REPLAY 3、期間外 2）＋ 凍結 EvaluationRecord 履歴 28（chain・fork・独立 terminal・orphan・foreign を含む）＋ 明示 `CohortBoundary(LIVE, 09-01..09-30)` → `analyze_calibration` → `calibration_report:0.1.0` → `as_dict()` → builder からの再構築および凍結 `from_dict`（JSON 経由）からの再構築 → 同一 report（dict も JSON 文字列も一致） |
+| 件数の真実性 | prediction_count 18 / unique_session 13（同一 session の複数 id を保持）/ supplied 23・28 / associated 23 / foreign 5（associated ＋ foreign = supplied）。coverage 12 / 1 / 2 / 3（FORK 2・MULTIPLE_TERMINALS 1）で予測をちょうど 1 回ずつ分割 |
+| 5 × 3 行列 | 5 level 全部が出現。cell の明示期待値（UPWARD_LEAN 2/0/2、SLIGHT_UPWARD_LEAN 1/0/0、NEUTRAL_RANGE 1/1/0、SLIGHT_DOWNWARD_LEAN 0/0/1、DOWNWARD_LEAN 1/1/1）に一致。15 cell 合計 11 = 方向 exact match 分母。一致件数 6 = 凍結写像 `prediction_direction_mapping:1.0.0` で一致する cell の和（analyzer は写像を再実装しない）。P4 が生成する 7 組だけが埋まり、残り 8 cell は 0 件のまま可視 |
+| 訂正 / supersession | A（UP・一致）→ B（DOWN・supersedes A・**古い** created_at）で active が B に変わり、exact match 7/11 → 6/11、UPWARD_LEAN 行 (3,0,1) → (2,0,2)、return 要約が変わる。cohort_digest 不変、active_evaluation_digest 変化、supplied / associated 評価件数 27 → 28 / 22 → 23。A は source history に残り、PredictionRecord は不変。A → B → C（最古の created_at）は入力順を 4 通り shuffle しても C が active |
+| DEFERRED → EVALUATED | A（DEFERRED）だけのとき coverage (11,2,2,3)・分母 10・DOWNWARD_LEAN 行 total 2・HIGH bucket (4,1,0,0)。B（EVALUATED・supersedes A）後は (12,1,2,3)・分母 11・行 total 3（UP 1 追加）・HIGH (5,0,0,0)。DEFERRED は RANGE にも正誤にもならず、A は書き換えない |
+| unresolved | fork（A→B、A→C。created_at は B 古い / C 新しい）は `FORK`、独立 terminal 2 件は `MULTIPLE_TERMINALS`。診断 status・terminal id・件数は report に残り、outcome / return / exact match のどの分母にも入らない。評価順を shuffle しても同一 report（created_at・物理順から推測しない） |
+| 棄権 | draft_abstained（EVALUATED DOWN）/ direction_mixed（confidence MEDIUM 保持・DEFERRED）/ no_outlook（評価なし）/ direction_uncertain（confidence LOW 保持・fork）の 4 件が total 18・abstained 4・棄権率 4/18 に残り、coverage (1,1,1,1)。EVALUATED の 1 件だけが棄権 outcome / return 診断に入る。方向 exact match には入らず、RANGE / 正誤へ変換されない。**confidence を保持した棄権は confidence bucket に入らない**（MEDIUM 3 = L2/L8/L12、LOW 6、合計 14 = available） |
+| coverage 分割 | overall・棄権・5 level・3 confidence・15 cell のすべてで `active_evaluated + active_deferred + no_evaluation + unresolved == predictions`、診断別件数の和 = unresolved。level / confidence / cell の予測合計 14 ＋ 棄権 4 = 18。bucket ごとにも level 合計 ＋ 棄権 = overall |
+| LIVE / REPLAY | 同じ期間で LIVE report（18 件）と REPLAY report（3 件、coverage (2,0,1,0)、exact 1/2、associated 2 / foreign 26）を別々に生成。同じ session_date が両 origin にあっても prediction_id は衝突せず別観測。origin は date から推定されず、COMBINED report は存在しない |
+| sample disclosure | analyzer の出力で N = 0 / 1 / 9 / 10 / 29 / 30 → NO_DATA / INSUFFICIENT / INSUFFICIENT / LIMITED / LIMITED / REPORTABLE（方向 exact match・outcome 頻度・行率・評価完了率・ReturnSummary）。生の分子 / 分母 / 件数は全 N で可視。有意性・信頼区間の語彙なし |
+| 空 cohort | 予測 23 件を供給しても 1 件も選ばれない cohort は例外ではなく、件数 0・分母 0・値 None・NO_DATA・5 行・3 列・3 bucket・15 cell・`realized_classification: []`・空 digest の有効な report。`([], [], cohort)` と digest が一致し、繰り返しで同一 |
+| 重複 fail closed | 同一 object・凍結 `from_dict` で再構築した意味的同一 object のいずれでも、prediction_id / evaluation_id の重複供給は `CalibrationInputError`。黙った dedupe・二重計上なし。入力 list と record は不変 |
+| foreign / cohort 外 | 期間外（前後）・別 origin・未知 prediction_id の評価を除いても、変わるのは supplied_evaluation_count / foreign_evaluation_count / lineage.evaluation_record_count だけ。cohort 外の予測を供給しなくても変わるのは supplied_prediction_count / lineage.prediction_record_count だけ。metric・行列・return・cohort_digest・active_evaluation_digest は同一 |
+| 決定論 | 予測・評価の入力順を 8 通り shuffle（半数は逆順）しても `json.dumps(as_dict())` が byte 一致。行列・level・confidence・cross-tab の順序は凍結語彙順で固定、unresolved id は昇順、lineage digest 不変 |
+| 直列化 | `as_dict()` は JSON 互換、float なし（int / str / bool / None のみ）、Decimal は凍結 canonical 表現（`parse_canonical_decimal` で往復、例: mean `0.002909090909090909090909090909`）、created_at / generated_at / now / timestamp の key なし、零 bucket・6 診断 status・版はすべて保持。`from_dict` は P5-3B 通り追加していない（再構築は入力 record 側で行う） |
+| 入力不変 | 1 回・繰り返し・shuffle・訂正比較・REPLAY・空 cohort の後も PredictionRecord / EvaluationRecord の `as_dict()` と object identity は不変。frozen dataclass。分析は cwd に何も書かない |
+| 依存 / read-only | P5-3A ＋ P5-3B の runtime import closure は 14 module（core / compass.model / reports / prediction_record / evaluation_record 経由）に閉じ、evaluation_engine / prediction_ingest / PredictionStore / EvaluationStore / market.model / tokyo_calendar / J-Quants / delivery / Pages / notifier を含まない。実行 source に open( / write_text / mkdir / unlink / rename / store.append / network / environ / datetime.now なし。P4 production closure は predictions に到達せず、predictions 外の src / scripts は calibration_* を参照しない |
+
+完了監査（読み取りのみ）: 写像版・resolver 版・disclosure 版・contract 版・report 版、分母定義
+（`Denominator` と analyzer の数値が fixture から独立に数えた件数と一致）、AVAILABLE のみの方向採点、
+AVAILABLE のみの confidence 集計、棄権 / DEFERRED / unresolved の分離、LIVE / REPLAY 分離、cohort 閉区間、
+重複 fail closed、lineage の件数 / digest の意味、Decimal 方針（prec 28 / ROUND_HALF_EVEN）は
+P5-3A / P5-3B と本書 §18〜§19 の間で一致している。矛盾は見つからず、凍結意味論への patch は無い。
+P5-1 / P5-2 / P5-3A / P5-3B は各 anchor から不変。
+
+**P5-3 completion validation: PASS（監督者 freeze 待ち）。** P5-4 / Phase 5 closeout は着手していない。
+
+---
