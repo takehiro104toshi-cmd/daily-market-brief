@@ -4,6 +4,40 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.02 (2026-09-19) — Phase 6 P6-A4a Theme 土台 model 実装
+
+Phase 6 Theme の **最初の runtime 実装 gate**。`src/intelligence/themes/` に純 model 層だけを追加した。
+store / JSONL IO / resolver / SQLite / discovery / lifecycle / graph / LLM / Compass・Reports・P5 連携 / 歴史 port は
+含まない。production bundle（P4）・P5 凍結 source / test は無変更。
+
+### 追加 — `src/intelligence/themes/`（model.py / fingerprint.py / qualification.py / revision.py）
+
+- A3 の 5 canonical record（ThemeRootRecord / ThemeObservation / ThemeGovernanceEvent / ThemeMetadataRecord /
+  ThemeSeriesMapping）を frozen dataclass として実装（schema version `*:0.1.0`、fail closed の `ThemeModelError`
+  ＋ 機械可読 code、`as_dict` / `from_dict` 往復、未知 field 拒否）。
+- A1 / A2 の語彙（機構確度 4 class、authority 4 class、role 4 値、provenance 3 値、component 4 型、evidence kind 5、
+  time basis / quality、entity link 3 class、governance event 11 種、metadata field 4、mapping role 3）。
+- 構造化された機構（driver / channel / domain / expected observable consequence、語彙 version 付き category、
+  typed reference、正規化文、assertion provenance）、主題、scope token、limitation、invalidation condition、
+  INFERRED_EXPOSURE link、evidence attachment（二重時点・basis / quality・source origin・role ＋ provenance・
+  consequence / invalidation ref・flag・QA snapshot・locator / excerpt）、observation provenance。
+- content id: observation / event / metadata / mapping は identity payload だけから `content_id`、root は生成 id
+  （`new_root_id`）。canonical 直列化は P5 と同じ canonical JSON、集合的 field は構築時に canonical sort。
+- DERIVED 純関数: 二段 fingerprint（identity core / semantic）、source origin group（保守的独立性）、temporal
+  diversity、資格判定（A1 Q1〜Q8 ＋ A2 §19。score なし）、DIRECTLY_EVIDENCED link。
+- 同一 root revision helper（`revise_observation` / `attach_evidence`。identity core 変化は IDENTITY_CORE_CHANGED）。
+
+### 追加 — tests/intelligence
+
+- `test_theme_model.py` / `test_theme_identity.py`（golden vector 6 本）/ `test_theme_evidence.py` /
+  `test_theme_governance_model.py` / `test_theme_import_boundary.py`（closure 9 module、IO / 時計 / 乱数 / store 不在、
+  production bundle からの排除、凍結 package からの非参照）。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §30 に実装状態（schema / id / payload 材料 /
+  実装判断）を追記。契約本文は変更していない。
+
 ## v5.01 (2026-09-19) — Phase 6 P6-A3 Theme persistence ＋ revision 契約（設計のみ）
 
 Family C（D7 履歴 model / D8 永続化 authority と writer model / D17 点時刻再構成の全体）を凍結した。

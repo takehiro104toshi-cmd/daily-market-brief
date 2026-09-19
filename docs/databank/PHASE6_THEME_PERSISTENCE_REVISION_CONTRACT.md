@@ -634,3 +634,44 @@ graph（P6-B）はその後。
 ## 29. 次 gate
 
 **P6-A4a Theme model**（§27）。本書と A1 / A2 が入力である。
+
+---
+
+## 30. 実装状態（P6-A4a。契約の意味論は変更していない）
+
+P6-A4a で **純 model 層のみ**を実装した（store / JSONL IO / resolver / SQLite / discovery / lifecycle / graph / LLM は未実装）。
+
+| 項目 | 実装 |
+|---|---|
+| package | `src/intelligence/themes/`（`__init__.py` / `model.py` / `fingerprint.py` / `qualification.py` / `revision.py`）。import は `core.ids` / `core.time` のみ（closure 9 module）。production bundle の EXCLUDED_PACKAGES に含まれる |
+| schema version | `theme_root:0.1.0` / `theme_observation:0.1.0` / `theme_governance:0.1.0` / `theme_metadata:0.1.0` / `theme_series_mapping:0.1.0`。語彙 version: `mechanism_vocabulary:0.1.0` / `governance_vocabulary:0.1.0` / `metadata_field_vocabulary:0.1.0` |
+| id prefix | root `theme_<ULID>`（生成。`new_root_id` のみが生成 primitive）／`thobs_` / `thgov_` / `thmeta_` / `thmap_` ＝ `core.ids.content_id(prefix, canonical_json(identity_payload))`（sha256 先頭 24 hex）／行 digest `thdigest_`（root_id とは別） |
+| observation_id の材料 | `schema_version, mechanism_vocabulary_version, root_id, previous_observation_id, subject, mechanism, certainty_class, scope, limitations, invalidation_conditions, inferred_links, attachments`（A2 §4 IDENTITY / SEMANTIC。provenance / recorded_at / DERIVED を含まない） |
+| event_id の材料 | `schema_version, governance_vocabulary_version, event_type, subject_roots, result_roots, related_observations, previous_event_ids, reverses_event_id, evidence_allocation, reason, actor_class`（actor_ref / recorded_at を含まない） |
+| metadata_id の材料 | `schema_version, metadata_field_vocabulary_version, root_id, field, value, previous_metadata_id, provenance_class, governance_event_id` |
+| mapping_id の材料 | `schema_version, root_id, consequence_ref, series_ref, mapping_role, expected_relation, valid_from, supersedes_mapping_id, provenance_class` |
+| canonical 直列化 | P5 と同じ `json.dumps(sort_keys=True, separators=(",",":"), ensure_ascii=False)`、datetime は UTC ISO、Enum は value、集合的 field は構築時に canonical sort（順序独立を test で証明）。`canonical_line(record)` ＝ 行 ＋ `\n` |
+| fingerprint | `fingerprint.identity_core_fingerprint`（`thcore_`）/ `semantic_fingerprint`（`thsem_`）。record に保存しない（DERIVED） |
+| 資格判定 | `qualification.evaluate_qualification`（QUALIFIES_SEMANTICALLY / THEME_CANDIDATE_POSSIBLE / DOES_NOT_QUALIFY ＋ 診断。score なし）、`source_origin_groups` / `independent_origin_count` / `evidence_date_set` / `has_source_diversity` / `has_temporal_diversity` / `directly_evidenced_links` |
+| revision helper | `revision.revise_observation` / `attach_evidence`（同一 root、identity core 不変を検査、時計注入、永続化なし） |
+| model 検証 code（A3 §7 / §23 と整合） | NAIVE_DATETIME / INVALID_ROOT_ID / INVALID_RECORD_ID / INVALID_VOCABULARY / UNSUPPORTED_SCHEMA_VERSION / EVIDENCE_AFTER_ATTACHMENT / MISSING_EVIDENCE_TIME / PROHIBITED_EVIDENCE_CLASS / PROHIBITED_EVIDENCE_KIND / REF_ID_KIND_MISMATCH / INVALID_MECHANISM / MISSING_OBSERVABLE_CONSEQUENCE / MISSING_INVALIDATION_CONDITION / MISSING_SCOPE / DUPLICATE_KEY / DUPLICATE_ATTACHMENT / DANGLING_CONSEQUENCE_REF / DANGLING_INVALIDATION_REF / DANGLING_SOURCE_CLAIM / MISSING_SOURCE_CAUSAL_CLAIM / UNSUPPORTED_CERTAINTY_CLASS / ATTACHED_AT_OUT_OF_RANGE / IDENTITY_CORE_CHANGED / NON_MONOTONIC_RECORDED_AT / MALFORMED_MERGE / MALFORMED_SPLIT / MALFORMED_SUCCESSOR / MALFORMED_REVERSAL / MALFORMED_GOVERNANCE_EVENT / ALLOCATION_VIOLATION / INVALID_ROLE_COMBINATION / MISSING_PROVENANCE / MISSING_REASON / PROHIBITED_CONTENT / NOT_NORMALIZED / UNKNOWN_FIELDS / IDENTITY_MISMATCH / NON_CANONICAL_RECORD |
+
+実装判断（契約の意味論を変えない範囲。field 名は A3 の推奨名を採用）:
+
+- 機構語彙の初期集合（`MECHANISM_CATEGORIES`。component 型ごとに 7〜10 語 ＋ `OTHER`。企業名・銘柄名を含まない）を
+  `mechanism_vocabulary:0.1.0` として同梱した。拡張は語彙 version の更新で行う（A2 §11 の shape 凍結に従う）。
+- attachment に `evidence_date`（YYYY-MM-DD。temporal diversity の単位。MISSING では空）と `subject_refs`
+  （evidence の subject entity の snapshot。DIRECTLY_EVIDENCED link の再計算材料）を持たせた。
+- attachment の authority class は PRIMARY_OBSERVATIONAL のみ受理（A3 §7）。kind ごとの `evidence_time_basis` /
+  `evidence_time_quality` の許容表と `ref_id` prefix（`fact_` / `obs_` / `doc_` / `news_`）を検査する。
+- governance event の actor_class は Phase 6 では HUMAN のみ受理（A1 §16 の「自動 system がしてはならないこと」に該当
+  する行為だけが event 種別であるため）。RULE / LLM_PROPOSAL は提案であり event を書けない。
+- metadata の `value` は常に tuple（単一値 field は要素 1、集合 field は全集合 snapshot）。
+- ThemeSubject / normalized_statement / ScopeToken.value は **正規化済み**（NFKC・casefold・空白圧縮）であることを要求
+  し、黙って書き換えない（`normalize_text` を呼び出し側が使う）。
+- INFERRED_EXPOSURE_LINK の `uncertainty` は HYPOTHESIZED / PARTIALLY_EVIDENCED / SOURCE_ASSERTED の class（数値でない）。
+- Q4 の判定のため PERIOD_FRAME token をちょうど 1 つ要求し、予約値 `single_session` / `single_event` は保持できるが
+  資格判定で DOES_NOT_QUALIFY になる。
+- root id の生成（`new_root_id`）だけが乱数 / 時刻を使う。validator・fingerprint・資格判定は純関数。
+
+次 gate: **P6-A4b Theme canonical store**（§27）。
