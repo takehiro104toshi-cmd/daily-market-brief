@@ -533,7 +533,7 @@ def test_p5_2_components_are_aligned() -> None:
 
 def test_no_validation_runner_or_cli_was_added() -> None:
     assert sorted(p.name for p in PACKAGE.glob("*.py")) == [
-        "__init__.py", "calibration_contract.py",
+        "__init__.py", "calibration_analyzer.py", "calibration_contract.py",
         "evaluation_engine.py", "evaluation_record.py", "evaluation_store.py",
         "prediction_ingest.py", "prediction_record.py", "prediction_store.py",
         "topix_neutral_band_measure.py", "topix_research_acquire.py",

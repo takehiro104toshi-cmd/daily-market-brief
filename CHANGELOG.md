@@ -4,6 +4,61 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.95 (2026-09-19) — Phase 5 P5-3B 純粋 OFFLINE 較正 analyzer
+
+P5-3A（FROZEN）の契約を**そのまま適用する**純粋 offline analyzer を追加した。store / filesystem /
+network / market / calendar / evaluation_engine に触れず、journal を変更せず、較正を永続化せず、
+P4 MarketSignal / Compass DNA / 閾値 / confidence を変更しない。較正は観測的 analytics であり
+production authority ではない。
+
+### 追加 — `src/intelligence/predictions/calibration_analyzer.py`
+
+- `analyze_calibration(predictions, evaluations, cohort) -> CalibrationReport`
+  （`calibration_report:0.1.0`）。凍結 PredictionRecord / EvaluationRecord の iterable と明示
+  `CohortBoundary` だけを受ける純関数（read-only・決定論的）。
+- cohort 選択は origin ＋ session_date 閉区間のみ（created_at / 物理位置 / 現在日付を使わない）。
+  同一 session の複数 prediction_id は dedupe しない（`prediction_count` ＋ `unique_session_count`）。
+- 対応付けは `prediction_id` のみで、予測ごとに凍結 `resolve_active_evaluation()` を呼ぶ
+  （第二の resolver・「最新」選択なし）。coverage は ACTIVE_EVALUATED / ACTIVE_DEFERRED /
+  NO_EVALUATION / UNRESOLVED の分割（`CoverageCounts` が検証）。UNRESOLVED は件数・診断別件数・
+  prediction_id で露出し分母に入らない（率は凍結 `METRIC_DEFINITIONS` に無いため件数のみ）。
+- cohort 外の予測・foreign evaluation は metric に影響しない。lineage の record 件数は供給 source
+  件数、`associated_evaluation_count` / `foreign_evaluation_count` は report 本体で別途報告。
+- report: `versions`・coverage 率・棄権（率 ＋ 棄権予測の outcome / return 診断、方向 exact match
+  なし）・方向 exact match（分母 = available かつ active EVALUATED）・overall outcome / Decimal return
+  統計・5×3 混同行列（零行可視）・level 別 5 行・confidence 別 3 bucket（AVAILABLE 予測のみ）・
+  level × confidence 15 cell。すべての率は凍結 `Rate`（分子・分母・disclosure、生件数を保持）。
+- 空 cohort は有効な report。重複 prediction_id / evaluation_id は `CalibrationInputError` で
+  fail closed。JSON 化して float を含まない。
+- 依存: `calibration_contract` / `evaluation_record` / `prediction_record` / `reports.market_signal`
+  と stdlib のみ。
+
+### 追加 — `tests/intelligence/test_calibration_analyzer.py`（35 tests）
+
+- gate §26 の 80 項目（cohort 境界・origin 分離・同一 session 複数予測・prediction_id のみの対応付け・
+  ACTIVE_DEFERRED / NO_EVALUATION / UNRESOLVED の分母除外・棄権の除外と保持・exact match の
+  分子分母・混同行列の形と合計・level / confidence / level×confidence の固定行と零 bucket・
+  棄権 outcome・Decimal return・sample disclosure の閾値・空 cohort・shuffle 決定論・重複 id
+  fail closed・orphan / cohort 外評価の除外・訂正での active と digest の変化・created_at / 物理順の
+  非使用・read-only・store / engine / market / network 非依存・公開 / 取引語彙不在・lineage 版・
+  report 版の明示・全 rate の分子分母露出）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §19「P5-3B 純粋 OFFLINE 較正 analyzer」を追加。§14〜§18 は不変。
+
+### 改善 — `src/intelligence/predictions/__init__.py`（docstring のみ）
+
+- `calibration_analyzer` を現在の内容に追記し、未実装を P5-3C に更新。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py` / `test_evaluation_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `calibration_analyzer.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-3C（較正 end-to-end offline 検証）以降は着手していない。
+
 ## v4.94 (2026-09-19) — Phase 5 P5-3A 較正の分析契約 ＋ metric 仕様
 
 P5-1 / P5-2（CLOSED / FROZEN）の上に、較正の**分析契約だけ**を凍結した（SPECIFICATION FIRST）。

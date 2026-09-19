@@ -769,3 +769,57 @@ persistence は含まない。
   （SignalLevel）と stdlib のみ。J-Quants・market Observation・tokyo_calendar・evaluation_engine・
   store・P4 pipeline・顧客 rendering に依存しない。
 
+## 19. P5-3B 純粋 OFFLINE 較正 analyzer（`calibration_analyzer.py`）
+
+N-1〜N-6・P5-1・P5-2・P5-3A を変えない。P5-3B は凍結 P5-3A の契約を**そのまま適用する純粋
+analyzer**であり、第二の metric 契約・第二の resolver・「最新」選択を発明しない。journal / store の
+変更・較正の永続化・市場データ取得・TOPIX 再評価・evaluation_engine 呼び出し・P4 / Compass DNA /
+閾値 / confidence の変更・runtime 統合・公開出力・売買推奨は**含まない**。
+
+- **入力の権威**: `analyze_calibration(predictions, evaluations, cohort)` は凍結 PredictionRecord と
+  EvaluationRecord の iterable と明示 `CohortBoundary` だけを受ける。store を要求せず、filesystem /
+  環境変数 / network / market / calendar / 現在日付に触れない（後段の adapter が
+  `store.iter_records()` を渡してよい）。read-only であり入力 record を変更しない。
+- **cohort 選択**: origin ＋ session_date の閉区間（`CohortBoundary.select`）。created_at・物理位置は
+  使わない。cohort 外の予測はどの metric・digest にも影響しない。LIVE / REPLAY は混ぜない。同一
+  session の複数 prediction_id は複数の観測のまま（`prediction_count` と `unique_session_count` を
+  両方報告）。
+- **対応付け**: `prediction_id` のみ。予測ごとに凍結 `resolve_active_evaluation()` を呼び、coverage は
+  ACTIVE_EVALUATED / ACTIVE_DEFERRED / NO_EVALUATION / UNRESOLVED のいずれか 1 つ（分割を
+  `CoverageCounts` が検証）。UNRESOLVED（FORK / MULTIPLE_TERMINALS / DANGLING_SUPERSESSION /
+  SUBJECT_MISMATCH / DUPLICATE_ID / CYCLE）は件数と診断別件数（`unresolved_by_status`）および
+  `unresolved_prediction_ids` で露出し、outcome / exact match の分母に入らない。unresolved の率は
+  凍結 `METRIC_DEFINITIONS` に無いため**件数のみ**（registry を変えない）。
+- **foreign evaluation と lineage 件数の意味**: cohort 外の prediction_id を持つ EvaluationRecord は
+  metric に影響しない。凍結 `CalibrationLineage` の `prediction_record_count` /
+  `evaluation_record_count` は**供給された source record の件数**（重複 id 検査後）、`cohort_digest`
+  は選ばれた予測の id 集合、`active_evaluation_digest` は cohort 内予測の active evaluation
+  （または診断 status）の digest。cohort 内で対応付いた `associated_evaluation_count` と
+  `foreign_evaluation_count` は report 本体に載せる（P5-3A の lineage 型は変えない）。
+- **report `calibration_report:0.1.0`**（`CalibrationReport.as_dict()`、JSON 化して float を含まない）:
+  `versions`（report 版・contract 版・写像版・resolver 版・disclosure 版・cohort 内に現れた
+  realized classification 版の一覧）、cohort、件数 4 種、`coverage`（件数 ＋ 評価完了率 /
+  active DEFERRED 率 / 評価なし率）、`abstention`（total / available / abstained・棄権率・棄権予測の
+  active EVALUATED outcome / return 診断。棄権に方向 exact match は無い）、
+  `directional_exact_match`（分母 = available かつ active EVALUATED。凍結 `directional_exact_match`）、
+  `overall`（同 eligible 集合の outcome 件数・outcome 頻度・凍結 `summarize_returns` の Decimal
+  統計）、`confusion_matrix`（行 = 5 level 全部・列 = UP / RANGE / DOWN・零行も可視・合計 =
+  exact match の分母）、`level_summaries`（5 行固定）、`confidence_summaries`（HIGH / MEDIUM / LOW
+  固定）、`level_confidence`（15 cell 固定、key `LEVEL|CONF`）。各 group は coverage・方向 exact
+  match・outcome summary を持つ。
+- **confidence 別集計は AVAILABLE 予測のみ**: unavailable の direction_mixed が保持する confidence は
+  outlook の属性であり方向予測が無いため、confidence bucket・方向 exact match の母集団に入れない
+  （棄権は `abstention` にのみ現れる）。
+- **rate と disclosure**: すべての率は凍結 `Rate`（numerator / denominator / canonical Decimal /
+  `sample_disclosure:1.0.0`）で、生の件数は常に残る。分母 0 は値 None ＋ NO_DATA。
+- **空 cohort**: 例外ではなく、件数 0・分母 0・値 None・NO_DATA・5 行・3 bucket・15 cell の有効な
+  report（決定論的に同一）。
+- **決定論**: 入力 iterable の順序は counts / resolver / rates / summaries / matrix / digest の
+  いずれにも影響しない（集計のためだけに id でソートする）。
+- **fail closed**: 同一 prediction_id または同一 evaluation_id の重複供給は `CalibrationInputError`
+  （黙って二重計上・上書きしない）。cohort 型不一致も同じ。
+- **依存境界**: import は `calibration_contract` / `evaluation_record` / `prediction_record` /
+  `reports.market_signal`（SignalLevel）と stdlib のみ。store・engine・market・calendar・pipeline・
+  Pages・notification・CLI に依存しない。production runtime closure から到達しない
+  （`EXCLUDED_PACKAGES` に `predictions` を維持）。
+- **未実施**: P5-3C（較正 end-to-end offline 検証）は本 gate に含まない。

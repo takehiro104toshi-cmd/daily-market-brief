@@ -21,6 +21,8 @@
   offline 純関数。市場 outcome のみを評価し、予測の正誤・較正・network を含まない）、P5-3A の
   `calibration_contract`（較正の分析契約: 分析用 5→3 方向写像・active evaluation resolver・
   cohort・分母・sample disclosure・lineage。観測的 analytics であり production authority ではない。
-  journal を読む analyzer と persistence は含まない）。
-  P5-3B offline 較正 analyzer は**未実装**。
+  journal を読む analyzer と persistence は含まない）、P5-3B の `calibration_analyzer`
+  （凍結 P5-3A 契約をそのまま適用する純粋 offline analyzer。record の iterable ＋ 明示 cohort →
+  決定論的 CalibrationReport。store / market / calendar / engine / persistence を含まない）。
+  P5-3C end-to-end 較正検証は**未実装**。
 """

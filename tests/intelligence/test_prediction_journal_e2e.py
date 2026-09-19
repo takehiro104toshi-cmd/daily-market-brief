@@ -435,7 +435,9 @@ def test_p5_remains_unreachable_from_the_p4_production_entrypoints() -> None:
 def test_no_validation_runner_or_cli_was_added() -> None:
     package = REPO_ROOT / "src" / "intelligence" / "predictions"
     assert sorted(p.name for p in package.glob("*.py")) == [
-        "__init__.py", "calibration_contract.py",         # P5-3A（契約 ＋ 純粋 helper。runner / CLI ではない）
+        "__init__.py",
+        "calibration_analyzer.py",                        # P5-3B（純粋 offline analyzer。persistence / CLI ではない）
+        "calibration_contract.py",                        # P5-3A（契約 ＋ 純粋 helper。runner / CLI ではない）
         "evaluation_engine.py",                           # P5-2C（offline 純関数。runner / CLI ではない）
         "evaluation_record.py",                           # P5-2A（object のみ。runner / CLI ではない）
         "evaluation_store.py",                            # P5-2B（追記専用 store。runner / CLI ではない）
