@@ -15,18 +15,25 @@ from tests.intelligence.test_theme_import_boundary import ALLOWED_CLOSURE as THE
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / "src" / "intelligence" / "theme_intelligence"
 THEMES_DIR = REPO_ROOT / "src" / "intelligence" / "themes"
-MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle")
-ALLOWED_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "typing"}
-ALLOWED_RELATIVE = {"..themes.model", "..themes.qualification", "..themes.resolver", ".model", ".lifecycle_model"}
+MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "proposal_model", "proposal_store",
+           "proposal_resolution", "dedup", "proposal_bridge")
+IO_MODULES = ("proposal_store",)                                         # 追記専用 JSONL のみ（P6-B3）
+IDENTITY_MODULES = ("proposal_model",)                                   # content id（thprop_ / thdec_）を計算する唯一の module
+ALLOWED_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "typing", "json", "re"}
+ALLOWED_STDLIB_IO = ALLOWED_STDLIB | {"os", "pathlib"}
+ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fingerprint", "..themes.qualification",
+                    "..themes.resolver", ".model", ".lifecycle_model", ".proposal_model", ".proposal_resolution"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
     "src.intelligence.theme_intelligence.change", "src.intelligence.theme_intelligence.lifecycle_model",
-    "src.intelligence.theme_intelligence.lifecycle"}
+    "src.intelligence.theme_intelligence.lifecycle", "src.intelligence.theme_intelligence.proposal_model",
+    "src.intelligence.theme_intelligence.proposal_store", "src.intelligence.theme_intelligence.proposal_resolution",
+    "src.intelligence.theme_intelligence.dedup", "src.intelligence.theme_intelligence.proposal_bridge"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
-                           "subprocess", "yaml", "random", "secrets", "store", "operations", "revision", "fingerprint")
+                           "subprocess", "yaml", "random", "secrets", "store", "operations", "revision")
 FORBIDDEN_SOURCE_TOKENS = ("sqlite", "open(", "Path(", "read_bytes(", "read_text(", "requests.", "urllib", "socket.",
                            ".now(", "utcnow", "time.time", "random.", "secrets.", "os.path", "subprocess", "yaml.",
                            "data/vnext", "INTELLIGENCE_DATA_ROOT", "data_root", "jsonl", ".write(", "fsync",
@@ -51,7 +58,8 @@ def test_modules_import_only_the_pure_read_only_foundation_surface() -> None:
         imports = imported_modules(PACKAGE_DIR / f"{name}.py")
         stdlib = {m for m in imports if not m.startswith(".")}
         relative = {m for m in imports if m.startswith(".")}
-        assert stdlib <= ALLOWED_STDLIB, (name, stdlib - ALLOWED_STDLIB)
+        allowed = ALLOWED_STDLIB_IO if name in IO_MODULES else ALLOWED_STDLIB
+        assert stdlib <= allowed, (name, stdlib - allowed)
         assert relative <= ALLOWED_RELATIVE, (name, relative - ALLOWED_RELATIVE)
         for token in FORBIDDEN_MODULE_TOKENS:
             assert not any(re.search(rf"(^|\.){token}(\.|$)", m) for m in imports), (name, token)
@@ -61,12 +69,16 @@ def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> N
     code = ("import sys\n"
             "import src.intelligence.theme_intelligence.model, src.intelligence.theme_intelligence.change\n"
             "import src.intelligence.theme_intelligence.lifecycle_model, src.intelligence.theme_intelligence.lifecycle\n"
+            "import src.intelligence.theme_intelligence.proposal_model, src.intelligence.theme_intelligence.proposal_store\n"
+            "import src.intelligence.theme_intelligence.proposal_resolution, src.intelligence.theme_intelligence.dedup\n"
+            "import src.intelligence.theme_intelligence.proposal_bridge\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
     closure = set(proc.stdout.split())
     assert closure <= ALLOWED_CLOSURE, closure - ALLOWED_CLOSURE
-    assert {"src.intelligence.theme_intelligence.change", "src.intelligence.theme_intelligence.lifecycle"} <= closure
+    assert {"src.intelligence.theme_intelligence.change", "src.intelligence.theme_intelligence.lifecycle",
+            "src.intelligence.theme_intelligence.dedup", "src.intelligence.theme_intelligence.proposal_bridge"} <= closure
     assert not any(token in m for m in closure for token in ("compass", "reports", "predictions", "internals", "context"))
 
 
@@ -94,13 +106,38 @@ def test_excluded_from_production_bundle_closure() -> None:
     assert "themes" in EXCLUDED_PACKAGES
 
 
+IO_ALLOWED_TOKENS = ("open(", "Path(", "read_bytes(", ".write(", "fsync", "data_root", "jsonl", "append_", "reload(",
+                     "initialize(")   # proposal_store のみ（追記専用 store の API）
+FORBIDDEN_IO_SOURCE_TOKENS = ("sqlite", "requests.", "urllib", "socket.", ".now(", "utcnow", "time.time", "random.", "secrets.",
+                              "subprocess", "yaml.", "core.paths", "ThemeStore", "execute_", "truncate(", '"w"', "'w'", '"r+"',
+                              "os.replace", "os.rename", "os.remove", "unlink(", "themes/")
+
+
 def test_no_io_clock_random_network_store_or_score_in_sources() -> None:
     for name in MODULES:
         source = executable_source(PACKAGE_DIR / f"{name}.py")
-        for token in FORBIDDEN_SOURCE_TOKENS:
+        forbidden = (tuple(t for t in FORBIDDEN_SOURCE_TOKENS if t not in IO_ALLOWED_TOKENS) + FORBIDDEN_IO_SOURCE_TOKENS
+                     if name in IO_MODULES else FORBIDDEN_SOURCE_TOKENS)
+        if name in IDENTITY_MODULES:                                                    # proposal / decision の content id を計算する module
+            forbidden = tuple(t for t in forbidden if t != "content_id(")
+        for token in forbidden:
             assert token not in source, (name, token)
         for token in LIFECYCLE_TOKENS:
             assert token not in source, (name, token)
+    store_source = executable_source(PACKAGE_DIR / "proposal_store.py")
+    assert "open('ab'" in store_source and "fsync" in store_source                      # 唯一の書き込み経路は追記のみ
+
+
+def test_proposal_modules_never_execute_foundation_operations_or_append_to_foundation() -> None:
+    """P6-B3 §15 / §22: bridge / dedup / store は Foundation に書かない・operations を実行しない・root id を生成しない。"""
+    for name in ("proposal_model", "proposal_store", "proposal_resolution", "dedup", "proposal_bridge"):
+        source = executable_source(PACKAGE_DIR / f"{name}.py")
+        for token in ("execute_candidate", "execute_declaration", "plan_candidate", "plan_merge", "append_root",
+                      "append_observation", "append_governance", "append_metadata", "append_mapping", "new_root_id", "new_id(",
+                      "new_ulid", "ThemeStore", "embedding", "cosine", "similarity", "nearest", "top_n", "rank"):
+            assert token not in source, (name, token)
+        imports = imported_modules(PACKAGE_DIR / f"{name}.py")
+        assert not any(m.endswith("themes.store") or m.endswith("themes.operations") for m in imports), (name, imports)
 
 
 def test_change_module_does_not_reimplement_store_or_resolver_semantics() -> None:

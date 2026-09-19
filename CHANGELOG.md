@@ -4,6 +4,41 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.10 (2026-09-19) — Phase 6 P6-B3 Theme proposal journal ＋ dedup review 実装
+
+「Theme 候補」「重複候補」「人間 review decision」を Foundation とは別の append-only proposal authority
+（`<data_root>/theme_intelligence/proposals.jsonl` / `proposal_decisions.jsonl`）に記録する層を追加した。Proposal ≠ Theme:
+proposal が存在しても ThemeRootRecord / ThemeObservation / governance は作られず、B3 は Foundation へ自動 write しない。
+Foundation・B1・B2 runtime・P4・P5 は無変更。config / workflow / 公開出力の変更なし。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `proposal_model.py`: `ThemeCandidateProposal`（A1 / A2 の Theme 定義を満たす構造。Foundation の純関数で semantic /
+  identity core fingerprint を計算し保持値と照合）、`EvidenceCandidateProposal`、`DedupReviewProposal`（RULE のみ、exact class
+  のみ）、`ProposalDecision`（HUMAN のみ、ACCEPT / REJECT / DEFER / NOT_DUPLICATE、`supersedes_decision_id`）。content id
+  `thprop_` / `thdec_`（created_at / recorded_at / provenance は identity 外）。全 datetime は aware UTC・caller 注入。
+- `proposal_store.py`: `ProposalStore`（明示 data_root、追記専用 JSONL、canonical 行、flush ＋ fsync、同 id 同 bytes 冪等 /
+  異 bytes CONFLICT、破損 fail closed、byte 長で外部変更検知、read-only、修復 / migration / SQLite なし）。decision chain の
+  validate-before-append（proposal 存在、種別別の許可 decision、predecessor の terminal 性、時刻単調性、fork 診断）。
+- `proposal_resolution.py`: `resolve_active_decision`（predecessor graph のみ。唯一 terminal ＝ RESOLVED、fork / 複数 start ＝
+  UNRESOLVED、dangling / cycle ＝ INVALID、時刻 / 物理順で選ばない）、`derive_proposal_status`（OPEN / OPEN_DEFERRED /
+  OPEN_UNRESOLVED / ACCEPTED / REJECTED / CLOSED_NOT_DUPLICATE / INVALID_DECISION_HISTORY）、`derive_open_proposals`。
+- `dedup.py`: `detect_exact_duplicates`（semantic fingerprint exact ＋ identity core fingerprint exact のみ。counterpart は
+  RESOLVED な ThemeResolution と他の THEME_CANDIDATE。複数 exact は全列挙、score / rank / nearest / embedding なし、
+  SCOPE / SUBJECT / MECHANISM / PARENT_CHILD の自動分類なし）。active NOT_DUPLICATE による derived suppression
+  （同 subject fingerprint・同 basis・同 dedup model version の同 counterpart は再提示しない。fingerprint / version 変更で再提示）。
+- `proposal_bridge.py`: `plan_theme_creation_from_accepted_proposal`（active ACCEPT の THEME_CANDIDATE だけを Foundation
+  candidate 作成の材料 `ThemeCreationPlan` にする。root_id を持たず生成せず、`execute_candidate` / `ThemeStore.append_*` を
+  呼ばない。plan に proposal id / decision id / actor の provenance）。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_proposal.py`（matrix 1〜30・40〜50）、`tests/intelligence/test_theme_dedup.py`（31〜39）。
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B3 module の import 境界と closure、
+  IO は proposal_store の追記のみ、operations / store 非 import、Foundation 非 write、root id 非生成、score / embedding token 不在）。
+- `docs/databank/PHASE6_THEME_PROPOSAL_DEDUP_CONTRACT.md`。
+- full suite 1723 passed（xfail 0 / skip 0）。
+
 ## v5.09 (2026-09-19) — Phase 6 P6-B2 Theme lifecycle view 実装
 
 Foundation の `ThemeResolution` 1 つから 2 層の lifecycle snapshot（governance 層 ＋ evidence 層）を導く純 derived 層を
