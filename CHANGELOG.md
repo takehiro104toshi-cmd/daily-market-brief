@@ -4,6 +4,44 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.08 (2026-09-19) — Phase 6 P6-B1 Theme change detection 実装
+
+Theme Foundation（凍結、anchor `12847bf`）の上に Theme Intelligence layer `src/intelligence/theme_intelligence/` を新設し、
+その最初の module として change detection を実装した。2 つの点時刻再構成 `ThemeResolution(root, T1)` / `(root, T2)` を
+比較し「Theme について何が変わったか」を決定論的な `ThemeChangeSet` で表す純 derived 層。authority ではなく journal に
+保存しない。Foundation 7 file・P4 production bundle・P5 凍結 source / test は無変更。lifecycle / discovery / dedup /
+graph / taxonomy / LLM / monitoring は含まない（監督者決定 D-B2〜D-B8）。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `__init__.py` / `model.py`: `ThemeChangeSet`（frozen。schema `theme_change_set:0.1.0`、model `theme_change_model:0.1.0`）、
+  `Change`、`ChangeKind` 語彙（ROOT_APPEARED / ROOT_BECAME_OBSERVED / OBSERVATION_REVISED / SEMANTIC_FIELD_CHANGED /
+  EVIDENCE_ADDED・CARRIED・DROPPED・ROLE_CHANGED・REF_REVISED・ATTRIBUTE_CHANGED / NEW_SOURCE_ORIGIN・SOURCE_ORIGIN_LOST /
+  NEW_EVIDENCE_DATE・EVIDENCE_DATE_LOST / QUALIFICATION_CHANGED / CONTRADICTION・INVALIDATION の APPEARED・CLEARED /
+  GOVERNANCE・METADATA・MAPPING・LINEAGE_CHANGED / PENDING_APPEARED・CLEARED / SEMANTIC・FACET_BECAME_UNRESOLVED・RESOLVED /
+  DEREFERENCE_CHANGED）、knowledge 軸（attached_at / recorded_at）と evidence-time 軸（evidence_time の window 関係）、
+  `ChangeSetStatus`（COMPUTED / UNAVAILABLE）、`ThemeChangeError`。lifecycle / 強弱 / 方向 / score の語は無い。
+- `change.py`: `compare_resolutions(before, after)`（主 authority）と `detect_changes(history, root_id, T1, T2,
+  dereference_before, dereference_after)`（resolver 公開 entry point を 2 回呼ぶ wrapper）。attachment_key 対応、決定論的
+  1:1 の role 訂正 / 上流 revision 対応（曖昧なら ADDED / DROPPED のまま）、carried evidence の区別、DerivedView の
+  diversity 比較（origin grouping を再定義しない）、facet 独立、UNRESOLVED / NO_STATE / dereference の分離、T1 > T2・root
+  不一致・resolver version 不一致は fail closed、INVALID_HISTORY / STORE_CORRUPTION は UNAVAILABLE な結果。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_change.py`（43 test。matrix 1〜42 ＋ 上流 revision 対応）、
+  `tests/intelligence/test_theme_intelligence_import_boundary.py`（7 test。語彙 / score / IO・時計・乱数 / import 境界 /
+  production closure / Foundation からの非参照）。
+- `docs/databank/PHASE6_THEME_CHANGE_DETECTION_CONTRACT.md`（authority 境界・語彙・二軸・evidence 対応・diversity・
+  qualification・contradiction / invalidation・facet 独立・UNRESOLVED / NO_STATE・dereference・決定論・除外・API・test・
+  versioning）。
+
+### 改善
+
+- `tests/intelligence/test_theme_import_boundary.py`: 「他 package は themes を import しない」の走査から、D-B1 で
+  Foundation の read-only surface を import してよい `theme_intelligence` だけを除外（その境界は新 boundary test が固定）。
+- full suite 1640 passed（xfail 0 / skip 0）。
+
 ## v5.07 (2026-09-19) — Phase 6 P6-B0 Theme Intelligence 設計監査（docs only）
 
 Theme Foundation（P6-A1〜A4d.1、anchor `12847bf`）は COMPLETE / CLOSED / FROZEN。その上に置く Theme Intelligence layer

@@ -84,8 +84,11 @@ def test_themes_is_excluded_from_production_bundle_and_no_frozen_package_imports
     assert "themes" in EXCLUDED_PACKAGES
     assert not any(".themes" in m for m in runtime_closure())
     offenders = []   # vNext（src/intelligence）の凍結 package は themes を import しない（legacy src.analysis の同名 module は対象外）
+    # P6-B1 D-B1: Theme Intelligence layer（theme_intelligence）だけは Foundation の read-only surface を import してよい。
+    # その境界は tests/intelligence/test_theme_intelligence_import_boundary.py が別途固定する。
+    intelligence_layer = REPO_ROOT / "src" / "intelligence" / "theme_intelligence"
     for path in (REPO_ROOT / "src" / "intelligence").rglob("*.py"):
-        if THEMES_DIR in path.parents:
+        if THEMES_DIR in path.parents or intelligence_layer in path.parents:
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
