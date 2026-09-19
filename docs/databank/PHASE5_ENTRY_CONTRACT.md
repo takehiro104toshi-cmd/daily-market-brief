@@ -490,7 +490,7 @@ P5-1C が draft を audit metadata（generated_at / outlook.rule_version）と�
 config.yaml に override が無く既定 `next_tokyo_session` であり、`KNOWN_HORIZONS` と一致する。
 outcome / 評価との結合は無い。
 
-**P5-1 status: CLOSED / FROZEN（監督者受理待ち）。** P5-2 以降は着手していない。
+**P5-1 status: CLOSED / FROZEN。**（P5-1D 時点の記録。P5-2 以降はその後の gate で完了。最終状態は §21）
 
 ---
 
@@ -692,7 +692,7 @@ defer 優先順位・provenance・supersession（append・前任存在・同一 
 single-writer は P5-2A / P5-2B / P5-2C と本書 §14〜§16 の間で一致している。P5-1 は anchor
 `6c28151` から不変。予測の正誤 / 較正の意味論は存在しない。
 
-**P5-2 status: CLOSED / FROZEN（監督者受理待ち）。** P5-3 以降は着手していない。
+**P5-2 status: CLOSED / FROZEN。**（P5-2D 時点の記録。P5-3 はその後の gate で完了。最終状態は §21）
 
 ---
 
@@ -822,7 +822,7 @@ analyzer**であり、第二の metric 契約・第二の resolver・「最新�
   `reports.market_signal`（SignalLevel）と stdlib のみ。store・engine・market・calendar・pipeline・
   Pages・notification・CLI に依存しない。production runtime closure から到達しない
   （`EXCLUDED_PACKAGES` に `predictions` を維持）。
-- **未実施**: P5-3C（較正 end-to-end offline 検証）は本 gate に含まない。
+- **本 gate の範囲外**: P5-3C（較正 end-to-end offline 検証）は本 gate に含まず、§20 で完了した。
 
 ## 20. P5-3 完了検証（P5-3C）
 
@@ -858,6 +858,37 @@ AVAILABLE のみの confidence 集計、棄権 / DEFERRED / unresolved の分離
 P5-3A / P5-3B と本書 §18〜§19 の間で一致している。矛盾は見つからず、凍結意味論への patch は無い。
 P5-1 / P5-2 / P5-3A / P5-3B は各 anchor から不変。
 
-**P5-3 completion validation: PASS（監督者 freeze 待ち）。** P5-4 / Phase 5 closeout は着手していない。
+**P5-3 completion validation: PASS。**（P5-3C 時点の記録。Phase 5 closeout は §21）
 
 ---
+
+## 21. Phase 5 closeout（完了監査）
+
+Phase 5 を 1 つの chain（P4 凍結意味論 → PredictionRecord → 追記専用 prediction journal →
+EvaluationRecord → 追記専用 evaluation journal → offline 評価 engine → 較正契約 → offline 較正
+analyzer → 決定論的 CalibrationReport）として読み取り監査した。正本は
+`docs/databank/PHASE5_COMPLETION_AUDIT.md`（判定・N-1〜N-6・各 gate・chain・persistence・訂正 /
+棄権 / coverage model・版 inventory・依存境界・security・非回帰・実データ status・deferred 項目・
+テスト結果）。N-1〜N-6・§13〜§20 の確定事項は変更していない。
+
+- N-1〜N-6: すべて PASS（実装は凍結決定のまま）。
+- chain: schema / logic / E2E の合成的完全性は完了（各 E2E ＋ `test_phase5_chain_e2e.py`）。
+  production runtime 統合は N-6 により**意図的に未着手**（単一 runtime が chain 全体を実行している
+  事実は無い）。
+- 実データ: **機構は offline で検証済み。実 live 履歴は蓄積されていない。** 実 journal は存在せず、
+  production は predictions を capture しておらず、評価も自動実行されていない。N-2 の TOPIX 研究取得は
+  production 評価 journal ではない。
+- 残項目は N-6 が後続 gate へ送った運用項目（runtime capture・直列化・評価 scheduling・J-Quants live
+  再確認・履歴蓄積・任意の較正 persistence / 内部 UI・SQLite index）と別 track（P4 通知 / root
+  cutover・H0 security）であり、Phase 5 完了の blocker ではない。
+- §7 の `known_at` は凍結 market `Observation.as_of`（aware 必須）に対応する。engine は clock を
+  持たないため「`session_date` の東京 close 以降にのみ評価」は評価 scheduling（後続 gate）の運用規則。
+
+| 段 | status |
+|---|---|
+| P5-1 Prediction Journal | CLOSED / FROZEN（anchor `6c28151`） |
+| P5-2 Evaluation | CLOSED / FROZEN（anchor `40e0e03`） |
+| P5-3 Calibration | CLOSED / FROZEN（anchor `7ea1226`。P5-3A `7c04e77` / P5-3B `bef71f0`） |
+| **PHASE 5** | **COMPLETE — supervisor acceptance pending** |
+
+次の roadmap 目的地は **PHASE 6 — THEME**（監督者の別途 Entry Contract / design gate まで着手しない）。

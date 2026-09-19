@@ -24,5 +24,8 @@
   journal を読む analyzer と persistence は含まない）、P5-3B の `calibration_analyzer`
   （凍結 P5-3A 契約をそのまま適用する純粋 offline analyzer。record の iterable ＋ 明示 cohort →
   決定論的 CalibrationReport。store / market / calendar / engine / persistence を含まない）。
-  P5-3C end-to-end 較正検証は**未実装**。
+  P5-3C（`tests/intelligence/test_calibration_e2e.py`）と Phase 5 closeout（chain 合成
+  `test_phase5_chain_e2e.py`、`docs/databank/PHASE5_COMPLETION_AUDIT.md`）まで完了し、
+  Phase 5 の機構は OFFLINE で検証済み。runtime での capture / 評価 scheduling / 較正の
+  永続化は N-6 により別の認可 gate（未着手）。
 """

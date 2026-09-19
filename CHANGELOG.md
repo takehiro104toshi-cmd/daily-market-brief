@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v4.97 (2026-09-19) — Phase 5 完了監査 / closeout
+
+Phase 5（Prediction Journal）を 1 つの chain として読み取り監査し、
+**PHASE_5_COMPLETION_AUDIT_PASS_WITH_NON_BLOCKING_DEFERRED_ITEMS / PHASE_5_COMPLETE_READY_FOR_SUPERVISOR_FREEZE**
+とした。新機能・runtime 統合・persistence・実 journal 実行・較正 feedback・P4 / P5 意味論の変更・
+Phase 6 は含まない。
+
+### 追加 — `docs/databank/PHASE5_COMPLETION_AUDIT.md`
+
+- 判定・scope・freeze anchor・N-1〜N-6 監査（全 PASS）・P5-1 / P5-2 / P5-3 監査・cross-phase chain
+  （合成的完全性は完了、production runtime 統合は N-6 により未着手）・persistence / 訂正 / 棄権 /
+  coverage model・版 inventory・依存境界・security・production 非回帰・実データ status
+  （MACHINERY VALIDATED / REAL LIVE HISTORY NOT ACCUMULATED）・deferred 11 項目・テスト結果・
+  blocker 無し・次 Phase。
+
+### 追加 — `tests/intelligence/test_phase5_chain_e2e.py`（2 tests）
+
+- 既存の凍結 API と既存 E2E の fixture だけで、P4 凍結 object 4 種 → ingest → predictions.jsonl →
+  権威 reload → engine（訂正 1 件込み）→ evaluations.jsonl → 権威 reload → analyzer →
+  CalibrationReport を 1 本の隔離 root で合成し、in-memory record からの report と一致・journal bytes
+  不変・入力順非依存・LIVE / REPLAY 非 pool を証明（新しい runtime 統合ではない）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §21「Phase 5 closeout」を追加（P5-1 / P5-2 / P5-3 CLOSED / FROZEN、PHASE 5 COMPLETE —
+  supervisor acceptance pending）。§13 / §17 / §19 / §20 の gate 時点 status 文言 4 箇所を
+  「時点の記録」と明示する最小修正。N-1〜N-6 は不変。
+
+### 改善 — `src/intelligence/predictions/__init__.py`（docstring のみ）
+
+- 「P5-3C 未実装」の stale 記述を Phase 5 機構検証済み・runtime 運用は別 gate に更新。
+
+### 未実施
+
+- Phase 5 operationalization（runtime capture / 直列化 / 評価 scheduling / 履歴蓄積）・Phase 6 は
+  着手していない。
+
 ## v4.96 (2026-09-19) — Phase 5 P5-3C 較正 end-to-end OFFLINE 検証
 
 P5-3A（契約）＋ P5-3B（analyzer）を 1 つの分析系として OFFLINE で検証した（VALIDATION のみ。
