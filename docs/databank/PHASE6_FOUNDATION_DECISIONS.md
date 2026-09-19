@@ -262,3 +262,8 @@ D0 は本書で解決済み。
 - P6-A3 の結果: Family C（D7 / D8 / D17 全体）は `PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` で凍結
   （`P6_A3_THEME_PERSISTENCE_REVISION_CONTRACT_FROZEN`）。本書 §11 の Family C 行は解決済み。契約 gate（A0〜A3）は
   完了。次 gate は P6-A4a Theme model（`src/intelligence/themes/` の model module のみ。§7 の import 制限）。
+- Foundation の結果: P6-A4a〜A4c 実装、P6-A4d E2E 検証、P6-A4d.1 BLOCKER 修正を経て
+  `P6_THEME_FOUNDATION_COMPLETE / CLOSED / FROZEN`（anchor `12847bf2783330cbd310d24c8310d3bf46469f6a`、branch
+  `claude/investment-intelligence-phase6`）。本書 §11 の Family D（D10〜D14、D18 / D21 / D22、taxonomy 採否）は
+  `PHASE6_THEME_INTELLIGENCE_ARCHITECTURE_AUDIT.md`（P6-B0）で選択肢と推奨順序を整理した。決定は監督者が行う。
+

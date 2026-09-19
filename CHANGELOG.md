@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.07 (2026-09-19) — Phase 6 P6-B0 Theme Intelligence 設計監査（docs only）
+
+Theme Foundation（P6-A1〜A4d.1、anchor `12847bf`）は COMPLETE / CLOSED / FROZEN。その上に置く Theme Intelligence layer
+（D10 graph / D11 lifecycle / D12 discovery / D13 dedup / D14 granularity、taxonomy / entity linkage / mechanism 語彙 /
+monitoring / 支持・反証の推移 / change detection / human governance / LLM 境界）の設計監査を行った。runtime・test・
+knowledge・config・workflow は無変更。historical branch の参考資産 11 件は read only（port / merge / cherry-pick なし）。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_INTELLIGENCE_ARCHITECTURE_AUDIT.md`（25 節）: Foundation の現能力と欠落能力、D10〜D14 の
+  選択肢比較、taxonomy / entity / monitoring / evidence 推移 / governance / LLM / Phase 7 境界、historical 資産分類
+  （PORT / REDESIGN / REFERENCE_ONLY / REJECT）、依存 graph、推奨実装順序（F: Change Detection → Lifecycle → Proposal ＋ Dedup →
+  Taxonomy ＋ Entity ＋ Discovery（proposal-only）→ Graph → Monitoring runner ＋ index → LLM）、P6-B subphase 案、schema /
+  interface 案、Foundation 変更候補（必須なし。FC-1 mechanism 語彙 version の複数受理は B4 前に再評価）、risk、
+  後続 test / guard、次 gate 推奨（P6-B1 Change Detection）。
+
+### 改善
+
+- `docs/databank/PHASE6_FOUNDATION_DECISIONS.md` §14 に Foundation freeze と P6-B0 監査の参照を追記（決定内容は不変）。
+
 ## v5.06 (2026-09-19) — Phase 6 P6-A4d.1 Theme foundation BLOCKER 修正
 
 A4d で発見した contract / implementation の不一致 3 件（A4D-1 / A4D-2 / A4D-3）を、`src/intelligence/themes/store.py` と
