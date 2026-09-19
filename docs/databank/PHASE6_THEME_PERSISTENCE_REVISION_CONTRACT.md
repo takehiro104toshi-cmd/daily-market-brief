@@ -729,3 +729,24 @@ phase5 branch は同 anchor で不変）。
 | A4d へ | E2E world（fork / merge / split / successor / correction / 遅延付与 / 上流改訂 / crash / journal 連結）、replay 決定論、不変条件 1〜97 の test 対応表、derived SQLite index は A4d 以降 |
 
 次 gate: **P6-A4d Theme foundation E2E**（§27）。
+
+## 33. 検証状態（P6-A4d E2E。契約の意味論は変更していない。runtime は無変更）
+
+A1〜A4c を canonical journal（5 authority）だけで連結し、代表 world・時間旅行・再起動・byte replay・入力順
+shuffle・future leakage・crash / PENDING・fork 隔離・correction / revision・merge / split / successor・上流改訂・
+derived 非保存・破損 fail closed を E2E で検証した。不変条件 1〜97 の対応表は
+`docs/databank/PHASE6_THEME_FOUNDATION_INVARIANT_MATRIX.md`。
+
+| 項目 | 状態 |
+|---|---|
+| 検証 module | `tests/intelligence/theme_foundation_fixtures.py`、`test_theme_foundation_e2e.py`、`test_theme_foundation_replay.py`、`test_theme_foundation_failures.py`（47 passed ＋ 5 strict xfail） |
+| 凍結 runtime | `model / fingerprint / qualification / revision / store / operations / resolver` は A4c 時点から diff 0 |
+| 判定 | **BLOCKER_FOUND**（freeze 宣言なし）。契約は変更しない。test は弱めない。workaround しない |
+| A4D-1 | store が identity core の置換を同一 root の revision として受理する（本契約 §7 の IDENTITY_CORE_CHANGED、§23 の INVALID_HISTORY が store / resolver で未実装。純 helper `revise_observation` のみ拒否）。最小修正候補: `store._validate_observation_chain` の非 genesis 分岐と resolver `_resolve` に `identity_core_fingerprint` 比較を追加。影響: store.py / resolver.py のみ、canonical bytes・id 不変 |
+| A4D-2 | METADATA_CORRECTION_APPROVED（related record が metadata id）を append した store が再 open できない（§3 の固定 load 順 roots → observations → governance → metadata により、governance の intra pass で GOVERNANCE_REFERENCE_MISSING）。最小修正候補: 当該 related record 検査を cross pass `_validate_event_results` へ移す。影響: store.py のみ、append 時挙動不変 |
+| A4D-3 | 宣言済みだが RootRecord 未作成の result root を解決すると UNKNOWN_ROOT のみで PENDING_EVENT / lineage が付かず、後日の RootRecord が同じ T の診断を変える（§13 の非遡及、A4c §32 の「result root 側でも PENDING_EVENT」に反する。state facet は不変）。最小修正候補: resolver `_resolve` の root 不在分岐でも T で eligible な宣言 event を集めて PENDING_EVENT ＋ lineage を付ける。影響: resolver.py のみ、診断のみ変化 |
+| 証明済み（抜粋） | 全 checkpoint の state facet は後段 stage で不変、byte replay は bytes・id・結果を再現、shuffle 不変、別 process 再読込一致、crash 段階は PENDING として可視で修復されない、fork は当該 facet のみ UNRESOLVED、破損 5 態様は resolver 入口で STORE_CORRUPTION / INVALID_HISTORY、derived 値は JSONL に無い |
+| DEFERRED | 23（企業固有 thesis は Theme 定義の外）、76（SQLite は derived のみ）、85（index の削除 / 再構築は canonical の結果を変えない）は後続 gate |
+
+次 gate: **BLOCKER 修正 gate（A4D-1 / A4D-2 / A4D-3。store.py / resolver.py の最小修正 ＋ 当該 xfail の解除）**。
+修正後に A4d の freeze 判定を再実行する。

@@ -4,6 +4,49 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.05 (2026-09-19) — Phase 6 P6-A4d Theme foundation E2E 検証（BLOCKER_FOUND）
+
+A1〜A4c が canonical journal を通じて 1 つの system として動くことを E2E で検証した gate。runtime source
+（`src/intelligence/themes/` の 7 file）は凍結のまま無変更。P4 production bundle・P5 凍結 source / test も無変更。
+E2E で contract / implementation の不一致を 3 件発見したため、修正せず strict xfail で再現を固定し
+**BLOCKER_FOUND** として停止した（freeze 宣言はしない）。
+
+### 追加 — tests/intelligence
+
+- `theme_foundation_fixtures.py`: 代表 E2E world（Theme A の T0〜T13: root → genesis → 独立 2 源の evidence →
+  contradiction → label / taxonomy / mapping → 受理 → semantic revision → 遅延付与 → 上流改訂 → retire → 取消、
+  Theme B、Theme A＋B → C の merge を crash 段階込みで記録）、checkpoint 別 snapshot、byte 単位 replay
+  （依存順を守る 5 queue 併合）、resolution digest。
+- `test_theme_foundation_e2e.py`: 時間旅行 checkpoint（literal 期待値）、再起動 / 再読込（別 process 含む）、
+  correction / revision の区別、merge / split / successor、上流改訂（dereference のみ変化）、derived 値の
+  非保存、A1 / A2 / A3 traceability。
+- `test_theme_foundation_replay.py`: byte 単位 replay の再現、入力順 shuffle の決定論、後段 stage による
+  過去 checkpoint の不変、future record matrix、後追い backdated root。
+- `test_theme_foundation_failures.py`: candidate / merge / split / successor の crash → PENDING → 再開、
+  fork の facet 隔離（observation / governance / label / mapping）、破損 data_root の fail closed
+  （malformed / noncanonical / truncated / duplicate conflicting id / authority 欠落）。
+- 新規 test は 47 passed ＋ 5 xfailed（strict。BLOCKER の再現）。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_FOUNDATION_INVARIANT_MATRIX.md`: 不変条件 1〜97 の layer / test / status 対応表
+  （PROVEN 78 / STRUCTURAL 13 / DEFERRED 3 / BLOCKED 3）と BLOCKER 3 件の最小修正候補・影響範囲。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §33 に A4d の検証状態と BLOCKER を追記
+  （契約の意味論は変更していない）。
+
+### 未修正（BLOCKER。次 gate で修正）
+
+- A4D-1: store が identity core の置換を同一 root の revision として受理する（A3 §7 / §23 は IDENTITY_CORE_CHANGED
+  を要求）。候補: `store._validate_observation_chain` と resolver `_resolve` に fingerprint 比較を追加。
+- A4D-2: METADATA_CORRECTION_APPROVED（metadata id を参照）を含む store が再 open できない（load 順により
+  intra pass で GOVERNANCE_REFERENCE_MISSING）。候補: 当該検査を cross pass `_validate_event_results` へ移す。
+- A4D-3: 宣言済み・未作成の result root を解決すると UNKNOWN_ROOT のみで PENDING_EVENT / lineage が付かず、
+  後日の RootRecord が過去 T の診断を変える。候補: resolver `_resolve` の root 不在分岐にも宣言 event の
+  PENDING_EVENT ＋ lineage 注釈を付ける。
+
 ## v5.04 (2026-09-19) — Phase 6 P6-A4c Theme point-in-time resolver 実装
 
 A3 §13（D17）の点時刻再構成を実装した。resolver は canonical history の読み取り専用の解釈器であり、authority ではない。
