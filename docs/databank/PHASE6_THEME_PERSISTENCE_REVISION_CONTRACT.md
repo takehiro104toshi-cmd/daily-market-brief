@@ -674,4 +674,30 @@ P6-A4a で **純 model 層のみ**を実装した（store / JSONL IO / resolver 
   資格判定で DOES_NOT_QUALIFY になる。
 - root id の生成（`new_root_id`）だけが乱数 / 時刻を使う。validator・fingerprint・資格判定は純関数。
 
-次 gate: **P6-A4b Theme canonical store**（§27）。
+次 gate（A4a 時点）: P6-A4b Theme canonical store（§27）。
+
+## 31. 実装状態（P6-A4b canonical store。契約の意味論は変更していない）
+
+| 項目 | 実装 |
+|---|---|
+| module | `src/intelligence/themes/store.py`（`ThemeStore`。5 authority の唯一の所有者）、`src/intelligence/themes/operations.py`（宣言先行の論理操作 plan / execute）。import は `core.ids` / `core.time` ＋ stdlib（json / os / pathlib）。closure 11 module |
+| authority path | `<data_root>/themes/theme_roots.jsonl` / `theme_observations.jsonl` / `theme_governance.jsonl` / `theme_metadata.jsonl` / `theme_series_mappings.jsonl`。load 順 roots → observations → governance → metadata → mappings。`data_root` は明示必須（`core.paths` / repository 相対 fallback / `data/theme_learning` を使わない） |
+| 初期化 / load | `ThemeStore.initialize(data_root)` だけが dir と 5 つの空 file を作る（明示の書込み。冪等）。`ThemeStore.open(data_root, read_only=False)` は file を作らず・書かず・修復しない（未初期化 ＝ NOT_INITIALIZED、authority 欠落 ＝ STORE_CORRUPTION/AUTHORITY_MISSING）。`ThemeStore.audit(data_root)` は read-only（件数・byte 長・PENDING・診断） |
+| append | open mode `"a"` のみ、A4a `canonical_line` の bytes、write → flush → fsync。validate-before-append（自己 round-trip、履歴検査、byte 長検査）の後に 1 行 |
+| 冪等 / conflict | 同一 id ＋ byte 一致 ＝ ALREADY_PRESENT（書かない）。同一 id ＋ bytes 差異 ＝ ThemeConflict（provenance / recorded_at だけの差でも。差分 field を報告） |
+| canonical byte 検証 | load 時に parse → model → `canonical_line(record)` が保存 bytes と一致しなければ NON_CANONICAL_LINE（整形・key 順・空白の別表現を受理しない） |
+| 改変検知 | file ごとに load / 最終 append 時の byte 長を記憶し、append 前に 5 file を検査。増減いずれも ConcurrentModificationDetected（lock ではない。明示の `reload()` だけが外部変化を取り込む） |
+| writer 保証 | `WRITER_GUARANTEE = "SINGLE_WRITER"`。複数 process・並行 append・cross-file transaction は保証しない。1 store object が 5 file を所有（file 別の独立 writer を作る API は無い。constructor は factory 経由のみ） |
+| root / genesis | RootRecord は genesis id を宣言して先に append 可（PENDING_GENESIS）。genesis は `observation_id == root.genesis_observation_id`（GENESIS_MISMATCH）、`recorded_at >= root.created_at`（OBSERVATION_BEFORE_ROOT）、root 不在は ROOT_NOT_FOUND |
+| predecessor | 物理的に先行・同一 root・recorded_at 非減少・**物理 terminal からのみ**（NON_TERMINAL_PREDECESSOR ＝ fork を生む append の拒否）。file 上の既存 fork は選ばず `diagnostics()`（FORK）に載せ、その root への append は FORKED_ROOT で拒否 |
+| attachment | `root.created_at <= attached_at <= observation.recorded_at`、`evidence_time <= attached_at`。例外は origin event の配分どおり byte 同一で carry された attachment（元 attached_at を保持するため root 作成前でよい） |
+| governance | subject root・related record（subject root 所属、承認対象より後）・previous event（物理 terminal、root に関与）・reverses_event（同一 subject roots）の物理存在を検査。root に履歴があるのに previous を欠く event は MISSING_PREVIOUS_EVENT。result root は **存在してはならない**（RESULT_ROOT_ALREADY_EXISTS。宣言が先）、他 event との重複宣言は RESULT_ROOT_REDECLARED。配分は subject root の stored observation の実在 attachment のみ、同一 key を 2 source から同一 result へ配分不可 |
+| metadata / mapping | root 実在、predecessor 実在・同一 root（metadata は同一 field）、recorded_at 非減少、物理 terminal から。metadata は履歴があれば previous 必須（MISSING_PREVIOUS_METADATA）。mapping の consequence_ref は当該 root の stored observation が宣言する key（MAPPING_CONSEQUENCE_UNKNOWN） |
+| 宣言先行 | `operations.plan_candidate / execute_candidate`（RootRecord → genesis）、`plan_merge / plan_split / plan_successor / execute_declaration`（event → 結果 RootRecord → 結果 genesis、複数 child は child ごとに root → genesis）。plan は全 id を事前確定（root id は呼び出し側が `new_root_id` で生成、他は content id）、同じ入力から同じ record。`previous_event_ids` は最初の試行前に `terminal_previous_events` で一度だけ取得し再試行でも同じ値を渡す（crash 後に取り直すと別 event になり RESULT_ROOT_REDECLARED で拒否される） |
+| PENDING | `pending()`: PENDING_GENESIS（RootRecord あり・宣言 genesis なし）/ PENDING_EVENT（宣言 event あり・result root か genesis が未完。欠落 id を列挙）。load は補完も修復もしない。同じ plan の再実行が冪等に完了する |
+| carried evidence | lineage は宣言 event の `evidence_allocation`（(source observation, attachment_key) → result root。event id の材料）が保持し、結果 genesis の attachment は source attachment と **byte 同一**でなければ ALLOCATION_VIOLATION（元 attached_at / role provenance / evidence 時点を保持）。genesis の attachment は配分の部分集合のみ（暗黙 carry なし、自動全複製なし）。attachment 自体に `carried_from` field は持たせない（A4a の canonical bytes / golden vector を変えないため。lineage は event 側で完全に再構成できる） |
+| 失敗区分 | STORE_CORRUPTION（ThemeStoreCorrupt: AUTHORITY_MISSING / INVALID_ENCODING / TRUNCATED_FINAL_LINE / BLANK_LINE / MALFORMED_JSON / NOT_AN_OBJECT / INVALID_RECORD / UNSUPPORTED_SCHEMA_VERSION / NON_CANONICAL_LINE / PHYSICAL_DUPLICATE_IDENTICAL / PHYSICAL_DUPLICATE_CONFLICTING）／INVALID_HISTORY（ThemeInvalidHistory。load 時）と APPEND_REJECTED（ThemeAppendRejected。append 時）が共有する code: ROOT_NOT_FOUND / GENESIS_MISMATCH / DANGLING_PREDECESSOR / WRONG_ROOT_PREDECESSOR / NON_TERMINAL_PREDECESSOR / NON_MONOTONIC_RECORDED_AT / OBSERVATION_BEFORE_ROOT / ATTACHED_AT_OUT_OF_RANGE / FORKED_ROOT / ORIGIN_EVENT_MISSING / ORIGIN_EVENT_MISMATCH / RESULT_ROOT_NOT_DECLARED / RESULT_ROOT_DECLARED_ELSEWHERE / RESULT_ROOT_ALREADY_EXISTS / RESULT_ROOT_REDECLARED / GOVERNANCE_REFERENCE_MISSING / MISSING_PREVIOUS_EVENT / MALFORMED_REVERSAL / ALLOCATION_VIOLATION / METADATA_PREDECESSOR_MISSING / MISSING_PREVIOUS_METADATA / MAPPING_PREDECESSOR_MISSING / MAPPING_CONSEQUENCE_UNKNOWN / NON_CANONICAL_RECORD / INVALID_TYPE／CONFLICT（ThemeConflict）／CONCURRENT_MODIFICATION／NOT_INITIALIZED／READ_ONLY。PENDING と fork 診断は例外ではない |
+| load の 2 pass | 固定順で 1 行ずつ parse ＋ 同一 file / 先行 authority への参照を検査（intra）、全 authority 読込後に後続 authority への参照（root の origin event、observation の carried 配分、event の result root 整合）を検査（cross）。append 時は両方を即時に検査 |
+| A4c へ | 点時刻再構成、governance / metadata / mapping の terminal 選択と UNRESOLVED 判定、EVENT_REVERSED の意味論、上流 dereference、DUPLICATE_CANDIDATE の提示。A4b は生 record の exact lookup と物理 terminal（`physical_terminal_*`）だけを提供する |
+
+次 gate: **P6-A4c Theme point-in-time resolver**（§27）。

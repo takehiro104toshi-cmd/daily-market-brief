@@ -4,6 +4,41 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.03 (2026-09-19) — Phase 6 P6-A4b Theme canonical store 実装
+
+A3 の永続化意味論を実装した。resolver / 点時刻状態 / lifecycle / discovery / graph / SQLite / LLM / Compass・P4・P5
+連携 / 自動修復 / 歴史 port は含まない。production bundle（P4）・P5 凍結 source / test・A4a golden vector は無変更。
+
+### 追加 — `src/intelligence/themes/store.py` / `operations.py`
+
+- `ThemeStore`: `<data_root>/themes/` の 5 canonical authority（roots / observations / governance / metadata /
+  series_mappings）を 1 writer が所有する追記専用 JSONL store。明示 data_root 必須（repository fallback なし）、
+  `initialize`（唯一の file 作成）/ `open`（read-only load。作らない・書かない・直さない）/ `audit`。
+- append: A4a canonical 行のみ、write → flush → fsync、byte 一致 ＝ 冪等 no-op、同一 id ＋ 異 bytes ＝ ThemeConflict
+  （provenance / recorded_at の差でも）。validate-before-append（root / genesis、物理 predecessor・同一 root・
+  recorded_at 非減少・物理 terminal、attached_at 範囲、governance の物理参照と result root 宣言、metadata / mapping
+  の chain、evidence 配分）。file ごとの byte 長で外部増減を検知（SINGLE_WRITER の検知。lock ではない）。
+- load: 非 canonical / 破損 / 未知 schema / id 不一致 / physical duplicate ＝ STORE_CORRUPTION（authority・行番号・
+  reason code）、履歴として不可能 ＝ INVALID_HISTORY、file 上の fork ＝ 診断（選ばない・直さない。当該 root への append
+  は FORKED_ROOT）。2 pass（同一 file / 先行 authority → 後続 authority 参照）。
+- 宣言先行の論理操作: candidate（RootRecord → genesis）、MERGE / SPLIT / SUCCESSOR（event → 結果 root → 結果 genesis）。
+  plan は全 id を事前確定し、同じ入力で冪等に再試行できる。PENDING_GENESIS / PENDING_EVENT を `pending()` で明示。
+- carried evidence: 宣言 event の `evidence_allocation` が lineage を保持し、結果 genesis の attachment は source と
+  byte 同一（元 attached_at / provenance 保持）、配分の部分集合のみ（暗黙 carry なし）。
+
+### 追加 — tests/intelligence
+
+- `test_theme_store.py` / `test_theme_store_corruption.py` / `test_theme_store_operations.py`（初期化・read-only・
+  canonical bytes・fsync・冪等 / conflict・破損 11 区分・外部改変・INVALID_HISTORY・fork 診断・chain 規則・
+  governance 参照・merge / split / successor の全 crash 境界での PENDING と再試行・配分違反・API 表面）。
+- `test_theme_import_boundary.py` を store / operations に拡張（closure 11 module、IO は追記のみ、resolver / 時計 /
+  乱数 / SQLite / repository fallback 不在）。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §31 に store の実装状態（authority path、append /
+  冪等 / conflict、writer 保証、改変検知、初期化、PENDING、操作順序、失敗 code 台帳、A4c への繰越）を追記。
+
 ## v5.02 (2026-09-19) — Phase 6 P6-A4a Theme 土台 model 実装
 
 Phase 6 Theme の **最初の runtime 実装 gate**。`src/intelligence/themes/` に純 model 層だけを追加した。

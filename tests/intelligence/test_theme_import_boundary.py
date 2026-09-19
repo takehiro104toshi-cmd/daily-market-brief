@@ -12,23 +12,33 @@ from tests.intelligence.test_prediction_record import executable_source, importe
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 THEMES_DIR = REPO_ROOT / "src" / "intelligence" / "themes"
-MODULES = ("__init__", "model", "fingerprint", "qualification", "revision")
+MODULES = ("__init__", "model", "fingerprint", "qualification", "revision", "store", "operations")
+PURE_MODULES = ("__init__", "model", "fingerprint", "qualification", "revision")   # IO / 時計 / 乱数を持たない
+IO_MODULES = ("store", "operations")                                                # 追記専用 JSONL のみ
 
 ALLOWED_STDLIB = {"__future__", "json", "re", "unicodedata", "dataclasses", "datetime", "enum", "typing"}
-ALLOWED_RELATIVE = {"..core.ids", "..core.time", ".model", ".fingerprint"}
+ALLOWED_STDLIB_IO = ALLOWED_STDLIB | {"os", "pathlib"}
+ALLOWED_RELATIVE = {"..core.ids", "..core.time", ".model", ".fingerprint", ".store"}
 ALLOWED_CLOSURE = {
     "src.intelligence", "src.intelligence.core", "src.intelligence.core.ids", "src.intelligence.core.time",
     "src.intelligence.themes", "src.intelligence.themes.model", "src.intelligence.themes.fingerprint",
-    "src.intelligence.themes.qualification", "src.intelligence.themes.revision",
+    "src.intelligence.themes.qualification", "src.intelligence.themes.revision", "src.intelligence.themes.store",
+    "src.intelligence.themes.operations",
 }
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
-                           "collectors", "legacy", "sqlite3", "requests", "urllib", "socket", "http", "pathlib", "os",
+                           "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
                            "subprocess", "yaml", "random", "secrets")
 FORBIDDEN_SOURCE_TOKENS = ("sqlite", "open(", "Path(", "requests.", "urllib", "socket.", ".now(", "utcnow", "time.time",
                            "random.", "secrets.", "os.path", "subprocess", "yaml.", "data/vnext", "INTELLIGENCE_DATA_ROOT",
                            "data_root", "jsonl", ".write(", "fsync", "class ThemeStore", "def resolve", "def append",
                            "latest_wins", "def merge", "PENDING")
+#: store / operations にも許さない token（IO は許すが resolver / 時計 / 乱数 / network / SQLite / repository fallback は不可）
+FORBIDDEN_IO_SOURCE_TOKENS = ("sqlite", "requests.", "urllib", "socket.", ".now(", "utcnow", "time.time", "random.",
+                              "secrets.", "subprocess", "yaml.", "data/vnext", "INTELLIGENCE_DATA_ROOT", "core.paths",
+                              "theme_learning", "def resolve", "latest_wins", "def merge", "state_at", "current_theme",
+                              "latest_theme", "active_theme", "governance_state", "metadata_at", "mapping_at",
+                              "truncate(", '"w"', "'w'", '"r+"', "os.replace", "os.rename", "os.remove", "unlink(")
 
 
 def test_package_contains_only_authorized_modules() -> None:
@@ -42,7 +52,8 @@ def test_theme_modules_import_only_core_ids_and_core_time() -> None:
         imports = imported_modules(THEMES_DIR / f"{name}.py")
         stdlib = {m for m in imports if not m.startswith(".")}
         relative = {m for m in imports if m.startswith(".")}
-        assert stdlib <= ALLOWED_STDLIB, (name, stdlib - ALLOWED_STDLIB)
+        allowed = ALLOWED_STDLIB_IO if name in IO_MODULES else ALLOWED_STDLIB
+        assert stdlib <= allowed, (name, stdlib - allowed)
         assert relative <= ALLOWED_RELATIVE, (name, relative - ALLOWED_RELATIVE)
         for token in FORBIDDEN_MODULE_TOKENS:
             assert not any(re.search(rf"(^|\.){token}(\.|$)", m) for m in imports), (name, token)
@@ -52,11 +63,12 @@ def test_theme_runtime_closure_is_core_ids_time_and_themes_only() -> None:
     code = ("import sys\n"
             "import src.intelligence.themes.model, src.intelligence.themes.fingerprint\n"
             "import src.intelligence.themes.qualification, src.intelligence.themes.revision\n"
+            "import src.intelligence.themes.store, src.intelligence.themes.operations\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
     closure = set(proc.stdout.split())
-    assert closure == ALLOWED_CLOSURE and len(closure) == 9
+    assert closure == ALLOWED_CLOSURE and len(closure) == 11
 
 
 def test_themes_is_excluded_from_production_bundle_and_no_frozen_package_imports_it() -> None:
@@ -76,10 +88,19 @@ def test_themes_is_excluded_from_production_bundle_and_no_frozen_package_imports
 
 
 def test_no_io_network_clock_random_store_or_resolver_in_theme_sources() -> None:
-    for name in MODULES:
+    for name in PURE_MODULES:
         source = executable_source(THEMES_DIR / f"{name}.py")
         for token in FORBIDDEN_SOURCE_TOKENS:
             assert token not in source, (name, token)
+    for name in IO_MODULES:
+        source = executable_source(THEMES_DIR / f"{name}.py")
+        for token in FORBIDDEN_IO_SOURCE_TOKENS:
+            assert token not in source, (name, token)
+        # 唯一の open mode は追記（'a'）。読み取りは read_bytes / stat のみ（ast.unparse は文字列を単引用符で出す）
+        if name == "store":
+            assert "open('a'" in source
+        for mode in ("open('w'", "open('wb'", "open('r+'", "open('a+'", "write_bytes(", "write_text("):
+            assert mode not in source, (name, mode)
 
 
 def test_root_id_generation_is_the_only_nondeterministic_primitive() -> None:
