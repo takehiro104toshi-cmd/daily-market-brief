@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.16 (2026-09-20) — Phase 6 P6-B4 完了監査（docs のみ）
+
+B4A〜B4E の読み取り専用の完了監査を実施し、結果を 1 本の監査 doc にまとめた。runtime・knowledge・test・config・
+workflow・公開出力はいずれも無変更。繰延項目の解消も行っていない。
+
+### 追加
+
+- `docs/databank/PHASE6_THEME_B4_COMPLETION_AUDIT.md`: authority map（versioned knowledge / derived discovery output /
+  proposal authority / derived bridge output / Foundation authority）と境界の証明、B4A の D-B4-1〜10 の照合、
+  B4D の D-B4D-1〜5 ＋ FC-1 と B4E の D-B4E-1〜4 の確定記録、identity 監査、8 つの時間軸の PIT 監査、
+  source origin と独立性の監査、false positive 監査、人間 governance 監査、dedup 監査、knowledge version 監査、
+  機密監査、import / 依存監査（循環なし）、永続化監査、繰延項目の canonical 登録簿 17 件、凍結面監査、
+  test / guard の件数、完了条件の照合。
+
+### 検証結果
+
+- Foundation authority は discovery → 提案 → 人間 ACCEPT → attachment plan の全段階を通しても byte 単位で不変。
+- 逆方向の依存（Foundation / B1 / B2 / B3 / P4 / P5 / 公開 bundle → B4）は 0 件。循環依存なし。
+- 凍結面（Foundation / B1 / B2 / B3 runtime / B4B / B4C / B4D / B4E / P4 / P5）の diff はすべて 0。
+- 自動の Theme 作成・evidence 付与・decision 追記・勝者選択・順位付けはいずれも実装に存在しない。
+- 繰延 17 件を NON_BLOCKING / FUTURE_GATE_REQUIRED / OPTIONAL / POLICY_LOCKED で分類して登録した。
+
 ## v5.15 (2026-09-20) — Phase 6 P6-B4E 受理済み evidence 候補 → Foundation attachment plan（計画境界）
 
 人間が ACCEPT した `EvidenceCandidateProposal` から、後で Foundation の `EvidenceAttachment` を組み立てるための
