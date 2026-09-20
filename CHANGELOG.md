@@ -4,6 +4,36 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.15 (2026-09-20) — Phase 6 P6-B4E 受理済み evidence 候補 → Foundation attachment plan（計画境界）
+
+人間が ACCEPT した `EvidenceCandidateProposal` から、後で Foundation の `EvidenceAttachment` を組み立てるための
+不変 plan を導く純関数を追加した。Foundation への追記・observation の改訂・root 生成・governance event・
+proposal / decision 履歴の変更・discovery / lifecycle / 資格判定の実行は一切行わない。Foundation・B1・B2・B3 runtime・
+B4B / B4C の runtime と knowledge・B4D の test / docs・P4・P5・config・workflow・公開出力は無変更。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `evidence_bridge_model.py`: `EvidenceAttachmentPlan`（frozen。content id を持たず永続化しない）、提案の出自
+  `ProposalOrigin` と受理の `DecisionOrigin`、`EvidenceBridgeError`、橋渡し可能な役割（SUPPORTS / CONTEXT）、
+  役割 authority は HUMAN 固定、authority class は PRIMARY_OBSERVATIONAL 固定。`to_plain()` / `canonical_line()` は決定論的。
+- `evidence_bridge.py`: `plan_evidence_attachment_from_accepted_proposal(proposal, decisions, *, target_resolution,
+  created_at, consequence_ref=None, invalidation_ref=None)`。B3 の decision chain resolver をそのまま使った受理判定、
+  明示 Foundation root のみを対象にする検証、SUPPORTS の consequence ref 必須 ＋ 実在検査、CONTEXT の consequence 禁止、
+  invalidation の全面禁止、重複 attachment key の fail closed、時刻の前後関係（等号は許可）、参照 identity の完全保存。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_evidence_bridge.py`（40 件）: 実 Foundation world の read-only resolution を対象に、
+  受理状態 6 種・proposal type・対象規則・resolution 状態 4 種・consequence / invalidation / 役割・時刻境界・
+  重複・保存・provenance・決定性（10 seed の decision 順入れ替え）・無変更（authority bytes / proposal / resolution）・
+  source / import 境界を固定する。
+- `docs/databank/PHASE6_THEME_EVIDENCE_BRIDGE_CONTRACT.md`。
+
+### 改善
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B4E module の列挙・
+  `.evidence_bridge_model` の許可・runtime closure・Foundation 実行 API 非参照の検査対象に追加）。
+
 ## v5.14 (2026-09-20) — Phase 6 P6-B4D Theme discovery E2E ＋ false-positive gate（検証のみ）
 
 B4C の discovery 層に対する敵対的 E2E gate を追加した。test と docs だけを追加し、runtime（discovery module、taxonomy /
