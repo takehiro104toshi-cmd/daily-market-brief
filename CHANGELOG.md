@@ -4,6 +4,39 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.12 (2026-09-20) — Phase 6 P6-B4B Theme taxonomy ＋ entity catalog（versioned knowledge）実装
+
+B4C discovery の前提となる決定論的 normalization knowledge を追加した。taxonomy / entity catalog は **VERSIONED KNOWLEDGE**
+（Foundation authority・proposal authority・evidence・governance ではない）で、`knowledge/theme_intelligence/` の不変 YAML
+snapshot を明示 version ＋ cutoff ＋ content digest 照合でのみ読む。「latest」loader・現在時刻・書き込み・network はない。
+Discovery・rule・proposal 生成・bridge・LLM・graph・monitoring は含まない。Foundation・B1・B2・B3 runtime・P4・P5 は無変更。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `knowledge_loader.py`: 共通 primitive（`KnowledgeError`、`KnowledgeProvenance`、version 解析、`normalize_token` ＝ NFKC /
+  空白圧縮 / casefold、canonical JSON、sha256 content digest、published_at / date 解析）と strict YAML loader（重複 key・
+  複数 document・非 mapping を拒否、unknown field / 型不一致は fail closed）、envelope 検証、version / cutoff / digest gate。
+- `taxonomy_model.py` / `taxonomy.py`: `TaxonomyNode` / `TaxonomySnapshot`（DAG、multi-parent 可、RELATED edge なし、親の自動
+  伝播なし、slug 不変、rename ＝ 新 slug ＋ deprecated_in_version / superseded_by、alias 所有の一意性、cycle 検出）、
+  `load_taxonomy_version`、`resolve_taxonomy_token`（EXACT_SLUG / EXACT_ALIAS / DEPRECATED / AMBIGUOUS / UNKNOWN。fuzzy なし）、
+  `validate_theme_taxonomy_refs`（Foundation METADATA TAXONOMY 値の純検証。書かない）。
+- `entity_model.py` / `entity_catalog.py`: `EntityType` 9 種（Foundation `ThemeEntityKind` へ単射で写像。PERSON / TICKER /
+  TECHNOLOGY / POLICY_PROGRAM は語彙外）、`EntityIdentifier`（TICKER / INSTRUMENT_ID / ISO_COUNTRY / ISO_CURRENCY、TICKER のみ
+  期間非重複なら再利用可）、`EntityRecord`（`<kind>:<immutable-slug>`、safe / context alias ＋ context_terms、valid_from /
+  valid_to、superseded_by、retired_in_version）、`EntityCatalogSnapshot`（alias 所有・shadow・identifier 衝突・lifecycle 検証）、
+  `load_entity_catalog_version`、`resolve_entity_token`（EXACT_ID / EXACT_SAFE_ALIAS / CONTEXT_ALIAS / AMBIGUOUS / UNKNOWN /
+  INACTIVE / SUPERSEDED。先頭選択・順位付けなし。後継への自動付け替えなし）。
+
+### 追加 — knowledge / tests / docs
+
+- `knowledge/theme_intelligence/theme_taxonomy.0.1.0.yaml` / `0.2.0.yaml`（historical slug 名 8 件の seed、0.2.0 で
+  `supply_chain_theme` → `supply_chain` の rename via new slug）、`entity_catalog.0.1.0.yaml` / `0.2.0.yaml`（公開標準 entity
+  と架空 MVP fixture company。0.2.0 で rename・ticker 変更・merger を表現）。顧客 watchlist・PERSON・信号語・Compass 文言なし。
+- `tests/intelligence/test_theme_taxonomy.py`（matrix 1〜24）、`test_theme_entity.py`（25〜50）、
+  `test_theme_taxonomy_entity_boundary.py`（55〜64）、`test_theme_intelligence_import_boundary.py` を additive に拡張。
+- `docs/databank/PHASE6_THEME_TAXONOMY_ENTITY_CONTRACT.md`。
+- full suite 1782 passed（xfail 0 / skip 0）。
+
 ## v5.11 (2026-09-19) — Phase 6 P6-B4A Theme taxonomy / entity / discovery architecture audit（docs only）
 
 B4 runtime を設計する前の read-only 監査。runtime・tests・knowledge・config・workflow は無変更。Foundation・B1・B2・B3 は

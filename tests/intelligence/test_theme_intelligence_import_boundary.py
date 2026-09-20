@@ -16,20 +16,30 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / "src" / "intelligence" / "theme_intelligence"
 THEMES_DIR = REPO_ROOT / "src" / "intelligence" / "themes"
 MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "proposal_model", "proposal_store",
-           "proposal_resolution", "dedup", "proposal_bridge")
+           "proposal_resolution", "dedup", "proposal_bridge",
+           # P6-B4B: versioned knowledge（taxonomy / entity catalog）。YAML は knowledge_loader だけが読む
+           "knowledge_loader", "taxonomy_model", "taxonomy", "entity_model", "entity_catalog")
 IO_MODULES = ("proposal_store",)                                         # 追記専用 JSONL のみ（P6-B3）
 IDENTITY_MODULES = ("proposal_model",)                                   # content id（thprop_ / thdec_）を計算する唯一の module
+KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
+KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog")                  # P6-B4B: pathlib.Path を型として受けるだけ
 ALLOWED_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "typing", "json", "re"}
 ALLOWED_STDLIB_IO = ALLOWED_STDLIB | {"os", "pathlib"}
+ALLOWED_STDLIB_KNOWLEDGE_PATH = ALLOWED_STDLIB | {"pathlib"}
+ALLOWED_STDLIB_KNOWLEDGE_YAML = ALLOWED_STDLIB | {"pathlib", "hashlib", "unicodedata", "yaml"}
 ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fingerprint", "..themes.qualification",
-                    "..themes.resolver", ".model", ".lifecycle_model", ".proposal_model", ".proposal_resolution"}
+                    "..themes.resolver", ".model", ".lifecycle_model", ".proposal_model", ".proposal_resolution",
+                    ".knowledge_loader", ".taxonomy_model", ".entity_model"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
     "src.intelligence.theme_intelligence.change", "src.intelligence.theme_intelligence.lifecycle_model",
     "src.intelligence.theme_intelligence.lifecycle", "src.intelligence.theme_intelligence.proposal_model",
     "src.intelligence.theme_intelligence.proposal_store", "src.intelligence.theme_intelligence.proposal_resolution",
-    "src.intelligence.theme_intelligence.dedup", "src.intelligence.theme_intelligence.proposal_bridge"}
+    "src.intelligence.theme_intelligence.dedup", "src.intelligence.theme_intelligence.proposal_bridge",
+    "src.intelligence.theme_intelligence.knowledge_loader", "src.intelligence.theme_intelligence.taxonomy_model",
+    "src.intelligence.theme_intelligence.taxonomy", "src.intelligence.theme_intelligence.entity_model",
+    "src.intelligence.theme_intelligence.entity_catalog"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
@@ -58,10 +68,13 @@ def test_modules_import_only_the_pure_read_only_foundation_surface() -> None:
         imports = imported_modules(PACKAGE_DIR / f"{name}.py")
         stdlib = {m for m in imports if not m.startswith(".")}
         relative = {m for m in imports if m.startswith(".")}
-        allowed = ALLOWED_STDLIB_IO if name in IO_MODULES else ALLOWED_STDLIB
+        allowed = (ALLOWED_STDLIB_IO if name in IO_MODULES else ALLOWED_STDLIB_KNOWLEDGE_YAML if name in KNOWLEDGE_YAML_MODULES
+                   else ALLOWED_STDLIB_KNOWLEDGE_PATH if name in KNOWLEDGE_PATH_MODULES else ALLOWED_STDLIB)
         assert stdlib <= allowed, (name, stdlib - allowed)
         assert relative <= ALLOWED_RELATIVE, (name, relative - ALLOWED_RELATIVE)
         for token in FORBIDDEN_MODULE_TOKENS:
+            if token == "yaml" and name in KNOWLEDGE_YAML_MODULES:                    # P6-B4B: YAML は loader module だけ
+                continue
             assert not any(re.search(rf"(^|\.){token}(\.|$)", m) for m in imports), (name, token)
 
 
@@ -72,6 +85,9 @@ def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> N
             "import src.intelligence.theme_intelligence.proposal_model, src.intelligence.theme_intelligence.proposal_store\n"
             "import src.intelligence.theme_intelligence.proposal_resolution, src.intelligence.theme_intelligence.dedup\n"
             "import src.intelligence.theme_intelligence.proposal_bridge\n"
+            "import src.intelligence.theme_intelligence.knowledge_loader, src.intelligence.theme_intelligence.taxonomy_model\n"
+            "import src.intelligence.theme_intelligence.taxonomy, src.intelligence.theme_intelligence.entity_model\n"
+            "import src.intelligence.theme_intelligence.entity_catalog\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
@@ -108,6 +124,7 @@ def test_excluded_from_production_bundle_closure() -> None:
 
 IO_ALLOWED_TOKENS = ("open(", "Path(", "read_bytes(", ".write(", "fsync", "data_root", "jsonl", "append_", "reload(",
                      "initialize(")   # proposal_store のみ（追記専用 store の API）
+KNOWLEDGE_READ_ALLOWED_TOKENS = ("read_text(", "yaml.")   # knowledge_loader のみ（読み取り専用。書き込み token は一切許さない）
 FORBIDDEN_IO_SOURCE_TOKENS = ("sqlite", "requests.", "urllib", "socket.", ".now(", "utcnow", "time.time", "random.", "secrets.",
                               "subprocess", "yaml.", "core.paths", "ThemeStore", "execute_", "truncate(", '"w"', "'w'", '"r+"',
                               "os.replace", "os.rename", "os.remove", "unlink(", "themes/")
@@ -118,6 +135,9 @@ def test_no_io_clock_random_network_store_or_score_in_sources() -> None:
         source = executable_source(PACKAGE_DIR / f"{name}.py")
         forbidden = (tuple(t for t in FORBIDDEN_SOURCE_TOKENS if t not in IO_ALLOWED_TOKENS) + FORBIDDEN_IO_SOURCE_TOKENS
                      if name in IO_MODULES else FORBIDDEN_SOURCE_TOKENS)
+        if name in KNOWLEDGE_YAML_MODULES:                                              # P6-B4B: 読み取りのみ許可
+            forbidden = tuple(t for t in FORBIDDEN_SOURCE_TOKENS + FORBIDDEN_IO_SOURCE_TOKENS
+                              if t not in KNOWLEDGE_READ_ALLOWED_TOKENS)
         if name in IDENTITY_MODULES:                                                    # proposal / decision の content id を計算する module
             forbidden = tuple(t for t in forbidden if t != "content_id(")
         for token in forbidden:
