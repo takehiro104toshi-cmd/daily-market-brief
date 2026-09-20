@@ -62,8 +62,9 @@ def test_56_no_discovery_rules_in_knowledge_modules_or_files() -> None:
         for record in document.get("nodes", []) + document.get("entities", []):
             assert not ({"strong_signals", "weak_signals", "exclude_terms", "keywords", "related", "trigger_terms", "predicates"}
                         & set(record)), (name, record.get("slug") or record.get("entity_id"))
-    assert not list(KNOWLEDGE_DIR.glob("*rule*")) and not list(KNOWLEDGE_DIR.glob("*signal*"))
-    assert sorted(p.name for p in KNOWLEDGE_DIR.iterdir()) == sorted(KNOWLEDGE_FILES)
+    assert not list(KNOWLEDGE_DIR.glob("*signal*"))
+    others = sorted(p.name for p in KNOWLEDGE_DIR.iterdir() if p.name not in KNOWLEDGE_FILES)
+    assert all(re.match(r"^discovery_rules\.\d+\.\d+\.\d+\.yaml$", n) for n in others), others   # P6-B4C の ruleset だけが同居できる
 
 
 def test_57_58_no_network_and_no_current_clock() -> None:

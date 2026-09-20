@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.13 (2026-09-20) — Phase 6 P6-B4C deterministic Theme discovery（contract ＋ implementation）
+
+許可された構造化入力（SourceDocument / NewsItem / usable Fact / market Observation）から、B3 の EvidenceCandidateProposal /
+ThemeCandidateProposal と derived な DiscoveryRunReport を決定論的に生成する discovery 層を追加した。Theme root を作らず、
+Foundation / ProposalStore に書かず、decision を変えず、EvidenceCandidate を自動 promotion せず、fuzzy / LLM / score / rank を
+持たない。ruleset は B4B と同じ VERSIONED KNOWLEDGE で taxonomy / catalog version を正確に pin する。
+Foundation・B1・B2・B3・B4B runtime・P4・P5・config・workflow・公開出力は無変更。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `discovery_model.py`: ruleset / rule / predicate / template（subject / mechanism / scope / invalidation / limitation）の純 model と
+  検証（rule_id 不変、SUPPORTS / CONTEXT のみ、THEME rule は template 完全 ＋ PERIOD_FRAME 1 個 ＋ invalidation ≥ 1、binding
+  `${entity}` / `${entity.<attr>}` / `${series}` の一意性）、`DiscoveryInputRecord`、`RuleEvaluation` / `DiscoveryRunReport` /
+  `DiscoveryResult`。certainty は authoring 不可（HYPOTHESIZED_MECHANISM 固定）。
+- `discovery_predicates.py`: ALL / ANY / NOT / ENTITY_PRESENT / TAXONOMY_SIGNAL / FACT_TYPE / OBSERVATION_SERIES / SOURCE_KIND /
+  MIN_DISTINCT（入力単位と rule 単位）の評価。件数は充足だけを決め、親 slug は数えない。
+- `discovery_rules.py`: `load_discovery_rules_version(path, *, expected_version, cutoff, taxonomy, entity_catalog)`（version / cutoff /
+  digest / pin 一致 / ACTIVE rule の deprecated taxonomy・retired / superseded entity・未知参照・binding 属性を fail closed）。
+- `discovery_adapter.py`: 4 入力 model → 共通 record。L1（明示 entity ref / identifier / fact_type / series / source kind）と L2
+  （headline / title / summary に対する alias の正規化完全一致。longest alias wins、本文非走査）。source origin の保守的導出
+  （同一記事の NewsItem / SourceDocument / Fact は同じ origin。独立数は数えない）。cutoff 後に知り得た入力・USABLE でない Fact は除外。
+- `discovery.py`: `discover(inputs, *, taxonomy, entity_catalog, ruleset, cutoff, run_created_at, existing_proposals, existing_decisions,
+  theme_resolutions, include_dedup)`。negative predicate による除外、集約 MIN_DISTINCT、EVIDENCE_CANDIDATE（rule 非依存の canonical
+  reason）、THEME_CANDIDATE（L1 hit 必須、template ＋ binding ＋ 同一 rule 内集約）、等価提案の rule 跨ぎ収束、既存 id の抑制と
+  decision 状態の診断、B3 exact dedup の任意呼び出し、run report。
+
+### 追加 — knowledge / tests / docs
+
+- `knowledge/theme_intelligence/discovery_rules.0.1.0.yaml`（pins taxonomy 0.2.0 / catalog 0.2.0。L1 entity・L2 alias・FACT_TYPE・
+  OBSERVATION の evidence rule、negative ＋ MIN_DISTINCT 付き THEME rule、同 template の収束用 rule、DEPRECATED rule。generic のみ）。
+- `tests/intelligence/test_theme_discovery_rules.py`（matrix 1〜14）、`test_theme_discovery.py`（15〜68）、
+  `test_theme_discovery_boundary.py`（74〜79）。`test_theme_intelligence_import_boundary.py` と
+  `test_theme_taxonomy_entity_boundary.py` を additive に拡張（B4C module の列挙・入力 model module の許可・ruleset file の同居）。
+- `docs/databank/PHASE6_THEME_DISCOVERY_CONTRACT.md`。
+- full suite 1846 passed（xfail 0 / skip 0）。
+
 ## v5.12 (2026-09-20) — Phase 6 P6-B4B Theme taxonomy ＋ entity catalog（versioned knowledge）実装
 
 B4C discovery の前提となる決定論的 normalization knowledge を追加した。taxonomy / entity catalog は **VERSIONED KNOWLEDGE**

@@ -18,18 +18,26 @@ THEMES_DIR = REPO_ROOT / "src" / "intelligence" / "themes"
 MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "proposal_model", "proposal_store",
            "proposal_resolution", "dedup", "proposal_bridge",
            # P6-B4B: versioned knowledge（taxonomy / entity catalog）。YAML は knowledge_loader だけが読む
-           "knowledge_loader", "taxonomy_model", "taxonomy", "entity_model", "entity_catalog")
+           "knowledge_loader", "taxonomy_model", "taxonomy", "entity_model", "entity_catalog",
+           # P6-B4C: deterministic discovery（ruleset knowledge / adapter / predicates / discover）。純関数。store を持たない
+           "discovery_model", "discovery_predicates", "discovery_rules", "discovery_adapter", "discovery")
 IO_MODULES = ("proposal_store",)                                         # 追記専用 JSONL のみ（P6-B3）
 IDENTITY_MODULES = ("proposal_model",)                                   # content id（thprop_ / thdec_）を計算する唯一の module
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
-KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog")                  # P6-B4B: pathlib.Path を型として受けるだけ
+KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
+INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
+INPUT_MODEL_TOKENS = ("facts", "market", "sources", "databank")
+LIFECYCLE_TOKEN_EXEMPTIONS = {"discovery_adapter": ("tier",)}            # SourceDocument.source_tier（上流の source 格）は lifecycle 語彙ではない
 ALLOWED_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "typing", "json", "re"}
 ALLOWED_STDLIB_IO = ALLOWED_STDLIB | {"os", "pathlib"}
 ALLOWED_STDLIB_KNOWLEDGE_PATH = ALLOWED_STDLIB | {"pathlib"}
 ALLOWED_STDLIB_KNOWLEDGE_YAML = ALLOWED_STDLIB | {"pathlib", "hashlib", "unicodedata", "yaml"}
 ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fingerprint", "..themes.qualification",
                     "..themes.resolver", ".model", ".lifecycle_model", ".proposal_model", ".proposal_resolution",
-                    ".knowledge_loader", ".taxonomy_model", ".entity_model"}
+                    ".knowledge_loader", ".taxonomy_model", ".entity_model",
+                    # P6-B4C
+                    ".discovery_model", ".discovery_predicates", ".discovery_rules", ".discovery_adapter", ".entity_catalog", ".taxonomy",
+                    ".dedup", "..core.types", "..facts.model", "..market.model", "..sources.model", "..databank.news_model"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
@@ -39,7 +47,13 @@ ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.
     "src.intelligence.theme_intelligence.dedup", "src.intelligence.theme_intelligence.proposal_bridge",
     "src.intelligence.theme_intelligence.knowledge_loader", "src.intelligence.theme_intelligence.taxonomy_model",
     "src.intelligence.theme_intelligence.taxonomy", "src.intelligence.theme_intelligence.entity_model",
-    "src.intelligence.theme_intelligence.entity_catalog"}
+    "src.intelligence.theme_intelligence.entity_catalog",
+    # P6-B4C: discovery module と、許可された入力 model module（model のみ。store / provider / ingestion は含まれない）
+    "src.intelligence.theme_intelligence.discovery_model", "src.intelligence.theme_intelligence.discovery_predicates",
+    "src.intelligence.theme_intelligence.discovery_rules", "src.intelligence.theme_intelligence.discovery_adapter",
+    "src.intelligence.theme_intelligence.discovery", "src.intelligence.core.types",
+    "src.intelligence.facts", "src.intelligence.facts.model", "src.intelligence.market", "src.intelligence.market.model",
+    "src.intelligence.sources", "src.intelligence.sources.model", "src.intelligence.databank", "src.intelligence.databank.news_model"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
@@ -75,6 +89,8 @@ def test_modules_import_only_the_pure_read_only_foundation_surface() -> None:
         for token in FORBIDDEN_MODULE_TOKENS:
             if token == "yaml" and name in KNOWLEDGE_YAML_MODULES:                    # P6-B4B: YAML は loader module だけ
                 continue
+            if token in INPUT_MODEL_TOKENS and name in INPUT_MODEL_MODULES:            # P6-B4C: 入力 model module（model のみ）
+                continue
             assert not any(re.search(rf"(^|\.){token}(\.|$)", m) for m in imports), (name, token)
 
 
@@ -88,6 +104,9 @@ def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> N
             "import src.intelligence.theme_intelligence.knowledge_loader, src.intelligence.theme_intelligence.taxonomy_model\n"
             "import src.intelligence.theme_intelligence.taxonomy, src.intelligence.theme_intelligence.entity_model\n"
             "import src.intelligence.theme_intelligence.entity_catalog\n"
+            "import src.intelligence.theme_intelligence.discovery_model, src.intelligence.theme_intelligence.discovery_predicates\n"
+            "import src.intelligence.theme_intelligence.discovery_rules, src.intelligence.theme_intelligence.discovery_adapter\n"
+            "import src.intelligence.theme_intelligence.discovery\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
@@ -143,6 +162,8 @@ def test_no_io_clock_random_network_store_or_score_in_sources() -> None:
         for token in forbidden:
             assert token not in source, (name, token)
         for token in LIFECYCLE_TOKENS:
+            if token in LIFECYCLE_TOKEN_EXEMPTIONS.get(name, ()):
+                continue
             assert token not in source, (name, token)
     store_source = executable_source(PACKAGE_DIR / "proposal_store.py")
     assert "open('ab'" in store_source and "fsync" in store_source                      # 唯一の書き込み経路は追記のみ
