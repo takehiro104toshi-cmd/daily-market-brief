@@ -4,6 +4,41 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.14 (2026-09-20) — Phase 6 P6-B4D Theme discovery E2E ＋ false-positive gate（検証のみ）
+
+B4C の discovery 層に対する敵対的 E2E gate を追加した。test と docs だけを追加し、runtime（discovery module、taxonomy /
+entity catalog / discovery rules の公開 snapshot）・Foundation・B1・B2・B3・B4B・P4・P5・config・workflow・公開出力は無変更。
+期待値は `discover()` の出力の snapshot ではなく、契約から独立に authoring した golden fixture である。
+
+### 追加 — tests
+
+- `tests/intelligence/test_theme_discovery_e2e.py`: 35 件の golden case corpus（正例 8、L2 攻撃 6、entity lifecycle 4、
+  taxonomy 階層 4、negative predicate 2、source origin 4、PIT 2、機構 firewall 3、MIN_DISTINCT 2）と、
+  EvidenceCandidate / ThemeCandidate を別々に数える混同行列（group 別内訳つき）。機構 firewall、矛盾 rule の非仲裁、
+  proposal id の収束と分岐、decision 履歴 4 状態の抑制、ThemeResolution との exact dedup、FC-1（Foundation OTHER 使用数）、
+  score / rank / 独立 source 主張の不在、成果物の機密 token 検査。
+- `tests/intelligence/test_theme_discovery_false_positive.py`: L2 正規化攻撃（別語内の部分文字列、句読点、NFKC、casefold、
+  空白、最長一致、alias 反復、URL / author のみ、context alias）、taxonomy 階層（親子非伝播、多親、deprecated slug）、
+  entity lifecycle（rename / ticker 変更 / supersession / inactive / ambiguous）、negative predicate stress、
+  MIN_DISTINCT 4 次元の stress。
+- `tests/intelligence/test_theme_discovery_replay.py`: cutoff 等号は可・1 マイクロ秒超過は除外（入力 4 種 ＋ knowledge 3 種）、
+  旧 version に pin した replay、旧 ruleset × 新 knowledge の pin 不一致、10 seed の入力 shuffle・既存 proposal / decision の
+  shuffle・knowledge 再読み込みでの proposal id / canonical bytes / run report 一致、run report 順序の canonical 性。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_DISCOVERY_E2E_GATE.md`: corpus の構成、golden 期待値の作り方、group 別混同行列、
+  L1 / L2 結果、taxonomy 階層・entity lifecycle・source origin・機構 firewall・negative predicate・MIN_DISTINCT の結果、
+  proposal id 収束、decision 履歴、dedup、PIT / replay、FC-1、限界、supervisor 決定事項（D-B4D-1〜5）。
+
+### 検証結果
+
+- ThemeCandidate の false positive 0、EvidenceCandidate の false positive 0。
+- ThemeCandidate の false negative は 1 件のみで、L2 だけの theme 的文面に対する意図的な fail closed
+  （診断 `THEME_CANDIDATE_REQUIRES_L1_HIT`）。
+- 生成された THEME_CANDIDATE 9 件はいずれも Foundation の OTHER category を必要としない。
+- 数値は合成 corpus 上の契約適合の計数であり、実運用の precision / recall の推定ではない。
+
 ## v5.13 (2026-09-20) — Phase 6 P6-B4C deterministic Theme discovery（contract ＋ implementation）
 
 許可された構造化入力（SourceDocument / NewsItem / usable Fact / market Observation）から、B3 の EvidenceCandidateProposal /
