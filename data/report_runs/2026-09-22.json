@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-22",
+  "timezone": "Asia/Tokyo",
+  "slots": {
+    "evening": {
+      "status": "success",
+      "scheduled_time": "17:20",
+      "started_at": "2026-09-22T00:09:12.452623+09:00",
+      "data_fetch_started_at": "2026-09-22T00:09:12.452623+09:00",
+      "trigger_type": "schedule",
+      "is_recovery_run": false,
+      "workflow_run_id": "35616939300",
+      "generated_at": "2026-09-22T00:09:12.452623+09:00",
+      "report_build_completed_at": "2026-09-22T00:09:12.452623+09:00",
+      "retry_count": 0,
+      "slot_label": "夕方総括",
+      "generated_at_jst": "2026-09-22T00:09:12.452623+09:00",
+      "generated_at_utc": "2026-09-21T15:09:12.452623+00:00",
+      "report_date_jst": "2026-09-22",
+      "git_commit_sha": "81998a0b3956d11a4de9c559e79d59e2110b3400",
+      "generation_status": "success",
+      "html_valid": true
+    }
+  }
+}
