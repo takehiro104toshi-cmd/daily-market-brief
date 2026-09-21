@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.17 (2026-09-21) — Phase 6 P6-B5A Theme relation graph 読み取り専用 architecture 監査（docs のみ）
+
+Theme root どうしの意味論的関係を表す永続 relation graph の architecture を、読み取り専用で設計監査した。
+runtime・test・knowledge・config・workflow・data・公開出力はいずれも無変更。graph runtime は実装していない。
+
+### 追加
+
+- `docs/databank/PHASE6_THEME_RELATION_GRAPH_AUDIT.md`: Foundation lineage との素な分離と強制方法、
+  relation authority の 4 案比較（別 append-only authority を推奨）、assertion ＋ governance event の
+  二層 record model と identity / 辺 key の区別、MVP 語彙 4 型（CAUSES / AMPLIFIES / MITIGATES / DEPENDS_ON。
+  RELATED_TO 不採用、PARENT_OF は MVP 外）、因果安全性（出典の主張の記録と系の推論の区別、RULE / LLM は提案止まり）、
+  提案 architecture、方向性と derived 逆辺、自己辺 / 重複辺、訂正 / 撤回、PIT の端点意味論、lifecycle 非干渉、
+  merge / split の自動移行禁止、evidence 要求、taxonomy / entity は hint のみ、discovery 非拡張、
+  記述的 query 面（順位付けなし・推移的導出辺なし）、循環意味論、数値強度の不採用、歴史資産の分類、
+  package 境界、永続化規律、公開境界、失敗語彙 17 種、将来 test matrix 32 項目、監督者決定 B5-D1〜D10。
+
+### 検証結果
+
+- 凍結面（Foundation / B1 / B2 / B3 / B4B / B4C / B4D / B4E / P4 / P5）の diff はすべて 0。
+- 監督者決定 10 件はいずれも Foundation / B3 / B4 の変更を必要としない。
+
 ## v5.16 (2026-09-20) — Phase 6 P6-B4 完了監査（docs のみ）
 
 B4A〜B4E の読み取り専用の完了監査を実施し、結果を 1 本の監査 doc にまとめた。runtime・knowledge・test・config・
