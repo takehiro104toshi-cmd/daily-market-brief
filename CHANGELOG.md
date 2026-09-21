@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.19 (2026-09-21) — Phase 6 P6-B5C relation 候補と人間の決定（contract ＋ implementation）
+
+B5B relation authority の直前に立つ提案・決定層を追加した。提案も ACCEPT も plan も authority ではなく、
+B5B への追記は本 gate に存在しない。Foundation・B1・B2・B3・B4・B5B の runtime と knowledge、P4・P5、
+config・workflow・公開出力はいずれも無変更。関係の自動生成は実装していない。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `relation_proposal_model.py`: 不変の `RelationProposal`（提案 type は RELATION_CANDIDATE の 1 つ）と
+  `RelationProposalDecision`（ACCEPT / REJECT / DEFER の 3 つ、actor は HUMAN 固定）。提案者 class は
+  HUMAN / SOURCE / RULE / LLM で、これは「誰が提案したか」であり authority の主張 class ではない。
+  提案 identity は候補となる主張そのもので、発見機構（提案者）と created_at を含まない。出典の帰属は
+  意味を変えるため identity に入る。ACCEPT は最終 authority（HUMAN_ASSERTED / SOURCE_ASSERTED）を明示する。
+  自己辺は提案段階で拒否する。
+- `relation_proposal_resolution.py`: decision chain を predecessor graph だけで解く純関数。latest-wins は無く、
+  fork / 複数 start は OPEN_UNRESOLVED、dangling / 別 proposal 参照 / 閉路は INVALID_DECISION_HISTORY。
+- `relation_proposal_bridge.py`: 受理済み候補 → 不変の `RelationAssertionPlan`。plan は journal identity を持たず
+  永続化しない。SOURCE_ASSERTED は提案に出典の帰属と citation が実在する場合のみ許し、提案者が RULE / LLM で
+  あることは出典の権威の代わりにならない（authority laundering の禁止）。CAUSES は evidence 必須。
+  端点は呼び出し側の read-only lookup が答え、退役 / 後継でも書き換えない。既存 authority と同内容なら
+  RELATION_ALREADY_AUTHORITATIVE、撤回済みなら RELATION_RETRACTED_REQUIRES_GOVERNANCE で fail closed。
+  NEW_RELATION と CORRECTION を明示し、訂正の predecessor は推測しない。
+- `relation_proposal_store.py`: `relation_proposals.jsonl` と `relation_proposal_decisions.jsonl` の
+  2 authority を持つ追記専用 store。冪等 / 衝突 / 破損 fail closed / 修復なし / single writer / 明示 data_root。
+  決定の追記時に対象 proposal の実在・chain の非分岐・SOURCE_ASSERTED 受理の資格を検査する。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_relation_proposal.py`（40 件）と
+  `tests/intelligence/test_theme_relation_proposal_store.py`（19 件）。
+- `docs/databank/PHASE6_THEME_RELATION_PROPOSAL_CONTRACT.md`。
+
+### 改善
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B5C module の列挙、
+  IO / identity module、相対 import の許可、runtime closure、提案層が B5B の追記 API に到達しないことの検査）。
+
 ## v5.18 (2026-09-21) — Phase 6 P6-B5B Theme relation authority（contract ＋ implementation）
 
 Theme root どうしの意味論的関係を記録する別 authority を追加した。Foundation・B1・B2・B3・B4 の runtime と
