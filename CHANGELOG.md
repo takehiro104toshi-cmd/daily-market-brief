@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.18 (2026-09-21) — Phase 6 P6-B5B Theme relation authority（contract ＋ implementation）
+
+Theme root どうしの意味論的関係を記録する別 authority を追加した。Foundation・B1・B2・B3・B4 の runtime と
+knowledge、P4・P5、config・workflow・公開出力はいずれも無変更。関係の提案層（B5C 以降）・関係の自動生成・
+graph の順位付けは実装していない。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `relation_model.py`: 不変の `ThemeRelationAssertion` と `ThemeRelationGovernanceEvent`。関係語彙は
+  CAUSES / AMPLIFIES / MITIGATES / DEPENDS_ON の 4 型ちょうど（すべて有向）。authority になれる主張 class は
+  HUMAN_ASSERTED / SOURCE_ASSERTED の 2 つちょうどで、rule / LLM に相当する値を持たず、記録者は HUMAN 固定。
+  CAUSES は両 class とも evidence 参照必須。SOURCE_ASSERTED は帰属と citation 必須。自己辺は禁止。
+  identity は内容から決まる content id（`threl_` / `thrgov_`）で、provenance と recorded_at は identity の外。
+  辺 key は derived で、同じ関係履歴に属する assertion をまとめる。
+- `relation_resolution.py`: 純 PIT resolver。chain は predecessor graph だけで解き、fork / 複数 start は
+  UNRESOLVED、dangling / 閉路 / 非単調 / 不正な governance 列は INVALID_HISTORY。両端点の Theme root が
+  cutoff までに存在することを要求し、ThemeObservation の解決は要求しない。端点判定は呼び出し側が渡す
+  read-only lookup が答える（Foundation store を読まない）。
+- `relation_graph.py`: 記述的な read view（outgoing / incoming / neighbors / relations_between /
+  relations_by_type）。順位付け・score・中心性・推奨を持たず、推移的に導出した辺を作らない。撤回辺は
+  既定の active 集合から外れ、明示要求でのみ返る。
+- `relation_store.py`: `relation_assertions.jsonl` と `relation_governance.jsonl` の 2 authority を持つ
+  追記専用 store。canonical 行のみ・冪等・同 id 異 bytes は CONFLICT・破損は fail closed・修復なし・
+  single writer・明示 data_root。分岐 append を許さない。store 経由の解決は破損を status として返す。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_relation.py`（41 件）と `tests/intelligence/test_theme_relation_store.py`（21 件）。
+- `docs/databank/PHASE6_THEME_RELATION_AUTHORITY_CONTRACT.md`。
+
+### 改善
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B5B module の列挙、
+  IO / identity module、相対 import の許可、runtime closure、凍結 module が relation authority を
+  import しないことの検査）。
+
 ## v5.17 (2026-09-21) — Phase 6 P6-B5A Theme relation graph 読み取り専用 architecture 監査（docs のみ）
 
 Theme root どうしの意味論的関係を表す永続 relation graph の architecture を、読み取り専用で設計監査した。

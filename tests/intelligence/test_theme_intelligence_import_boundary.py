@@ -22,9 +22,11 @@ MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "propo
            # P6-B4C: deterministic discovery（ruleset knowledge / adapter / predicates / discover）。純関数。store を持たない
            "discovery_model", "discovery_predicates", "discovery_rules", "discovery_adapter", "discovery",
            # P6-B4E: 受理済み evidence 候補 → Foundation attachment plan（純。store を読まず書かない）
-           "evidence_bridge_model", "evidence_bridge")
-IO_MODULES = ("proposal_store",)                                         # 追記専用 JSONL のみ（P6-B3）
-IDENTITY_MODULES = ("proposal_model",)                                   # content id（thprop_ / thdec_）を計算する唯一の module
+           "evidence_bridge_model", "evidence_bridge",
+           # P6-B5B: Theme relation authority（assertion / governance の追記専用 store と PIT resolver、記述的 view）
+           "relation_model", "relation_resolution", "relation_graph", "relation_store")
+IO_MODULES = ("proposal_store", "relation_store")                        # 追記専用 JSONL のみ（P6-B3 / P6-B5B）
+IDENTITY_MODULES = ("proposal_model", "relation_model")                  # content id を計算する module（thprop_ / thdec_ / threl_ / thrgov_）
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
 KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
 INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
@@ -41,7 +43,9 @@ ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fin
                     ".discovery_model", ".discovery_predicates", ".discovery_rules", ".discovery_adapter", ".entity_catalog", ".taxonomy",
                     ".dedup", "..core.types", "..facts.model", "..market.model", "..sources.model", "..databank.news_model",
                     # P6-B4E
-                    ".evidence_bridge_model"}
+                    ".evidence_bridge_model",
+                    # P6-B5B
+                    ".relation_model", ".relation_resolution"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
@@ -59,7 +63,10 @@ ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.
     "src.intelligence.facts", "src.intelligence.facts.model", "src.intelligence.market", "src.intelligence.market.model",
     "src.intelligence.sources", "src.intelligence.sources.model", "src.intelligence.databank", "src.intelligence.databank.news_model",
     # P6-B4E: attachment plan の model と bridge（Foundation の read-only resolution 型だけを参照する）
-    "src.intelligence.theme_intelligence.evidence_bridge_model", "src.intelligence.theme_intelligence.evidence_bridge"}
+    "src.intelligence.theme_intelligence.evidence_bridge_model", "src.intelligence.theme_intelligence.evidence_bridge",
+    # P6-B5B: relation authority（Foundation の store / resolver を一切引き込まない）
+    "src.intelligence.theme_intelligence.relation_model", "src.intelligence.theme_intelligence.relation_resolution",
+    "src.intelligence.theme_intelligence.relation_graph", "src.intelligence.theme_intelligence.relation_store"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
@@ -115,6 +122,8 @@ def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> N
             "import src.intelligence.theme_intelligence.discovery\n"
             "import src.intelligence.theme_intelligence.evidence_bridge_model\n"
             "import src.intelligence.theme_intelligence.evidence_bridge\n"
+            "import src.intelligence.theme_intelligence.relation_model, src.intelligence.theme_intelligence.relation_store\n"
+            "import src.intelligence.theme_intelligence.relation_resolution, src.intelligence.theme_intelligence.relation_graph\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
@@ -180,7 +189,8 @@ def test_no_io_clock_random_network_store_or_score_in_sources() -> None:
 def test_proposal_modules_never_execute_foundation_operations_or_append_to_foundation() -> None:
     """P6-B3 §15 / §22: bridge / dedup / store は Foundation に書かない・operations を実行しない・root id を生成しない。"""
     for name in ("proposal_model", "proposal_store", "proposal_resolution", "dedup", "proposal_bridge",
-                 "evidence_bridge_model", "evidence_bridge"):
+                 "evidence_bridge_model", "evidence_bridge", "relation_model", "relation_resolution",
+                 "relation_graph", "relation_store"):
         source = executable_source(PACKAGE_DIR / f"{name}.py")
         for token in ("execute_candidate", "execute_declaration", "plan_candidate", "plan_merge", "append_root",
                       "append_observation", "append_governance", "append_metadata", "append_mapping", "new_root_id", "new_id(",
@@ -204,3 +214,20 @@ def test_lifecycle_module_uses_foundation_results_without_recounting() -> None:
                   "has_source_diversity", "has_temporal_diversity", "compare_resolutions", "ThemeChangeSet"):
         assert token not in source, token
     assert "derived.qualification" in source and "has_contradicting_evidence" in source
+
+
+RELATION_MODULES = ("relation_model", "relation_resolution", "relation_graph", "relation_store")
+
+
+def test_frozen_theme_intelligence_modules_never_import_the_relation_authority() -> None:
+    """P6-B5B §21: Foundation / B1 / B2 / B3 / B4 は B5B に依存しない（package 内の逆方向依存も作らない）。"""
+    for name in MODULES:
+        if name in RELATION_MODULES:
+            continue
+        source = (PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8")
+        for module in RELATION_MODULES:
+            assert f"from .{module} import" not in source and f"theme_intelligence.{module}" not in source, (name, module)
+    for path in THEMES_DIR.glob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for module in RELATION_MODULES:
+            assert module not in text, (path.name, module)
