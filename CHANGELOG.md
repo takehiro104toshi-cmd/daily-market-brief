@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.20 (2026-09-22) — Phase 6 P6-B5D relation E2E / authority laundering / 収束 gate（test ＋ doc のみ）
+
+B5B relation authority と B5C 提案・決定層の鎖を `RelationAssertionPlan` まで通す敵対的 gate。
+**runtime は 1 byte も変更していない**（test / doc / CHANGELOG のみ）。B5B authority への追記は本 gate に存在しない。
+Foundation・B1・B2・B3・B4・B5B・B5C の runtime と knowledge、P4・P5、config・workflow・公開出力はいずれも無変更。
+
+判定は `P6_B5C_REMEDIATION_REQUIRED`。`SOURCE_ASSERTED` の適格判定が構造的存在（帰属 field が非 None ＋
+citation 1 件以上）だけで成立し、「出典が relation semantics を主張した」ことと「citation が存在する」ことを
+区別できないため。詳細と監督者の決定事項は gate doc を参照。
+
+### 追加 — `tests/intelligence/`
+
+- `test_theme_relation_e2e.py`【新規】: 提案 → 人間の決定 → plan の鎖（plan で停止）、
+  authority laundering matrix（4 提案者 class × 2 受理 class ＋ case A〜F）、B5C 報告 §8 の述語一致、
+  提案収束 matrix（5 case ＋ 冪等 replay ＋ created_at）、決定 graph の敵対的集合（fork / 複数 genesis /
+  dangling / 別 proposal / cycle / 11 seed の順序不変性）、訂正と governance の相互作用（撤回済み関係は
+  ACCEPT だけで復帰しない）、PIT と決定論、store の破損と conflict、
+  Foundation 5 authority ＋ B5B 2 authority の byte 同一性。113 test。
+- `test_theme_relation_causal_safety.py`【新規】: 14 行の合成因果 corpus（**synthetic gate result only**）、
+  自動的な関係発見の不在、推移的 authority の不在（`A CAUSES B` ＋ `B CAUSES C` から `A CAUSES C` は生まれない）。
+  70 test。
+
+### 追加 — `docs/databank/`
+
+- `PHASE6_THEME_RELATION_E2E_AUTHORITY_GATE.md`【新規】: `SOURCE_ASSERTED` の意味論監査（GAP 3 点）、
+  B5C 報告 §8 の決着（矛盾ではなく同一述語の 2 分岐）、収束判定（intentional and operationally safe。
+  B4C との差異は producer 層の有無であって identity 規則ではない）、因果安全性 corpus、
+  運用契約の明確化（check-then-reuse）、監督者の決定事項 B5D-D1〜D6。
+
 ## v5.19 (2026-09-21) — Phase 6 P6-B5C relation 候補と人間の決定（contract ＋ implementation）
 
 B5B relation authority の直前に立つ提案・決定層を追加した。提案も ACCEPT も plan も authority ではなく、
