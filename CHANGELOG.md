@@ -4,6 +4,33 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.23 (2026-09-22) — Phase 6 P6-B5 closeout audit（docs のみ）
+
+B5A → B5B → B5C → B5C-R1 → B5D-RERUN を 1 つの系として監査した完了監査。**READ-ONLY / DOCS-ONLY** で、
+runtime・test・既存 B5 doc・knowledge・config・workflow・公開出力はいずれも無変更。新規 doc と本 CHANGELOG のみ。
+判定は `P6_B5_COMPLETION_AUDIT_PASS_WITH_NON_BLOCKING_DEFERRED_ITEMS`。blocker は無い。
+
+### 追加 — `docs/databank/PHASE6_THEME_B5_COMPLETION_AUDIT.md`【新規】
+
+- **authority map**: 意味論 contract / B5B relation authority / B5C 提案 authority / 人間の決定 authority /
+  決定に埋め込まれた出典主張確認 / 派生 plan / 未実装の実行 gate を層として分離し、
+  「提案 ≠ authority」「ACCEPT ≠ authority」「確認 ≠ authority」「plan ≠ authority」
+  「B5C は B5B に append しない」「RULE / LLM の出自 ≠ HUMAN の出自」「SOURCE_ASSERTED ≠ 客観的真実」を明示。
+- **B5A 照合**: 監督者決定 B5-D1〜D10 をすべて実装と突き合わせ、意図的な逸脱 1 件（B5-D1 の file 名が
+  `relations.jsonl` ではなく `relation_assertions.jsonl` / `relation_governance.jsonl` として確定したこと）を記録。
+- **B5B / B5C 監査**、**R1 の欠陥と remediation**、**B5D-RERUN の結果**、
+  **人間の統治 flow 5 本**（撤回済み関係が ACCEPT だけで復帰しないことを実機確認）、
+  **保証しないことの明示**（出典の真実性 / 自動意味論検証 / 相関から因果 / 共起・taxonomy・entity・時間近接・
+  graph 経路から関係）、**identity 監査**、**時間軸 7 種の PIT 監査**、
+  **永続化 map**（永続 authority 4 file と派生 4 種を分離。出典主張確認は決定 record の一部であり独立 journal を持たない）、
+  **依存方向**（B5C は B5B の model / resolution を read-only 参照するが `relation_store` を import しない。
+  Foundation は B5 を import しない。循環なし）。
+- **RR-1 / RR-2 を NON_BLOCKING_DEFERRED、RR-3 を POLICY_LOCKED / FUTURE_GATE_REQUIRED** として確定。
+  将来の実行 gate は渡された plan object を信頼せず、authoritative な提案と決定から再導出するか同等の
+  不変条件を完全に再検証すること。
+- **B5 繰越 register の正本**（D3〜D5 / RR-1〜RR-3 / 実行 gate / 実世界精度測定 / 自動発見 / 意味論 verifier /
+  所在の表記規約 / B4 繰越 #17 / B5A の語彙・世界時間・移行 gate）。
+
 ## v5.22 (2026-09-22) — Phase 6 P6-B5D-RERUN 再検証 gate（test ＋ doc のみ）
 
 B5C-R1 に対して B5D の敵対的 gate を独立に再実行した。**runtime は 1 byte も変更していない**
