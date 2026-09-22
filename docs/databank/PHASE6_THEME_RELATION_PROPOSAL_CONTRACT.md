@@ -176,7 +176,11 @@ B3 の governance 規律を **概念として**踏襲する（B3 の authority �
 10. 時刻が `proposal.created_at <= verified_at <= decision.recorded_at`
     （`VERIFICATION_BEFORE_PROPOSAL` / `VERIFICATION_AFTER_DECISION`）
 
-一致はすべて**厳密**である。曖昧一致も publisher 推定もしない。
+一致はすべて**厳密**である。ただし帰属の比較だけは、B5B の `attribution_key` と同じ共有規約
+`normalize_text`（NFKC → 空白圧縮 → strip → casefold）を**両辺に適用したうえでの完全一致**である
+（P6-B5D-RERUN §6 で確定）。すなわち大文字小文字・前後空白・NFKC 差は一致し、それ以外の差はすべて不一致になる。
+曖昧一致は無く、publisher / entity の等価推定も行わない（`publisher:mof` と `publisher:mof_japan` は別物）。
+citation 側 (`evidence_ref_id` ＋ `evidence_kind`) と端点と関係型は正規化せず、値の完全一致である。
 `HUMAN_ASSERTED` は `SourceClaimVerification` を要求しない（付けると `SOURCE_CLAIM_VERIFICATION_FORBIDDEN`）。
 
 `HUMAN_ASSERTED` として受理した場合、plan の `source_attribution` は **None** になる（B5B の

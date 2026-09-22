@@ -436,3 +436,68 @@ B5D 判定 `P6_B5C_REMEDIATION_REQUIRED` に対し、P6-B5C-R1 で `SourceClaimV
 
 B5D §4 の判定（A. intentional and operationally safe）は R1 で変更していない。
 `CONVERGENT_PROPOSAL` / `append_or_reuse` / co-discovery journal はいずれも未実装のまま繰り越す。
+
+---
+
+## 18. 付録 — P6-B5D-RERUN（B5C-R1 に対する独立再検証）
+
+R1 anchor `c1cbe44` に対して B5D gate を independent に再実行した。R1 報告を前提にせず runtime の挙動から確認した。
+本 gate は **TEST / DOC ONLY**（`src/` の diff は R1 anchor に対して 0）。
+
+### 18.1 受理述語の一意性（2 つ目の弱い述語の探索）
+
+適格判定を行いうる runtime 経路を列挙して確認した。
+
+| 経路 | 結果 |
+|---|---|
+| ACCEPT 決定の構築（`build` / 直接構築 / `dataclasses.replace`） | 確認なしでは組み立て不可（`MISSING_SOURCE_CLAIM_VERIFICATION`） |
+| ACCEPT 決定の解決（`relation_proposal_resolution`） | `SOURCE_ASSERTED` を見て分岐する箇所が 1 つも無い（R1 で無変更） |
+| plan の構築（`relation_proposal_bridge`） | `source_asserted_refusal` を 1 回呼ぶ |
+| 直列化と復元（`as_dict` / `from_dict`） | 確認を落とすと `MISSING_SOURCE_CLAIM_VERIFICATION`、改ざんすると `INVALID_RECORD_ID` |
+| store からの load | append 時と同じ検査。破損は `INVALID_RECORD`、束縛崩れは `INVALID_HISTORY` |
+| 適格判定そのもの | `source_asserted_refusal` の呼び出しは **store と bridge の 2 箇所だけ** |
+
+`source_authority_available`（R1 前の弱い述語）は `src/` 全体で **呼び出し 0 件**。定義だけが helper として残る。
+**2 つ目の弱い述語は存在しない。**
+
+### 18.2 A〜N matrix（再実行。bridge と store で同一 code）
+
+A 受理 ／ B `VERIFICATION_CITATION_ATTRIBUTION_MISMATCH` ／ B' 同左 ／ C `MISSING_SOURCE_CLAIM_VERIFICATION` ／
+D `MISSING_SOURCE_ATTRIBUTION` ／ E `MISSING_SOURCE_CITATION` ／ F 受理（HUMAN 規則）／
+G `VERIFICATION_ATTRIBUTION_MISMATCH` ／ H `VERIFICATION_CITATION_MISMATCH` ／ I・J `VERIFICATION_ENDPOINT_MISMATCH` ／
+K `VERIFICATION_RELATION_TYPE_MISMATCH` ／ L `FORBIDDEN_VERIFICATION_AUTHORITY` ／ M `VERIFICATION_AFTER_DECISION` ／
+N 端点 / 関係型で不一致。
+
+### 18.3 帰属一致の正確な意味（本 gate で確定・doc を更新）
+
+帰属の比較は `normalize_text`（NFKC → 空白圧縮 → strip → casefold）を**両辺に適用したうえでの完全一致**である。
+B5B の `attribution_key` と同じ共有規約であり、曖昧一致ではない。
+
+- 一致する: `" Publisher:Example_Wire "` と `publisher:example_wire`
+- 一致しない: `publisher:example wire` / `publisher:examplewire` / `publisher:example_wires` / `example_wire`
+- 等価推定をしない: `publisher:mof` と `publisher:ministry_of_finance` / `publisher:mof_japan`
+
+citation（`evidence_kind` ＋ `evidence_ref_id`）・端点・関係型は正規化せず値の完全一致。
+
+### 18.4 主張の所在
+
+必須・非空・200 字上限、`claim_summary` は必須・非空・240 字上限。長文引用は要求しない。
+両 field に `PROHIBITED_CONTENT` guard（credential URL / secret query / drive path / UNC path）が効く。
+**所在の表記規約は強制していない**（`section:2` / `p.14` / `paragraph 3` / `annex-b#2` がすべて通る）。
+本 gate では正規化 scheme を導入していない。
+
+### 18.5 本 gate の findings（いずれも NON-BLOCKING）
+
+| # | finding | 種別 | 対応 |
+|---|---|---|---|
+| RR-1 | `relation_proposal_store.py` の **module docstring だけ**が R1 前の文言のまま（「出典の帰属と citation が実在する場合にのみ許す」）。実行経路は `source_asserted_refusal` に一本化済みで挙動は正しい | 記述のずれ（runtime 内） | 本 gate は `src/` を変更できないため未修正。docstring のみの後続修正として申し送る（test_rr_107 が事実を固定） |
+| RR-2 | 復元経路で naive な時刻文字列を渡すと `RelationProposalError` ではなく素の `ValueError` になる（`from_iso` 規約）。提案の `created_at`・決定の `recorded_at` も同じで、R1 が持ち込んだものではない | 既存の例外型の不統一 | fail closed であり bypass にならない。store は `INVALID_RECORD` に写像する（test_rr_66 / 66b） |
+| RR-3 | `RelationAssertionPlan` は値 object で自前の検査を持たない。直接構築すれば bridge の検査を経ずに `verification_origin` を落とせる | 将来 gate への申し送り | plan は authority ではなく実行 gate が存在しないため現時点では安全。**将来の実行 gate は渡された plan を信頼せず、提案と決定から再導出するか再検査すること**（test_rr_106） |
+
+### 18.6 据え置き
+
+- 収束の判定（§4 の A. intentional and operationally safe）は R1 で変化していないことを再確認した。
+  提案 identity payload の key 集合も R1 前と同一。`CONVERGENT_PROPOSAL` / `append_or_reuse` /
+  co-discovery journal は未実装のまま（繰越 D3〜D5）。
+- §7 corpus の結果は引き続き **synthetic gate result only**。
+- §17.4 の限界（人間は誤った確認を行いうる。系はそれを検出しない）は変わらない。

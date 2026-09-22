@@ -4,6 +4,42 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.22 (2026-09-22) — Phase 6 P6-B5D-RERUN 再検証 gate（test ＋ doc のみ）
+
+B5C-R1 に対して B5D の敵対的 gate を独立に再実行した。**runtime は 1 byte も変更していない**
+（`src/` の diff は R1 anchor に対して 0）。B5B・Foundation・B1〜B4・P4・P5・config・workflow・公開出力も無変更。
+判定は `P6_B5D_RERUN_VALIDATED`。B5D が示した SOURCE_ASSERTED の authority laundering blocker は
+構造的に閉じており、HUMAN_ASSERTED・決定 graph・提案 provenance・PIT 決定性・store の fail closed 挙動・
+先行凍結面のいずれにも退行は無い。
+
+### 追加 — `tests/intelligence/test_theme_relation_rerun.py`【新規】
+
+- 受理述語の一意性: 決定の構築 / 解決 / plan 構築 / 直列化と復元 / store load / 適格判定の各 runtime 経路を
+  列挙し、2 つ目の弱い述語が無いことを固定。R1 前の `source_authority_available` は `src/` 全体で呼び出し 0 件。
+- A〜N matrix を bridge と store の両方で再実行し、正確な失敗 code を固定。
+- RULE / LLM 抽出 matrix（出典裏付き ＋ 人間の確認 → 許可、citation を貼っただけ → 拒否）と、
+  提案者 class が plan provenance に保存され HUMAN に書き換えられないことの確認。
+- 確認の identity と再利用、帰属 / citation の束縛（正規化の境界・publisher 等価推定の不在・
+  複数 citation のうち確認された 1 件）、所在 contract、時刻の包含境界と ±1 マイクロ秒、
+  決定 graph の不変、HUMAN_ASSERTED の非退行、B5B 互換性、authority 非改変、因果安全性 corpus、
+  推移的推論の不在、収束の不変、store の fail closed（改ざんされた確認 record を含む）、
+  import / 自動化の境界。116 test。
+
+### 改善 — `docs/databank/`
+
+- `PHASE6_THEME_RELATION_PROPOSAL_CONTRACT.md`: 帰属一致の正確な意味を明記した。
+  `normalize_text`（NFKC → 空白圧縮 → strip → casefold）を両辺に適用したうえでの完全一致であり、
+  citation・端点・関係型は正規化せず値の完全一致である。
+- `PHASE6_THEME_RELATION_E2E_AUTHORITY_GATE.md`: 付録 §18 に再検証の結果と findings を追記。
+
+### findings（いずれも NON-BLOCKING・本 gate では未修正）
+
+- RR-1: `relation_proposal_store.py` の module docstring だけが R1 前の文言のまま。実行経路は正しい。
+  本 gate は `src/` を変更できないため、docstring のみの後続修正として申し送る。
+- RR-2: 復元経路の naive 時刻が素の `ValueError` になる（既存の `from_iso` 規約。fail closed で bypass ではない）。
+- RR-3: `RelationAssertionPlan` は値 object で自前の検査を持たない。将来の実行 gate は渡された plan を
+  信頼せず、提案と決定から再導出するか再検査すること。
+
 ## v5.21 (2026-09-22) — Phase 6 P6-B5C-R1 出典主張の確認（SOURCE_ASSERTED remediation）
 
 B5D が示した欠陥（`SOURCE_ASSERTED` の適格判定が「帰属 field が非 None ＋ citation 1 件以上」という
