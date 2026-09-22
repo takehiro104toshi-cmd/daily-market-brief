@@ -88,10 +88,12 @@ proposer_ref / rule_version / created_at は identity の外にある。
 | 受理 class | 条件 |
 |---|---|
 | `HUMAN_ASSERTED` | 受理した人間が自分の名前で主張する。提案者 class は問わない |
-| `SOURCE_ASSERTED` | 提案に **出典の帰属と出典 evidence が実在する**場合のみ |
+| `SOURCE_ASSERTED` | 提案の出典の帰属 ＋ 出典 evidence に加えて、**受理決定が人間の `SourceClaimVerification` を持ち、それが提案の出典 / citation / 端点 / 関係型と厳密に一致する**場合のみ（P6-B5C-R1） |
 
-RULE / LLM という提案者 class は、出典の権威の代わりにならない（`FORBIDDEN_SOURCE_AUTHORITY`）。
-これを **authority laundering の禁止**と呼ぶ。store と bridge の両方で拒否する。
+RULE / LLM という提案者 class は、出典の権威の代わりにならない。
+**citation が存在することも出典の権威にならない**（`CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY`）。
+これを **authority laundering の禁止**と呼ぶ。store と bridge の両方で、同一の述語
+`source_asserted_refusal(proposal, decision)` によって拒否する。
 
 `CAUSES` の plan は B5B と同じく evidence 参照 1 件以上を必須とする（B5B の制約を弱めない）。
 
@@ -158,7 +160,24 @@ B3 の governance 規律を **概念として**踏襲する（B3 の authority �
 | 受理 | 許可条件 |
 |---|---|
 | ACCEPT → `HUMAN_ASSERTED` | HUMAN / SOURCE / RULE / LLM のいずれの提案でも可。HUMAN 主張の要件（rationale、CAUSES の evidence）を満たすこと |
-| ACCEPT → `SOURCE_ASSERTED` | 提案に出典の帰属 ＋ 出典 evidence が実在する場合のみ |
+| ACCEPT → `SOURCE_ASSERTED` | 下の 10 条件をすべて満たす場合のみ（P6-B5C-R1） |
+
+`ACCEPT → SOURCE_ASSERTED` の 10 条件:
+
+1. 決定の actor が人間（`FORBIDDEN_DECISION_AUTHORITY`）
+2. 提案に出典の帰属がある（`MISSING_SOURCE_ATTRIBUTION`）
+3. 提案に出典 evidence が 1 件以上ある（`MISSING_SOURCE_CITATION`）
+4. 決定が `SourceClaimVerification` を持つ（`MISSING_SOURCE_CLAIM_VERIFICATION`）
+5. 確認の帰属が提案の帰属と一致する（`VERIFICATION_ATTRIBUTION_MISMATCH`）
+6. 確認の citation が提案の evidence 参照に実在する（`VERIFICATION_CITATION_MISMATCH`）
+7. その citation 自身の帰属が同じ出典を指す。空文字は不可（`VERIFICATION_CITATION_ATTRIBUTION_MISMATCH`）
+8. 確認の端点が提案の端点と一致する（`VERIFICATION_ENDPOINT_MISMATCH`）
+9. 確認の関係型が提案の関係型と一致する（`VERIFICATION_RELATION_TYPE_MISMATCH`）
+10. 時刻が `proposal.created_at <= verified_at <= decision.recorded_at`
+    （`VERIFICATION_BEFORE_PROPOSAL` / `VERIFICATION_AFTER_DECISION`）
+
+一致はすべて**厳密**である。曖昧一致も publisher 推定もしない。
+`HUMAN_ASSERTED` は `SourceClaimVerification` を要求しない（付けると `SOURCE_CLAIM_VERIFICATION_FORBIDDEN`）。
 
 `HUMAN_ASSERTED` として受理した場合、plan の `source_attribution` は **None** になる（B5B の
 `ATTRIBUTION_FORBIDDEN` に従う）。提案側の帰属は `proposal_origin.proposal_source_attribution` に残る。
@@ -288,14 +307,16 @@ P5 calibration、network、LLM SDK、公開 module。
 `MISSING_SOURCE_CITATION` / `MISSING_PREDECESSOR` / `PREDECESSOR_FORBIDDEN` / `DUPLICATE_EVIDENCE_REF` /
 `EVIDENCE_AFTER_RECORD` / `FORBIDDEN_DECISION_AUTHORITY` / `MISSING_ACCEPTED_AUTHORITY` /
 `ACCEPTED_AUTHORITY_FORBIDDEN` / `INVALID_VOCABULARY` / `UNSUPPORTED_SCHEMA_VERSION` / `INVALID_RECORD_ID` /
-`UNKNOWN_FIELD` / `PROHIBITED_CONTENT` / `FIELD_TOO_LONG` / `INVALID_TEXT` / `INVALID_TIME` / `INVALID_TYPE`
+`UNKNOWN_FIELD` / `PROHIBITED_CONTENT` / `FIELD_TOO_LONG` / `INVALID_TEXT` / `INVALID_TIME` / `INVALID_TYPE` /
+`MISSING_SOURCE_CLAIM_VERIFICATION` / `SOURCE_CLAIM_VERIFICATION_FORBIDDEN` / `VERIFICATION_AFTER_DECISION` /
+`FORBIDDEN_VERIFICATION_AUTHORITY` / `REF_ID_KIND_MISMATCH`
 
 **store**: 破損 12 種 ＋ `PROPOSAL_NOT_FOUND` / `MISSING_PREDECESSOR` / `WRONG_PROPOSAL_PREDECESSOR` /
-`NOT_TERMINAL_PREDECESSOR` / `NON_MONOTONIC_RECORDED_AT` / `FORBIDDEN_SOURCE_AUTHORITY` / `READ_ONLY` /
-`DATA_ROOT_REQUIRED` / `CONFLICT` / `CONCURRENT_MODIFICATION`
+`NOT_TERMINAL_PREDECESSOR` / `NON_MONOTONIC_RECORDED_AT` / `READ_ONLY` / `DATA_ROOT_REQUIRED` / `CONFLICT` /
+`CONCURRENT_MODIFICATION` ＋ `SOURCE_ASSERTED_REFUSAL_CODES` の 9 種
 
 **bridge**: `INVALID_PROPOSAL_TYPE` / `PROPOSAL_NOT_ACCEPTED` / `MISSING_ACCEPTED_AUTHORITY` /
-`FORBIDDEN_SOURCE_AUTHORITY` / `MISSING_CAUSAL_EVIDENCE` / `INVALID_RECORDED_AT` / `PLAN_BEFORE_PROPOSAL` /
+`SOURCE_ASSERTED_REFUSAL_CODES` の 9 種 / `MISSING_CAUSAL_EVIDENCE` / `INVALID_RECORDED_AT` / `PLAN_BEFORE_PROPOSAL` /
 `PLAN_BEFORE_DECISION` / `PLAN_BEFORE_EVIDENCE_TIME` / `ENDPOINT_NOT_AVAILABLE` / `PREDECESSOR_NOT_FOUND` /
 `PREDECESSOR_WRONG_EDGE` / `PREDECESSOR_NOT_TERMINAL` / `RELATION_RETRACTED_REQUIRES_GOVERNANCE` /
 `RELATION_ALREADY_AUTHORITATIVE` / `EDGE_ALREADY_STARTED` / `INVALID_TYPE`
@@ -334,3 +355,55 @@ version 変更である。
 
 合計 59 件（`test_theme_relation_proposal.py` 40 件、`test_theme_relation_proposal_store.py` 19 件）。
 import 境界は `test_theme_intelligence_import_boundary.py` を additive に拡張して固定している。
+
+---
+
+## 24. 付録 — P6-B5C-R1 出典主張の確認（`SourceClaimVerification`）
+
+B5D が示した欠陥（citation の存在だけで `SOURCE_ASSERTED` 適格が成立する）を閉じるための追加。
+**意味論を機械が判定する機構は導入していない。** 人間が確認した事実を record として要求する。
+
+```
+SourceClaimVerification
+  schema_version        theme_relation_source_claim_verification:0.1.0
+  attributed_to         誰が述べたか（提案の帰属と厳密一致）
+  evidence_kind         どの citation か（kind）
+  evidence_ref_id       どの citation か（ref id。提案の evidence 参照に実在すること）
+  assertion_locus       出典のどこで述べたか（短い所在。本文の複製ではない）
+  claim_summary         何を述べたか（短い要約。長文引用を要求しない）
+  source_theme_root_id  どの Theme から
+  target_theme_root_id  どの Theme へ
+  relation_type         どの関係型として
+  verifier_class        HUMAN 固定（他は FORBIDDEN_VERIFICATION_AUTHORITY）
+  verified_by           確認した人（仮名 / role ref）
+  verified_at           確認時刻（呼び出し側が渡す。現在時刻を読まない）
+```
+
+### 24.1 配置
+
+確認は **ACCEPT 決定に束ねる**（提案には束ねない）。提案は「何が提案されたか」を、
+決定は「人間が何を査読し authorize したか」を記録する。人間の査読の後から提案履歴を書き換えない。
+
+### 24.2 identity
+
+確認は決定の identity payload に入る。したがって**確認した所在が違う 2 つの ACCEPT は
+別の `decision_id` になり、黙って同一視されない**。同じ authorization は同じ id に収束する。
+決定後に確認を差し替える手段は無い（両 record とも frozen、id は内容から決まる）。
+
+### 24.3 意味の境界（凍結文言）
+
+- `SOURCE_CLAIM_VERIFICATION_MEANING = "a person verified that the cited source asserted this relation"`
+- `SOURCE_CLAIM_VERIFICATION_NON_MEANING = "a person verified that this relation is objectively true"`
+
+plan の `verification_origin` は両方を保持する。「人間がこの関係を客観的真実として検証した」とは読ませない。
+
+### 24.4 保証の範囲
+
+保証すること: **citation の存在が黙って `SOURCE_ASSERTED` の権威へ昇格しない。**
+保証しないこと: 引用した出典がその関係を客観的に証明していること。
+人間は誤った確認を行いうる。系はそれを検出しない。意味論の NLP 判定は行わない。
+
+### 24.5 B5B 互換性
+
+B5B は無変更。plan は凍結された `ThemeRelationAssertion` をそのまま組み立てられる。
+確認 metadata は B5C の plan / 監査 provenance に留まり、B5B の record には入らない。

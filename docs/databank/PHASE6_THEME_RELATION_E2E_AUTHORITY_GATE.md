@@ -384,3 +384,55 @@ test と doc と CHANGELOG のみ。runtime は無変更。
 - `tests/intelligence/test_theme_relation_causal_safety.py`【新規】
 - `docs/databank/PHASE6_THEME_RELATION_E2E_AUTHORITY_GATE.md`【新規】
 - `CHANGELOG.md`
+
+---
+
+## 17. 付録 — P6-B5C-R1 remediation の結果（本 gate の §2 blocker に対する応答）
+
+B5D 判定 `P6_B5C_REMEDIATION_REQUIRED` に対し、P6-B5C-R1 で `SourceClaimVerification` を導入した。
+**B5B は無変更。意味論の自動判定は導入していない。**
+
+### 17.1 §2.4 の GAP 3 点の閉じ方
+
+| GAP | R1 での対応 |
+|---|---|
+| 帰属と citation の対応が検査されない | 確認の帰属が提案の帰属と厳密一致し、かつ**その citation 自身の帰属**も同じ出典を指すことを必須化。citation の帰属が空文字なら不適格（`VERIFICATION_CITATION_ATTRIBUTION_MISMATCH`） |
+| 主張の所在を記録する field が無い | `assertion_locus`（必須・非空）と `claim_summary`（必須・非空）を確認 record に追加 |
+| 人間が何を検証したかが残らない | 確認は ACCEPT 決定の identity に入り、plan の `verification_origin` に丸ごと保存される |
+
+### 17.2 §2.3 の case 表（R1 後）
+
+| case | 状況 | R1 後の runtime |
+|---|---|---|
+| A | 出典の主張を抽出し、人間が所在を確認 | 受理（`verification_origin` に所在と要約が残る） |
+| B | 無関係な出典の citation を後付け | `VERIFICATION_CITATION_ATTRIBUTION_MISMATCH` |
+| B' | citation の帰属が空 | `VERIFICATION_CITATION_ATTRIBUTION_MISMATCH` |
+| C | 言及のみの citation | 確認なしでは組み立て不可（`MISSING_SOURCE_CLAIM_VERIFICATION`） |
+| D | 帰属なし | `MISSING_SOURCE_ATTRIBUTION` |
+| E | citation なし | `MISSING_SOURCE_CITATION` |
+| F | LLM 提案 → HUMAN_ASSERTED | 受理（確認は不要。付けると `SOURCE_CLAIM_VERIFICATION_FORBIDDEN`） |
+| G | 確認の出典が違う | `VERIFICATION_ATTRIBUTION_MISMATCH` |
+| H | 確認の citation が違う | `VERIFICATION_CITATION_MISMATCH` |
+| I | 確認の source root が違う | `VERIFICATION_ENDPOINT_MISMATCH` |
+| J | 確認の target root が違う | `VERIFICATION_ENDPOINT_MISMATCH` |
+| K | 確認の関係型が違う | `VERIFICATION_RELATION_TYPE_MISMATCH` |
+| L | 確認者が人間でない | `FORBIDDEN_VERIFICATION_AUTHORITY`（model 段階） |
+| M | 確認が決定より後 | `VERIFICATION_AFTER_DECISION`（model 段階） |
+| N | 別の意味論の提案へ確認を使い回す | 端点 / 関係型 / 帰属 / citation のいずれかで不一致 |
+
+### 17.3 §7 corpus への影響
+
+行 7 / 9 / 10 / 11（見出しの語法 / 関連 / 可能性 / 否定）は、**いずれも人間の出典主張確認なしには
+`SOURCE_ASSERTED` へ到達できなくなった**。系が保証するのは「citation の存在が黙って権威へ昇格しないこと」であり、
+「出典が客観的にその関係を証明していること」ではない。この境界は R1 後も変わらない（§17.4）。
+
+### 17.4 残る限界（変わらない）
+
+人間は誤った確認を行いうる。系はそれを検出しない。R1 が閉じたのは
+**「構造だけ整えた提案が、人間の明示的な確認なしに `SOURCE_ASSERTED` になる」経路**であって、
+「出典が真にその関係を述べている」ことの保証ではない。
+
+### 17.5 §15 の収束判定は据え置き
+
+B5D §4 の判定（A. intentional and operationally safe）は R1 で変更していない。
+`CONVERGENT_PROPOSAL` / `append_or_reuse` / co-discovery journal はいずれも未実装のまま繰り越す。

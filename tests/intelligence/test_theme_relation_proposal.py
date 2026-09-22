@@ -24,6 +24,8 @@ from src.intelligence.theme_intelligence.relation_proposal_model import (ACCEPTA
                                                                          RelationProposalError,
                                                                          RelationProposalProvenance,
                                                                          RelationProposalType, RelationProposerClass,
+                                                                         SourceClaimVerification,
+                                                                         source_asserted_refusal,
                                                                          source_authority_available)
 from src.intelligence.theme_intelligence.relation_proposal_resolution import (RelationProposalStatus,
                                                                               derive_relation_proposal_status,
@@ -70,13 +72,35 @@ def sourced(**kw) -> RelationProposal:
     return proposal(**kw)
 
 
+DERIVE_VERIFICATION = object()          # P6-B5C-R1: SOURCE_ASSERTED の受理では既定で確認を組み立てる
+
+
+def verification(candidate, *, attributed_to=None, evidence_ref=None, locus="section:2",
+                 summary="the release states that the first theme drives the second", source=None, target=None,
+                 relation_type=None, verifier="reviewer:r1", at=None) -> SourceClaimVerification:
+    """提案に整合する人間の出典主張確認（既定）。ずらした引数で不一致 case を作る。"""
+    ref = evidence_ref if evidence_ref is not None else (candidate.evidence_refs[0] if candidate.evidence_refs
+                                                         else evidence())
+    named = candidate.source_attribution.attributed_to if candidate.source_attribution is not None else \
+        ATTRIBUTION.attributed_to
+    return SourceClaimVerification(attributed_to=attributed_to or named, evidence_kind=ref.evidence_kind,
+                                   evidence_ref_id=ref.ref_id, assertion_locus=locus, claim_summary=summary,
+                                   source_theme_root_id=source or candidate.source_theme_root_id,
+                                   target_theme_root_id=target or candidate.target_theme_root_id,
+                                   relation_type=relation_type or candidate.relation_type, verified_by=verifier,
+                                   verified_at=at or candidate.created_at)
+
+
 def decide(candidate, kind=RelationDecisionKind.ACCEPT, *, accepted=AssertionClass.HUMAN_ASSERTED,
            actor="reviewer:r1", reason="checked the cited release", at=DECIDED_AT,
-           supersedes="") -> RelationProposalDecision:
+           supersedes="", verified=DERIVE_VERIFICATION) -> RelationProposalDecision:
+    if verified is DERIVE_VERIFICATION:
+        verified = (verification(candidate) if kind is RelationDecisionKind.ACCEPT
+                    and accepted is AssertionClass.SOURCE_ASSERTED else None)
     return RelationProposalDecision.build(proposal_id=candidate.proposal_id, decision=kind,
                                           accepted_assertion_class=accepted if kind is RelationDecisionKind.ACCEPT else None,
-                                          actor_ref=actor, reason=reason, recorded_at=at,
-                                          supersedes_decision_id=supersedes)
+                                          source_claim_verification=verified, actor_ref=actor, reason=reason,
+                                          recorded_at=at, supersedes_decision_id=supersedes)
 
 
 def lookup(*roots, retired=(), superseded=(), created=None):
@@ -193,8 +217,12 @@ def test_15_a_source_candidate_records_an_attributed_claim_not_a_verified_truth(
     assert accepted.assertion_class is AssertionClass.SOURCE_ASSERTED
     assert accepted.source_attribution == ATTRIBUTION
     assert accepted.proposal_origin.proposer_class is RelationProposerClass.SOURCE
-    plain = json.dumps(accepted.to_plain()).lower()
-    for token in ("verified", "true", "proven", "confirmed_truth"):
+    body = accepted.to_plain()
+    origin = body.pop("verification_origin")                       # P6-B5C-R1: 凍結文言だけを別に検査する
+    assert origin["meaning"] == "a person verified that the cited source asserted this relation"
+    assert origin["non_meaning"] == "a person verified that this relation is objectively true"
+    plain = json.dumps(body).lower()
+    for token in ("true", "proven", "confirmed_truth", "objectively"):
         assert token not in plain, token
     assert SOURCE_ASSERTED_MEANING == "the cited source asserted this relation"
     assert SOURCE_ASSERTED_NON_MEANING == "the system verified this relation as causal truth"
@@ -220,7 +248,7 @@ def test_18_21_rule_and_llm_candidates_can_only_become_human_authority(proposer)
     assert accepted.assertion_class is AssertionClass.HUMAN_ASSERTED
     assert accepted.proposal_origin.proposer_class is proposer and accepted.source_attribution is None
     laundering = decide(candidate, accepted=AssertionClass.SOURCE_ASSERTED)
-    fails_plan("FORBIDDEN_SOURCE_AUTHORITY", candidate, (laundering,))
+    fails_plan("MISSING_SOURCE_ATTRIBUTION", candidate, (laundering,))
     with_source = causal(proposer=proposer, proposer_ref=f"{proposer.value.lower()}:x", attribution=ATTRIBUTION)
     ok = plan_of(with_source, (decide(with_source, accepted=AssertionClass.SOURCE_ASSERTED),))
     assert ok.assertion_class is AssertionClass.SOURCE_ASSERTED and ok.source_attribution == ATTRIBUTION
@@ -468,3 +496,112 @@ def test_58b_a_correction_must_continue_from_the_terminal_assertion() -> None:
     stale = proposal(change_kind=RelationChangeKind.CORRECTION, previous=first.relation_assertion_id,
                      rationale="a later revision")
     fails_plan("PREDECESSOR_NOT_TERMINAL", stale, (decide(stale),), existing=edges)
+
+
+# ---------------------------------------------------------------- 80〜95 出典主張の確認（P6-B5C-R1）
+
+
+def test_80_the_verification_is_immutable_and_binds_every_semantic_axis() -> None:
+    import dataclasses
+    subject = verification(sourced())
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        subject.assertion_locus = "section:9"                      # type: ignore[misc]
+    bound = set(dataclasses.asdict(subject))
+    assert {"attributed_to", "evidence_kind", "evidence_ref_id", "assertion_locus", "claim_summary",
+            "source_theme_root_id", "target_theme_root_id", "relation_type", "verifier_class", "verified_by",
+            "verified_at"} <= bound
+    assert not [name for name in bound if name in ("verified", "is_valid", "ok", "approved")]
+
+
+def test_81_the_verification_serializes_deterministically() -> None:
+    subject = verification(sourced())
+    assert json.loads(json.dumps(subject.as_dict())) == subject.as_dict()
+    assert SourceClaimVerification.from_dict(subject.as_dict()) == subject
+    assert subject.evidence_key == f"{subject.evidence_kind.value}:{subject.evidence_ref_id}"
+    assert subject.attribution_key == ATTRIBUTION.attribution_key
+
+
+def test_82_the_verification_participates_in_the_decision_identity() -> None:
+    candidate = sourced()
+    left = decide(candidate, accepted=AssertionClass.SOURCE_ASSERTED,
+                  verified=verification(candidate, locus="section:2"))
+    right = decide(candidate, accepted=AssertionClass.SOURCE_ASSERTED,
+                   verified=verification(candidate, locus="section:7"))
+    assert left.decision_id != right.decision_id
+    assert left.identity_payload()["source_claim_verification"] != right.identity_payload()["source_claim_verification"]
+    same = decide(candidate, accepted=AssertionClass.SOURCE_ASSERTED, verified=verification(candidate, locus="section:2"))
+    assert same.decision_id == left.decision_id                    # 同じ authorization は収束する
+
+
+@pytest.mark.parametrize("field,code", [("assertion_locus", "MISSING_FIELD"), ("claim_summary", "MISSING_FIELD"),
+                                        ("attributed_to", "MISSING_FIELD"), ("verified_by", "MISSING_FIELD")])
+def test_83_86_every_required_text_field_is_required(field, code) -> None:
+    candidate = sourced()
+    base = verification(candidate).as_dict()
+    base[field] = ""
+    fails_model(code, lambda: SourceClaimVerification.from_dict(base))
+
+
+def test_87_the_verification_time_must_be_aware() -> None:
+    candidate = sourced()
+    base = verification(candidate)
+    fails_model("INVALID_TIME", lambda: SourceClaimVerification(
+        attributed_to=base.attributed_to, evidence_kind=base.evidence_kind, evidence_ref_id=base.evidence_ref_id,
+        assertion_locus=base.assertion_locus, claim_summary=base.claim_summary,
+        source_theme_root_id=base.source_theme_root_id, target_theme_root_id=base.target_theme_root_id,
+        relation_type=base.relation_type, verified_by=base.verified_by, verified_at=datetime(2026, 9, 20)))
+
+
+def test_88_the_verification_rejects_a_self_relation_and_an_unknown_root() -> None:
+    candidate = sourced()
+    base = verification(candidate).as_dict()
+    fails_model("SELF_RELATION", lambda: SourceClaimVerification.from_dict({**base, "target_theme_root_id": A}))
+    fails_model("UNKNOWN_THEME_ROOT", lambda: SourceClaimVerification.from_dict({**base, "source_theme_root_id": "x"}))
+
+
+def test_89_the_verification_ref_id_must_match_its_evidence_kind() -> None:
+    candidate = sourced()
+    base = verification(candidate).as_dict()
+    fails_model("REF_ID_KIND_MISMATCH", lambda: SourceClaimVerification.from_dict({**base, "evidence_kind": "NEWS_ITEM"}))
+
+
+def test_90_the_verification_refuses_a_machine_specific_path_or_a_credential_url() -> None:
+    candidate = sourced()
+    base = verification(candidate).as_dict()
+    drive = "D" + ":" + chr(92) + "research" + chr(92) + "note"
+    fails_model("PROHIBITED_CONTENT", lambda: SourceClaimVerification.from_dict({**base, "assertion_locus": drive}))
+    leaked = "https://user:pw@example.invalid/release"
+    fails_model("PROHIBITED_CONTENT", lambda: SourceClaimVerification.from_dict({**base, "claim_summary": leaked}))
+
+
+@pytest.mark.parametrize("proposer", [RelationProposerClass.RULE, RelationProposerClass.LLM])
+def test_91_92_a_source_backed_machine_proposal_may_become_source_asserted(proposer) -> None:
+    """RULE / LLM が出典裏付きで提案し、人間が確認して受理すれば SOURCE_ASSERTED になれる。"""
+    candidate = proposal(proposer=proposer, proposer_ref=f"{proposer.value.lower()}:extractor",
+                         attribution=ATTRIBUTION, refs=(evidence(),),
+                         rationale="the release states the first theme drives the second")
+    plan = plan_of(candidate, (decide(candidate, accepted=AssertionClass.SOURCE_ASSERTED),))
+    assert plan.assertion_class is AssertionClass.SOURCE_ASSERTED
+    assert plan.proposal_origin.proposer_class is proposer
+    assert plan.verification_origin.verifier_class is ProvenanceClass.HUMAN
+
+
+@pytest.mark.parametrize("proposer", [RelationProposerClass.RULE, RelationProposerClass.LLM])
+def test_93_94_a_machine_inference_with_a_citation_only_cannot(proposer) -> None:
+    """citation を付けただけの機械推論は SOURCE_ASSERTED にならない（帰属が無い）。"""
+    candidate = proposal(proposer=proposer, proposer_ref=f"{proposer.value.lower()}:reasoner", refs=(evidence(),),
+                         rationale="inferred without a source claim")
+    decision = decide(candidate, accepted=AssertionClass.SOURCE_ASSERTED)
+    assert source_asserted_refusal(candidate, decision) == "MISSING_SOURCE_ATTRIBUTION"
+    fails_plan("MISSING_SOURCE_ATTRIBUTION", candidate, (decision,))
+    assert plan_of(candidate, (decide(candidate),)).assertion_class is AssertionClass.HUMAN_ASSERTED
+
+
+def test_95_the_verification_records_a_locus_not_a_reproduction_of_the_source() -> None:
+    """長文の引用を要求しない。短い所在と主張の要約だけを記録する（著作権面の抑制）。"""
+    from src.intelligence.theme_intelligence.relation_proposal_model import MAX_LOCUS_LEN, MAX_TEXT_LEN
+    assert MAX_LOCUS_LEN == 200 and MAX_TEXT_LEN == 240
+    candidate = sourced()
+    base = verification(candidate).as_dict()
+    fails_model("FIELD_TOO_LONG", lambda: SourceClaimVerification.from_dict({**base, "claim_summary": "x" * 241}))
+    fails_model("FIELD_TOO_LONG", lambda: SourceClaimVerification.from_dict({**base, "assertion_locus": "y" * 201}))

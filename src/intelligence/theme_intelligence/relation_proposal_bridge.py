@@ -6,7 +6,8 @@ existing_relations=())`
 - plan は **authority ではない**。B5B の `ThemeRelationAssertion` を append できるのは将来の実行 gate だけで、
   本 module は relation store の追記 API を import も呼び出しもしない。
 - 最終的な主張 authority は受理決定が明示した class（HUMAN_ASSERTED / SOURCE_ASSERTED）。
-  SOURCE_ASSERTED は、提案に出典の帰属と出典 evidence が実在する場合にのみ許す。提案者が RULE / LLM であることは
+  SOURCE_ASSERTED は、受理決定が持つ人間の `SourceClaimVerification` が提案の出典 / citation / 端点 / 関係型と
+  厳密に一致する場合にのみ許す（P6-B5C-R1）。citation が在るだけでは許さない。提案者が RULE / LLM であることも
   出典の権威の代わりにならない（authority laundering の禁止）。
 - 提案の出自（誰が提案したか）と、受理された主張 authority（誰が主張するか）は別物として両方保持する。
 - 端点 Theme root は呼び出し側が渡す read-only lookup だけが答える。Foundation store を読まない。
@@ -23,9 +24,10 @@ from ..core.time import to_utc_iso
 from ..themes.model import ProvenanceClass, canonical_json
 from .relation_model import (AssertionClass, RELATION_VOCAB_VERSION, RelationEvidenceRef, RelationType,
                              SourceAttribution, edge_key_of)
-from .relation_proposal_model import (RelationChangeKind, RelationDecisionKind, RelationProposal,
+from .relation_proposal_model import (SOURCE_CLAIM_VERIFICATION_MEANING, SOURCE_CLAIM_VERIFICATION_NON_MEANING,
+                                      RelationChangeKind, RelationDecisionKind, RelationProposal,
                                       RelationProposalDecision, RelationProposalError, RelationProposerClass,
-                                      source_authority_available)
+                                      SourceClaimVerification, source_asserted_refusal)
 from .relation_proposal_resolution import (RelationProposalStatus, derive_relation_proposal_status,
                                            resolve_active_relation_decision)
 from .relation_resolution import ENDPOINT_PRESENT_STATES, EdgeState, EndpointLookup, EndpointState, ResolvedRelation
@@ -100,6 +102,47 @@ class RelationDecisionOrigin:
                 "supersedes_decision_id": self.supersedes_decision_id}
 
 
+@dataclass(frozen=True, kw_only=True)
+class RelationVerificationOrigin:
+    """P6-B5C-R1 — 受理を authorize した人間の出典主張確認。監査のためにそのまま plan に残す。
+
+    `meaning` / `non_meaning` は凍結文言であり、「人間がこの関係を客観的真実として検証した」とは読ませない。
+    """
+
+    verified_by: str
+    verifier_class: ProvenanceClass
+    attributed_to: str
+    evidence_kind: str
+    evidence_ref_id: str
+    assertion_locus: str
+    claim_summary: str
+    source_theme_root_id: str
+    target_theme_root_id: str
+    relation_type: RelationType
+    verified_at: datetime
+    meaning: str = SOURCE_CLAIM_VERIFICATION_MEANING
+    non_meaning: str = SOURCE_CLAIM_VERIFICATION_NON_MEANING
+
+    @classmethod
+    def of(cls, verification: SourceClaimVerification) -> "RelationVerificationOrigin":
+        return cls(verified_by=verification.verified_by, verifier_class=verification.verifier_class,
+                   attributed_to=verification.attributed_to, evidence_kind=verification.evidence_kind.value,
+                   evidence_ref_id=verification.evidence_ref_id, assertion_locus=verification.assertion_locus,
+                   claim_summary=verification.claim_summary,
+                   source_theme_root_id=verification.source_theme_root_id,
+                   target_theme_root_id=verification.target_theme_root_id,
+                   relation_type=verification.relation_type, verified_at=verification.verified_at)
+
+    def to_plain(self) -> Dict[str, object]:
+        return {"verified_by": self.verified_by, "verifier_class": self.verifier_class.value,
+                "attributed_to": self.attributed_to, "evidence_kind": self.evidence_kind,
+                "evidence_ref_id": self.evidence_ref_id, "assertion_locus": self.assertion_locus,
+                "claim_summary": self.claim_summary, "source_theme_root_id": self.source_theme_root_id,
+                "target_theme_root_id": self.target_theme_root_id, "relation_type": self.relation_type.value,
+                "verified_at": to_utc_iso(self.verified_at), "meaning": self.meaning,
+                "non_meaning": self.non_meaning}
+
+
 # ---------------------------------------------------------------- plan
 
 
@@ -125,6 +168,7 @@ class RelationAssertionPlan:
     diagnostics: Tuple[str, ...] = ()
     proposal_origin: RelationProposalOrigin
     decision_origin: RelationDecisionOrigin
+    verification_origin: Optional[RelationVerificationOrigin] = None
 
     def to_plain(self) -> Dict[str, object]:
         return {
@@ -138,6 +182,8 @@ class RelationAssertionPlan:
             "source_endpoint": self.source_endpoint.value, "target_endpoint": self.target_endpoint.value,
             "diagnostics": list(self.diagnostics), "proposal_origin": self.proposal_origin.to_plain(),
             "decision_origin": self.decision_origin.to_plain(),
+            "verification_origin": (self.verification_origin.to_plain()
+                                    if self.verification_origin is not None else None),
         }
 
     def canonical_line(self) -> str:
@@ -214,8 +260,9 @@ def plan_relation_assertion_from_accepted_proposal(proposal: object, decisions: 
     _require(assertion_class is not None, "MISSING_ACCEPTED_AUTHORITY", "an acceptance names the final authority")
 
     if assertion_class is AssertionClass.SOURCE_ASSERTED:
-        _require(source_authority_available(proposal), "FORBIDDEN_SOURCE_AUTHORITY",
-                 "a source asserted relation needs the source attribution and citation of the proposal")
+        refusal = source_asserted_refusal(proposal, decision)             # P6-B5C-R1
+        _require(refusal == "", refusal or "FORBIDDEN_SOURCE_AUTHORITY",
+                 "a source asserted relation needs the human verification of the cited claim")
         attribution = proposal.source_attribution
     else:
         attribution = None
@@ -261,8 +308,11 @@ def plan_relation_assertion_from_accepted_proposal(proposal: object, decisions: 
         rationale=proposal.rationale, evidence_refs=proposal.evidence_refs,
         previous_assertion_id=proposal.previous_assertion_id, change_kind=proposal.change_kind, edge_key=edge_key,
         recorded_at=moment, source_endpoint=source_state, target_endpoint=target_state,
-        diagnostics=tuple(sorted(annotations)), proposal_origin=origin, decision_origin=accepted)
+        diagnostics=tuple(sorted(annotations)), proposal_origin=origin, decision_origin=accepted,
+        verification_origin=(RelationVerificationOrigin.of(decision.source_claim_verification)
+                             if decision.source_claim_verification is not None else None))
 
 
 __all__ = ["EVIDENCE_REQUIRED_TYPES", "RELATION_PLAN_VERSION", "RelationAssertionPlan", "RelationBridgeError",
-           "RelationDecisionOrigin", "RelationProposalOrigin", "plan_relation_assertion_from_accepted_proposal"]
+           "RelationDecisionOrigin", "RelationProposalOrigin", "RelationVerificationOrigin",
+           "plan_relation_assertion_from_accepted_proposal"]

@@ -23,13 +23,19 @@ from src.intelligence.theme_intelligence.relation_model import (AssertionClass, 
                                                                 canonical_relation_line, edge_key_of)
 from src.intelligence.theme_intelligence.relation_proposal_bridge import (RELATION_PLAN_VERSION,
                                                                           RelationBridgeError,
+                                                                          RelationVerificationOrigin,
                                                                           plan_relation_assertion_from_accepted_proposal)
 from src.intelligence.theme_intelligence.relation_proposal_model import (ACCEPTABLE_ASSERTION_CLASSES,
                                                                          PROPOSER_IS_NOT_AUTHORITY,
                                                                          RelationChangeKind, RelationDecisionKind,
                                                                          RelationProposal, RelationProposalDecision,
                                                                          RelationProposerClass,
+                                                                         SOURCE_ASSERTED_REFUSAL_CODES,
+                                                                         SOURCE_CLAIM_VERIFICATION_MEANING,
+                                                                         SOURCE_CLAIM_VERIFICATION_NON_MEANING,
+                                                                         SourceClaimVerification,
                                                                          canonical_proposal_record_line,
+                                                                         source_asserted_refusal,
                                                                          source_authority_available)
 from src.intelligence.theme_intelligence.relation_proposal_resolution import (DecisionResolutionStatus,
                                                                               RelationProposalStatus,
@@ -50,7 +56,7 @@ from tests.intelligence.test_theme_relation import (A, ACTOR, ATTRIBUTION, B, C,
                                                     retraction)
 from tests.intelligence.test_theme_relation_proposal import (DECIDED_AT, MISSING_ASSERTION_ID, OTHER_SOURCE, PLANNED_AT,
                                                              authority_edges, b5b_assertion, causal, decide, lookup,
-                                                             plan_of, proposal, provenance, sourced)
+                                                             plan_of, proposal, provenance, sourced, verification)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / "src" / "intelligence" / "theme_intelligence"
@@ -183,24 +189,27 @@ def test_b5d_06_09_every_proposer_class_may_be_accepted_as_human_asserted(propos
 
 
 @pytest.mark.parametrize("proposer", PROPOSER_CLASSES)
-def test_b5d_10_13_source_asserted_depends_only_on_attribution_and_citation(proposer) -> None:
-    """4 提案者 class すべてで、SOURCE_ASSERTED の可否は提案者ではなく帰属 ＋ citation の有無だけで決まる。"""
-    bare = candidate_of(proposer) if proposer is RelationProposerClass.SOURCE else candidate_of(proposer)
+def test_b5d_10_13_source_asserted_needs_a_human_verification_whatever_the_proposer(proposer) -> None:
+    """4 提案者 class すべてで、SOURCE_ASSERTED の可否は提案者ではなく人間の出典主張確認の有無で決まる。"""
+    bare = candidate_of(proposer)
     if proposer is RelationProposerClass.SOURCE:
-        plan = plan_of(bare, (accept(bare, AssertionClass.SOURCE_ASSERTED),))
-        assert plan.assertion_class is AssertionClass.SOURCE_ASSERTED
+        assert plan_of(bare, (accept(bare, AssertionClass.SOURCE_ASSERTED),)).assertion_class \
+            is AssertionClass.SOURCE_ASSERTED
     else:
         assert source_authority_available(bare) is False
-        refuses("FORBIDDEN_SOURCE_AUTHORITY", bare, (accept(bare, AssertionClass.SOURCE_ASSERTED),))
+        refuses("MISSING_SOURCE_ATTRIBUTION", bare, (accept(bare, AssertionClass.SOURCE_ASSERTED),))
     dressed = candidate_of(proposer, attribution=ATTRIBUTION, refs=(cited(),))
-    assert source_authority_available(dressed) is True
+    assert source_authority_available(dressed) is True               # 構造的前提は満たす
+    unverified = accept(dressed, AssertionClass.HUMAN_ASSERTED)      # 確認を伴わない受理は HUMAN_ASSERTED だけ
+    assert plan_of(dressed, (unverified,)).assertion_class is AssertionClass.HUMAN_ASSERTED
     plan = plan_of(dressed, (accept(dressed, AssertionClass.SOURCE_ASSERTED),))
     assert plan.assertion_class is AssertionClass.SOURCE_ASSERTED
     assert plan.proposal_origin.proposer_class is proposer
+    assert plan.verification_origin.verifier_class is ProvenanceClass.HUMAN
 
 
 def test_b5d_14_case_a_extracted_source_claim_keeps_attribution_and_proposer() -> None:
-    """A: RULE / LLM が出典の主張を抽出し、帰属と citation を保ったまま人間が SOURCE_ASSERTED で受理する。"""
+    """A: RULE / LLM が出典の主張を抽出し、人間がその所在を確認して SOURCE_ASSERTED で受理する。"""
     extracted = candidate_of(RelationProposerClass.LLM, attribution=ATTRIBUTION,
                              refs=(cited("a", attribution="publisher:example_wire", locator="section:2"),),
                              rationale="the cited release states the tariff raises input costs")
@@ -208,54 +217,61 @@ def test_b5d_14_case_a_extracted_source_claim_keeps_attribution_and_proposer() -
     assert plan.assertion_class is AssertionClass.SOURCE_ASSERTED
     assert plan.source_attribution == ATTRIBUTION
     assert plan.proposal_origin.proposer_class is RelationProposerClass.LLM
-    assert plan.proposal_origin.proposal_source_attribution == ATTRIBUTION.attributed_to
+    assert plan.verification_origin.attributed_to == ATTRIBUTION.attributed_to
+    assert plan.verification_origin.assertion_locus == "section:2"
 
 
-def test_b5d_15_case_b_independent_inference_with_an_unrelated_citation_is_not_rejected() -> None:
-    """B: 独自推論に無関係な citation を付けても、帰属と citation が形式的に在る限り受理は通る（GAP）。
-
-    citation の `attribution` が帰属 `attributed_to` と別 source を指していても runtime は突き合わせない。
-    """
+def test_b5d_15_case_b_independent_inference_with_an_unrelated_citation_is_refused() -> None:
+    """B: 独自推論に無関係な出典の citation を付けても、帰属が一致しないため受理されない。"""
     laundered = candidate_of(RelationProposerClass.LLM, attribution=ATTRIBUTION,
                              refs=(cited("b", attribution=OTHER_SOURCE.attributed_to),),
                              rationale="inferred from model reasoning, citation attached for context")
-    assert source_authority_available(laundered) is True
-    plan = plan_of(laundered, (accept(laundered, AssertionClass.SOURCE_ASSERTED),))
-    assert plan.assertion_class is AssertionClass.SOURCE_ASSERTED
-    assert plan.source_attribution == ATTRIBUTION
-    assert {e.attribution for e in plan.evidence_refs} == {OTHER_SOURCE.attributed_to}   # 突き合わせは無い
+    assert source_authority_available(laundered) is True             # 構造的前提だけは満たす
+    refuses("VERIFICATION_CITATION_ATTRIBUTION_MISMATCH", laundered,
+            (accept(laundered, AssertionClass.SOURCE_ASSERTED),))
+    forged = accept(laundered, AssertionClass.SOURCE_ASSERTED,
+                    verified=verification(laundered, attributed_to=OTHER_SOURCE.attributed_to))
+    refuses("VERIFICATION_ATTRIBUTION_MISMATCH", laundered, (forged,))
 
 
-def test_b5d_16_case_b_a_citation_with_no_attribution_at_all_is_not_rejected() -> None:
-    """B': citation の帰属 field が空でも SOURCE_ASSERTED 適格になる（GAP）。"""
+def test_b5d_16_case_b_a_citation_with_no_attribution_at_all_is_refused() -> None:
+    """B': citation の帰属 field が空なら SOURCE_ASSERTED 適格にならない。"""
     generic = candidate_of(RelationProposerClass.RULE, attribution=ATTRIBUTION, refs=(cited("c", attribution=""),))
     assert source_authority_available(generic) is True
-    plan = plan_of(generic, (accept(generic, AssertionClass.SOURCE_ASSERTED),))
-    assert plan.assertion_class is AssertionClass.SOURCE_ASSERTED
-    assert [e.attribution for e in plan.evidence_refs] == [""]
+    refuses("VERIFICATION_CITATION_ATTRIBUTION_MISMATCH", generic,
+            (accept(generic, AssertionClass.SOURCE_ASSERTED),))
 
 
-def test_b5d_17_case_c_a_source_that_only_mentions_the_topic_is_indistinguishable() -> None:
-    """C: 出典が entity / topic に言及しただけで relation semantics を主張していない場合も区別されない（GAP）。"""
+def test_b5d_17_case_c_a_mention_only_citation_cannot_qualify_structurally() -> None:
+    """C: 出典が言及しただけの citation は、構造的な存在だけでは SOURCE_ASSERTED に到達しない。
+
+    人間が主張の所在を明示的に確認した record が無ければ受理されない。
+    """
     mention_only = candidate_of(RelationProposerClass.RULE, attribution=ATTRIBUTION,
-                               refs=(cited("d", locator="section:1"),),
-                               rationale="the release mentions both themes but asserts no link")
+                                refs=(cited("d", locator="section:1"),),
+                                rationale="the release mentions both themes but asserts no link")
     assert source_authority_available(mention_only) is True
-    plan = plan_of(mention_only, (accept(mention_only, AssertionClass.SOURCE_ASSERTED),))
-    assert plan.assertion_class is AssertionClass.SOURCE_ASSERTED
+    unverified = RelationProposalDecision.build(
+        proposal_id=mention_only.proposal_id, decision=RelationDecisionKind.ACCEPT,
+        accepted_assertion_class=AssertionClass.HUMAN_ASSERTED, actor_ref="reviewer:r1",
+        reason="accepted on my own authority", recorded_at=DECIDED_AT)
+    assert plan_of(mention_only, (unverified,)).assertion_class is AssertionClass.HUMAN_ASSERTED
+    from src.intelligence.theme_intelligence.relation_proposal_model import RelationProposalError
+    with pytest.raises(RelationProposalError) as info:               # 確認なしの SOURCE_ASSERTED は組み立てられない
+        accept(mention_only, AssertionClass.SOURCE_ASSERTED, verified=None)
+    assert info.value.code == "MISSING_SOURCE_CLAIM_VERIFICATION"
 
 
-def test_b5d_18_case_a_and_case_b_can_produce_byte_identical_plans() -> None:
-    """A と B は field が同じなら plan の canonical bytes まで同一になる。record model に差が無い（GAP の核心）。"""
+def test_b5d_18_two_different_verified_loci_never_collapse_into_one_authorization() -> None:
+    """§8: 検証した所在が違う 2 つの ACCEPT は、decision identity でも plan bytes でも区別される。"""
     shared = dict(attribution=ATTRIBUTION, refs=(cited("e"),), rationale="the release links the two themes")
-    extracted = candidate_of(RelationProposerClass.LLM, **shared)
-    inferred = candidate_of(RelationProposerClass.LLM, **shared)
-    assert extracted.proposal_id == inferred.proposal_id
-    left = plan_of(extracted, (accept(extracted, AssertionClass.SOURCE_ASSERTED),))
-    right = plan_of(inferred, (accept(inferred, AssertionClass.SOURCE_ASSERTED),))
-    assert left.canonical_line() == right.canonical_line()
-    plain = json.loads(left.canonical_line())
-    assert not any(key for key in plain if "semantic" in key or "locus" in key or "verified" in key)
+    candidate = candidate_of(RelationProposerClass.LLM, **shared)
+    left = accept(candidate, AssertionClass.SOURCE_ASSERTED, verified=verification(candidate, locus="section:2"))
+    right = accept(candidate, AssertionClass.SOURCE_ASSERTED, verified=verification(candidate, locus="section:9"))
+    assert left.decision_id != right.decision_id
+    assert plan_of(candidate, (left,)).canonical_line() != plan_of(candidate, (right,)).canonical_line()
+    plain = json.loads(plan_of(candidate, (left,)).canonical_line())["verification_origin"]
+    assert plain["assertion_locus"] == "section:2" and plain["claim_summary"]
 
 
 def test_b5d_19_case_d_missing_attribution_is_refused_in_store_and_bridge(tmp_path) -> None:
@@ -264,12 +280,12 @@ def test_b5d_19_case_d_missing_attribution_is_refused_in_store_and_bridge(tmp_pa
                                 rationale="the release asserts the link but the source is not named")
     assert source_authority_available(unattributed) is False
     decision = accept(unattributed, AssertionClass.SOURCE_ASSERTED)
-    refuses("FORBIDDEN_SOURCE_AUTHORITY", unattributed, (decision,))
+    refuses("MISSING_SOURCE_ATTRIBUTION", unattributed, (decision,))
     store = store_at(tmp_path)
     store.append_proposal(unattributed)
     with pytest.raises(RelationProposalAppendRejected) as info:
         store.append_decision(decision)
-    assert info.value.code == "FORBIDDEN_SOURCE_AUTHORITY"
+    assert info.value.code == "MISSING_SOURCE_ATTRIBUTION"
 
 
 def test_b5d_20_case_e_missing_citation_is_refused_in_store_and_bridge(tmp_path) -> None:
@@ -277,12 +293,12 @@ def test_b5d_20_case_e_missing_citation_is_refused_in_store_and_bridge(tmp_path)
     uncited = candidate_of(RelationProposerClass.RULE, attribution=ATTRIBUTION)
     assert source_authority_available(uncited) is False
     decision = accept(uncited, AssertionClass.SOURCE_ASSERTED)
-    refuses("FORBIDDEN_SOURCE_AUTHORITY", uncited, (decision,))
+    refuses("MISSING_SOURCE_CITATION", uncited, (decision,))
     store = store_at(tmp_path)
     store.append_proposal(uncited)
     with pytest.raises(RelationProposalAppendRejected) as info:
         store.append_decision(decision)
-    assert info.value.code == "FORBIDDEN_SOURCE_AUTHORITY"
+    assert info.value.code == "MISSING_SOURCE_CITATION"
 
 
 def test_b5d_21_case_f_llm_proposal_accepted_as_human_asserted_drops_the_attribution() -> None:
@@ -293,16 +309,22 @@ def test_b5d_21_case_f_llm_proposal_accepted_as_human_asserted_drops_the_attribu
     assert plan.assertion_class is AssertionClass.HUMAN_ASSERTED and plan.source_attribution is None
     assert plan.proposal_origin.proposer_class is RelationProposerClass.LLM
     assert plan.proposal_origin.proposal_source_attribution == ATTRIBUTION.attributed_to
+    assert plan.verification_origin is None                          # HUMAN_ASSERTED は確認を要求しない
     assert plan.decision_origin.actor_ref == "reviewer:r1"
 
 
-def test_b5d_22_source_authority_available_is_exactly_the_two_clause_structural_predicate() -> None:
-    """適格判定の全体。意味論的検査は存在しない（B5D では実装しない）。"""
-    source = executable_source(PACKAGE_DIR / "relation_proposal_model.py")
-    body = source.split("def source_authority_available")[1]
-    assert "source_attribution is not None" in body and "len(proposal.evidence_refs) >= 1" in body
-    for token in ("attribution_key", "asserts", "semantic", "verify", "locus"):
-        assert token not in body.split("return")[1].split("\n")[0], token
+def test_b5d_22_citation_presence_alone_is_never_sufficient() -> None:
+    """P6-B5C-R1 の受理条件。`source_authority_available` は前提であって適格性ではない。"""
+    from src.intelligence.theme_intelligence.relation_proposal_model import CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY
+    assert CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY == "a citation alone never carries source authority"
+    dressed = candidate_of(RelationProposerClass.RULE, attribution=ATTRIBUTION, refs=(cited(),))
+    assert source_authority_available(dressed) is True
+    lone = RelationProposalDecision.build(proposal_id=dressed.proposal_id, decision=RelationDecisionKind.ACCEPT,
+                                          accepted_assertion_class=AssertionClass.HUMAN_ASSERTED,
+                                          actor_ref="reviewer:r1", reason="no source verification was made",
+                                          recorded_at=DECIDED_AT)
+    assert source_asserted_refusal(dressed, lone) == "MISSING_SOURCE_CLAIM_VERIFICATION"
+    assert source_asserted_refusal(dressed, accept(dressed, AssertionClass.SOURCE_ASSERTED)) == ""
 
 
 def test_b5d_23_no_assertion_class_exists_for_rule_or_llm() -> None:
@@ -315,6 +337,8 @@ def test_b5d_24_the_frozen_source_asserted_meaning_is_unchanged() -> None:
     assert SOURCE_ASSERTED_MEANING == "the cited source asserted this relation"
     assert SOURCE_ASSERTED_NON_MEANING == "the system verified this relation as causal truth"
     assert PROPOSER_IS_NOT_AUTHORITY == "a proposer class describes who proposed, not who asserts"
+    assert SOURCE_CLAIM_VERIFICATION_MEANING == "a person verified that the cited source asserted this relation"
+    assert SOURCE_CLAIM_VERIFICATION_NON_MEANING == "a person verified that this relation is objectively true"
 
 
 def test_b5d_25_the_source_proposer_class_is_neither_required_nor_privileged() -> None:
@@ -330,43 +354,46 @@ def test_b5d_25_the_source_proposer_class_is_neither_required_nor_privileged() -
     assert rule_side.proposal_id == source_side.proposal_id          # 提案者は identity の外
 
 
-# ================================================================ §3 B5C 報告 §8 の矛盾の決着
+# ================================================================ §3 受理述語の一意性（R1 後）
 
 
 @pytest.mark.parametrize("proposer", PROPOSER_CLASSES)
-def test_b5d_26_forbidden_source_authority_fires_iff_the_predicate_is_false(proposer) -> None:
-    """「RULE / LLM でも帰属 ＋ citation があれば SOURCE_ASSERTED になれる」と
-    「FORBIDDEN_SOURCE_AUTHORITY で拒否する」は同一述語の 2 分岐であり、矛盾ではない。"""
-    for attribution, refs in ((None, ()), (ATTRIBUTION, ()), (None, (cited(),)), (ATTRIBUTION, (cited(),))):
+def test_b5d_26_the_refusal_code_is_one_predicate_for_every_proposer_class(proposer) -> None:
+    """受理可否は提案者 class に依らず `source_asserted_refusal` の 1 述語だけが答える。"""
+    for attribution, refs, expected in ((None, (), "MISSING_SOURCE_ATTRIBUTION"),
+                                        (ATTRIBUTION, (), "MISSING_SOURCE_CITATION"),
+                                        (None, (cited(),), "MISSING_SOURCE_ATTRIBUTION"),
+                                        (ATTRIBUTION, (cited(),), "")):
         if proposer is RelationProposerClass.SOURCE and not (attribution and refs):
-            continue                                              # SOURCE class は model 段階で形式を要求する
+            continue                                                 # SOURCE class は model 段階で形式を要求する
         candidate = candidate_of(proposer, attribution=attribution, refs=refs)
-        eligible = source_authority_available(candidate)
-        assert eligible is bool(attribution is not None and refs)
         decision = accept(candidate, AssertionClass.SOURCE_ASSERTED)
-        if eligible:
-            assert plan_of(candidate, (decision,)).assertion_class is AssertionClass.SOURCE_ASSERTED
+        assert source_asserted_refusal(candidate, decision) == expected
+        if expected:
+            refuses(expected, candidate, (decision,))
         else:
-            refuses("FORBIDDEN_SOURCE_AUTHORITY", candidate, (decision,))
+            assert plan_of(candidate, (decision,)).assertion_class is AssertionClass.SOURCE_ASSERTED
 
 
-def test_b5d_27_store_and_bridge_agree_on_the_predicate_for_every_proposer_class(tmp_path) -> None:
+def test_b5d_27_store_and_bridge_agree_on_the_refusal_for_every_proposer_class(tmp_path) -> None:
     store = store_at(tmp_path)
     for index, proposer in enumerate(PROPOSER_CLASSES):
         candidate = candidate_of(proposer, refs=(cited(chr(ord("h") + index)),),
                                  rationale=f"candidate {index} without attribution")
         store.append_proposal(candidate)
         decision = accept(candidate, AssertionClass.SOURCE_ASSERTED)
-        store_refused = bridge_refused = False
+        expected = source_asserted_refusal(candidate, decision)
+        store_code = bridge_code = ""
         try:
             store.append_decision(decision)
         except RelationProposalAppendRejected as exc:
-            store_refused = exc.code == "FORBIDDEN_SOURCE_AUTHORITY"
+            store_code = exc.code
         try:
             plan_of(candidate, (decision,))
         except RelationBridgeError as exc:
-            bridge_refused = exc.code == "FORBIDDEN_SOURCE_AUTHORITY"
-        assert store_refused == bridge_refused == (not source_authority_available(candidate))
+            bridge_code = exc.code
+        assert store_code == bridge_code == expected, proposer
+        assert expected in SOURCE_ASSERTED_REFUSAL_CODES or expected == ""
 
 
 # ================================================================ §4 提案収束 matrix
@@ -1037,3 +1064,177 @@ def test_b5d_90_this_gate_writes_only_under_the_pytest_tmp_root() -> None:
     for token in forbidden:
         assert token not in source, token
     assert source.count("tmp" + "_path") > 20
+
+
+# ================================================================ §2R P6-B5C-R1 — 確認の不一致 matrix（G〜N）
+
+
+def verified_candidate() -> RelationProposal:
+    return candidate_of(RelationProposerClass.LLM, attribution=ATTRIBUTION,
+                        refs=(cited("r", attribution=ATTRIBUTION.attributed_to, locator="section:4"),),
+                        rationale="the release states the first theme drives the second")
+
+
+MISMATCHES = (
+    ("G_wrong_source", dict(attributed_to=OTHER_SOURCE.attributed_to), "VERIFICATION_ATTRIBUTION_MISMATCH"),
+    ("H_wrong_citation", dict(evidence_ref=cited("x", attribution=ATTRIBUTION.attributed_to)),
+     "VERIFICATION_CITATION_MISMATCH"),
+    ("I_wrong_source_root", dict(source=C), "VERIFICATION_ENDPOINT_MISMATCH"),
+    ("J_wrong_target_root", dict(target=D), "VERIFICATION_ENDPOINT_MISMATCH"),
+    ("K_wrong_relation_type", dict(relation_type=RelationType.MITIGATES), "VERIFICATION_RELATION_TYPE_MISMATCH"),
+)
+
+
+@pytest.mark.parametrize("label,shift,code", MISMATCHES, ids=[row[0] for row in MISMATCHES])
+def test_b5d_160_164_a_mismatched_verification_fails_closed(label, shift, code) -> None:
+    candidate = verified_candidate()
+    decision = accept(candidate, AssertionClass.SOURCE_ASSERTED, verified=verification(candidate, **shift))
+    assert source_asserted_refusal(candidate, decision) == code, label
+    refuses(code, candidate, (decision,))
+
+
+@pytest.mark.parametrize("label,shift,code", MISMATCHES, ids=[row[0] for row in MISMATCHES])
+def test_b5d_165_169_the_store_refuses_the_same_mismatches(tmp_path, label, shift, code) -> None:
+    store = store_at(tmp_path)
+    candidate = verified_candidate()
+    store.append_proposal(candidate)
+    decision = accept(candidate, AssertionClass.SOURCE_ASSERTED, verified=verification(candidate, **shift))
+    with pytest.raises(RelationProposalAppendRejected) as info:
+        store.append_decision(decision)
+    assert info.value.code == code, label
+
+
+def test_b5d_170_case_l_a_non_human_verifier_cannot_be_constructed() -> None:
+    """L: 確認者は人間だけ。RULE / LLM の確認 record は model 段階で作れない。"""
+    from src.intelligence.theme_intelligence.relation_proposal_model import RelationProposalError
+    candidate = verified_candidate()
+    base = verification(candidate)
+    for actor_class in (ProvenanceClass.RULE, ProvenanceClass.LLM_PROPOSAL):
+        with pytest.raises(RelationProposalError) as info:
+            SourceClaimVerification(attributed_to=base.attributed_to, evidence_kind=base.evidence_kind,
+                                    evidence_ref_id=base.evidence_ref_id, assertion_locus=base.assertion_locus,
+                                    claim_summary=base.claim_summary,
+                                    source_theme_root_id=base.source_theme_root_id,
+                                    target_theme_root_id=base.target_theme_root_id,
+                                    relation_type=base.relation_type, verifier_class=actor_class,
+                                    verified_by="rule:auto", verified_at=base.verified_at)
+        assert info.value.code == "FORBIDDEN_VERIFICATION_AUTHORITY"
+
+
+def test_b5d_171_case_m_a_verification_later_than_its_decision_is_refused() -> None:
+    """M: 決定より後に行われた確認は、その決定を authorize できない。"""
+    from src.intelligence.theme_intelligence.relation_proposal_model import RelationProposalError
+    candidate = verified_candidate()
+    with pytest.raises(RelationProposalError) as info:
+        accept(candidate, AssertionClass.SOURCE_ASSERTED,
+               verified=verification(candidate, at=DECIDED_AT + timedelta(seconds=1)))
+    assert info.value.code == "VERIFICATION_AFTER_DECISION"
+    assert accept(candidate, AssertionClass.SOURCE_ASSERTED,
+                  verified=verification(candidate, at=DECIDED_AT)).recorded_at == DECIDED_AT
+
+
+def test_b5d_172_a_verification_earlier_than_its_proposal_is_refused() -> None:
+    candidate = candidate_of(RelationProposerClass.LLM, attribution=ATTRIBUTION,
+                             refs=(cited("r", attribution=ATTRIBUTION.attributed_to),),
+                             at=T0 + timedelta(hours=2))
+    decision = accept(candidate, AssertionClass.SOURCE_ASSERTED, at=DECIDED_AT + timedelta(hours=2),
+                      verified=verification(candidate, at=T0))
+    assert source_asserted_refusal(candidate, decision) == "VERIFICATION_BEFORE_PROPOSAL"
+    refuses("VERIFICATION_BEFORE_PROPOSAL", candidate, (decision,), at=PLANNED_AT + timedelta(hours=2))
+
+
+@pytest.mark.parametrize("shift,code", [(dict(relation_type=RelationType.CAUSES), "VERIFICATION_RELATION_TYPE_MISMATCH"),
+                                        (dict(target=C), "VERIFICATION_ENDPOINT_MISMATCH")])
+def test_b5d_173_174_case_n_a_verification_cannot_be_reused_for_other_semantics(shift, code) -> None:
+    """N: 別の意味論を持つ提案へ確認を使い回せない。"""
+    verified = verified_candidate()
+    other = candidate_of(RelationProposerClass.LLM, attribution=ATTRIBUTION,
+                         refs=(cited("r", attribution=ATTRIBUTION.attributed_to, locator="section:4"),),
+                         rationale="the release states the first theme drives the second", **shift)
+    assert other.proposal_id != verified.proposal_id
+    borrowed = accept(other, AssertionClass.SOURCE_ASSERTED, verified=verification(verified))
+    assert source_asserted_refusal(other, borrowed) == code
+    refuses(code, other, (borrowed,))
+
+
+def test_b5d_175_the_plan_preserves_the_whole_verification_audit_trail() -> None:
+    candidate = verified_candidate()
+    decision = accept(candidate, AssertionClass.SOURCE_ASSERTED)
+    plan = plan_of(candidate, (decision,))
+    origin = plan.verification_origin
+    assert isinstance(origin, RelationVerificationOrigin)
+    assert origin.verified_by == "reviewer:r1" and origin.verifier_class is ProvenanceClass.HUMAN
+    assert origin.attributed_to == ATTRIBUTION.attributed_to
+    assert origin.evidence_ref_id == candidate.evidence_refs[0].ref_id
+    assert origin.assertion_locus and origin.claim_summary
+    assert (origin.source_theme_root_id, origin.target_theme_root_id) == (A, B)
+    assert origin.relation_type is candidate.relation_type
+    assert origin.verified_at <= decision.recorded_at <= plan.recorded_at
+    assert origin.meaning == SOURCE_CLAIM_VERIFICATION_MEANING
+    assert origin.non_meaning == SOURCE_CLAIM_VERIFICATION_NON_MEANING
+    assert plan.decision_origin.decision_id == decision.decision_id
+
+
+def test_b5d_176_the_source_asserted_plan_still_builds_the_frozen_b5b_assertion(tmp_path) -> None:
+    """§11: B5B は変更していない。plan は凍結された ThemeRelationAssertion をそのまま組み立てられる。"""
+    candidate = verified_candidate()
+    plan = plan_of(candidate, (accept(candidate, AssertionClass.SOURCE_ASSERTED),))
+    assembled = ThemeRelationAssertion.build(
+        source_theme_root_id=plan.source_theme_root_id, target_theme_root_id=plan.target_theme_root_id,
+        relation_type=plan.relation_type, assertion_class=plan.assertion_class, rationale=plan.rationale,
+        evidence_refs=plan.evidence_refs, source_attribution=plan.source_attribution,
+        previous_assertion_id=plan.previous_assertion_id, provenance=ACTOR, recorded_at=plan.recorded_at)
+    assert assembled.assertion_class is AssertionClass.SOURCE_ASSERTED
+    assert assembled.source_attribution == ATTRIBUTION
+    assert assembled.edge_key == plan.edge_key
+    body = json.loads(canonical_relation_line(assembled))
+    for token in ("verification", "assertion_locus", "claim_summary", "verified_by"):
+        assert token not in body, token                       # 確認 metadata は B5C 側の監査 provenance に留まる
+    assert not any(path.exists() for path in relation_authority_paths(tmp_path / "data").values())
+
+
+def test_b5d_177_a_human_asserted_accept_never_carries_a_verification() -> None:
+    from src.intelligence.theme_intelligence.relation_proposal_model import RelationProposalError
+    candidate = verified_candidate()
+    with pytest.raises(RelationProposalError) as info:
+        accept(candidate, AssertionClass.HUMAN_ASSERTED, verified=verification(candidate))
+    assert info.value.code == "SOURCE_CLAIM_VERIFICATION_FORBIDDEN"
+    for kind in (RelationDecisionKind.REJECT, RelationDecisionKind.DEFER):
+        with pytest.raises(RelationProposalError) as info:
+            decide(candidate, kind, reason="not now", verified=verification(candidate))
+        assert info.value.code in ("ACCEPTED_AUTHORITY_FORBIDDEN", "SOURCE_CLAIM_VERIFICATION_FORBIDDEN")
+
+
+@pytest.mark.parametrize("seed", DEEP_SEEDS)
+def test_b5d_178_a_verified_accept_is_order_independent_and_deterministic(seed) -> None:
+    candidate = verified_candidate()
+    first = decide(candidate, RelationDecisionKind.DEFER, reason="hold for a second reader")
+    second = accept(candidate, AssertionClass.SOURCE_ASSERTED, at=DECIDED_AT + timedelta(hours=1),
+                    supersedes=first.decision_id, reason="locus confirmed")
+    ordered = plan_of(candidate, (first, second), at=PLANNED_AT + timedelta(hours=1)).canonical_line()
+    shuffled = [first, second]
+    random.Random(seed).shuffle(shuffled)
+    assert plan_of(candidate, tuple(shuffled), at=PLANNED_AT + timedelta(hours=1)).canonical_line() == ordered
+    assert json.loads(ordered)["verification_origin"]["assertion_locus"] == "section:2"
+
+
+def test_b5d_179_a_verified_decision_survives_a_store_round_trip(tmp_path) -> None:
+    store = store_at(tmp_path)
+    candidate = verified_candidate()
+    decision = accept(candidate, AssertionClass.SOURCE_ASSERTED)
+    recorded(store, candidate, (decision,))
+    reopened = RelationProposalStore.open(tmp_path / "data")
+    restored = reopened.decisions()[0]
+    assert canonical_proposal_record_line(restored) == canonical_proposal_record_line(decision)
+    assert restored.source_claim_verification == decision.source_claim_verification
+    assert plan_of(reopened.get_proposal(candidate.proposal_id), (restored,)).canonical_line() \
+        == plan_of(candidate, (decision,)).canonical_line()
+
+
+def test_b5d_180_no_semantic_verifier_was_implemented() -> None:
+    """R1 は人間の確認 record を要求しただけで、意味論を判定する機構を持ち込んでいない。"""
+    for name in B5_RUNTIME_MODULES:
+        source = executable_source(PACKAGE_DIR / f"{name}.py")
+        for token in ("nltk", "spacy", "transformers", "embedding", "classifier", "tokenize", "llm_", "prompt",
+                      "anthropic", "openai"):
+            assert token not in source.lower(), f"{name}:{token}"

@@ -22,16 +22,20 @@ from typing import Dict, Mapping, Optional, Sequence, Tuple
 
 from ..core.ids import content_id
 from ..core.time import ensure_aware, from_iso
-from ..themes.model import ProvenanceClass, canonical_json, is_root_id
+from ..themes.model import (EvidenceKind, ProvenanceClass, REF_ID_PREFIX_BY_KIND, canonical_json, is_root_id,
+                            normalize_text)
 from .relation_model import (ASSERTION_ID_PREFIX, AssertionClass, RELATION_VOCAB_VERSION, RelationEvidenceRef,
                              RelationType, SourceAttribution)
 
 RELATION_PROPOSAL_SCHEMA_VERSION = "theme_relation_proposal:0.1.0"
 RELATION_DECISION_SCHEMA_VERSION = "theme_relation_proposal_decision:0.1.0"
+#: P6-B5C-R1 — SOURCE_ASSERTED を受理するときに人間が残す、出典主張の確認 record
+SOURCE_CLAIM_VERIFICATION_SCHEMA_VERSION = "theme_relation_source_claim_verification:0.1.0"
 PROPOSAL_ID_PREFIX = "threlprop"
 DECISION_ID_PREFIX = "threldec"
 MAX_TEXT_LEN = 240
 MAX_REF_LEN = 200
+MAX_LOCUS_LEN = 200
 
 _ID_RE = {PROPOSAL_ID_PREFIX: re.compile(r"^threlprop_[0-9a-f]{24}$"),
           DECISION_ID_PREFIX: re.compile(r"^threldec_[0-9a-f]{24}$"),
@@ -141,6 +145,18 @@ class RelationDecisionKind(str, Enum):
 ACCEPTABLE_ASSERTION_CLASSES: Tuple[AssertionClass, ...] = (AssertionClass.HUMAN_ASSERTED, AssertionClass.SOURCE_ASSERTED)
 #: 提案者 class と authority の主張 class は別物であることを凍結する文言
 PROPOSER_IS_NOT_AUTHORITY = "a proposer class describes who proposed, not who asserts"
+#: P6-B5C-R1 — 出典主張確認の意味（contract / test で凍結する文言）
+SOURCE_CLAIM_VERIFICATION_MEANING = "a person verified that the cited source asserted this relation"
+#: 出典主張確認が意味しないこと
+SOURCE_CLAIM_VERIFICATION_NON_MEANING = "a person verified that this relation is objectively true"
+#: citation の存在だけでは出典の権威にならないことを凍結する文言
+CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY = "a citation alone never carries source authority"
+#: SOURCE_ASSERTED 受理が失敗しうる理由の全体（store / bridge が共有する）
+SOURCE_ASSERTED_REFUSAL_CODES: Tuple[str, ...] = (
+    "MISSING_SOURCE_ATTRIBUTION", "MISSING_SOURCE_CITATION", "MISSING_SOURCE_CLAIM_VERIFICATION",
+    "VERIFICATION_ATTRIBUTION_MISMATCH", "VERIFICATION_CITATION_MISMATCH",
+    "VERIFICATION_CITATION_ATTRIBUTION_MISMATCH", "VERIFICATION_ENDPOINT_MISMATCH",
+    "VERIFICATION_RELATION_TYPE_MISMATCH", "VERIFICATION_BEFORE_PROPOSAL")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -292,11 +308,95 @@ class RelationProposal:
                    created_at=from_iso(_str(data, "created_at")))
 
 
+# ---------------------------------------------------------------- 出典主張の確認（P6-B5C-R1）
+
+
+VERIFICATION_FIELDS = ("schema_version", "attributed_to", "evidence_kind", "evidence_ref_id", "assertion_locus",
+                       "claim_summary", "source_theme_root_id", "target_theme_root_id", "relation_type",
+                       "verifier_class", "verified_by", "verified_at")
+
+
+@dataclass(frozen=True, kw_only=True)
+class SourceClaimVerification:
+    """人間が「引用した出典のこの箇所が、この関係を明示的に述べている」と確認した不変 record。
+
+    確認しているのは **帰属と主張の所在**であって、その因果が客観的に正しいことではない
+    （`SOURCE_CLAIM_VERIFICATION_MEANING` / `SOURCE_CLAIM_VERIFICATION_NON_MEANING`）。
+
+    出典 / citation / 端点 / 関係型をすべて束ねるため、別の出典・別の citation・別の Theme・
+    別の関係型へ使い回すことができない。汎用の真偽 flag は持たない。
+    """
+
+    schema_version: str = SOURCE_CLAIM_VERIFICATION_SCHEMA_VERSION
+    attributed_to: str
+    evidence_kind: EvidenceKind
+    evidence_ref_id: str
+    assertion_locus: str
+    claim_summary: str
+    source_theme_root_id: str
+    target_theme_root_id: str
+    relation_type: RelationType
+    verifier_class: ProvenanceClass = ProvenanceClass.HUMAN
+    verified_by: str
+    verified_at: datetime
+
+    def __post_init__(self) -> None:
+        _require(self.schema_version == SOURCE_CLAIM_VERIFICATION_SCHEMA_VERSION, "UNSUPPORTED_SCHEMA_VERSION",
+                 self.schema_version)
+        object.__setattr__(self, "attributed_to", _text(self.attributed_to, "attributed_to", max_len=MAX_REF_LEN,
+                                                        required=True))
+        kind = _enum(self.evidence_kind, EvidenceKind, "evidence_kind")
+        ref_id = _text(self.evidence_ref_id, "evidence_ref_id", max_len=MAX_REF_LEN, required=True)
+        _require(ref_id.startswith(REF_ID_PREFIX_BY_KIND[kind]), "REF_ID_KIND_MISMATCH",
+                 f"{kind.value} evidence_ref_id must start with {REF_ID_PREFIX_BY_KIND[kind]!r}")
+        object.__setattr__(self, "evidence_ref_id", ref_id)
+        object.__setattr__(self, "assertion_locus", _text(self.assertion_locus, "assertion_locus",
+                                                          max_len=MAX_LOCUS_LEN, required=True))
+        object.__setattr__(self, "claim_summary", _text(self.claim_summary, "claim_summary", max_len=MAX_TEXT_LEN,
+                                                        required=True))
+        for name in ("source_theme_root_id", "target_theme_root_id"):
+            _require(is_root_id(getattr(self, name)), "UNKNOWN_THEME_ROOT", f"{name} must be a Theme root id")
+        _require(self.source_theme_root_id != self.target_theme_root_id, "SELF_RELATION",
+                 "a verified relation connects two distinct Theme roots")
+        _enum(self.relation_type, RelationType, "relation_type")
+        _enum(self.verifier_class, ProvenanceClass, "verifier_class")
+        _require(self.verifier_class is ProvenanceClass.HUMAN, "FORBIDDEN_VERIFICATION_AUTHORITY",
+                 "a source claim is verified by a person")
+        object.__setattr__(self, "verified_by", _text(self.verified_by, "verified_by", max_len=MAX_REF_LEN,
+                                                      required=True))
+        object.__setattr__(self, "verified_at", _aware(self.verified_at, "verified_at"))
+
+    @property
+    def attribution_key(self) -> str:
+        return normalize_text(self.attributed_to)
+
+    @property
+    def evidence_key(self) -> str:
+        return f"{self.evidence_kind.value}:{self.evidence_ref_id}"
+
+    def as_dict(self) -> Dict[str, object]:
+        return _plain(self)  # type: ignore[return-value]
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "SourceClaimVerification":
+        _reject_unknown(data, VERIFICATION_FIELDS)
+        return cls(schema_version=_str(data, "schema_version"), attributed_to=_str(data, "attributed_to"),
+                   evidence_kind=_parse_enum(data.get("evidence_kind"), EvidenceKind, "evidence_kind"),
+                   evidence_ref_id=_str(data, "evidence_ref_id"), assertion_locus=_str(data, "assertion_locus"),
+                   claim_summary=_str(data, "claim_summary"),
+                   source_theme_root_id=_str(data, "source_theme_root_id"),
+                   target_theme_root_id=_str(data, "target_theme_root_id"),
+                   relation_type=_parse_enum(data.get("relation_type"), RelationType, "relation_type"),
+                   verifier_class=_parse_enum(data.get("verifier_class"), ProvenanceClass, "verifier_class"),
+                   verified_by=_str(data, "verified_by"), verified_at=from_iso(_str(data, "verified_at")))
+
+
 # ---------------------------------------------------------------- decision
 
 
 DECISION_FIELDS = ("schema_version", "decision_id", "proposal_id", "decision", "accepted_assertion_class",
-                   "actor_class", "actor_ref", "reason", "supersedes_decision_id", "recorded_at")
+                   "source_claim_verification", "actor_class", "actor_ref", "reason", "supersedes_decision_id",
+                   "recorded_at")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -308,6 +408,7 @@ class RelationProposalDecision:
     proposal_id: str
     decision: RelationDecisionKind
     accepted_assertion_class: Optional[AssertionClass] = None
+    source_claim_verification: Optional[SourceClaimVerification] = None
     actor_class: ProvenanceClass = ProvenanceClass.HUMAN
     actor_ref: str
     reason: str
@@ -327,6 +428,13 @@ class RelationProposalDecision:
         else:
             _require(self.accepted_assertion_class is None, "ACCEPTED_AUTHORITY_FORBIDDEN",
                      "only an acceptance names a final assertion authority")
+        if self.accepted_assertion_class is AssertionClass.SOURCE_ASSERTED:      # P6-B5C-R1
+            _require(isinstance(self.source_claim_verification, SourceClaimVerification),
+                     "MISSING_SOURCE_CLAIM_VERIFICATION",
+                     "a source asserted acceptance carries the human verification of the cited claim")
+        else:
+            _require(self.source_claim_verification is None, "SOURCE_CLAIM_VERIFICATION_FORBIDDEN",
+                     "only a source asserted acceptance carries a source claim verification")
         object.__setattr__(self, "actor_ref", _text(self.actor_ref, "actor_ref", max_len=MAX_REF_LEN, required=True))
         object.__setattr__(self, "reason", _text(self.reason, "reason", max_len=MAX_TEXT_LEN, required=True))
         object.__setattr__(self, "supersedes_decision_id", _text(self.supersedes_decision_id, "supersedes_decision_id",
@@ -335,16 +443,21 @@ class RelationProposalDecision:
                  "INVALID_RECORD_ID", "supersedes_decision_id")
         _require(self.supersedes_decision_id != self.decision_id, "INVALID_RECORD", "a decision cannot supersede itself")
         object.__setattr__(self, "recorded_at", _aware(self.recorded_at, "recorded_at"))
+        if self.source_claim_verification is not None:
+            _require(self.source_claim_verification.verified_at <= self.recorded_at, "VERIFICATION_AFTER_DECISION",
+                     "the verification cannot be later than the decision it authorizes")
         _require(self.decision_id == _decision_id(self.identity_payload()), "INVALID_RECORD_ID",
                  "decision_id does not match the decision content")
 
     @classmethod
     def build(cls, *, proposal_id: str, decision: RelationDecisionKind, actor_ref: str, reason: str,
               recorded_at: datetime, accepted_assertion_class: Optional[AssertionClass] = None,
+              source_claim_verification: Optional[SourceClaimVerification] = None,
               supersedes_decision_id: str = "") -> "RelationProposalDecision":
         shell = object.__new__(cls)
         values = dict(schema_version=RELATION_DECISION_SCHEMA_VERSION, proposal_id=proposal_id, decision=decision,
-                      accepted_assertion_class=accepted_assertion_class, actor_class=ProvenanceClass.HUMAN,
+                      accepted_assertion_class=accepted_assertion_class,
+                      source_claim_verification=source_claim_verification, actor_class=ProvenanceClass.HUMAN,
                       actor_ref=actor_ref, reason=reason, supersedes_decision_id=supersedes_decision_id)
         for name, value in values.items():
             object.__setattr__(shell, name, value)
@@ -355,6 +468,8 @@ class RelationProposalDecision:
         return {"schema_version": self.schema_version, "proposal_id": self.proposal_id, "decision": self.decision.value,
                 "accepted_assertion_class": (self.accepted_assertion_class.value
                                              if self.accepted_assertion_class is not None else None),
+                "source_claim_verification": (_plain(self.source_claim_verification)
+                                              if self.source_claim_verification is not None else None),
                 "actor_class": self.actor_class.value, "actor_ref": self.actor_ref, "reason": self.reason,
                 "supersedes_decision_id": self.supersedes_decision_id}
 
@@ -365,11 +480,14 @@ class RelationProposalDecision:
     def from_dict(cls, data: Mapping[str, object]) -> "RelationProposalDecision":
         _reject_unknown(data, DECISION_FIELDS)
         accepted = data.get("accepted_assertion_class")
+        verification = data.get("source_claim_verification")
         return cls(schema_version=_str(data, "schema_version"), decision_id=_str(data, "decision_id"),
                    proposal_id=_str(data, "proposal_id"),
                    decision=_parse_enum(data.get("decision"), RelationDecisionKind, "decision"),
                    accepted_assertion_class=(_parse_enum(accepted, AssertionClass, "accepted_assertion_class")
                                              if accepted is not None else None),
+                   source_claim_verification=(SourceClaimVerification.from_dict(verification)
+                                              if isinstance(verification, dict) else None),
                    actor_class=_parse_enum(data.get("actor_class"), ProvenanceClass, "actor_class"),
                    actor_ref=_str(data, "actor_ref"), reason=_str(data, "reason"),
                    supersedes_decision_id=_str(data, "supersedes_decision_id", ""),
@@ -402,12 +520,52 @@ def parse_proposal_record(payload: Mapping[str, object]):
 
 
 def source_authority_available(proposal: RelationProposal) -> bool:
-    """SOURCE_ASSERTED として受理できる材料が提案にあるか（提案者 class では代替できない）。"""
+    """SOURCE_ASSERTED の**構造的な前提**が提案にあるか（提案者 class では代替できない）。
+
+    P6-B5C-R1: これは前提であって適格性ではない。citation と帰属が在るだけでは SOURCE_ASSERTED にならない
+    （`CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY`）。受理可否は
+    `source_asserted_refusal(proposal, decision)` だけが答える。
+    """
     return proposal.source_attribution is not None and len(proposal.evidence_refs) >= 1
 
 
-__all__ = ["ACCEPTABLE_ASSERTION_CLASSES", "DECISION_ID_PREFIX", "PROPOSAL_ID_PREFIX", "PROPOSER_IS_NOT_AUTHORITY",
-           "RELATION_DECISION_SCHEMA_VERSION", "RELATION_PROPOSAL_SCHEMA_VERSION", "RelationChangeKind",
-           "RelationDecisionKind", "RelationProposal", "RelationProposalDecision", "RelationProposalError",
-           "RelationProposalProvenance", "RelationProposalType", "RelationProposerClass",
-           "canonical_proposal_record_line", "parse_proposal_record", "source_authority_available"]
+def source_asserted_refusal(proposal: RelationProposal, decision: RelationProposalDecision) -> str:
+    """SOURCE_ASSERTED として受理できない理由 code。受理できるなら空文字。
+
+    人間の `SourceClaimVerification` が、提案の出典 / citation / 端点 / 関係型と厳密に一致することを要求する。
+    曖昧一致も publisher 推定もしない。citation 側の帰属が空なら適格にならない。
+    """
+    attribution = proposal.source_attribution
+    if attribution is None:
+        return "MISSING_SOURCE_ATTRIBUTION"
+    if len(proposal.evidence_refs) < 1:
+        return "MISSING_SOURCE_CITATION"
+    verification = decision.source_claim_verification
+    if not isinstance(verification, SourceClaimVerification):
+        return "MISSING_SOURCE_CLAIM_VERIFICATION"
+    if verification.attribution_key != attribution.attribution_key:
+        return "VERIFICATION_ATTRIBUTION_MISMATCH"
+    cited = next((e for e in proposal.evidence_refs if e.evidence_key == verification.evidence_key), None)
+    if cited is None:
+        return "VERIFICATION_CITATION_MISMATCH"
+    if cited.attribution == "" or normalize_text(cited.attribution) != verification.attribution_key:
+        return "VERIFICATION_CITATION_ATTRIBUTION_MISMATCH"
+    if (verification.source_theme_root_id != proposal.source_theme_root_id
+            or verification.target_theme_root_id != proposal.target_theme_root_id):
+        return "VERIFICATION_ENDPOINT_MISMATCH"
+    if verification.relation_type is not proposal.relation_type:
+        return "VERIFICATION_RELATION_TYPE_MISMATCH"
+    if verification.verified_at < proposal.created_at:
+        return "VERIFICATION_BEFORE_PROPOSAL"
+    return ""
+
+
+__all__ = ["ACCEPTABLE_ASSERTION_CLASSES", "CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY", "DECISION_ID_PREFIX",
+           "PROPOSAL_ID_PREFIX", "PROPOSER_IS_NOT_AUTHORITY", "RELATION_DECISION_SCHEMA_VERSION",
+           "RELATION_PROPOSAL_SCHEMA_VERSION", "SOURCE_ASSERTED_REFUSAL_CODES",
+           "SOURCE_CLAIM_VERIFICATION_MEANING", "SOURCE_CLAIM_VERIFICATION_NON_MEANING",
+           "SOURCE_CLAIM_VERIFICATION_SCHEMA_VERSION", "RelationChangeKind", "RelationDecisionKind",
+           "RelationProposal", "RelationProposalDecision", "RelationProposalError", "RelationProposalProvenance",
+           "RelationProposalType", "RelationProposerClass", "SourceClaimVerification",
+           "canonical_proposal_record_line", "parse_proposal_record", "source_asserted_refusal",
+           "source_authority_available"]

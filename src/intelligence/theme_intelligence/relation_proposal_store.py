@@ -21,9 +21,9 @@ from typing import Dict, List, Mapping, Optional, Tuple, Union
 
 from .relation_model import AssertionClass
 from .relation_proposal_model import (RELATION_DECISION_SCHEMA_VERSION, RELATION_PROPOSAL_SCHEMA_VERSION,
-                                      RelationDecisionKind, RelationProposal, RelationProposalDecision,
-                                      RelationProposalError, canonical_proposal_record_line, parse_proposal_record,
-                                      source_authority_available)
+                                      SOURCE_ASSERTED_REFUSAL_CODES, RelationDecisionKind, RelationProposal,
+                                      RelationProposalDecision, RelationProposalError,
+                                      canonical_proposal_record_line, parse_proposal_record, source_asserted_refusal)
 
 RELATION_PROPOSAL_DIRNAME = "theme_intelligence"
 ENCODING = "utf-8"
@@ -36,9 +36,9 @@ CORRUPTION_REASONS: Tuple[str, ...] = ("AUTHORITY_MISSING", "INVALID_ENCODING", 
                                        "MALFORMED_JSON", "NOT_AN_OBJECT", "INVALID_RECORD", "UNSUPPORTED_SCHEMA_VERSION",
                                        "NON_CANONICAL_LINE", "WRONG_AUTHORITY", "PHYSICAL_DUPLICATE_IDENTICAL",
                                        "PHYSICAL_DUPLICATE_CONFLICTING")
-HISTORY_REASONS: Tuple[str, ...] = ("PROPOSAL_NOT_FOUND", "MISSING_PREDECESSOR", "WRONG_PROPOSAL_PREDECESSOR",
-                                    "NOT_TERMINAL_PREDECESSOR", "NON_MONOTONIC_RECORDED_AT",
-                                    "FORBIDDEN_SOURCE_AUTHORITY", "INVALID_TYPE")
+HISTORY_REASONS: Tuple[str, ...] = (("PROPOSAL_NOT_FOUND", "MISSING_PREDECESSOR", "WRONG_PROPOSAL_PREDECESSOR",
+                                     "NOT_TERMINAL_PREDECESSOR", "NON_MONOTONIC_RECORDED_AT", "INVALID_TYPE")
+                                    + SOURCE_ASSERTED_REFUSAL_CODES)
 
 
 class ProposalFailureCategory(str, Enum):
@@ -254,11 +254,12 @@ class RelationProposalStore:
             self._reject(for_append, "PROPOSAL_NOT_FOUND", f"{record.proposal_id} is not stored", authority="decisions",
                          line_number=line_number)
         if (record.decision is RelationDecisionKind.ACCEPT
-                and record.accepted_assertion_class is AssertionClass.SOURCE_ASSERTED
-                and not source_authority_available(subject.record)):
-            self._reject(for_append, "FORBIDDEN_SOURCE_AUTHORITY",
-                         "a source asserted acceptance needs the source attribution and citation of the proposal",
-                         authority="decisions", line_number=line_number)
+                and record.accepted_assertion_class is AssertionClass.SOURCE_ASSERTED):
+            refusal = source_asserted_refusal(subject.record, record)    # P6-B5C-R1: 人間の確認まで含めて検査する
+            if refusal:
+                self._reject(for_append, refusal,
+                             "a source asserted acceptance needs the human verification of the cited claim",
+                             authority="decisions", line_number=line_number)
         decisions = self._authorities["decisions"].entries
         if record.supersedes_decision_id == "":
             return

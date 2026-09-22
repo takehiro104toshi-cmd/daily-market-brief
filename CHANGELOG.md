@@ -4,6 +4,53 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.21 (2026-09-22) — Phase 6 P6-B5C-R1 出典主張の確認（SOURCE_ASSERTED remediation）
+
+B5D が示した欠陥（`SOURCE_ASSERTED` の適格判定が「帰属 field が非 None ＋ citation 1 件以上」という
+構造的存在だけで成立し、「出典がその関係を主張した」ことと「citation が存在する」ことを区別できない）を
+閉じる narrow remediation。**意味論を機械が判定する機構は導入していない。** 人間が確認した事実を
+record として要求する。B5B relation authority は無変更。Foundation・B1・B2・B3・B4 も無変更。
+config・workflow・公開出力・P4・P5 も無変更。提案 identity と store の収束挙動は B5D の判定どおり据え置き。
+
+### 追加 — `src/intelligence/theme_intelligence/relation_proposal_model.py`
+
+- `SourceClaimVerification`: 人間が「引用した出典のこの箇所が、この関係を述べている」と確認した不変 record。
+  出典の帰属 / citation（kind ＋ ref id）/ 主張の所在 / 主張の要約 / 両端点 / 関係型 / 確認者 / 確認時刻を
+  1 つに束ね、別の出典・別の citation・別の Theme・別の関係型へ使い回せない。確認者は HUMAN 固定。
+  汎用の真偽 flag は持たない。長文引用を要求せず、短い所在と要約だけを記録する。
+- `source_asserted_refusal(proposal, decision)`: `SOURCE_ASSERTED` 受理の単一述語。store と bridge が共有する。
+  `SOURCE_ASSERTED_REFUSAL_CODES` として 9 種の拒否理由を凍結した。
+- 凍結文言 `SOURCE_CLAIM_VERIFICATION_MEANING` / `SOURCE_CLAIM_VERIFICATION_NON_MEANING` /
+  `CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY`。
+
+### 改善 — `relation_proposal_model.py` / `relation_proposal_store.py` / `relation_proposal_bridge.py`
+
+- `RelationProposalDecision` が `source_claim_verification` を持つ。`SOURCE_ASSERTED` の ACCEPT では必須、
+  それ以外では禁止。確認時刻は決定時刻を超えられない。確認は決定の identity payload に入るため、
+  所在の違う 2 つの ACCEPT が黙って同一視されない。確認は提案ではなく決定に束ねる
+  （提案は「何が提案されたか」、決定は「人間が何を authorize したか」）。
+- store と bridge の `SOURCE_ASSERTED` 検査を `source_asserted_refusal` へ一本化した。
+  従来の `FORBIDDEN_SOURCE_AUTHORITY` は、原因を名指しする 9 種の code に置き換わった。
+- `RelationAssertionPlan` に `verification_origin`（`RelationVerificationOrigin`）を追加。
+  誰が / どの出典を / どの citation の / どの所在で / どの関係意味論を / いつ確認したか、および
+  authorize した決定を監査できる。凍結文言を併記し「客観的真実の検証」とは読ませない。
+
+### 改善 — tests / docs
+
+- `tests/intelligence/test_theme_relation_proposal.py`: 確認 model の matrix 80〜95 を追加（16 test）。
+- `tests/intelligence/test_theme_relation_e2e.py`: B5D の case A〜F を R1 の期待値へ更新し、
+  不一致 matrix G〜N（確認の出典 / citation / source root / target root / 関係型 / 非人間確認者 /
+  決定より後の確認 / 別意味論への使い回し）を追加（31 test）。
+- `tests/intelligence/test_theme_relation_causal_safety.py`: corpus 行の拒否 code を R1 に合わせた。
+- `docs/databank/PHASE6_THEME_RELATION_PROPOSAL_CONTRACT.md`: §6 / §11 / §20 を更新し、
+  付録 §24 に確認 model・配置・identity・意味の境界・B5B 互換性を追記。
+- `docs/databank/PHASE6_THEME_RELATION_E2E_AUTHORITY_GATE.md`: §17 に remediation 結果の付録を追記。
+
+### 残る限界
+
+人間は誤った確認を行いうる。系はそれを検出しない。R1 が閉じたのは「構造だけ整えた提案が、人間の明示的な
+確認なしに `SOURCE_ASSERTED` になる」経路であって、「出典が真にその関係を述べている」ことの保証ではない。
+
 ## v5.20 (2026-09-22) — Phase 6 P6-B5D relation E2E / authority laundering / 収束 gate（test ＋ doc のみ）
 
 B5B relation authority と B5C 提案・決定層の鎖を `RelationAssertionPlan` まで通す敵対的 gate。

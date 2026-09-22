@@ -105,7 +105,7 @@ def test_61c_source_authority_cannot_be_laundered_through_the_store(tmp_path) ->
     store.append_proposal(candidate)
     with pytest.raises(RelationProposalAppendRejected) as info:
         store.append_decision(decide(candidate, accepted=AssertionClass.SOURCE_ASSERTED))
-    assert info.value.code == "FORBIDDEN_SOURCE_AUTHORITY"
+    assert info.value.code == "MISSING_SOURCE_ATTRIBUTION"
     attributed = sourced()
     store.append_proposal(attributed)
     assert store.append_decision(decide(attributed, accepted=AssertionClass.SOURCE_ASSERTED)).status is AppendStatus.APPENDED

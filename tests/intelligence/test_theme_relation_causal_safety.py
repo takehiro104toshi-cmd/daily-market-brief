@@ -20,7 +20,9 @@ from src.intelligence.theme_intelligence.relation_model import (AssertionClass, 
                                                                 SOURCE_ASSERTED_NON_MEANING, SourceAttribution)
 from src.intelligence.theme_intelligence.relation_proposal_bridge import RelationBridgeError
 from src.intelligence.theme_intelligence.relation_proposal_model import (RelationDecisionKind, RelationProposal,
+                                                                         RelationProposalDecision,
                                                                          RelationProposerClass,
+                                                                         source_asserted_refusal,
                                                                          source_authority_available)
 from src.intelligence.theme_intelligence.relation_proposal_resolution import RelationProposalStatus, \
     derive_relation_proposal_status
@@ -30,7 +32,7 @@ from tests.intelligence.test_prediction_record import executable_source, importe
 from tests.intelligence.test_theme_relation import A, ATTRIBUTION, B, C, D, T0, lookup as b5b_lookup
 from tests.intelligence.test_theme_relation_e2e import (B5_RUNTIME_MODULES, accept, candidate_of, cited, plan_of,
                                                         refuses, store_at)
-from tests.intelligence.test_theme_relation_proposal import b5b_assertion, decide, lookup, proposal
+from tests.intelligence.test_theme_relation_proposal import (b5b_assertion, decide, lookup, proposal, verification)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / "src" / "intelligence" / "theme_intelligence"
@@ -49,6 +51,11 @@ class CausalScenario:
     structurally_eligible: bool
     contract_guarantee: str
     human_review_required: bool
+
+    @property
+    def refusal_without_attribution(self) -> str:
+        """帰属が無い行が SOURCE_ASSERTED を試みたときの拒否 code。"""
+        return "MISSING_SOURCE_ATTRIBUTION"
 
 
 #: 14 行の合成 corpus。`contract_guarantee` は runtime が構造として保証できることだけを書く。
@@ -133,25 +140,32 @@ def test_b5d_120_126_every_authored_row_still_needs_a_human_decision(row) -> Non
 def test_b5d_127_132_a_bare_overlap_row_cannot_reach_source_asserted(row) -> None:
     candidate = authored(row)
     assert source_authority_available(candidate) is False
-    refuses("FORBIDDEN_SOURCE_AUTHORITY", candidate, (accept(candidate, AssertionClass.SOURCE_ASSERTED),))
+    decision = accept(candidate, AssertionClass.SOURCE_ASSERTED)
+    assert source_asserted_refusal(candidate, decision) == row.refusal_without_attribution
+    refuses(row.refusal_without_attribution, candidate, (decision,))
 
 
-def test_b5d_133_the_runtime_cannot_separate_assertion_from_association_or_denial() -> None:
+def test_b5d_133_each_semantic_variant_needs_its_own_human_claim_verification() -> None:
     """出典が「引き起こす」「関連する」「寄与しうる」「引き起こさない」のどれを述べたかは record に現れない。
 
-    これは contract の保証が終わる境界であり、人間の査読だけが担う。B5D では分類器を作らない。
+    P6-B5C-R1 の後も系はこれを判定しない。かわりに、いずれの行も**人間の出典主張確認なしには
+    SOURCE_ASSERTED へ到達できない**。系が保証するのは「citation の存在が黙って権威に昇格しないこと」であり、
+    「出典が客観的にその関係を証明していること」ではない。分類器は作らない。
     """
     rows = {row.key: row for row in CORPUS if row.key in SEMANTIC_VARIANTS}
     assert len(rows) == len(SEMANTIC_VARIANTS)
-    eligibility = {key: source_authority_available(authored(row)) for key, row in rows.items()}
-    assert set(eligibility.values()) == {True}
-    plans = {}
+    assert {source_authority_available(authored(row)) for row in rows.values()} == {True}
     for key, row in rows.items():
         candidate = authored(row)
-        plans[key] = plan_of(candidate, (accept(candidate, AssertionClass.SOURCE_ASSERTED),))
-    assert {plan.assertion_class for plan in plans.values()} == {AssertionClass.SOURCE_ASSERTED}
-    fields = {key: set(plan.to_plain()) for key, plan in plans.items()}
-    assert len({frozenset(value) for value in fields.values()}) == 1      # field 集合に差が無い
+        unverified = RelationProposalDecision.build(
+            proposal_id=candidate.proposal_id, decision=RelationDecisionKind.ACCEPT,
+            accepted_assertion_class=AssertionClass.HUMAN_ASSERTED, actor_ref="reviewer:r1",
+            reason=f"reviewed corpus row {key}", recorded_at=T0 + timedelta(hours=1))
+        assert source_asserted_refusal(candidate, unverified) == "MISSING_SOURCE_CLAIM_VERIFICATION"
+        plan = plan_of(candidate, (accept(candidate, AssertionClass.SOURCE_ASSERTED),))
+        assert plan.verification_origin.verified_by == "reviewer:r1"
+        assert plan.verification_origin.assertion_locus                 # 所在は必ず記録される
+        assert plan.verification_origin.non_meaning == "a person verified that this relation is objectively true"
 
 
 def test_b5d_134_the_corpus_result_is_labelled_synthetic_only() -> None:
@@ -283,7 +297,11 @@ def test_b5d_158_no_plan_arises_for_the_implied_transitive_edge() -> None:
 def test_b5d_159_a_transitive_source_asserted_edge_still_needs_its_own_citation() -> None:
     implied = proposal(source=A, target=C, relation_type=RelationType.CAUSES, refs=(cited("v"),),
                        rationale="implied by the two recorded causal edges")
-    refuses("FORBIDDEN_SOURCE_AUTHORITY", implied, (accept(implied, AssertionClass.SOURCE_ASSERTED),))
+    refuses("MISSING_SOURCE_ATTRIBUTION", implied, (accept(implied, AssertionClass.SOURCE_ASSERTED),))
+    borrowed = proposal(source=A, target=B, relation_type=RelationType.CAUSES, refs=(cited("v"),),
+                        attribution=ATTRIBUTION, rationale="the release states the first link only")
+    stolen = accept(implied, AssertionClass.SOURCE_ASSERTED, verified=verification(borrowed))
+    refuses("MISSING_SOURCE_ATTRIBUTION", implied, (stolen,))
     attributed = proposal(source=A, target=C, relation_type=RelationType.CAUSES, refs=(cited("v"),),
                           attribution=ATTRIBUTION, rationale="the release states the chain end to end")
     assert plan_of(attributed, (accept(attributed, AssertionClass.SOURCE_ASSERTED),)).source_attribution == ATTRIBUTION
