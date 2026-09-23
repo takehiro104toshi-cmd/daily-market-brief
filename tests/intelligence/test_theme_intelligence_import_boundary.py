@@ -29,12 +29,14 @@ MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "propo
            "relation_proposal_model", "relation_proposal_resolution", "relation_proposal_bridge",
            "relation_proposal_store",
            # P6-B6B: monitoring の不変 record model と語彙（純。engine / ruleset / store を持たない）
-           "monitoring_model")
+           "monitoring_model",
+           # P6-B6C: 決定論的 monitoring engine（純・I/O なし）と versioned ruleset の loader
+           "monitoring_rules", "monitoring_engine")
 IO_MODULES = ("proposal_store", "relation_store", "relation_proposal_store")   # 追記専用 JSONL のみ（B3 / B5B / B5C）
 IDENTITY_MODULES = ("proposal_model", "relation_model", "relation_proposal_model",
                     "monitoring_model")                                  # content id を計算する module
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
-KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
+KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules", "monitoring_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
 INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
 INPUT_MODEL_TOKENS = ("facts", "market", "sources", "databank")
 LIFECYCLE_TOKEN_EXEMPTIONS = {"discovery_adapter": ("tier",)}            # SourceDocument.source_tier（上流の source 格）は lifecycle 語彙ではない
@@ -45,6 +47,8 @@ ALLOWED_STDLIB_KNOWLEDGE_YAML = ALLOWED_STDLIB | {"pathlib", "hashlib", "unicode
 ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fingerprint", "..themes.qualification",
                     "..themes.resolver", ".model", ".lifecycle_model", ".proposal_model", ".proposal_resolution",
                     ".knowledge_loader", ".taxonomy_model", ".entity_model",
+                    # P6-B6
+                    ".monitoring_model", ".monitoring_rules",
                     # P6-B4C
                     ".discovery_model", ".discovery_predicates", ".discovery_rules", ".discovery_adapter", ".entity_catalog", ".taxonomy",
                     ".dedup", "..core.types", "..facts.model", "..market.model", "..sources.model", "..databank.news_model",

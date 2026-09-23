@@ -4,6 +4,70 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.26 (2026-09-23) — Phase 6 P6-B6C 決定論的 monitoring engine ＋ versioned ruleset
+
+B6B の frozen model を用い、read-only な resolved state ＋ 明示 cutoff ＋ versioned ruleset から
+`MonitoringFinding` 群と `MonitoringRunReport` を純関数的に導く engine を実装した。
+**store / review-state store / runner / scheduler / notification / 実データ監視は作っていない。**
+B6B model は無変更。Foundation・B1〜B5 の runtime も無変更（frozen anchor 13 件すべてに対して
+`src/` ・`knowledge/` ・`config.yaml` ・workflow の変更 0。新規追加のみ）。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_rules.py`【新規】
+
+- `CONDITION_REGISTRY`: B6A MVP（§4 の ✅ 21 行）を **18 condition_id** へ写した凍結対応。
+  condition_id → category / subject_kind / salient_state_kind / 閾値要求 を固定し、ruleset は宣言し直せるだけで
+  変更できない。18 件すべてが B6B の frozen 14 `SalientStateKind` へ写っている。
+- strict loader `load_monitoring_rules_version`: schema version 厳密一致・expected version 完全一致・
+  `published_at <= cutoff`・digest 一致・未知 key 拒否・重複 condition 拒否・全 condition 必須・
+  registry と異なる分類の拒否・閾値の範囲検査・YAML の緩い型変換の拒否（`"yes"` は bool でない、
+  version は str のみ）。`PROHIBITED_RULE_KEYS` 22 種（expression / python / eval / regex / prompt / model /
+  weight / score / priority / probability / severity / rank / confidence / stance / target_price ほか）を schema で拒否。
+- engine を I/O-free に保つため loader を分離した（`discovery_rules` と同じ分担。YAML の読み取りは
+  `knowledge_loader.read_yaml_document` 経由のみ）。
+
+### 追加 — `knowledge/theme_intelligence/monitoring_rules.0.1.0.yaml`【新規】
+
+18 condition の versioned policy。閾値は B6 が所有する提案の滞留日数 2 件（OPEN 60 日 / DEFERRED 30 日）だけで、
+**stale の日数は B2 `LifecyclePolicy` が所有するため置いていない。**
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_engine.py`【新規】
+
+- `evaluate_monitoring(evaluation_input, *, ruleset, recorded_at)` の純 API。
+  file / network / 現在時刻 / 乱数 / 環境変数を一切触らない（import は `..core.time` と monitoring の
+  2 module と stdlib だけ）。
+- 入力は typed で不変な最小 snapshot（`ThemeSnapshot` / `ProposalSnapshot` / `RelationSnapshot` /
+  `RelationProposalSnapshot` / `KnowledgeDriftSnapshot` / `AuthorityFailureSnapshot`）。generic dict dump を受けない。
+- **上流 derived 意味論を再実装しない**。`CONTESTED` / `STALE` / 端点状態 / chain 解決は B1 / B2 / B4 / B5 の
+  結果をそのまま読む。stale の日数計算を engine に二重実装していない（test が token 不在を固定）。
+- **判定不能を「条件が偽」にしない**。subject が読めない / B2 policy token が無い / 提案の作成時刻が無い場合は
+  `unevaluated_conditions` に入れ、INTEGRITY finding を出し、run status を `PARTIAL` にする。
+  静かな COMPLETE ＋ finding 0 になる経路が存在しない。
+- 同じ障害は fingerprint が同じなので finding も diagnostics も 1 件に収束する（無制限の重複生成をしない）。
+- 出力順は `finding_id` 昇順に固定（**順序に優先度の意味は無い**）。score / 順位 / 確率 / severity /
+  予測 / 投資スタンス / 実行命令の語彙を持たない。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_monitoring_engine.py`【新規】98 test。ruleset loader の拒否条件、
+  18 condition の TRUE / FALSE / UNAVAILABLE、§24 の identity test A〜K（同じ状態は cutoff / ruleset version /
+  文言 / 追加参照が変わっても同じ finding、stale と滞留は日々変化しない、矛盾 evidence が増えても同じ）、
+  11 seed の順序不変性、合成 false-positive gate（**synthetic gate result only**）、入力非改変、
+  file 書き込み不在、時計 / 乱数 / network / LLM 不在、import 境界。
+- `docs/databank/PHASE6_THEME_MONITORING_ENGINE_CONTRACT.md`【新規】: module 分割の理由、
+  21 行 → 18 condition_id の対応表、ruleset schema と拒否条件、入力 model、上流再実装の不在、
+  閾値の所有、evidence / proposal / relation / discovery の意味論、integrity routing と PARTIAL、
+  version binding、決定論、B6D への entry contract。
+
+### 改善 — 既存 test の additive 更新（3 件）
+
+- `test_theme_intelligence_import_boundary.py`: `MODULES` へ `monitoring_rules` / `monitoring_engine` を、
+  `KNOWLEDGE_PATH_MODULES` へ `monitoring_rules` を、`ALLOWED_RELATIVE` へ `.monitoring_model` /
+  `.monitoring_rules` を追加。
+- `test_theme_monitoring_model.py`: B6B の 2 assertion が「B6C はまだ無い」ことを主張していたため、
+  意図（package 外から model を参照しない／store・runner・scheduler・notifier が無い）を保ったまま更新。
+- `test_theme_taxonomy_entity_boundary.py`: knowledge 直下に同居してよい ruleset の pattern へ
+  `monitoring_rules.<version>.yaml` を additive に追加（signal / keyword 系 file を拒否する意図は不変）。
+
 ## v5.25 (2026-09-23) — Phase 6 P6-B6B monitoring model / vocabulary（model gate）
 
 B6A で凍結した Monitoring architecture を、最小・不変・決定論的な runtime model と語彙に落とした。

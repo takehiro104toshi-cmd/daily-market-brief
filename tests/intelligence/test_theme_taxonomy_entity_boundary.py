@@ -64,7 +64,8 @@ def test_56_no_discovery_rules_in_knowledge_modules_or_files() -> None:
                         & set(record)), (name, record.get("slug") or record.get("entity_id"))
     assert not list(KNOWLEDGE_DIR.glob("*signal*"))
     others = sorted(p.name for p in KNOWLEDGE_DIR.iterdir() if p.name not in KNOWLEDGE_FILES)
-    assert all(re.match(r"^discovery_rules\.\d+\.\d+\.\d+\.yaml$", n) for n in others), others   # P6-B4C の ruleset だけが同居できる
+    allowed_rulesets = r"^(discovery_rules|monitoring_rules)\.\d+\.\d+\.\d+\.yaml$"   # P6-B4C / P6-B6C の ruleset
+    assert all(re.match(allowed_rulesets, n) for n in others), others
 
 
 def test_57_58_no_network_and_no_current_clock() -> None:

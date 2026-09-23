@@ -611,19 +611,23 @@ def test_86_the_monitoring_model_imports_no_b1_to_b5_runtime() -> None:
         assert f"from .{token}" not in source and f"import {token}" not in source, token
 
 
-def test_87_nothing_outside_the_package_imports_the_monitoring_model() -> None:
+def test_87_nothing_outside_the_theme_intelligence_package_imports_the_model() -> None:
+    """model を参照してよいのは同じ package の monitoring 層だけ（B6C の engine / rules を含む）。"""
     hits = []
     for path in sorted((REPO_ROOT / "src").rglob("*.py")):
-        if path == MODULE:
+        if path == MODULE or path.parent == PACKAGE_DIR:
             continue
         if "monitoring_model" in executable_source(path):
             hits.append(str(path.relative_to(REPO_ROOT)))
     assert hits == [], hits
+    inside = sorted(p.stem for p in PACKAGE_DIR.glob("*.py") if "monitoring_model" in executable_source(p))
+    assert inside == ["monitoring_engine", "monitoring_rules"], inside      # model 自身は自分を名指さない
 
 
-def test_88_no_engine_ruleset_store_or_runner_was_created() -> None:
+def test_88_no_store_runner_scheduler_or_notifier_was_created() -> None:
+    """B6B の model gate が禁じた operational 面は、B6C の engine / ruleset 追加後も存在しない。"""
     present = sorted(p.stem for p in PACKAGE_DIR.glob("monitoring*.py"))
-    assert present == ["monitoring_model"], present
-    assert not list((REPO_ROOT / "knowledge").glob("**/monitoring*"))
-    for stem in ("monitoring_engine", "monitoring_runner", "monitoring_store", "monitoring_rules"):
+    assert present == ["monitoring_engine", "monitoring_model", "monitoring_rules"], present
+    for stem in ("monitoring_store", "monitoring_runner", "monitoring_scheduler", "monitoring_notifier",
+                 "monitoring_review_store"):
         assert not (PACKAGE_DIR / f"{stem}.py").exists(), stem
