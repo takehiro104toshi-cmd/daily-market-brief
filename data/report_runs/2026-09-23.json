@@ -58,6 +58,25 @@
       "git_commit_sha": "29c670c9e5a26f805bc51064ddc76b36b83c770e",
       "generation_status": "success",
       "html_valid": true
+    },
+    "afternoon_open": {
+      "status": "success",
+      "scheduled_time": "12:40",
+      "started_at": "2026-09-23T17:48:33.325276+09:00",
+      "data_fetch_started_at": "2026-09-23T17:48:33.325276+09:00",
+      "trigger_type": "schedule",
+      "is_recovery_run": false,
+      "workflow_run_id": "35839198168",
+      "generated_at": "2026-09-23T17:48:33.325276+09:00",
+      "report_build_completed_at": "2026-09-23T17:48:33.325276+09:00",
+      "retry_count": 0,
+      "slot_label": "後場開始確認",
+      "generated_at_jst": "2026-09-23T17:48:33.325276+09:00",
+      "generated_at_utc": "2026-09-23T08:48:33.325276+00:00",
+      "report_date_jst": "2026-09-23",
+      "git_commit_sha": "da6f0f2e1cfab0c566540d80999bca0d040eb794",
+      "generation_status": "success",
+      "html_valid": true
     }
   }
 }
