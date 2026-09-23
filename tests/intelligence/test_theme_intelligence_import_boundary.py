@@ -31,10 +31,16 @@ MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "propo
            # P6-B6B: monitoring の不変 record model と語彙（純。engine / ruleset / store を持たない）
            "monitoring_model",
            # P6-B6C: 決定論的 monitoring engine（純・I/O なし）と versioned ruleset の loader
-           "monitoring_rules", "monitoring_engine")
-IO_MODULES = ("proposal_store", "relation_store", "relation_proposal_store")   # 追記専用 JSONL のみ（B3 / B5B / B5C）
+           "monitoring_rules", "monitoring_engine",
+           # P6-B6D: 人間の review 状態だけの追記専用 store / 上流 → snapshot の写像 / read-only な run orchestration
+           "monitoring_store", "monitoring_adapter", "monitoring_runner")
+#: P6-B6: B5 の read-only な解決結果を読む層（package 内の逆方向依存ではない）
+MONITORING_MODULES = ("monitoring_model", "monitoring_rules", "monitoring_engine", "monitoring_store",
+                      "monitoring_adapter", "monitoring_runner")
+IO_MODULES = ("proposal_store", "relation_store", "relation_proposal_store",
+              "monitoring_store", "monitoring_runner")   # 追記専用 JSONL と read-only な読み取りのみ
 IDENTITY_MODULES = ("proposal_model", "relation_model", "relation_proposal_model",
-                    "monitoring_model")                                  # content id を計算する module
+                    "monitoring_model", "monitoring_adapter")            # content id を計算する module
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
 KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules", "monitoring_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
 INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
@@ -48,7 +54,9 @@ ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fin
                     "..themes.resolver", ".model", ".lifecycle_model", ".proposal_model", ".proposal_resolution",
                     ".knowledge_loader", ".taxonomy_model", ".entity_model",
                     # P6-B6
-                    ".monitoring_model", ".monitoring_rules",
+                    ".monitoring_model", ".monitoring_rules", ".monitoring_engine", ".monitoring_store",
+                    ".monitoring_adapter", ".lifecycle", ".proposal_store", ".relation_store",
+                    ".relation_proposal_store",
                     # P6-B4C
                     ".discovery_model", ".discovery_predicates", ".discovery_rules", ".discovery_adapter", ".entity_catalog", ".taxonomy",
                     ".dedup", "..core.types", "..facts.model", "..market.model", "..sources.model", "..databank.news_model",
@@ -209,7 +217,8 @@ def test_proposal_modules_never_execute_foundation_operations_or_append_to_found
     for name in ("proposal_model", "proposal_store", "proposal_resolution", "dedup", "proposal_bridge",
                  "evidence_bridge_model", "evidence_bridge", "relation_model", "relation_resolution",
                  "relation_graph", "relation_store", "relation_proposal_model", "relation_proposal_resolution",
-                 "relation_proposal_bridge", "relation_proposal_store"):
+                 "relation_proposal_bridge", "relation_proposal_store",
+                 "monitoring_store", "monitoring_adapter", "monitoring_runner"):
         source = executable_source(PACKAGE_DIR / f"{name}.py")
         for token in ("execute_candidate", "execute_declaration", "plan_candidate", "plan_merge", "append_root",
                       "append_observation", "append_governance", "append_metadata", "append_mapping", "new_root_id", "new_id(",
@@ -243,8 +252,8 @@ RELATION_PROPOSAL_MODULES = ("relation_proposal_model", "relation_proposal_resol
 def test_frozen_theme_intelligence_modules_never_import_the_relation_authority() -> None:
     """P6-B5B §21: Foundation / B1 / B2 / B3 / B4 は B5B に依存しない（package 内の逆方向依存も作らない）。"""
     for name in MODULES:
-        if name in RELATION_MODULES or name in RELATION_PROPOSAL_MODULES:
-            continue
+        if name in RELATION_MODULES or name in RELATION_PROPOSAL_MODULES or name in MONITORING_MODULES:
+            continue                                        # P6-B6D: monitoring は B5 の read-only 解決を読む下流層
         source = (PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8")
         for module in RELATION_MODULES:
             assert f"from .{module} import" not in source and f"theme_intelligence.{module}" not in source, (name, module)

@@ -633,10 +633,15 @@ def test_85_the_rules_module_owns_the_only_file_access() -> None:
 
 
 def test_86_no_store_runner_or_scheduler_was_created() -> None:
+    """B6D で review store / adapter / runner が加わった後も、engine は純関数のままで finding store は無い。"""
     present = sorted(p.stem for p in PACKAGE_DIR.glob("monitoring*.py"))
-    assert present == ["monitoring_engine", "monitoring_model", "monitoring_rules"], present
-    for stem in ("monitoring_store", "monitoring_runner", "monitoring_scheduler", "monitoring_notifier"):
+    assert present == ["monitoring_adapter", "monitoring_engine", "monitoring_model", "monitoring_rules",
+                       "monitoring_runner", "monitoring_store"], present
+    for stem in ("monitoring_scheduler", "monitoring_notifier", "finding_store"):
         assert not (PACKAGE_DIR / f"{stem}.py").exists(), stem
+    engine = executable_source(ENGINE)
+    for token in ("open(", "Path(", "data_root", "jsonl", "run_monitoring", "append_"):
+        assert token not in engine, token
 
 
 def test_87_the_ruleset_carries_no_path_credential_or_article_text() -> None:

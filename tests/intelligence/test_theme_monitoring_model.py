@@ -621,13 +621,17 @@ def test_87_nothing_outside_the_theme_intelligence_package_imports_the_model() -
             hits.append(str(path.relative_to(REPO_ROOT)))
     assert hits == [], hits
     inside = sorted(p.stem for p in PACKAGE_DIR.glob("*.py") if "monitoring_model" in executable_source(p))
-    assert inside == ["monitoring_engine", "monitoring_rules"], inside      # model 自身は自分を名指さない
+    assert inside == ["monitoring_adapter", "monitoring_engine", "monitoring_rules", "monitoring_runner",
+                      "monitoring_store"], inside                           # model 自身は自分を名指さない
 
 
 def test_88_no_store_runner_scheduler_or_notifier_was_created() -> None:
-    """B6B の model gate が禁じた operational 面は、B6C の engine / ruleset 追加後も存在しない。"""
+    """monitoring 層は B6B model / B6C engine・ruleset / B6D store・adapter・runner だけ。
+
+    B6D で人間の review 状態の store と read-only な runner が加わった（finding の store ではない）。
+    scheduler / notifier は依然として存在しない。"""
     present = sorted(p.stem for p in PACKAGE_DIR.glob("monitoring*.py"))
-    assert present == ["monitoring_engine", "monitoring_model", "monitoring_rules"], present
-    for stem in ("monitoring_store", "monitoring_runner", "monitoring_scheduler", "monitoring_notifier",
-                 "monitoring_review_store"):
+    assert present == ["monitoring_adapter", "monitoring_engine", "monitoring_model", "monitoring_rules",
+                       "monitoring_runner", "monitoring_store"], present
+    for stem in ("monitoring_scheduler", "monitoring_notifier", "monitoring_finding_store", "finding_store"):
         assert not (PACKAGE_DIR / f"{stem}.py").exists(), stem

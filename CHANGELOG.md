@@ -4,6 +4,69 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.27 (2026-09-23) — Phase 6 P6-B6D 運用 review store ＋ read-only monitoring runner
+
+B6B（model）と B6C（engine / ruleset）を **無変更**のまま、monitoring の運用層を追加した。
+読むのは authority、書くのは **人間の review 状態だけ**である。
+`MonitoringFinding` は保存しない（B6A Option C）。**scheduler / notification / 実データ監視 /
+B5 execution gate / B7 は作っていない。** Foundation・B1〜B5 の runtime も無変更
+（frozen anchor 14 件すべてに対して `src/` ・`knowledge/` ・`config.yaml` ・workflow の変更 0。新規追加のみ）。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_store.py`【新規】
+
+- `<data_root>/theme_intelligence/monitoring_review_states.jsonl` の **追記専用 journal**。
+  `append_review_state()` が唯一の書き込み経路で、人間が明示的に行った review だけを通す。
+- 明示 `data_root`（空・空白・`~` 始まりは `DATA_ROOT_REQUIRED`）、canonical 行のみ、
+  `open('ab')` → flush → `os.fsync`、同 id ＋ byte 一致 ＝ `ALREADY_PRESENT`、同 id ＋ 異 bytes ＝ `CONFLICT`、
+  外部変更は byte 長で検知（single writer）。修復・migration・読み飛ばし・現在時刻の参照は無い。
+- 破損語彙 12 種（`AUTHORITY_MISSING` / `NON_CANONICAL_LINE` / `UNSUPPORTED_SCHEMA_VERSION` ほか）と
+  chain 規律 5 種（`MISSING_PREDECESSOR` / `CROSS_FINDING_PREDECESSOR` / `NOT_TERMINAL_PREDECESSOR` /
+  `NON_MONOTONIC_RECORDED_AT` / `INVALID_TYPE`）で fail closed。
+- 終端の決定は B6B の `resolve_review_state` だけが行う。store は独自の latest-wins を持たない。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_adapter.py`【新規】
+
+- 上流の resolved / derived state（Foundation resolution・B2 lifecycle view・B3 提案 status・
+  B5 relation resolution・B5C 提案 status）→ B6C `MonitoringEvaluationInput` の **純写像**。
+  B6C limitation #1（snapshot 構築が engine の外にある）を閉じた。
+- silent coercion を禁止: `None` を false にしない、`UNRESOLVED` を「存在しない」にしない、
+  store 破損を「条件が無い」にしない、未知 root を「不活性」にしない。すべて
+  `SubjectAvailability.UNAVAILABLE` ＋ `failure_class` として engine へ渡る。
+- 決定論的 `input_digests`（`content_id("thmin", canonical JSON)`）。物理順に依存せず、
+  mtime / inode / 絶対 path / 現在時刻を含まない。
+- B6B の token 語彙・長さ制限を超える識別子は **捨てず**に `content_id("thmloc", …)` の安定 locator へ畳む。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_runner.py`【新規】
+
+- `run_monitoring()`: 明示入力 → version 固定の knowledge 読み込み → authority の read-only 読み取り →
+  cutoff 固定の PIT 解決 → adapter → `evaluate_monitoring()` → finding ごとの review 状態解決、という
+  orchestration のみ。intelligence semantics を持たない。
+- **shadow flag を持たず、構造として read-only**。`append_review_state` を import も参照もしない。
+- `MonitoringRunResult`（`runner_version` / `report` / `findings` / `reviews` / `review_status` /
+  `diagnostics`）。governance command・実行計画・推奨 action・優先度・severity・投資 signal・予測を持たない。
+- `ReviewLookupStatus`（`AVAILABLE` / `NOT_INITIALIZED` / `UNUSABLE`）。review journal が読めないことを
+  「誰も review していない」にしない。
+- 上流の失敗（store 破損 / `NO_STATE` / governance 未解決 / lifecycle の推測拒否 / 端点不明）は
+  空 snapshot にならず、`unevaluated_conditions` ＋ INTEGRITY finding ＋ run status `PARTIAL` として伝播する。
+
+### 追加 — test / docs
+
+- `tests/intelligence/test_theme_monitoring_store.py`【新規】51 件（§24 matrix）。
+- `tests/intelligence/test_theme_monitoring_runner.py`【新規】78 件（§25 / §26 matrix。
+  synthetic な代表 world ＋ 合成 B3 / B5B / B5C record 上での E2E と、run 前後の journal SHA-256 比較を含む）。
+- `docs/databank/PHASE6_THEME_MONITORING_OPERATIONAL_CONTRACT.md`【新規】: 権限境界・永続化方式の決定（A 採用）・
+  authority read/write map・store 契約・chain 規律・runner 構成・adapter contract 表・PIT・digest・
+  knowledge binding・PARTIAL 伝播・再出現の意味論・非変更の証明・限界・B6E entry contract。
+
+### 改善 — guard（既存 test の追加更新。意図は不変）
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py`: B6D の 3 module を `MODULES` へ追加し、
+  `monitoring_store` / `monitoring_runner` を IO module、`monitoring_adapter` を identity module として登録。
+  B6 は B5 の read-only な解決結果を読む下流層であるため、B5 逆方向依存 guard の対象から除外した。
+- `tests/intelligence/test_theme_monitoring_model.py` / `test_theme_monitoring_engine.py`:
+  「store / runner を作っていない」ことの固定を「monitoring 層は B6B/B6C/B6D の 6 module だけで、
+  scheduler / notifier / finding store は存在しない」へ更新した。
+
 ## v5.26 (2026-09-23) — Phase 6 P6-B6C 決定論的 monitoring engine ＋ versioned ruleset
 
 B6B の frozen model を用い、read-only な resolved state ＋ 明示 cutoff ＋ versioned ruleset から
