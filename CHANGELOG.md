@@ -4,6 +4,59 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.25 (2026-09-23) — Phase 6 P6-B6B monitoring model / vocabulary（model gate）
+
+B6A で凍結した Monitoring architecture を、最小・不変・決定論的な runtime model と語彙に落とした。
+**engine / ruleset YAML / condition evaluator / store / runner / notification は作っていない。**
+実データ監視もしていない。Foundation・B1〜B5 の runtime は無変更（frozen anchor すべてに対して
+`src/` ・`knowledge/` ・`config.yaml` ・workflow の変更 0）。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_model.py`【新規】
+
+- **語彙**: `MonitoringCategory`（名義 7 種。順序を持たず severity / priority の意味を持たない）、
+  `MonitoringSubjectKind`（閉じた 8 種。`OTHER` / `GENERIC` なし）、`MonitoringRunStatus`（COMPLETE / PARTIAL のみ。
+  `FAILED` な report は存在しない）、`ReviewDisposition`（ACKNOWLEDGED / DISMISSED / DEFERRED。
+  `RESOLVED` も `APPROVED` / `REJECTED` も無い）。
+- **`MonitoringFinding`**: 条件成立の derived record。identity は
+  `(schema_version, condition_id, category, subject_kind, subject_ref, salient_state)` の content id で、
+  **cutoff / ruleset version / knowledge version / 表示文言 / 参照 / diagnostics を含まない**。
+  同じ状態は cutoff や ruleset version が変わっても同じ finding になる。
+  条件の意味が変わるときは version を上げず `condition_id` を変える（`CONDITION_ID_IS_SEMANTIC`）。
+- **`SalientState`**: 自由な JSON ではなく、`SalientStateKind` 14 種ごとに identity を担う key 集合を凍結した
+  typed value object。値は bounded な token 文字列のみで、**数値・時刻・score を構造的に保持できない**。
+  そのため「何日 stale か」「滞留何日か」が identity に混入せず、毎日別 finding にならない。
+  逆に撤退 root への evidence は 1 件ごとに identity を担う。
+  `ALLOWED_CATEGORIES_BY_STATE_KIND` が state kind と category の誤った組み合わせを拒否する。
+- **`MonitoringReference`**: 根拠の参照 identity のみ。identity を担わないため、矛盾 evidence が増えても
+  finding は同じまま。本文・引用を保持しない。
+- **`MonitoringRunReport`**: `run_id` は **cutoff ＋ ruleset version ＋ knowledge version ＋ 入力 digest** の
+  content id（finding とは逆に cutoff が identity を担う）。実行時刻と結果は identity 外。
+  `COMPLETE` は `unevaluated_conditions` が空であることを要求し、`PARTIAL` は理由を必ず持つ。
+  **authority が読めなかった run を「finding 0 件の COMPLETE」にできない。**
+- **`ReviewItemState`**: 再導出できない人間入力だけを保持する operational record。actor は HUMAN 固定。
+  `recorded_at` は identity 外。`resolve_review_state` が `supersedes` graph だけで終端を解き、
+  fork / 複数 genesis / dangling / 別 finding の predecessor / cycle を fail closed にする（latest-wins なし）。
+- 現在時刻・乱数・network・storage・LLM を使わない。import は `..core.ids` / `..core.time` /
+  `..themes.model` と stdlib だけで、B1〜B5 の runtime module を 1 つも import しない。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_monitoring_model.py`【新規】111 test。語彙の厳密一致、不変性、
+  canonical round-trip、identity の除外項目、salient state の粒度（stale / 滞留が毎日別 finding にならないこと、
+  矛盾 evidence 追加で再 surface しないこと、integrity fingerprint の収束）、run identity、
+  silent failure の禁止、review chain の fail-closed、隠れた authority と score 語彙の不在、
+  時計 / 乱数 / network / LLM の不在、import 境界、engine / ruleset / store / runner が存在しないこと。
+- `docs/databank/PHASE6_THEME_MONITORING_MODEL_CONTRACT.md`【新規】: authority 境界・語彙・identity contract・
+  condition family ごとの salient state 表・provenance・run report・integrity・review chain・
+  時間 / PIT・直列化・security・隠れた authority の不在・B6C への entry contract。
+
+### 改善 — 既存 test の additive 更新（2 件）
+
+- `test_theme_intelligence_import_boundary.py`: `MODULES` と `IDENTITY_MODULES` へ `monitoring_model` を追加。
+- `test_theme_relation_rerun.py`: `test_rr_105` が package の module 総数を 30 と直書きしており、
+  B5 の非改変とは無関係な将来の module 追加で壊れる状態だった。B5 の面（`relation*.py` の集合）を見る
+  assertion に改め、package 全体の inventory は import boundary guard に委ねた。
+
 ## v5.24 (2026-09-23) — Phase 6 P6-B6A Monitoring architecture / design audit（docs のみ）
 
 次工程 B6 Monitoring の architecture を設計・凍結するための READ-ONLY / DOCS-ONLY 監査。

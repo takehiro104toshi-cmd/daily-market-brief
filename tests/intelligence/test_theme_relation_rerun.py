@@ -871,8 +871,10 @@ def test_rr_104_nothing_in_the_package_appends_to_the_relation_authority() -> No
 
 
 def test_rr_105_the_package_module_set_is_unchanged_by_r1() -> None:
+    """R1 が B5 の module 集合を変えていないこと。package 全体の inventory は import boundary guard が持つ
+    （後続 phase が module を追加しても、この test は B5 の面だけを見る）。"""
     present = sorted(p.stem for p in PACKAGE_DIR.glob("*.py"))
-    assert len(present) == 30 and present.count("relation_proposal_model") == 1
+    assert present.count("relation_proposal_model") == 1
     assert sorted(p.stem for p in PACKAGE_DIR.glob("relation*.py")) == sorted(B5_RUNTIME_MODULES)
     assert not list(PACKAGE_DIR.glob("*.jsonl")) and not list(PACKAGE_DIR.glob("*.sqlite3"))
 

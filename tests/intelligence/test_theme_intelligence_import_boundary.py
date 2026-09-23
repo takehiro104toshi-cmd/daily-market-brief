@@ -27,9 +27,12 @@ MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "propo
            "relation_model", "relation_resolution", "relation_graph", "relation_store",
            # P6-B5C: relation 候補と人間の決定（提案 authority と、受理 → assertion plan の計画境界）
            "relation_proposal_model", "relation_proposal_resolution", "relation_proposal_bridge",
-           "relation_proposal_store")
+           "relation_proposal_store",
+           # P6-B6B: monitoring の不変 record model と語彙（純。engine / ruleset / store を持たない）
+           "monitoring_model")
 IO_MODULES = ("proposal_store", "relation_store", "relation_proposal_store")   # 追記専用 JSONL のみ（B3 / B5B / B5C）
-IDENTITY_MODULES = ("proposal_model", "relation_model", "relation_proposal_model")   # content id を計算する module
+IDENTITY_MODULES = ("proposal_model", "relation_model", "relation_proposal_model",
+                    "monitoring_model")                                  # content id を計算する module
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
 KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
 INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
