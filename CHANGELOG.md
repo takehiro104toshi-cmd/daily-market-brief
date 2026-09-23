@@ -4,6 +4,47 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.24 (2026-09-23) — Phase 6 P6-B6A Monitoring architecture / design audit（docs のみ）
+
+次工程 B6 Monitoring の architecture を設計・凍結するための READ-ONLY / DOCS-ONLY 監査。
+**実装は一切行っていない**（`src/` ・`tests/` ・`knowledge/` ・`config.yaml` ・workflow の diff は
+B5 freeze anchor に対して 0）。B6B 実装も B5 execution gate も開始していない。
+判定は `P6_B6A_MONITORING_ARCHITECTURE_AUDIT_PASS`。blocker は無い。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_ARCHITECTURE_AUDIT.md`【新規】
+
+- **既存系の再監査**: Foundation / B1 / B2 / B3 / B4 / B5 を source と docs から独立に確認した。
+  とくに B2 の `EvidenceConditionFlag` が `CONTESTED` / `INVALIDATION_EVIDENCE_PRESENT` / `STALE` を
+  すでに derived view として出していること、`LifecyclePolicy` が現在時刻を読まず cutoff との差で
+  判定していることを確認し、B6 はこれらを**再実装せず参照する**方針とした。
+- **6 つの意味論層の分離**: Observation / Derived Change / Monitoring Condition / Monitoring Finding /
+  Review Candidate / Governance Action。`Monitoring Finding ≠ Governance Action`、
+  `Review Candidate ≠ Theme mutation / Relation mutation / Evidence attachment / Prediction / Trading signal`、
+  `Acknowledgement ≠ Governance decision` を明文化した。
+- **用語の判断**: 本 codebase で `Event` はすでに authority を意味する（`ThemeGovernanceEvent` /
+  `ThemeRelationGovernanceEvent`）。derived record に `MonitoringEvent` の名を与えると
+  「隠れた governance authority」の誤読を生むため、`MonitoringFinding` を推奨した。
+- **persistence の結論（Option C）**: finding は authority ＋ knowledge version ＋ cutoff の純関数なので
+  永続化しない。**再導出できない人間入力（acknowledgement / disposition）だけ**を operational journal に置く。
+  finding を永続化しないため B5C の「同 id ＋ 異 bytes → CONFLICT」問題が構造的に発生しない。
+- **identity**: `finding_key = content id over (condition_id, subject_kind, subject_ref, salient_state)`。
+  run 時刻を identity に混ぜない。同じ状態なら同じ key（再提示されない）、状態が変われば別 key（= reopen）、
+  条件が消えれば finding が生成されない（= resolved）。閾値や抑制ヒューリスティクスを持たない。
+- **severity を MVP から外すことを推奨**。順序尺度は score / ranking へ転用されるため、
+  名義分類の `MonitoringCategory` で routing する。
+- **fail-closed の monitoring 版**: authority が読めないことを「条件が成立しない」と同一視しない。
+  `PARTIAL` ＋ `INTEGRITY` finding とし、静かな無検出を作らない。
+- **contradiction / invalidation**、**relation monitoring**、**proposal / discovery monitoring** の
+  condition 案と禁止事項、**diagnostics aggregation**（技術 integrity と intelligence review condition を
+  別 category に分離。B4 繰越 #3 を回収）、**operational runner の責務と既定禁止**（B4 繰越 #15 を回収）、
+  **real-data shadow 段階**（synthetic → fixture → read-only shadow → internal operational）。
+- **監督者決定候補 D-B6-1〜D-B6-14**、**B6 MVP と明示的 non-goals**、**test matrix**、
+  **実装 sequence（B6B model → B6C engine → B6D review store ＋ runner → B6E 敵対的 gate → closeout）**。
+- **B5 繰越 register の分類**: B6_REQUIRED 2 件（B4 繰越 #3 / #15）、B6_RELEVANT_BUT_DEFER 4 件、
+  OUTSIDE_B6 7 件、POLICY_LOCKED 1 件（RR-3）、OPTIONAL 1 件、HISTORICAL_ONLY 1 件。
+  **B5 RR-3 POLICY LOCK を明示的に継承**しつつ、execution gate 自体は B6 の scope に含めない
+  （Monitoring と execution authority を混同しない）。
+
 ## v5.23 (2026-09-22) — Phase 6 P6-B5 closeout audit（docs のみ）
 
 B5A → B5B → B5C → B5C-R1 → B5D-RERUN を 1 つの系として監査した完了監査。**READ-ONLY / DOCS-ONLY** で、
