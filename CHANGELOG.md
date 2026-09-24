@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.34 (2026-09-24) — Phase 6 P6-B7A LLM proposal layer の architecture / contract audit（DESIGN / AUDIT ONLY）
+
+B7（LLM 提案層）の実装前 audit。**runtime・test・knowledge・config・workflow・scripts は変更していない**
+（B6 最終 freeze `7a8f8a4` 以降、docs と CHANGELOG のみ）。LLM / network call は行っていない。
+
+結論（案）: B7 は新しい proposal authority を作らず、authority 手前の非 authority 層（PIT 入力 manifest → 生成 adapter →
+厳格 parser → 決定論 validator → 提案 plan）から、検証済み候補だけを既存の B3（EVIDENCE / THEME）と B5C（RELATION）へ
+check-then-reuse で渡す。上限は L1、decision・authority append・root 作成への経路なし。blocker なし。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_PROPOSAL_ARCHITECTURE_AUDIT.md`【新規】
+
+- B3 / B4 / B5 / B6 の既存 interface 監査（B3 / B5C は LLM 提案者を予約済み、provenance を除く内容 id、同内容・別 provenance は
+  CONFLICT → check-then-reuse、identity に入る自由文 `reason` / `rationale` の template 化、THEME 候補の attachment / component
+  provenance を `LLM_PROPOSAL` に固定する必要、B4E は SUPPORTS / CONTEXT のみ、guard は module 名の列挙）。
+- authority ceiling、LLM role taxonomy（A〜H）、proposal type の対応（新 type なし）、package boundary（flat `llm_` module を推奨）、
+  input contract と output schema の概念（manifest handle による引用、数値確信度なし、棄権 code）、evidence grounding、
+  決定論 validator（違反時は生成全体を拒否）、hallucination / prompt injection の構造的拒否、非決定性の境界、identity 戦略、
+  PIT（LLM の知識は PIT ではない）、provenance、永続化 3 案（生成 journal を分離する Option C を推奨）、failure taxonomy、
+  provider 境界、data minimization、Compass / DNA 境界、B3 dedup / B5 relation / B6 monitoring との相互作用、security、
+  offline test、public surface の隔離、deferred register（B7-DEF-1〜8）、実装順の修正案（入力 manifest を独立 gate に、
+  実 provider 接続を B7 の外へ）、監督者の決定事項 D-B7-1〜12。
+
 ## v5.33 (2026-09-24) — Phase 6 P6-B6R1-RERUN coverage completeness の独立再検証（TEST / AUDIT / DOC ONLY）
 
 B6R1 remediation（anchor `3620901`）を変更せずに独立再検証した。**runtime は変更していない**
