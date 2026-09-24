@@ -4,6 +4,55 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.28 (2026-09-24) — Phase 6 P6-B6E monitoring E2E / adversarial validation gate
+
+B6A architecture / B6B model / B6C engine / B6D operational layer を **1 系として** 検証した。
+**runtime は 1 byte も変更していない**（`git diff 8ef09ab -- src/intelligence/theme_intelligence knowledge/theme_intelligence`
+が空であることを test で固定）。閾値調整・condition 追加・identity 変更・review semantics 変更は一切していない。
+
+**判定は BLOCKER_FOUND。** B3 / B5C の提案 record が run cutoff で濾過されず、cutoff より後に記録された
+関係提案が過去 cutoff の run で finding を生む。remediation は P6-B6D（runner）の担当であり、本 gate では修正しない。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_e2e.py`【新規】
+
+- §A: B6C の 18 condition すべてに positive / negative fixture（36 件）。category / subject_kind /
+  salient_state_kind / cutoff 非依存の finding identity / COMPLETE・PARTIAL 挙動を検証。
+- §B: corruption matrix（Foundation / B3 / B5B / B5C / review × malformed / truncated / non-canonical /
+  not-an-object / blank / 欠損 / duplicate conflicting / unsupported schema / unknown field）。
+  すべて fail closed・PARTIAL・自動修復なし・byte 不変。
+- §C: cross-layer E2E（authority journal → resolver → B2 / B3 / B5 derived → adapter → engine → review lookup）。
+  合成 world から **17/18 condition** を実 authority 経由で発火。review-state の全生涯（ACK → 消失 → 再出現 →
+  同一 finding_id → 自動 reopen しない）と chain 異常 4 種を固定。
+- §D: 同一 cutoff の replay 一致、独立 record の物理順 shuffle 11 seed、PIT 境界（cutoff / −1µs）。
+- §E: data_root 全 file の inventory 比較による zero-write、authority / knowledge hash 不変、
+  finding・run report 非永続、RR-3、hidden authority、source-origin 安全性、security。
+- §F: read-only shadow harness の検証と real-data precheck。
+
+### 追加 — `tests/intelligence/theme_monitoring_shadow.py`【新規】
+
+- 実 data_root 用の **READ-ONLY shadow validation harness（1 command）**。
+  実行前後の file inventory（sha256）比較で zero-write を証明し、同一 cutoff の 2 回 run を自動比較する。
+- review append なし / finding 保存なし / scheduler なし / notification なし / network なし / 現在時刻なし。
+- summary は counts・安定 id・diagnostic code・version・hash のみ。本文・note・actor・絶対 path を出さない。
+- production entry point ではないため `scripts/` ではなく test helper として置く
+  （`.github/` ・`config.yaml` ・`scripts/` が `theme_intelligence` を参照しない既存不変条件を保つ）。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_E2E_VALIDATION.md`【新規】
+
+18 condition coverage matrix、cross-layer 結果、zero-write 証明、PIT matrix、corruption matrix、
+PARTIAL 品質監査、blind-spot 監査（B6D limitation #1）、noise 監査、BLOCKER の再現手順と remediation 提案、
+real-data precheck（**REAL_DATA_SHADOW_NOT_RUN**: Theme authority journal がどの環境にも存在しない）、
+B6 closeout entry contract。
+
+### 記録 — 検出した BLOCKER（本 gate では修正しない）
+
+- `monitoring_runner._read_proposals()` / `_read_relation_proposals()` が B3 / B5C の record を
+  run cutoff で濾過しない。`theme_proposals` / `theme_relation_proposals` の input digest が cutoff に依存せず、
+  未来の関係提案が過去 cutoff の run で `RETRACTED_RELATION_HAS_NEW_PROPOSAL` を発火させる。
+- Foundation（`resolve_at_data_root`）と B5B（`resolve_relations_at_data_root`）は PIT 正しい。
+  B3 / B5C の derive API は cutoff 引数を持たないため、濾過は runner 側の責務である。
+- PIT 契約を述べる test 2 件を **strict xfail** として残した（defect に合わせて test を弱めない）。
+
 ## v5.27 (2026-09-23) — Phase 6 P6-B6D 運用 review store ＋ read-only monitoring runner
 
 B6B（model）と B6C（engine / ruleset）を **無変更**のまま、monitoring の運用層を追加した。
