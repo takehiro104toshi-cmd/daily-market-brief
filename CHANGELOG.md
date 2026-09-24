@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.33 (2026-09-24) — Phase 6 P6-B6R1-RERUN coverage completeness の独立再検証（TEST / AUDIT / DOC ONLY）
+
+B6R1 remediation（anchor `3620901`）を変更せずに独立再検証した。**runtime は変更していない**
+（`src/`・`knowledge/`・`config.yaml`・`.github/`・`scripts/` の `3620901` との diff 0）。
+
+判定: **B6-DEF-1 は CLOSED を確認**。依存表は source から再導出して監督指示の期待値と一致。B6 freeze（`99d45ef`）の
+runtime で B6-DEF-1 を同じ data root 上に再現し、B6R1 の runtime で閉じていることを確認した。finding の bytes・id、
+18 condition の意味・ruleset、PIT、決定論、zero-write、review / authority 分離、RR-3、fail closed はすべて保持。
+real-data shadow は NOT_RUN（Theme authority が実在しない）。runtime defect・blocker なし。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_coverage_rerun.py`【新規】
+
+B6R1 matrix の helper・world・期待値の定数を使わない独立検証（112 tests）: runtime freeze（anchor との diff・byte 同一・履歴）、
+依存表の AST 再導出、engine 経路（手組み snapshot）と runner 経路（`retired` stage の別 world・2 cutoff）の A〜F、
+report 1 行だけからの判別、3 状態の run_id / digest 分離・再実行一致・物理順、B6 freeze runtime（git から一時展開・別 process）
+との finding bytes 比較と欠陥の再現、engine AST の非回帰、B3 / B5C の未来 record 4 family の PIT（coverage 固定）、
+12 種の破損 × channel 欠落（未評価と diagnostics の厳密な和）、zero-write、review / authority / RR-3、既定 run、
+synthetic harness、closeout 履歴の保持。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_COVERAGE_RERUN.md`【新規】
+
+再検証の結果、mutation 検査（runtime の一時 copy を 7 通りに壊し全検出）、non-blocking の観測事項
+（OBS-1 空 scope が runner diagnostics のみ／OBS-2 governance events 未供給が runner diagnostics のみ（必要時は fail closed）／
+OBS-3 harness CLI に観測 option なし／OBS-4 engine は presence のみ束縛し内容の束縛は input digest の契約どおり）。
+
 ## v5.32 (2026-09-24) — Phase 6 P6-B6R1 monitoring coverage-completeness remediation（NARROW REMEDIATION）
 
 B6-DEF-1（観測 channel の coverage 欠落）だけを是正した。観測 channel が未供給のとき、依存する condition を未評価にし、
