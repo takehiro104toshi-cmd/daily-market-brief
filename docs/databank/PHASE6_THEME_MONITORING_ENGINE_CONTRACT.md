@@ -150,6 +150,9 @@ evaluate_monitoring(evaluation_input, *, ruleset, recorded_at) -> MonitoringEval
 いずれも frozen dataclass。generic dict dump を受けない。`_Subject` 基底が
 `availability` / `authority_name` / `failure_class` / `locator_token` を共通に持つ。
 
+（P6-B6R1 追記）`MonitoringEvaluationInput.supplied_observation_channels`（既定 `()` = 何も供給されていない）が
+加わった。意味は §13.3。
+
 ---
 
 ## 7. 既存 derived 意味論の再実装をしない
@@ -242,6 +245,34 @@ subject が `UNAVAILABLE`、または `AuthorityFailureSnapshot` が与えられ
 | unevaluated_conditions | `set` に集めて canonical sort |
 
 すなわち「同じ障害」は run report 上でも finding 上でも 1 回だけ現れる。
+
+### 13.3 観測 channel の未供給（P6-B6R1 追記。B6-DEF-1 の remediation）
+
+呼び出し側の観測 channel（到着 key・意味改訂 id・discovery outcome）は snapshot の field に載るが、
+**空欄は「評価したが該当なし」とも「供給されていない」とも読めてしまう**。engine はこの 2 つを
+`supplied_observation_channels` で区別する。依存表 `OBSERVATION_CHANNEL_CONDITIONS` は engine が snapshot を読む
+箇所の写しとして engine に置く。
+
+| channel | 依存する condition_id |
+|---|---|
+| `arrived_attachment_keys` | `RETIRED_ROOT_RECEIVED_EVIDENCE` |
+| `semantic_revision_observation_ids` | `ACCEPTED_THEME_SEMANTIC_REVISION` |
+| `discovery_outcome_tokens` | `DISCOVERY_HIT_WITHOUT_ACCEPTED_PROPOSAL`, `ACCEPTED_CANDIDATE_WITHOUT_OBSERVED_EFFECT` |
+
+未供給の channel について engine は:
+
+1. 依存 condition を**評価しない**（snapshot に値が紛れていても finding を出さない）
+2. 依存 condition のうち有効なものを `unevaluated_conditions` に入れる（authority 由来の未評価と同じ set に合流し、canonical sort）
+3. 有効な依存 condition があれば `OBSERVATION_NOT_SUPPLIED:<channel>` を report diagnostics に残す
+4. **finding を作らない**（未供給は障害ではなく入力の不足。`AUTHORITY_STATE_UNUSABLE` も出さない）
+
+供給状況は `observation_channels_supplied`（供給済み channel 名の辞書順 `|` 連結、何も無ければ `none`）として
+report の `input_digests` に engine が束縛する。呼び出し側がこの key を渡すことはできない（`RESERVED_DIGEST_KEY`）。
+未知の channel 名は `INVALID_OBSERVATION_CHANNEL` で fail closed。
+
+`COMPLETE` の定義（「要求されたすべての条件を評価できた」、`COMPLETE ⟺ unevaluated_conditions == ()`）は変えていない。
+未供給の channel に依存する有効な condition があれば、それだけで `PARTIAL` になる。18 condition の id・閾値・分類・
+subject・finding の意味は変えていない。
 
 ---
 

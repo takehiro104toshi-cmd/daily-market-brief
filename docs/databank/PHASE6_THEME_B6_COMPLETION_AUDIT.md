@@ -254,7 +254,7 @@ authority への append、governance の変更、提案の自動受理のいず�
 | **PIT impact** | NONE |
 | **Finding correctness impact** | No evidence of incorrect emitted findings. |
 | **Coverage/status correctness impact** | YES |
-| **Deadline** | BEFORE P7 ENTRY（監督指示の原文どおり）。Status が MANDATORY_PRE_B7_REMEDIATION のため、実効の期限は B7 entry の前である |
+| **Deadline** | **BEFORE B7 ENTRY**（P6-B6R1 で訂正。closeout 時点の記載「BEFORE P7 ENTRY」は監督指示上の表記ミスであり、監督者が訂正した。Status の MANDATORY_PRE_B7_REMEDIATION と一致する） |
 | **Owner** | P6-B6R1 remediation gate |
 
 監督 disposition の意味:
@@ -277,7 +277,7 @@ B6E-RERUN の `test_70` / `test_71` は現挙動の記録であり、P6-B6R1 が
 
 | id | 内容 | blocking | owner | deadline | risk | future gate |
 |---|---|---|---|---|---|---|
-| **B6-DEF-1** | 観測 channel の coverage 欠落（§17） | B6 closeout: No / **B7: Yes** | P6-B6R1 | BEFORE P7 ENTRY（実効: B7 entry 前） | report 単体の consumer への false assurance（既定 run すべてが該当） | P6-B6R1 |
+| **B6-DEF-1** | 観測 channel の coverage 欠落（§17） | B6 closeout: No / **B7: Yes** | P6-B6R1 | BEFORE B7 ENTRY（P6-B6R1 で表記訂正。旧記載「BEFORE P7 ENTRY」は表記ミス） | report 単体の consumer への false assurance（既定 run すべてが該当） | P6-B6R1 → **CLOSED（§23）** |
 | B6-DEF-2 | #17 は store 経路で到達不能な防御的 condition（§15） | No | B6 closeout で記録済み | なし | 低（fail closed で表れる） | B5B の load 意味論を変える gate があれば再評価 |
 | B6-DEF-3 | PIT 保証の境界: 不正な authority は PIT 濾過前に検証され全 cutoff で fail closed し得る（§9） | No | B6 closeout で記録済み | なし | 低（黙った漏洩ではない） | なし |
 | B6-DEF-4 | review state は PIT authority ではない（運用状態） | No | 監督者 | なし | 低 | 過去時点の review 状態が必要になった時 |
@@ -305,7 +305,7 @@ docs に現れる `?api_key=` は guard が拒否する対象の説明であり�
 
 1. 検証はすべて synthetic。実世界の precision / recall・因果の正しさ・投資上の有用性は主張しない。
 2. real-data shadow 未実施（B6-DEF-5）。
-3. B6-DEF-1 が未是正（B7 前に必須）。
+3. B6-DEF-1 が未是正（B7 前に必須）。→ P6-B6R1 で CLOSED（§23）。
 4. B5C の DEFER 可視性は monitoring の出力から観測できない（OPEN と OPEN_DEFERRED はどちらも live）。
 5. naive timestamp の経路は fault injection でしか到達しない。
 
@@ -315,3 +315,30 @@ B6A〜B6E-RERUN の性質（authority 非保持・PIT・決定論・zero-write�
 すべて保持されている。BLOCKER-1 は CLOSED。B6-DEF-1 は監督判定どおり B7 前の必須 remediation として登録した。
 
 **B6 は supervisor freeze に進める。B6 closeout 後の次の gate は P6-B6R1 であり、B7 ではない。**
+
+---
+
+## 23. P6-B6R1 追記（B6 freeze `99d45ef` 以降の変更記録）
+
+本節と §17 / §18 / §21 の注記は P6-B6R1 で追記した。§1〜§22 の監査結論（B6 closeout 時点の判定）は書き換えていない。
+
+### 23.1 deadline 表記の訂正
+
+B6 closeout 時点の §17 / §18 は B6-DEF-1 の deadline を「BEFORE P7 ENTRY」と記載していた。これは監督指示上の
+表記ミスであり、監督者の訂正に従い **BEFORE B7 ENTRY** とした。Status（NON_BLOCKING_FOR_B6_CLOSEOUT /
+MANDATORY_PRE_B7_REMEDIATION）は変更していない。
+
+### 23.2 B6-DEF-1 の closure
+
+| 項目 | 内容 |
+|---|---|
+| 履歴 | B6 closeout（`99d45ef`）時点では **deferred**（NON_BLOCKING_FOR_B6_CLOSEOUT / MANDATORY_PRE_B7_REMEDIATION） |
+| 是正 gate | P6-B6R1 MONITORING COVERAGE-COMPLETENESS REMEDIATION |
+| 現在の Status | **CLOSED**（P6-B6R1） |
+| 是正内容 | 観測 channel を「未供給（`None`、既定）」「空で供給（`{}`）」「非空で供給」の 3 状態にし、未供給 channel に依存する condition を engine が未評価にする。run は `PARTIAL`、report diagnostics に `OBSERVATION_NOT_SUPPLIED:<channel>`、input digest に供給状況（`observation_channels_supplied`）と供給 channel の内容 digest（`observation:<channel>`）を束縛する |
+| 保持したもの | B6B の `COMPLETE` 定義（`COMPLETE ⟺ unevaluated_conditions == ()`）、`FAILED` を使わないこと、finding identity、run identity の契約、18 condition の意味、ruleset、review / authority の分離、PIT |
+| 検証 | `tests/intelligence/test_theme_monitoring_coverage.py`（regression matrix A〜R）、B6E-RERUN `test_70` / `test_71` の反転 |
+| 詳細 | `PHASE6_THEME_MONITORING_COVERAGE_REMEDIATION.md` |
+
+B6-DEF-1 の closure により、B7 entry を妨げる B6 由来の deferred は残っていない（B6-DEF-2〜6 は元から non-blocking）。
+B7 の開始は監督者の判断による。

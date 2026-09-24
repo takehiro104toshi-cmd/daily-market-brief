@@ -45,6 +45,17 @@ OPEN_STATUS = "OPEN"
 DEFERRED_STATUS = "OPEN_DEFERRED"
 OUTCOME_NO_ACCEPTED_PROPOSAL = "NO_ACCEPTED_PROPOSAL"
 OUTCOME_NO_OBSERVED_EFFECT = "NO_OBSERVED_EFFECT"
+#: P6-B6R1: 呼び出し側が供給する観測 channel → その channel が無いと評価できない condition。
+#: 下の `_theme` / `_proposal` が読む snapshot field（到着 key・意味改訂 id・discovery outcome）の写しである。
+OBSERVATION_CHANNEL_CONDITIONS: Mapping[str, Tuple[str, ...]] = {
+    "arrived_attachment_keys": ("RETIRED_ROOT_RECEIVED_EVIDENCE",),
+    "semantic_revision_observation_ids": ("ACCEPTED_THEME_SEMANTIC_REVISION",),
+    "discovery_outcome_tokens": ("DISCOVERY_HIT_WITHOUT_ACCEPTED_PROPOSAL",
+                                 "ACCEPTED_CANDIDATE_WITHOUT_OBSERVED_EFFECT"),
+}
+#: どの channel が供給されたかを run identity（input digest）へ束縛する key と、何も供給されていないときの値
+OBSERVATION_PRESENCE_KEY = "observation_channels_supplied"
+NO_CHANNEL_SUPPLIED = "none"
 
 
 class MonitoringEngineError(ValueError):
@@ -159,6 +170,8 @@ class MonitoringEvaluationInput:
     relation_proposals: Tuple[RelationProposalSnapshot, ...] = ()
     knowledge_drift: Tuple[KnowledgeDriftSnapshot, ...] = ()
     authority_failures: Tuple[AuthorityFailureSnapshot, ...] = ()
+    #: 供給された観測 channel。**既定は「何も供給されていない」**（coverage を主張する隠れた既定値を持たない）
+    supplied_observation_channels: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         _require(isinstance(self.cutoff, datetime), "INVALID_CUTOFF", "cutoff must be a datetime")
@@ -167,8 +180,14 @@ class MonitoringEvaluationInput:
         except Exception:
             raise MonitoringEngineError("INVALID_CUTOFF", "cutoff must be an aware datetime") from None
         for name in ("themes", "proposals", "relations", "relation_proposals", "knowledge_drift",
-                     "authority_failures", "knowledge_versions", "input_digests"):
+                     "authority_failures", "knowledge_versions", "input_digests", "supplied_observation_channels"):
             _require(isinstance(getattr(self, name), tuple), "INVALID_TYPE", f"{name} must be a tuple")
+        _require(all(isinstance(name, str) and name in OBSERVATION_CHANNEL_CONDITIONS
+                     for name in self.supplied_observation_channels),
+                 "INVALID_OBSERVATION_CHANNEL", "supplied_observation_channels names a known channel only")
+        _require(not any(isinstance(pair, tuple) and pair[:1] == (OBSERVATION_PRESENCE_KEY,)
+                         for pair in self.input_digests), "RESERVED_DIGEST_KEY",
+                 f"{OBSERVATION_PRESENCE_KEY} is bound by the engine")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -190,6 +209,8 @@ class _Collector:
     findings: Dict[str, MonitoringFinding] = field(default_factory=dict)
     unevaluated: set = field(default_factory=set)
     diagnostics: set = field(default_factory=set)
+    #: 必要な観測 channel が供給されず評価しない condition（finding を出さない）
+    withheld: set = field(default_factory=set)
 
     def enabled(self, condition_id: str) -> bool:
         rule = self.ruleset.rule(condition_id)
@@ -198,6 +219,8 @@ class _Collector:
     def emit(self, condition_id: str, subject_ref: str, facts: Mapping[str, str], *,
              trigger_refs: Sequence[MonitoringReference] = (),
              supporting_refs: Sequence[MonitoringReference] = ()) -> None:
+        if condition_id in self.withheld:                     # 入力が無い condition は評価しない
+            return
         rule = self.ruleset.rule(condition_id)
         if rule is None or not rule.enabled:
             return
@@ -385,6 +408,15 @@ def evaluate_monitoring(evaluation_input: MonitoringEvaluationInput, *, ruleset:
              "the ruleset was published after the cutoff")
 
     collector = _Collector(ruleset=ruleset, cutoff=evaluation_input.cutoff)
+    supplied = set(evaluation_input.supplied_observation_channels)
+    for channel in sorted(set(OBSERVATION_CHANNEL_CONDITIONS) - supplied):   # 未供給 ≠ 空で供給
+        dependents = OBSERVATION_CHANNEL_CONDITIONS[channel]
+        collector.withheld.update(dependents)
+        requested = [condition_id for condition_id in dependents if collector.enabled(condition_id)]
+        collector.unevaluated.update(requested)
+        if requested:
+            collector.diagnostics.add(f"OBSERVATION_NOT_SUPPLIED:{channel}")
+    presence = "|".join(sorted(supplied)) or NO_CHANNEL_SUPPLIED
     for theme in sorted(evaluation_input.themes, key=lambda s: s.theme_root_id):
         _theme(collector, theme)
     for proposal in sorted(evaluation_input.proposals, key=lambda s: s.proposal_id):
@@ -405,7 +437,7 @@ def evaluate_monitoring(evaluation_input: MonitoringEvaluationInput, *, ruleset:
     report = MonitoringRunReport.build(
         cutoff=evaluation_input.cutoff, ruleset_version=ruleset.ruleset_version, recorded_at=recorded_at,
         status=status, knowledge_versions=evaluation_input.knowledge_versions,
-        input_digests=evaluation_input.input_digests,
+        input_digests=evaluation_input.input_digests + ((OBSERVATION_PRESENCE_KEY, presence),),
         finding_ids=tuple(item.finding_id for item in findings), unevaluated_conditions=unevaluated,
         diagnostics=tuple(sorted(collector.diagnostics)))
     return MonitoringEvaluation(findings=findings, report=report)
@@ -413,6 +445,7 @@ def evaluate_monitoring(evaluation_input: MonitoringEvaluationInput, *, ruleset:
 
 __all__ = ["ABSENCE_FLAGS", "ACCEPTED_STATES", "AuthorityFailureSnapshot", "BROKEN_CHAIN_STATES", "CLOSED_STATES",
            "DIVERGENCE_FLAGS", "ENGINE_EMITS_OBSERVATIONS_ONLY", "INACTIVE_ENDPOINT_STATES",
-           "MONITORING_ENGINE_VERSION", "KnowledgeDriftSnapshot", "MonitoringEngineError", "MonitoringEvaluation",
+           "MONITORING_ENGINE_VERSION", "NO_CHANNEL_SUPPLIED", "OBSERVATION_CHANNEL_CONDITIONS",
+           "OBSERVATION_PRESENCE_KEY", "KnowledgeDriftSnapshot", "MonitoringEngineError", "MonitoringEvaluation",
            "MonitoringEvaluationInput", "ProposalSnapshot", "RelationProposalSnapshot", "RelationSnapshot",
            "SubjectAvailability", "ThemeSnapshot", "evaluate_monitoring"]

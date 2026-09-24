@@ -15,6 +15,7 @@ import pytest
 
 from src.intelligence.theme_intelligence.knowledge_loader import KnowledgeError
 from src.intelligence.theme_intelligence.monitoring_engine import (ENGINE_EMITS_OBSERVATIONS_ONLY,
+                                                                   OBSERVATION_CHANNEL_CONDITIONS,
                                                                    MONITORING_ENGINE_VERSION,
                                                                    AuthorityFailureSnapshot, KnowledgeDriftSnapshot,
                                                                    MonitoringEngineError, MonitoringEvaluationInput,
@@ -52,7 +53,13 @@ def ruleset(cutoff=T0):
 RULES = ruleset()
 
 
+#: P6-B6R1: condition の意味論を検査する本 file は、観測 channel をすべて供給した完全な入力で評価する
+#: （未供給の挙動は `test_theme_monitoring_coverage.py` が固定する）
+ALL_CHANNELS = tuple(sorted(OBSERVATION_CHANNEL_CONDITIONS))
+
+
 def evaluate(*, cutoff=T0, recorded_at=None, rules=None, **kw):
+    kw.setdefault("supplied_observation_channels", ALL_CHANNELS)
     return evaluate_monitoring(MonitoringEvaluationInput(cutoff=cutoff, **kw), ruleset=rules or RULES,
                                recorded_at=recorded_at or cutoff)
 

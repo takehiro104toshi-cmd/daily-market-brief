@@ -116,7 +116,13 @@ def relation_proposal(**kw) -> RelationProposalSnapshot:
     return RelationProposalSnapshot(**kw)
 
 
+#: P6-B6R1: condition matrix は観測 channel をすべて供給した完全な入力で評価する（未供給は coverage test が固定）
+ALL_SUPPLIED = MonitoringObservations(arrived_attachment_keys={}, semantic_revision_observation_ids={},
+                                      discovery_outcome_tokens={})
+
+
 def evaluate(cutoff=T, **families):
+    families.setdefault("observations", ALL_SUPPLIED)
     return evaluate_monitoring(build_evaluation_input(cutoff=cutoff, **families), ruleset=RULES, recorded_at=cutoff)
 
 
@@ -723,15 +729,19 @@ def test_d09_the_proposal_snapshot_is_cutoff_bound(world) -> None:
 
 # ---------------------------------------------------------------- §E zero-write / 権限 / security
 
+#: B6D anchor 以降に変わってよい runtime（B6D-R1: runner、P6-B6R1: engine / adapter / runner）
+CHANGED_SINCE_B6D = ("monitoring_adapter.py", "monitoring_engine.py", "monitoring_runner.py")
+
+
 def test_e01_the_frozen_runtime_is_untouched() -> None:
-    """B6D anchor 以降に変わってよい runtime は P6-B6D-R1 の `monitoring_runner.py` だけである。"""
+    """B6D anchor 以降に変わってよい runtime は B6D-R1 と P6-B6R1 の remediation 対象だけである。"""
     import subprocess
     changed = subprocess.run(["git", "diff", "--name-only", "8ef09ab1db447ad783defd0c6afecd3e943edcfe", "--",
                               "src/intelligence/theme_intelligence", "knowledge/theme_intelligence"],
                              cwd=REPO_ROOT, capture_output=True, text=True, check=True).stdout.split()
-    assert changed in ([], ["src/intelligence/theme_intelligence/monitoring_runner.py"]), changed
+    assert set(changed) <= {f"src/intelligence/theme_intelligence/{name}" for name in CHANGED_SINCE_B6D}, changed
     for name in FROZEN_RUNTIME:
-        if name == "monitoring_runner.py":
+        if name in CHANGED_SINCE_B6D:
             continue
         anchored = subprocess.run(["git", "show", f"8ef09ab1db447ad783defd0c6afecd3e943edcfe:"
                                    f"src/intelligence/theme_intelligence/{name}"], cwd=REPO_ROOT,

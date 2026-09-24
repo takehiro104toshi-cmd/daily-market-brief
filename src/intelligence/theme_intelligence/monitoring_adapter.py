@@ -31,9 +31,9 @@ from ..themes.model import canonical_json
 from ..themes.resolver import ResolutionStatus, ThemeResolution
 from .lifecycle_model import (EvidenceConditionFlag, EvidenceConditionStatus, GovernanceLifecycleState,
                               LifecyclePolicy, LifecycleViewStatus, ThemeLifecycleView)
-from .monitoring_engine import (AuthorityFailureSnapshot, KnowledgeDriftSnapshot, MonitoringEvaluationInput,
-                                ProposalSnapshot, RelationProposalSnapshot, RelationSnapshot, SubjectAvailability,
-                                ThemeSnapshot)
+from .monitoring_engine import (OBSERVATION_CHANNEL_CONDITIONS, AuthorityFailureSnapshot, KnowledgeDriftSnapshot,
+                                MonitoringEvaluationInput, ProposalSnapshot, RelationProposalSnapshot,
+                                RelationSnapshot, SubjectAvailability, ThemeSnapshot)
 from .monitoring_model import MAX_KEY_LEN, MAX_REF_LEN
 from .proposal_resolution import DecisionResolutionStatus, ProposalStatus
 from .relation_proposal_resolution import RelationProposalStatus
@@ -119,27 +119,49 @@ def freshness_policy_token(policy: LifecyclePolicy) -> str:
 # ---------------------------------------------------------------- 呼び出し側が渡す観測（B6D では導出できない channel）
 
 
+#: 観測 channel の名前（engine の依存表が source of truth）
+OBSERVATION_CHANNELS: Tuple[str, ...] = tuple(sorted(OBSERVATION_CHANNEL_CONDITIONS))
+OBSERVATION_BINDING_PREFIX = "observation:"
+
+
+def _canonical_channel(values: Mapping[str, object]) -> Dict[str, object]:
+    """channel の内容を物理順に依らない形へ（key は canonical_json が、列はここで並べ替える）。"""
+    return {str(key): sorted(set(value)) if isinstance(value, (tuple, list)) else value
+            for key, value in values.items()}
+
+
 @dataclass(frozen=True, kw_only=True)
 class MonitoringObservations:
     """frozen な上流 view からは cutoff 1 点で導けない観測。**未供給は「無かった」ではない**。
 
-    未供給の channel は runner が `OBSERVATION_CHANNEL_NOT_SUPPLIED:<name>` として結果の diagnostics に残す。
+    各 channel は 3 状態を持つ（P6-B6R1）:
+
+    - `None`（既定）: **未供給**。依存する condition は評価不能であり、run は `PARTIAL` になる。
+    - 空の mapping `{}`: **空で供給**（該当が無いことを確かめた）。評価可能。
+    - 非空の mapping: 供給。評価可能。
     """
 
-    arrived_attachment_keys: Mapping[str, Tuple[str, ...]] = field(default_factory=dict)
-    semantic_revision_observation_ids: Mapping[str, str] = field(default_factory=dict)
-    discovery_outcome_tokens: Mapping[str, str] = field(default_factory=dict)
+    arrived_attachment_keys: Optional[Mapping[str, Tuple[str, ...]]] = None
+    semantic_revision_observation_ids: Optional[Mapping[str, str]] = None
+    discovery_outcome_tokens: Optional[Mapping[str, str]] = None
+
+    def __post_init__(self) -> None:
+        for name in OBSERVATION_CHANNELS:
+            value = getattr(self, name)
+            _require(value is None or isinstance(value, Mapping), "INVALID_TYPE",
+                     f"{name} is either not supplied (None) or a mapping")
 
     def supplied_channels(self) -> Tuple[str, ...]:
-        return tuple(name for name, value in (("arrived_attachment_keys", self.arrived_attachment_keys),
-                                              ("semantic_revision_observation_ids",
-                                               self.semantic_revision_observation_ids),
-                                              ("discovery_outcome_tokens", self.discovery_outcome_tokens)) if value)
+        return tuple(name for name in OBSERVATION_CHANNELS if getattr(self, name) is not None)
 
     def missing_channels(self) -> Tuple[str, ...]:
-        supplied = set(self.supplied_channels())
-        return tuple(name for name in ("arrived_attachment_keys", "semantic_revision_observation_ids",
-                                       "discovery_outcome_tokens") if name not in supplied)
+        return tuple(name for name in OBSERVATION_CHANNELS if getattr(self, name) is None)
+
+    def channel_bindings(self) -> Tuple[Tuple[str, str], ...]:
+        """供給された channel の内容 digest（空供給も digest を持つ。未供給は束縛せず、engine が presence を束縛する）。"""
+        return tuple((OBSERVATION_BINDING_PREFIX + name,
+                      content_id(DIGEST_PREFIX, canonical_json(_canonical_channel(getattr(self, name)))))
+                     for name in self.supplied_channels())
 
 
 # ---------------------------------------------------------------- Theme
@@ -329,13 +351,19 @@ def build_evaluation_input(*, cutoff: datetime, knowledge_versions: Sequence[Tup
                            relations: Sequence[RelationSnapshot] = (),
                            relation_proposals: Sequence[RelationProposalSnapshot] = (),
                            knowledge_drift: Sequence[KnowledgeDriftSnapshot] = (),
-                           authority_failures: Sequence[AuthorityFailureSnapshot] = ()
+                           authority_failures: Sequence[AuthorityFailureSnapshot] = (),
+                           observations: Optional[MonitoringObservations] = None
                            ) -> MonitoringEvaluationInput:
-    """snapshot 群 ＋ knowledge version から評価入力を組み立て、決定論的な input digest を付ける。"""
+    """snapshot 群 ＋ knowledge version から評価入力を組み立て、決定論的な input digest を付ける。
+
+    `observations` を省略すると **全 channel 未供給**として扱う（fail closed）。"""
+    seen = observations if observations is not None else MonitoringObservations()
+    _require(isinstance(seen, MonitoringObservations), "INVALID_TYPE", "observations must be MonitoringObservations")
     families = ((AUTHORITY_THEMES, themes), (AUTHORITY_PROPOSALS, proposals), (AUTHORITY_RELATIONS, relations),
                 (AUTHORITY_RELATION_PROPOSALS, relation_proposals), ("knowledge_drift", knowledge_drift),
                 ("authority_failures", authority_failures))
     digests = tuple(snapshot_digest(name, _ordered(items)) for name, items in families if items)
+    digests += seen.channel_bindings()
     return MonitoringEvaluationInput(
         cutoff=cutoff, knowledge_versions=tuple(sorted(knowledge_versions)), input_digests=tuple(sorted(digests)),
         themes=tuple(sorted(themes, key=lambda s: s.theme_root_id)),
@@ -344,10 +372,11 @@ def build_evaluation_input(*, cutoff: datetime, knowledge_versions: Sequence[Tup
         relation_proposals=tuple(sorted(relation_proposals, key=lambda s: (s.relation_proposal_id, s.edge_key))),
         knowledge_drift=tuple(sorted(knowledge_drift, key=lambda s: s.knowledge_name)),
         authority_failures=tuple(sorted(authority_failures,
-                                        key=lambda s: (s.authority_name, s.failure_class, s.locator_token))))
+                                        key=lambda s: (s.authority_name, s.failure_class, s.locator_token))),
+        supplied_observation_channels=seen.supplied_channels())
 
 
-__all__ = ["ADAPTER_MAPS_ONLY", "TOKEN_PATTERN", "AUTHORITY_PROPOSALS", "AUTHORITY_RELATIONS", "AUTHORITY_RELATION_PROPOSALS",
+__all__ = ["ADAPTER_MAPS_ONLY", "OBSERVATION_BINDING_PREFIX", "OBSERVATION_CHANNELS", "TOKEN_PATTERN", "AUTHORITY_PROPOSALS", "AUTHORITY_RELATIONS", "AUTHORITY_RELATION_PROPOSALS",
            "AUTHORITY_THEMES", "BROKEN_DECISION_STATUSES", "CHAIN_STATUS_TOKENS", "CONTESTED_ROLE", "DIGEST_PREFIX",
            "LIVE_RELATION_PROPOSAL_STATUSES", "LOCATOR_PREFIX", "MONITORING_ADAPTER_VERSION",
            "MonitoringAdapterError", "MonitoringObservations", "RESOLUTION_FAILURE_CLASS",

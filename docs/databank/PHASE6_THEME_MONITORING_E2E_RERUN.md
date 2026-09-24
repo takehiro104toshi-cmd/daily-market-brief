@@ -207,6 +207,9 @@ day70 の cross-layer world（4 condition すべてが成立し得る状態）�
 **提案: C — NON_BLOCKING_DEFERRED_WITH_CONTRACT**
 
 > **監督判定（P6-B6 closeout audit）**: B6-DEF-1 = NON_BLOCKING_FOR_B6_CLOSEOUT / MANDATORY_PRE_B7_REMEDIATION。canonical な登録は `PHASE6_THEME_B6_COMPLETION_AUDIT.md` §17。
+>
+> **P6-B6R1 追記**: B6-DEF-1 は P6-B6R1 で CLOSED（`PHASE6_THEME_B6_COMPLETION_AUDIT.md` §23、`PHASE6_THEME_MONITORING_COVERAGE_REMEDIATION.md`）。
+> 本書の `test_70` / `test_71` は削除・弱化せず、期待値を反転して是正を確認する test に変えた（未供給 → `PARTIAL`、未供給 ≠ 空供給）。
 
 - **A を採らない理由**: 現挙動は B6A / B6B / B6C の wording と矛盾する。受け入れれば `COMPLETE` の意味を黙って変えることになる。
 - **closeout を止めない理由**: authority・PIT・finding の正しさに影響しない。report の consumer がまだ存在しない。

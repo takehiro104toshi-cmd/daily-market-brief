@@ -248,8 +248,8 @@ def _read_themes(data_root, scope: Tuple[str, ...], cutoff: datetime, policy: Li
             superseded.append(root_id)
         snapshots.append(theme_snapshot(
             resolution, view, policy_token=policy_token,
-            arrived_attachment_keys=tuple(observations.arrived_attachment_keys.get(root_id, ())),
-            semantic_revision_observation_id=observations.semantic_revision_observation_ids.get(root_id, "")))
+            arrived_attachment_keys=tuple((observations.arrived_attachment_keys or {}).get(root_id, ())),
+            semantic_revision_observation_id=(observations.semantic_revision_observation_ids or {}).get(root_id, "")))
     return _ThemeReadout(snapshots=tuple(snapshots), created_at_by_root=created, retired=tuple(sorted(retired)),
                          superseded=tuple(sorted(superseded)))
 
@@ -273,7 +273,7 @@ def _read_proposals(data_root, cutoff: datetime, observations: MonitoringObserva
             proposal.proposal_id, status=derive_proposal_status(proposal, decisions),
             created_at=proposal.created_at, decision_status=chain.status,
             decision_diagnostic=chain.diagnostics[0] if chain.diagnostics else "",
-            discovery_outcome_token=observations.discovery_outcome_tokens.get(proposal.proposal_id, "")))
+            discovery_outcome_token=(observations.discovery_outcome_tokens or {}).get(proposal.proposal_id, "")))
     return tuple(snapshots)
 
 
@@ -391,7 +391,7 @@ def run_monitoring(*, data_root: Union[str, "os.PathLike[str]"], cutoff: datetim
     evaluation_input = build_evaluation_input(
         cutoff=moment, knowledge_versions=versions, themes=readout.snapshots, proposals=proposals,
         relations=relations, relation_proposals=relation_proposals, knowledge_drift=drift,
-        authority_failures=tuple(failures))
+        authority_failures=tuple(failures), observations=seen)
     evaluation = evaluate_monitoring(evaluation_input, ruleset=rules, recorded_at=recorded)
     reviews, review_status = _read_reviews(root, evaluation.findings, diagnostics)
     return MonitoringRunResult(report=evaluation.report, findings=evaluation.findings, reviews=reviews,

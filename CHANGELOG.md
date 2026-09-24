@@ -4,6 +4,63 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.32 (2026-09-24) — Phase 6 P6-B6R1 monitoring coverage-completeness remediation（NARROW REMEDIATION）
+
+B6-DEF-1（観測 channel の coverage 欠落）だけを是正した。観測 channel が未供給のとき、依存する condition を未評価にし、
+run を `COMPLETE` にしない。B6B の `COMPLETE` 定義（`COMPLETE ⟺ unevaluated_conditions == ()`）は変えていない。
+`FAILED` は使わない。finding identity・run identity の契約・18 condition の意味・ruleset・review・authority・PIT は不変。
+**B6-DEF-1 = CLOSED**（B6 closeout 時点の deferred 記録は保持）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_engine.py`
+
+- 依存表 `OBSERVATION_CHANNEL_CONDITIONS`（`arrived_attachment_keys` → `RETIRED_ROOT_RECEIVED_EVIDENCE`、
+  `semantic_revision_observation_ids` → `ACCEPTED_THEME_SEMANTIC_REVISION`、`discovery_outcome_tokens` →
+  `DISCOVERY_HIT_WITHOUT_ACCEPTED_PROPOSAL` / `ACCEPTED_CANDIDATE_WITHOUT_OBSERVED_EFFECT`）。
+- `MonitoringEvaluationInput.supplied_observation_channels`（既定 `()` = 何も供給されていない。未知の名前は
+  `INVALID_OBSERVATION_CHANNEL`）。
+- 未供給 channel の依存 condition を評価せず（finding を出さない）、有効なものを `unevaluated_conditions` へ入れ、
+  report diagnostics に `OBSERVATION_NOT_SUPPLIED:<channel>` を残す。authority 由来の未評価と同じ集合へ合流。
+- 供給状況 `observation_channels_supplied`（供給済み channel 名の `|` 連結、無ければ `none`）を report の
+  `input_digests` に束縛（呼び出し側は渡せない: `RESERVED_DIGEST_KEY`）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_adapter.py`
+
+- `MonitoringObservations` の 3 channel を `Optional[Mapping]`（**既定 `None` = 未供給**、`{}` = 空で供給）に。
+  mapping 以外は `INVALID_TYPE`。`supplied_channels()` / `missing_channels()` は `is not None` で判定。
+- `build_evaluation_input(observations=None)`: 省略時は全 channel 未供給。供給 channel ごとに内容 digest を
+  `observation:<channel>` として束縛（列は並べ替えてから digest するため物理順に依らない）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_runner.py`
+
+- 観測を adapter へ渡す（`observations=seen`）。snapshot 構築では未供給 channel を空として読む（評価は engine が止める）。
+  R1 の PIT 濾過は不変。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_coverage.py`【新規】
+
+regression matrix A〜R（全供給空 → COMPLETE、全省略 → PARTIAL、channel 単位の省略、未供給 ≠ 空供給の report / run_id /
+input digest、決定論、物理順、未供給 ＋ authority 破損、finding / review / authority を作らないこと、finding identity 不変、
+PIT 回帰）と入力検証・既定値・report 単体での判別・shadow harness の PARTIAL。
+
+### 改善 — 既存 test（削除・弱化なし）
+
+- `test_theme_monitoring_engine.py` / `test_theme_monitoring_e2e.py`: 評価 helper が観測 channel を明示的に供給する
+  （従来の「空 = 供給済み」前提を明示化）。B6E の frozen pin に B6R1 の変更 3 file を登録。
+- `test_theme_monitoring_runner.py`: presence binding と「空供給 → COMPLETE / 省略 → PARTIAL」を固定。
+- `test_theme_monitoring_e2e_rerun.py`: `test_70` / `test_71` の期待値を反転（未供給 → PARTIAL、未供給 ≠ 空供給）。
+  frozen pin に B6R1 の変更 3 file を登録。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_COVERAGE_REMEDIATION.md`【新規】
+
+根本原因、channel 依存表、設計案 A / A' / B / C の比較（編集前に記録）、選定 B ＋ C、identity・status・digest の規則、
+regression matrix の結果。
+
+### 改善 — docs
+
+- `PHASE6_THEME_B6_COMPLETION_AUDIT.md`: B6-DEF-1 の deadline 表記を **BEFORE B7 ENTRY** に訂正（旧「BEFORE P7 ENTRY」は
+  監督指示上の表記ミス）。§23 に B6-DEF-1 の closure を追記（closeout 時点の deferred 履歴は保持）。
+- `PHASE6_THEME_MONITORING_ENGINE_CONTRACT.md` §13.3、`PHASE6_THEME_MONITORING_OPERATIONAL_CONTRACT.md` §8 / §10 / §12 / §19、
+  `PHASE6_THEME_MONITORING_E2E_RERUN.md` §15 に P6-B6R1 の追記。
+
 ## v5.31 (2026-09-24) — Phase 6 P6-B6 Theme Monitoring completion audit（AUDIT / DOC ONLY）
 
 B6A〜B6E-RERUN（B6D-R1 を含む）の completion audit を行った。**runtime・test・knowledge・config・workflow・scripts は

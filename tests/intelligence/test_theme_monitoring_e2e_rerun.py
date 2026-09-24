@@ -111,14 +111,18 @@ def append_raw(path: Path, line: str) -> None:
 
 # ---------------------------------------------------------------- §1 frozen surface
 
+#: R1 anchor 以降に変わってよい runtime は P6-B6R1（観測 channel の coverage remediation）の 3 module だけ
+B6R1_CHANGED = ("monitoring_adapter.py", "monitoring_engine.py", "monitoring_runner.py")
+
+
 def test_01_no_runtime_surface_changed_since_the_r1_anchor() -> None:
     changed = subprocess.run(["git", "diff", "--name-only", R1_ANCHOR, "--", "src", "knowledge", "config.yaml",
                               ".github", "scripts"], cwd=REPO_ROOT, capture_output=True, text=True,
                              check=True).stdout.split()
-    assert changed == [], changed
+    assert set(changed) <= {f"src/intelligence/theme_intelligence/{name}" for name in B6R1_CHANGED}, changed
 
 
-@pytest.mark.parametrize("name", MONITORING_RUNTIME)
+@pytest.mark.parametrize("name", [n for n in MONITORING_RUNTIME if n not in B6R1_CHANGED])
 def test_02_every_monitoring_module_is_byte_identical_to_the_r1_anchor(name: str) -> None:
     anchored = subprocess.run(["git", "show", f"{R1_ANCHOR}:src/intelligence/theme_intelligence/{name}"],
                               cwd=REPO_ROOT, capture_output=True, check=True).stdout
@@ -427,33 +431,41 @@ def _supplied(case: str, ids: dict) -> dict:
 
 @pytest.mark.parametrize("case", CASES)
 def test_70_blind_spot_current_behavior(world, case: str) -> None:
-    """現挙動の記録。チャネルが欠けても report は COMPLETE・未評価 0・report diagnostics 空のまま、
-    そのチャネルに依存する condition だけが黙る。runner の diagnostics だけが欠落を述べる。"""
+    """P6-B6R1 後の契約（B6E-RERUN 時点の「欠けても COMPLETE」を反転）。
+
+    channel が欠けると依存 condition は未評価になり、run は PARTIAL になる。欠落は report 単体
+    （status・unevaluated_conditions・diagnostics）に残り、runner の diagnostics に頼らない。"""
     root, ids = world
     supplied = _supplied(case, ids)
     result = run(root, cutoff=day(70), policy=STALE_POLICY, observations=MonitoringObservations(**supplied))
     omitted = [name for name in CHANNEL_CONDITIONS if name not in supplied]
     silenced = {c for name in omitted for c in CHANNEL_CONDITIONS[name]}
-    assert result.report.status is MonitoringRunStatus.COMPLETE
-    assert result.report.unevaluated_conditions == ()
-    assert result.report.diagnostics == ()                                    # report には痕跡が無い
+    expected = MonitoringRunStatus.PARTIAL if omitted else MonitoringRunStatus.COMPLETE
+    assert result.report.status is expected
+    assert set(result.report.unevaluated_conditions) == silenced
+    assert sorted(code.split(":", 1)[1] for code in result.report.diagnostics
+                  if code.startswith("OBSERVATION_NOT_SUPPLIED:")) == sorted(omitted)   # report に痕跡が残る
     assert fired(result) & BLIND_CONDITIONS == BLIND_CONDITIONS - silenced
     assert sorted(code.split(":", 1)[1] for code in result.diagnostics
                   if code.startswith("OBSERVATION_NOT_SUPPLIED:")) == sorted(omitted)
 
 
 def test_71_the_report_alone_cannot_tell_an_omitted_channel_from_an_empty_one(world) -> None:
-    """report が束縛するのは snapshot の digest だけで、「供給されなかった」は読み取れない。"""
+    """P6-B6R1 後の契約（B6E-RERUN 時点の「report 単体では区別できない」を反転）。
+
+    未供給と空供給は report 単体で区別できる: status・未評価・diagnostics・input digest・run_id がすべて異なる。"""
     root, ids = world
     omitted = run(root, cutoff=day(70), policy=STALE_POLICY)
     empty = run(root, cutoff=day(70), policy=STALE_POLICY, observations=MonitoringObservations(
         arrived_attachment_keys={ROOT_B: ()}, semantic_revision_observation_ids={ROOT_B: ""},
         discovery_outcome_tokens={ids["forked"]: ""}))
-    assert omitted.report.status is empty.report.status is MonitoringRunStatus.COMPLETE
-    assert omitted.report.unevaluated_conditions == empty.report.unevaluated_conditions == ()
-    assert omitted.report.diagnostics == empty.report.diagnostics == ()
-    assert any(code.startswith("OBSERVATION_NOT_SUPPLIED:") for code in omitted.diagnostics)
-    assert not any(code.startswith("OBSERVATION_NOT_SUPPLIED:") for code in empty.diagnostics)
+    assert omitted.report.status is MonitoringRunStatus.PARTIAL
+    assert empty.report.status is MonitoringRunStatus.COMPLETE
+    assert set(omitted.report.unevaluated_conditions) == BLIND_CONDITIONS
+    assert empty.report.unevaluated_conditions == ()
+    assert omitted.report.diagnostics != empty.report.diagnostics
+    assert omitted.report.input_digests != empty.report.input_digests
+    assert omitted.report.run_id != empty.report.run_id
 
 
 def test_72_the_engine_already_marks_a_missing_required_input_unevaluated() -> None:

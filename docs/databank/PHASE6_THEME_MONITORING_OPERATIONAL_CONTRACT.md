@@ -147,12 +147,12 @@ review journal が読めないことを「誰も review していない」にし
 | `ThemeSnapshot.evidence_flags` | B2 `view.evidence.flags` | 同上 | flag 無し = 条件不成立（B2 が評価済み） | `EvidenceConditionStatus != EVALUATED` → UNAVAILABLE | 同上 |
 | `ThemeSnapshot.evidence_roles_present` | B2 flag → role 写像（`ROLE_BY_FLAG`） | 同上 | 同上 | 同上 | 同上 |
 | `ThemeSnapshot.freshness_policy_token` | B2 `LifecyclePolicy`（`schema_version|stale_after_days`） | 不変 | 空なら B6C が `THEME_EVIDENCE_STALE` を**未評価**にする | — | — |
-| `ThemeSnapshot.arrived_attachment_keys` | 呼び出し側の観測 channel | 呼び出し側 | 未供給は `OBSERVATION_NOT_SUPPLIED:` として結果に残す | — | token 語彙外の key は locator へ畳む（捨てない） |
+| `ThemeSnapshot.arrived_attachment_keys` | 呼び出し側の観測 channel | 呼び出し側 | **未供給（`None`、既定）≠ 空で供給（`{}`）**。未供給は依存 condition を未評価 ＋ `PARTIAL` ＋ report diagnostics `OBSERVATION_NOT_SUPPLIED:<channel>`（P6-B6R1 で改訂） | — | token 語彙外の key は locator へ畳む（捨てない） |
 | `ThemeSnapshot.semantic_revision_observation_id` | 呼び出し側の観測 channel | 呼び出し側 | 同上 | — | — |
 | `ProposalSnapshot.proposal_status` | B3 `derive_proposal_status` | `created_at <= cutoff` の提案 ＋ `recorded_at <= cutoff` の決定（**解決の前に濾過**。P6-B6D-R1） | `None` → UNAVAILABLE（**false にしない**） | `OPEN_UNRESOLVED` はそのまま渡す | store 失敗 → authority failure |
 | `ProposalSnapshot.decision_chain_status` | B3 `resolve_active_decision().status` | 同上 | `NONE` / `RESOLVED` は空文字（健全） | `UNRESOLVED` / `INVALID` をそのまま渡す | 同上 |
 | `ProposalSnapshot.created_at` | B3 `proposal.created_at` | — | `None` → B6C が aging を**未評価**にする | — | — |
-| `ProposalSnapshot.discovery_outcome_token` | 呼び出し側の観測 channel | 呼び出し側 | 未供給は結果の diagnostics に残す | — | — |
+| `ProposalSnapshot.discovery_outcome_token` | 呼び出し側の観測 channel | 呼び出し側 | 同上（P6-B6R1 で改訂） | — | — |
 | `RelationSnapshot.edge_state` / `assertion_class` / 端点 | B5 `ResolvedRelation` | `resolve_relations_at_data_root` の cutoff | — | `UnresolvedEdge` → chain 語彙へ写す | `ExcludedEdge` → UNAVAILABLE（`ENDPOINT_<STATE>`） |
 | `RelationSnapshot.contested_theme_root_id` | B2 の `CONTESTED` flag と B5 端点の**機械的 join** | 両者の cutoff（同一） | join 無しは空 | 端点 Theme が UNAVAILABLE なら contested 判定に入らない | — |
 | `RelationSnapshot.governance_chain_status` | B5 `UnresolvedEdge.status` | 同上 | 健全なら空 | `UNRESOLVED`→`UNRESOLVED` | `INVALID_HISTORY`→`INVALID`（語彙写像） |
@@ -221,6 +221,10 @@ R1 で runner の読み取り境界に濾過を入れた。B3 / B5C の runtime�
 - 物理順・投入順に依存しない（test 18）。
 - mtime / inode / 絶対 path / 現在時刻を **含まない**。別 path へ複製し mtime を書き換えても digest は同一（test 17 / 20）。
 - snapshot は cutoff 固定で導出済みなので digest は cutoff-aware であり、`cutoff` 自体も run identity に別 field として入る。
+- （P6-B6R1 追記）観測 channel: 供給された channel ごとに `observation:<channel>` へ内容 digest を束縛する
+  （空供給も digest を持つ。列は並べ替えてから digest するので物理順に依らない）。未供給の channel は束縛しない。
+  加えて engine が `observation_channels_supplied`（供給済み channel 名の `|` 連結、無ければ `none`）を束縛する。
+  したがって「未供給」「空で供給」「非空で供給」は input digest・run_id・canonical report がすべて異なる。
 
 ## 11. knowledge version binding
 
@@ -245,6 +249,7 @@ R1 で runner の読み取り境界に濾過を入れた。B3 / B5C の runtime�
 | proposal / relation / relation proposal journal が読めない | `AuthorityFailureSnapshot` | 該当条件が未評価 ＋ `PARTIAL` |
 | relation 解決が `UNRESOLVED` / `INVALID_HISTORY` / `STORE_CORRUPTION` | `AuthorityFailureSnapshot` | RELATION 条件 ＋ 関係提案条件が未評価 ＋ `PARTIAL` |
 | edge の端点が cutoff 時点で取れない（`ExcludedEdge`） | `RelationSnapshot` UNAVAILABLE | 同上（該当 edge のみ） |
+| 観測 channel が未供給（P6-B6R1） | `supplied_observation_channels` に含まれない | 依存 condition が未評価 ＋ report diagnostics `OBSERVATION_NOT_SUPPLIED:<channel>` ＋ `PARTIAL`（finding は作らない） |
 
 `COMPLETE ⟺ unevaluated_conditions == ()` は B6B model が強制する。静かな「finding 0 件の COMPLETE」は作れない。
 
@@ -308,6 +313,10 @@ monitoring は plan を作らず、plan を実行せず、提案の ACCEPT / REJ
    cutoff 1 点の frozen view からは導けないため **呼び出し側の観測 channel** のままである。
    未供給は `OBSERVATION_NOT_SUPPLIED:<name>` として結果に残す（黙って「無かった」にしない）が、
    供給されない限り該当条件は成立しない。
+   → **P6-B6R1 で解消（B6-DEF-1 CLOSED）**: 未供給の channel に依存する condition は report の
+   `unevaluated_conditions` に入り、run は `PARTIAL` になる。未供給と空供給は input digest・run_id で区別される。
+   channel が呼び出し側の観測であること自体は変わらない
+   （`PHASE6_THEME_MONITORING_COVERAGE_REMEDIATION.md`）。
 2. Foundation の attachment key は `#` を含み B6B の token 語彙に入らないため、
    `RETIRED_ROOT_RECEIVED_EVIDENCE` の `attachment_key` は安定 locator（`thmloc_…`）へ畳まれる。
    人間可読性は落ちる。token 語彙の拡張は B6B の変更になるため行っていない。

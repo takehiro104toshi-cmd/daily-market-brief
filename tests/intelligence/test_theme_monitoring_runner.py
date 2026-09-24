@@ -32,7 +32,8 @@ from src.intelligence.theme_intelligence.monitoring_adapter import (ADAPTER_MAPS
                                                                     theme_failure_snapshot, theme_snapshot,
                                                                     TOKEN_PATTERN, _locator,
                                                                     unresolved_relation_snapshot)
-from src.intelligence.theme_intelligence.monitoring_engine import (RELATION_CONDITIONS, SubjectAvailability,
+from src.intelligence.theme_intelligence.monitoring_engine import (NO_CHANNEL_SUPPLIED, OBSERVATION_PRESENCE_KEY,
+                                                                   RELATION_CONDITIONS, SubjectAvailability,
                                                                    ThemeSnapshot)
 from src.intelligence.theme_intelligence.monitoring_model import (MonitoringRunStatus, ReviewChainStatus,
                                                                   ReviewDisposition, ReviewItemState,
@@ -277,7 +278,10 @@ def test_18_digests_are_independent_of_the_snapshot_order() -> None:
 def test_19_digests_name_the_authority_they_came_from(data_root: Path) -> None:
     names = [name for name, _ in run(data_root).report.input_digests]
     assert names == sorted(names) and AUTHORITY_THEMES in names and AUTHORITY_RELATIONS in names
-    for _, digest in run(data_root).report.input_digests:
+    for name, digest in run(data_root).report.input_digests:
+        if name == OBSERVATION_PRESENCE_KEY:                          # P6-B6R1: 供給状況の束縛（digest ではない）
+            assert digest == NO_CHANNEL_SUPPLIED
+            continue
         assert digest.startswith("thmin_")
 
 
@@ -362,9 +366,13 @@ def test_28_no_network_random_or_subprocess_in_the_runner() -> None:
 # ---------------------------------------------------------------- 29〜40 PARTIAL の伝播（silent coercion の禁止）
 
 def test_29_complete_means_every_requested_condition_was_evaluated(data_root: Path) -> None:
-    result = run(data_root, cutoff=CHECKPOINTS["merge_completed"])
+    complete_inputs = MonitoringObservations(arrived_attachment_keys={}, semantic_revision_observation_ids={},
+                                             discovery_outcome_tokens={})
+    result = run(data_root, cutoff=CHECKPOINTS["merge_completed"], observations=complete_inputs)
     assert result.report.status is MonitoringRunStatus.COMPLETE
     assert result.report.unevaluated_conditions == ()
+    omitted = run(data_root, cutoff=CHECKPOINTS["merge_completed"])  # P6-B6R1: 観測 channel 未供給は評価不能
+    assert omitted.report.status is MonitoringRunStatus.PARTIAL and omitted.report.unevaluated_conditions
 
 
 def test_30_a_root_without_state_at_the_cutoff_is_unevaluated_not_false(data_root: Path) -> None:
