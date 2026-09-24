@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.30 (2026-09-24) — Phase 6 P6-B6E-RERUN monitoring E2E 再検証（TEST / AUDIT / DOC ONLY）
+
+B6D-R1 の PIT remediation 後に、B6 monitoring 全体を adversarial E2E で再検証した。**runtime は変更していない**
+（R1 anchor `e67a546` 以降、`src/` ・`knowledge/` ・`config.yaml` ・`.github/` ・`scripts/` の diff 0）。
+B6E の証跡 commit `8655d8d` は履歴に残したまま。
+
+判定: **BLOCKER-1 = CLOSED**。6 family PIT・zero-write・決定論・fail closed・review 分離・RR-3・security は全 PASS。
+観測 channel の blind spot は **NON_BLOCKING_DEFERRED_WITH_CONTRACT** として提案（監督者判断待ち）。
+real-data shadow は NOT_RUN（Theme authority がどの環境にも存在しない）。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_e2e_rerun.py`【新規】（48 件）
+
+- frozen surface（R1 anchor 以降 runtime diff 0、monitoring 6 module が anchor と byte 一致、8655d8d が祖先に残る）。
+- BLOCKER-1 の close 基準: 未来の B3 / B5C 提案・決定・後継・fork が、過去 cutoff の run の
+  run_id / input digest / status / finding bytes / diagnostics を変えないこと（R1 とは独立の fixture）。
+- 解決前濾過の証明: 挙動、全 record を解いた結果に過去の終端が残らないこと、濾過を外した runner では漏れる負の対照。
+- PIT 保証の境界: 正規の append 経路では fork を書けないこと、経路外の B5C fork は全 cutoff で fail closed になること。
+- corruption の追加: B3 / B5C の unsupported schema / unknown field / 重複 / dangling predecessor / 未来日付の破損行。
+- review 分離: ACK / DISMISSED / DEFERRED のいずれも finding・authority・Theme resolution を変えない、
+  review の DEFERRED は提案の DEFER ではない。
+- RR-3: monitoring が authority record を構築・変更する経路が無い。
+- blind spot の実験（3 channel の全供給 / 1 つ欠落 / 全欠落）と、report 単体では欠落が読み取れないこと、
+  engine が入力欠落を既に未評価として扱う先例、runner が 3 channel の供給元を持たないこと。
+- condition #17 が in-memory 解決では到達可能であること（dead code ではなく防御的 condition）。
+- shadow harness の自己 replay 一致、tracked file の security 走査。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_E2E_RERUN.md`【新規】
+
+B6E 証跡の整理（BLOCKER-1 は実在、`test_d08` / `test_d09` / `test_d04` の証拠上の問題）、close 基準、
+6 family PIT、解決前濾過、PIT 保証の境界、corruption、zero-write、決定論、review 分離、RR-3、
+18 condition coverage と #17 の分類、blind spot の実験・意味論分析（7 問）・disposition 提案と契約・remediation 候補、
+real-data shadow の状態、deferred register、closeout readiness。
+
+### 改善 — `docs/databank/PHASE6_THEME_MONITORING_E2E_VALIDATION.md`
+
+冒頭の状態を BLOCKER-1 = CLOSED に更新し、再検証 doc への参照を追加（§1〜§23 は監査証跡としてそのまま）。
+
 ## v5.29 (2026-09-24) — Phase 6 P6-B6D-R1 monitoring runner の point-in-time remediation
 
 B6E（`8655d8d`）で見つかった BLOCKER-1 だけを修正した。B3 / B5C の提案・決定が monitoring run の cutoff で

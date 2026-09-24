@@ -6,6 +6,9 @@ B6A architecture / B6B model / B6C engine / B6D operational layer を **1 系と
 **判定: BLOCKER_FOUND。** B3 / B5C の提案 record が run cutoff で濾過されず、
 cutoff より後に記録された関係提案が過去 cutoff の run で finding を生む。詳細は §10。
 
+> **状態更新（P6-B6E-RERUN）: BLOCKER-1 = CLOSED。** close 基準の再検証は
+> `PHASE6_THEME_MONITORING_E2E_RERUN.md` §2 を参照。本 report（§1〜§23）は監査証跡としてそのまま残す。
+>
 > **状態更新（P6-B6D-R1）: BLOCKER-1 = REMEDIATED_PENDING_RERUN。** runner の読み取り境界で
 > B3 / B5C の提案・決定を cutoff 濾過するよう修正した（§23）。**B6E の PASS も BLOCKER の CLOSE もまだ判定していない。**
 > それは B6E-RERUN の判定事項である。本 report の §1〜§22 は 8655d8d 時点の記録として残す。
