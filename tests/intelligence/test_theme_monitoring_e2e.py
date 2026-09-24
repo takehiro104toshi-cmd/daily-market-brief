@@ -13,8 +13,8 @@ finding 件数を重要度・投資妥当性・予測として解釈しない。
 - §E  zero-write / hidden authority / RR-3 / source-origin / security
 - §F  read-only shadow harness と real-data precheck
 
-§D の 2 件は **strict xfail** である。B3 / B5C の提案 record が run cutoff で濾過されないという
-B6D runner の PIT 欠陥を、defect に合わせて弱めずそのまま記録する（報告書の BLOCKER を参照）。
+§D の提案 PIT 2 件は B6E（8655d8d）で strict xfail として BLOCKER-1 を記録していた。P6-B6D-R1 で runner が
+B3 / B5C の record を cutoff で濾過するようになったため、同じ契約のまま通常の test に戻した。
 """
 from __future__ import annotations
 
@@ -644,11 +644,12 @@ def test_d03_a_different_cutoff_is_a_different_run(world) -> None:
 
 @pytest.mark.parametrize("family,cutoff,condition", [
     ("theme_evidence_attachment", CHECKPOINTS["contradiction_added"], "THEME_CONTRADICTION_EVIDENCE_PRESENT"),
-    ("theme_governance", CHECKPOINTS["genesis_visible"], "THEME_WITHOUT_COUNTED_EVIDENCE"),
+    ("theme_genesis_observation", CHECKPOINTS["genesis_visible"], "THEME_WITHOUT_COUNTED_EVIDENCE"),
+    ("theme_governance_retirement", CHECKPOINTS["retired"], "RELATION_ENDPOINT_NOT_ACTIVE"),
 ])
 def test_d04_foundation_records_are_invisible_one_microsecond_early(world, family: str, cutoff, condition) -> None:
     root, _ = world
-    scope = (ROOT_A,)
+    scope = SCOPE if family == "theme_governance_retirement" else (ROOT_A,)
     assert condition in {f.condition_id for f in run(root, cutoff=cutoff, root_ids=scope).findings}
     early = run(root, cutoff=cutoff - timedelta(microseconds=1), root_ids=scope)
     assert condition not in {f.condition_id for f in early.findings}
@@ -677,7 +678,6 @@ def test_d06_review_state_is_operational_not_point_in_time(copied: Path) -> None
     assert review.resolution.terminal.recorded_at == day(60)            # 現在の運用状態を答える
 
 
-@pytest.mark.xfail(strict=True, reason="P6-B6E BLOCKER: runner が B3 提案 / 決定を run cutoff で濾過しない")
 def test_d07_theme_proposal_records_after_the_cutoff_must_be_invisible(copied: Path) -> None:
     """PIT 契約: cutoff より後に記録された提案は、その cutoff の run から見えてはならない。"""
     store = ProposalStore.open(copied)
@@ -688,34 +688,55 @@ def test_d07_theme_proposal_records_after_the_cutoff_must_be_invisible(copied: P
     assert dict(before)["theme_proposals"] != dict(after)["theme_proposals"]
 
 
-@pytest.mark.xfail(strict=True, reason="P6-B6E BLOCKER: runner が B5C 関係提案を run cutoff で濾過しない")
 def test_d08_relation_proposals_after_the_cutoff_must_not_raise_a_conflict(copied: Path) -> None:
-    """PIT 契約: day(20) に記録された関係提案は、day(5) の run で衝突を起こしてはならない。"""
-    RelationProposalStore.open(copied).append_proposal(
-        relation_candidate(ROOT_A, ROOT_C, relation_type=RelationType.CAUSES, at=day(20)))
-    early = run(copied, cutoff=day(5))
-    conflicts = [f for f in early.findings if f.condition_id == "RETRACTED_RELATION_HAS_NEW_PROPOSAL"]
-    assert conflicts == []
+    """PIT 契約: day(20) に記録された関係提案は、day(5) の run で衝突を起こしてはならない。
+
+    B6E（8655d8d）版はこの契約を検査できていなかった: 「未来」の提案が撤回 edge の無い A→C を指し、
+    day(5) に出ていた衝突は day(5) 記録の既存提案（B→A、撤回は day(4)）による PIT 上正しい finding だった。
+    R1 で、未来の提案を撤回済み edge B→A に向け、その提案 id だけを検査するよう修正した。"""
+    future = relation_candidate(ROOT_B, ROOT_A, relation_type=RelationType.CAUSES, at=day(20),
+                                rationale="a second relation candidate recorded after the cutoff")
+    RelationProposalStore.open(copied).append_proposal(future)
+
+    def conflicting(cutoff) -> set:
+        return {dict(f.salient_state.facts)["relation_proposal_id"] for f in run(copied, cutoff=cutoff).findings
+                if f.condition_id == "RETRACTED_RELATION_HAS_NEW_PROPOSAL"}
+
+    assert future.proposal_id not in conflicting(day(5))
+    assert future.proposal_id in conflicting(day(25))                   # fixture は cutoff 以後には効く
 
 
-def test_d09_the_proposal_snapshot_is_currently_cutoff_independent(world) -> None:
-    """上の 2 件が xfail である理由を、欠陥に合わせて弱めずそのまま観測として固定する。"""
+def test_d09_the_proposal_snapshot_is_cutoff_bound(world) -> None:
+    """提案 family の input digest は cutoff 以前の record だけに束縛される。
+
+    B6E（8655d8d）版は day(5) と day(50) の digest が等しいことを「欠陥の観測」としていたが、world には
+    その間の提案 record が無く、修正の前後どちらでも等しくなる（判別力の無い観測だった）。R1 で置き換えた。"""
     root, _ = world
-    early = dict(run(root, cutoff=day(5)).report.input_digests)
-    late = dict(run(root, cutoff=day(50)).report.input_digests)
-    assert early["theme_proposals"] == late["theme_proposals"]
-    assert early["theme_relation_proposals"] == late["theme_relation_proposals"]
-    assert early["theme_observations"] != late["theme_observations"]              # Foundation は PIT 正しい
+    first_day = dict(run(root, cutoff=day(1)).report.input_digests)        # 提案 day(1) だけが見える
+    settled = dict(run(root, cutoff=day(5)).report.input_digests)          # 全提案・全決定が見える
+    later = dict(run(root, cutoff=day(50)).report.input_digests)           # その後の提案 record は無い
+    assert first_day["theme_proposals"] != settled["theme_proposals"]
+    assert "theme_relation_proposals" not in first_day                     # 関係提案は day(5) 記録
+    assert settled["theme_proposals"] == later["theme_proposals"]
+    assert settled["theme_relation_proposals"] == later["theme_relation_proposals"]
 
 
 # ---------------------------------------------------------------- §E zero-write / 権限 / security
 
 def test_e01_the_frozen_runtime_is_untouched() -> None:
+    """B6D anchor 以降に変わってよい runtime は P6-B6D-R1 の `monitoring_runner.py` だけである。"""
     import subprocess
     changed = subprocess.run(["git", "diff", "--name-only", "8ef09ab1db447ad783defd0c6afecd3e943edcfe", "--",
                               "src/intelligence/theme_intelligence", "knowledge/theme_intelligence"],
                              cwd=REPO_ROOT, capture_output=True, text=True, check=True).stdout.split()
-    assert changed == [], changed
+    assert changed in ([], ["src/intelligence/theme_intelligence/monitoring_runner.py"]), changed
+    for name in FROZEN_RUNTIME:
+        if name == "monitoring_runner.py":
+            continue
+        anchored = subprocess.run(["git", "show", f"8ef09ab1db447ad783defd0c6afecd3e943edcfe:"
+                                   f"src/intelligence/theme_intelligence/{name}"], cwd=REPO_ROOT,
+                                  capture_output=True, check=True).stdout
+        assert (PACKAGE_DIR / name).read_bytes() == anchored, name
 
 
 def test_e02_a_run_changes_no_byte_anywhere_under_the_data_root(copied: Path, world) -> None:

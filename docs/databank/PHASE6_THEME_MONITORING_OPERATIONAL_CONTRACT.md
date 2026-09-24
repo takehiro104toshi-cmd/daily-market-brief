@@ -149,14 +149,14 @@ review journal が読めないことを「誰も review していない」にし
 | `ThemeSnapshot.freshness_policy_token` | B2 `LifecyclePolicy`（`schema_version|stale_after_days`） | 不変 | 空なら B6C が `THEME_EVIDENCE_STALE` を**未評価**にする | — | — |
 | `ThemeSnapshot.arrived_attachment_keys` | 呼び出し側の観測 channel | 呼び出し側 | 未供給は `OBSERVATION_NOT_SUPPLIED:` として結果に残す | — | token 語彙外の key は locator へ畳む（捨てない） |
 | `ThemeSnapshot.semantic_revision_observation_id` | 呼び出し側の観測 channel | 呼び出し側 | 同上 | — | — |
-| `ProposalSnapshot.proposal_status` | B3 `derive_proposal_status` | store の全 record ＋ decision chain | `None` → UNAVAILABLE（**false にしない**） | `OPEN_UNRESOLVED` はそのまま渡す | store 失敗 → authority failure |
+| `ProposalSnapshot.proposal_status` | B3 `derive_proposal_status` | `created_at <= cutoff` の提案 ＋ `recorded_at <= cutoff` の決定（**解決の前に濾過**。P6-B6D-R1） | `None` → UNAVAILABLE（**false にしない**） | `OPEN_UNRESOLVED` はそのまま渡す | store 失敗 → authority failure |
 | `ProposalSnapshot.decision_chain_status` | B3 `resolve_active_decision().status` | 同上 | `NONE` / `RESOLVED` は空文字（健全） | `UNRESOLVED` / `INVALID` をそのまま渡す | 同上 |
 | `ProposalSnapshot.created_at` | B3 `proposal.created_at` | — | `None` → B6C が aging を**未評価**にする | — | — |
 | `ProposalSnapshot.discovery_outcome_token` | 呼び出し側の観測 channel | 呼び出し側 | 未供給は結果の diagnostics に残す | — | — |
 | `RelationSnapshot.edge_state` / `assertion_class` / 端点 | B5 `ResolvedRelation` | `resolve_relations_at_data_root` の cutoff | — | `UnresolvedEdge` → chain 語彙へ写す | `ExcludedEdge` → UNAVAILABLE（`ENDPOINT_<STATE>`） |
 | `RelationSnapshot.contested_theme_root_id` | B2 の `CONTESTED` flag と B5 端点の**機械的 join** | 両者の cutoff（同一） | join 無しは空 | 端点 Theme が UNAVAILABLE なら contested 判定に入らない | — |
 | `RelationSnapshot.governance_chain_status` | B5 `UnresolvedEdge.status` | 同上 | 健全なら空 | `UNRESOLVED`→`UNRESOLVED` | `INVALID_HISTORY`→`INVALID`（語彙写像） |
-| `RelationProposalSnapshot.conflict_token` | B5C status ＋ B5B 撤回 edge の join | 両者の cutoff | 衝突無しは空 | chain 未解決の提案は UNAVAILABLE（**衝突なしにしない**） | relation authority 不可なら条件ごと未評価 |
+| `RelationProposalSnapshot.conflict_token` | B5C status ＋ B5B 撤回 edge の join | B5B は resolver の cutoff、B5C は `created_at` / `recorded_at <= cutoff`（解決前に濾過。R1） | 衝突無しは空 | chain 未解決の提案は UNAVAILABLE（**衝突なしにしない**） | relation authority 不可なら条件ごと未評価 |
 | `KnowledgeDriftSnapshot` | 呼び出し側が渡す (name, from, to) | — | 未供給は drift 無し（明示入力） | — | — |
 | `AuthorityFailureSnapshot` | 各 store の失敗 code | — | — | — | `blocked_condition_ids` で条件を未評価にする |
 
@@ -175,6 +175,43 @@ review journal が読めないことを「誰も review していない」にし
 - cutoff ちょうどの record は見える。1 マイクロ秒後の record は見えない（test 15）。
 - 同じ authority bytes ＋ 同じ knowledge version ＋ 同じ ruleset ＋ 同じ cutoff →
   同じ `input_digests`・同じ `run_id`・同じ findings（test 13 / 17）。
+
+### 9.1 authority family ごとの PIT（P6-B6D-R1 で改訂）
+
+B6E（`8655d8d`）で、B3 / B5C の提案 record が run cutoff で濾過されず、cutoff より未来の提案・決定が
+過去 cutoff の finding / input digest / run_id に影響することが見つかった（BLOCKER-1）。
+R1 で runner の読み取り境界に濾過を入れた。B3 / B5C の runtime（resolver）には cutoff 引数を足していない。
+
+| family | PIT の入口 | 可視の条件 |
+|---|---|---|
+| Theme observation / evidence | Foundation `resolve_at_data_root` | resolver の規則（record 時刻 ≤ cutoff） |
+| Theme governance | Foundation `resolve_at_data_root` | 同上 |
+| B3 theme proposal | runner `_visible_at(..., "created_at", cutoff)` | `created_at <= cutoff` |
+| B3 proposal decision | runner `_visible_at(..., "recorded_at", cutoff)` | `recorded_at <= cutoff` |
+| B5B relation assertion / governance | `resolve_relations_at_data_root(..., cutoff=)` | resolver の規則（`recorded_at <= cutoff`） |
+| B5C relation proposal | runner `_visible_at(..., "created_at", cutoff)` | `created_at <= cutoff` |
+| B5C relation proposal decision | runner `_visible_at(..., "recorded_at", cutoff)` | `recorded_at <= cutoff` |
+| review state | — | PIT ではない（運用状態。§13） |
+
+規則:
+
+1. **解決の前に濾過する。** canonical に load・検証済みの record → cutoff 可視集合 → 既存 B3 / B5C resolver の順。
+   全 record を resolver に通してから結果を補正しない（未来の後継決定が chain / status を先に変えてしまうため）。
+2. 境界: 時刻 = C は可視、C + 1µs は不可視、C − 1µs は可視。
+3. 未来の record は **存在しないもの** として扱う。除外した件数も diagnostics に残さない
+   （残せば、未来の record を足しただけで過去 run の diagnostics が変わり、それ自体が漏洩になる）。
+4. store の load / 検証は従来どおり濾過より先に行う。破損行を「未来だから」と読み飛ばさない。
+5. PIT 判定に使えない時刻（aware datetime でない）を持つ record は authority の失敗
+   `INVALID_RECORD_TIME` として `AuthorityFailureSnapshot` ＋ PARTIAL にする（読み飛ばさない）。
+6. 濾過後の決定集合は既存 resolver にそのまま渡す。fork / dangling / cycle は resolver の意味論で fail closed し、
+   runner は chain を修復しない。B3 store は「決定の時刻 ≥ 提案の時刻」と「後継の時刻 ≥ 前任の時刻」を、
+   B5C store は「後継の時刻 ≥ 前任の時刻」を load 時に強制するため、妥当な journal を cutoff で切っても
+   「前任が見えない後継」は生じない。未来の後継を除いた結果として過去時点の終端が変わるのは正常である。
+   B5C は決定の時刻と提案の時刻を結び付けないが、runner は **可視な提案だけ**を走査するため、
+   提案より前に記録された決定がその提案の可視化前に参照されることはない。
+7. input digest は cutoff 可視の semantic input に束縛される。cutoff C より未来の提案 / 決定を journal に足しても、
+   C の run の input digest・run_id・finding・diagnostics・status は変わらない
+   （`tests/intelligence/test_theme_monitoring_runner_pit.py` の I / R）。
 
 ## 10. input digest
 

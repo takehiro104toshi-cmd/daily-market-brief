@@ -6,6 +6,10 @@ B6A architecture / B6B model / B6C engine / B6D operational layer を **1 系と
 **判定: BLOCKER_FOUND。** B3 / B5C の提案 record が run cutoff で濾過されず、
 cutoff より後に記録された関係提案が過去 cutoff の run で finding を生む。詳細は §10。
 
+> **状態更新（P6-B6D-R1）: BLOCKER-1 = REMEDIATED_PENDING_RERUN。** runner の読み取り境界で
+> B3 / B5C の提案・決定を cutoff 濾過するよう修正した（§23）。**B6E の PASS も BLOCKER の CLOSE もまだ判定していない。**
+> それは B6E-RERUN の判定事項である。本 report の §1〜§22 は 8655d8d 時点の記録として残す。
+
 finding の件数を Theme の重要度・市場の重要度・投資妥当性・予測確度として解釈してはならない。
 本 report の数値はすべて synthetic fixture 上の descriptive metrics である。
 
@@ -351,3 +355,49 @@ retired cutoff の run: PARTIAL / finding 6 / unevaluated 7 / `NO_STATE_AT_CUTOF
    未供給を `unevaluated_conditions` に載せるかを監督者が決める。
 4. real data_root が生まれた時点で §18 の 1 command を実行し、`wrote_nothing` と `replay_identical` を確認する。
 5. その 3 点が揃うまで ruleset の閾値調整も condition 追加も行わない。
+
+## 23. P6-B6D-R1 remediation 状態（REMEDIATED_PENDING_RERUN）
+
+- **修正箇所**: `src/intelligence/theme_intelligence/monitoring_runner.py` のみ。`_visible_at()` が canonical に
+  load 済みの record を `created_at <= cutoff`（提案）/ `recorded_at <= cutoff`（決定）で濾過し、
+  その後で既存 B3 / B5C resolver に渡す。model / engine / rules / YAML / store / adapter、Foundation・B1〜B5 は無変更。
+- **回帰 matrix**: `tests/intelligence/test_theme_monitoring_runner_pit.py`（A〜R ＋ 解決前濾過 ＋ fail closed ＋
+  six-family 境界 ＋ zero-write）。修正前の runner で 17 件が fail、修正後に全件 pass することを確認した。
+- **strict xfail 2 件**: xfail mark を除去し、通常の test として pass。
+
+### B6E 証跡の訂正（8655d8d の記述のうち誤っていたもの）
+
+R1 の作業中に、B6E の PIT test のうち 3 件が主張どおりのものを検査していなかったことが分かった。
+BLOCKER-1 そのものは実在する（`test_d07` と §10 の再現手順が正しく示しており、R1 の回帰 matrix でも再確認した）が、
+証跡の帰属を次のとおり訂正する。
+
+| test | 8655d8d での状態 | 実際に起きていたこと | R1 での扱い |
+|---|---|---|---|
+| `test_d07` | strict xfail | 正しく欠陥を検出していた | mark 除去のみ（assertion 不変） |
+| `test_d08` | strict xfail | **欠陥を検査していなかった。** 「未来」の提案が撤回 edge の無い A→C を指し、day(5) の衝突は day(5) 記録の既存提案（B→A、撤回 day(4)）による **PIT 上正しい finding** だった。修正後も fail し続けたことで判明 | 未来の提案を撤回済み edge B→A に向け、その提案 id だけを検査するよう修正。契約（day(20) の提案は day(5) で衝突を起こさない）は不変 |
+| `test_d09` | pass | 判別力が無かった。day(5) と day(50) の間に提案 record が無く、修正の前後どちらでも digest が等しい | 「提案 family の digest は cutoff 以前の record に束縛される」を day(1) / day(5) / day(50) で検査する test に置換 |
+| `test_d04` | pass | `theme_governance` と名付けた case が実際は genesis observation の境界だった | label を `theme_genesis_observation` に訂正し、本物の governance 境界（退役 event）を追加 |
+
+`test_d07` / `test_d08` / `test_d09` の修正版は、**修正前の runner（8ef09ab）で fail し、修正後の runner で pass する**
+ことを確認済み（判別力のある test であることの証明）。§10 の「影響範囲」表は正しい。
+§10 で `test_d08` / `test_d09` を証拠として挙げた箇所は、上表の訂正に従って読むこと。
+
+### 6 family PIT 境界（R1 時点）
+
+| family | t − 1µs | t | t + 1µs |
+|---|---|---|---|
+| Theme observation / evidence | 不可視 | 可視 | 可視 |
+| Theme governance（退役） | 不可視 | 可視 | 可視 |
+| B3 theme proposal / decision | 不可視 | 可視 | 可視 |
+| B5B relation assertion | 不可視 | 可視 | 可視 |
+| B5B relation governance | 不可視 | 可視 | 可視 |
+| B5C relation proposal / decision | 不可視 | 可視 | 可視 |
+
+（cutoff を record 時刻 t の前後へ動かした観測。t = cutoff で可視、cutoff = t − 1µs は「record が cutoff + 1µs」に相当）
+
+### 本 remediation で扱っていないもの
+
+- §13 の blind spot（`OBSERVATION_NOT_SUPPLIED` があっても report は `COMPLETE`）: 変更していない。test も削除・弱体化していない。
+- §9 の #17 到達性、condition 語彙、閾値、ruleset、finding / run identity、review 意味論: 変更していない。
+- real-data shadow、B6 closeout、B7: 開始していない。
+

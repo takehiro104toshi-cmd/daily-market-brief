@@ -9,7 +9,8 @@ lifecycle semantics は B2、relation semantics は B5 が答える。ここに�
 
 1. 明示入力の検証（data_root / cutoff / recorded_at / monitoring scope / policy / ruleset version）
 2. versioned knowledge の version 固定読み込み（「latest」解決をしない）
-3. authority の read-only 読み取りと cutoff 固定の PIT 解決
+3. authority の read-only 読み取りと cutoff 固定の PIT 解決（PIT 入口を持たない B3 / B5C は、canonical に load 済みの
+   record を cutoff で濾過してから既存 resolver へ渡す。解決後に補正しない）
 4. 上流 derived view → `MonitoringEvaluationInput` の写像（`monitoring_adapter`）
 5. `evaluate_monitoring()` の呼び出し
 6. finding ごとの現在の `ReviewItemState` の解決（`resolve_review_state`）
@@ -84,6 +85,34 @@ def _error_code(exc: Exception) -> str:
     if not isinstance(code, str) or code == "" or not set(code) <= _CODE_CHARS:
         return UNKNOWN_FAILURE
     return code[:MAX_DIAGNOSTIC_LEN]
+
+
+class _UnusableRecordTime(Exception):
+    """PIT 判定に使えない時刻を持つ record。読み飛ばさず、その authority の失敗として扱う。"""
+
+    code = "INVALID_RECORD_TIME"
+
+
+def _visible_at(records: Sequence[object], attribute: str, cutoff: datetime) -> Tuple[object, ...]:
+    """canonical に load 済みの record のうち `attribute <= cutoff` のものだけを返す（cutoff ちょうどは可視）。
+
+    cutoff より未来の record は **存在しない** ものとして扱い、件数も diagnostics へ残さない
+    （残せばそれ自体が未来の漏洩になる）。時刻が aware datetime でない record は fail closed。"""
+    visible = []
+    for record in records:
+        moment = getattr(record, attribute, None)
+        if not isinstance(moment, datetime) or moment.tzinfo is None or moment.utcoffset() is None:
+            raise _UnusableRecordTime()
+        if moment <= cutoff:
+            visible.append(record)
+    return tuple(visible)
+
+
+def _by_proposal(decisions: Sequence[object]) -> Dict[str, List]:
+    grouped: Dict[str, List] = {}
+    for record in decisions:
+        grouped.setdefault(record.proposal_id, []).append(record)
+    return grouped
 
 
 class ReviewLookupStatus(str, Enum):
@@ -225,18 +254,20 @@ def _read_themes(data_root, scope: Tuple[str, ...], cutoff: datetime, policy: Li
                          superseded=tuple(sorted(superseded)))
 
 
-def _read_proposals(data_root, observations: MonitoringObservations, failures: List, diagnostics: Set[str]
-                    ) -> Tuple[ProposalSnapshot, ...]:
+def _read_proposals(data_root, cutoff: datetime, observations: MonitoringObservations, failures: List,
+                    diagnostics: Set[str]) -> Tuple[ProposalSnapshot, ...]:
     try:
         store = ProposalStore.open(data_root, read_only=True)
+        proposals = _visible_at(store.proposals(), "created_at", cutoff)        # store 検証の後で濾過する
+        decisions_by_proposal = _by_proposal(_visible_at(store.decisions(), "recorded_at", cutoff))
     except Exception as exc:
         code = _error_code(exc)
         failures.append(authority_failure(AUTHORITY_PROPOSALS, code, blocked_condition_ids=PROPOSAL_CONDITIONS))
         diagnostics.add(f"PROPOSAL_AUTHORITY_UNUSABLE:{code}"[:MAX_DIAGNOSTIC_LEN])
         return ()
     snapshots: List[ProposalSnapshot] = []
-    for proposal in store.proposals():
-        decisions = store.decisions_for(proposal.proposal_id)
+    for proposal in proposals:
+        decisions = tuple(decisions_by_proposal.get(proposal.proposal_id, ()))
         chain = resolve_active_decision(proposal.proposal_id, decisions)
         snapshots.append(proposal_snapshot(
             proposal.proposal_id, status=derive_proposal_status(proposal, decisions),
@@ -271,21 +302,21 @@ def _read_relations(data_root, cutoff: datetime, readout: _ThemeReadout, failure
     return tuple(snapshots), retracted_edge_prefixes(resolution.edges), failure is None
 
 
-def _read_relation_proposals(data_root, retracted: Mapping[str, Tuple[str, ...]], relations_usable: bool,
-                             failures: List, diagnostics: Set[str]) -> Tuple[RelationProposalSnapshot, ...]:
+def _read_relation_proposals(data_root, cutoff: datetime, retracted: Mapping[str, Tuple[str, ...]],
+                             relations_usable: bool, failures: List, diagnostics: Set[str]
+                             ) -> Tuple[RelationProposalSnapshot, ...]:
     try:
         store = RelationProposalStore.open(data_root, read_only=True)
+        proposals = _visible_at(store.proposals(), "created_at", cutoff)        # store 検証の後で濾過する
+        decisions_by_proposal = _by_proposal(_visible_at(store.decisions(), "recorded_at", cutoff))
     except Exception as exc:
         code = _error_code(exc)
         failures.append(authority_failure(AUTHORITY_RELATION_PROPOSALS, code,
                                           blocked_condition_ids=RELATION_PROPOSAL_CONDITIONS))
         diagnostics.add(f"RELATION_PROPOSAL_AUTHORITY_UNUSABLE:{code}"[:MAX_DIAGNOSTIC_LEN])
         return ()
-    decisions_by_proposal: Dict[str, List] = {}
-    for decision in store.decisions():
-        decisions_by_proposal.setdefault(decision.proposal_id, []).append(decision)
     snapshots: List[RelationProposalSnapshot] = []
-    for proposal in store.proposals():
+    for proposal in proposals:
         decisions = decisions_by_proposal.get(proposal.proposal_id, [])
         status = derive_relation_proposal_status(proposal, decisions)
         prefix = edge_prefix(proposal.source_theme_root_id, proposal.target_theme_root_id,
@@ -351,9 +382,9 @@ def run_monitoring(*, data_root: Union[str, "os.PathLike[str]"], cutoff: datetim
     readout = _read_themes(root, scope, moment, lifecycle_policy, seen, events, diagnostics)
     if scope and not events:
         diagnostics.add("GOVERNANCE_EVENTS_NOT_SUPPLIED")
-    proposals = _read_proposals(root, seen, failures, diagnostics)
+    proposals = _read_proposals(root, moment, seen, failures, diagnostics)
     relations, retracted, relations_usable = _read_relations(root, moment, readout, failures, diagnostics)
-    relation_proposals = _read_relation_proposals(root, retracted, relations_usable, failures, diagnostics)
+    relation_proposals = _read_relation_proposals(root, moment, retracted, relations_usable, failures, diagnostics)
     drift = tuple(knowledge_drift_snapshot(str(name), str(before), str(after))
                   for name, before, after in knowledge_drift)
 

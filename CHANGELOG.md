@@ -4,6 +4,61 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.29 (2026-09-24) — Phase 6 P6-B6D-R1 monitoring runner の point-in-time remediation
+
+B6E（`8655d8d`）で見つかった BLOCKER-1 だけを修正した。B3 / B5C の提案・決定が monitoring run の cutoff で
+濾過されず、cutoff より未来の record が過去 cutoff の finding / input digest / run_id に影響していた。
+**変更した runtime は `monitoring_runner.py` だけ**。model / engine / rules / YAML / store / adapter、
+Foundation・B1〜B5 は無変更。B3 / B5C の resolver に cutoff 引数は足していない。
+B6E の証跡 commit は残したまま（revert / squash / history 書き換えなし）。
+BLOCKER-1 の状態は **REMEDIATED_PENDING_RERUN**（close の判定は B6E-RERUN で行う）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_runner.py`
+
+- `_visible_at()` を追加。canonical に load・検証済みの record のうち、提案は `created_at <= cutoff`、
+  決定は `recorded_at <= cutoff` のものだけを残す（cutoff ちょうどは可視、+1µs は不可視）。
+- `_read_proposals()` / `_read_relation_proposals()` は **解決の前に**この濾過を行い、その後で既存の
+  `derive_proposal_status` / `resolve_active_decision` / `derive_relation_proposal_status` に渡す。
+  全 record を解いてから結果を補正する形にはしていない。
+- 未来の record は存在しないものとして扱い、除外件数も diagnostics に残さない（残すこと自体が漏洩になるため）。
+- aware datetime でない時刻を持つ record は読み飛ばさず、`INVALID_RECORD_TIME` の authority 失敗（PARTIAL）にする。
+- store の load / 検証は従来どおり濾過より先。破損行を「未来だから」と読み飛ばさない。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_runner_pit.py`【新規】
+
+- A〜R の回帰 matrix（B3 提案・決定の境界 A〜F、未来 ACCEPT G、未来の提案 H、過去 run 不変 I、
+  B5C 提案・決定の境界 J〜O、未来の ACCEPT / REJECT / DEFER P、未来の関係提案 Q、過去 run 不変 R）。
+- 解決前濾過の証明（未来の決定で初めて fork になる chain / 未来の後継が終端を変える chain）。
+- fail closed（破損行・解析不能な時刻・naive な時刻）、未来 record が diagnostics に痕跡を残さないこと、
+  6 family の PIT 境界、zero-write、現在時刻不使用、write 側 API 不到達。
+- 修正前の runner で 17 件が fail し、修正後に 37 件すべて pass することを確認した。
+
+### 改善 — `tests/intelligence/test_theme_monitoring_e2e.py`（B6E test の更新）
+
+- strict xfail 2 件（`test_d07` / `test_d08`）の mark を除去し、通常の test として pass。
+- `test_d08` を訂正: B6E 版は撤回 edge の無い A→C へ「未来」の提案を置いており、xfail の原因は day(5) 記録の
+  既存提案による PIT 上正しい衝突だった（欠陥を検査していなかった）。未来の提案を撤回済み edge B→A に向け、
+  その提案 id だけを検査するよう修正した。契約（day(20) の提案は day(5) で衝突を起こさない）は不変。
+- `test_d09` を置換: B6E 版は修正の前後どちらでも成立する判別力の無い観測だったため、
+  「提案 family の digest は cutoff 以前の record に束縛される」を検査する test にした。
+- `test_d04`: `theme_governance` と名付けていた case が genesis observation の境界だったため label を訂正し、
+  退役 event による本物の governance 境界 case を追加。
+- `test_e01`: B6D anchor 以降に変わってよい runtime を `monitoring_runner.py` だけとし、他の frozen file が
+  anchor と byte 一致することを検査するよう更新。
+- 修正版の `test_d07` / `test_d08` / `test_d09` は、修正前の runner で fail・修正後に pass することを確認した。
+
+### 改善 — docs
+
+- `PHASE6_THEME_MONITORING_OPERATIONAL_CONTRACT.md`: §8 の PIT 列と §9.1（family ごとの PIT 入口と規則）を改訂。
+- `PHASE6_THEME_MONITORING_E2E_VALIDATION.md`: BLOCKER-1 を REMEDIATED_PENDING_RERUN に更新し、
+  §23 に remediation 状態と B6E 証跡の訂正（`test_d08` / `test_d09` / `test_d04`）を追記。
+
+### 変更していないもの
+
+`OBSERVATION_NOT_SUPPLIED` と `COMPLETE` の関係（blind spot）、観測 channel の供給設計、#17 の到達性、
+condition 語彙、閾値、ruleset、finding / run identity、review 意味論、real-data shadow、scheduler、notification、
+B5 execution gate、B7。
+
 ## v5.28 (2026-09-24) — Phase 6 P6-B6E monitoring E2E / adversarial validation gate
 
 B6A architecture / B6B model / B6C engine / B6D operational layer を **1 系として** 検証した。
