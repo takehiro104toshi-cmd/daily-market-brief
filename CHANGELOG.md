@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.31 (2026-09-24) — Phase 6 P6-B6 Theme Monitoring completion audit（AUDIT / DOC ONLY）
+
+B6A〜B6E-RERUN（B6D-R1 を含む）の completion audit を行った。**runtime・test・knowledge・config・workflow・scripts は
+変更していない**（B6E-RERUN anchor `00bb5a2` 以降の diff 0）。
+
+結論: B6 は完了条件を満たす。B6-DEF-1（観測 channel の coverage 欠落）は監督判定どおり
+**NON_BLOCKING_FOR_B6_CLOSEOUT / MANDATORY_PRE_B7_REMEDIATION** として登録した。
+B6 closeout 後の次の gate は **P6-B6R1（MONITORING COVERAGE-COMPLETENESS REMEDIATION）** であり、B7 ではない。
+
+### 追加 — `docs/databank/PHASE6_THEME_B6_COMPLETION_AUDIT.md`【新規】
+
+- phase lineage と anchor、authority map（finding / run report は derived・非永続、review state は人間専用の運用 journal）、
+  最終 pipeline と「存在しない近道」の一覧。
+- B6A D-B6-1〜14 の全件 audit（IMPLEMENTED / 精緻化 / 一部 SUPERSEDED / DEFERRED を記録先付きで分類。記録の無い drift 0）。
+- B6B model・B6C engine・B6D operational の audit、PIT blocker の履歴（FOUND → REMEDIATED → CLOSED）と
+  B6E 証跡の訂正、6 family PIT matrix と PIT 保証の境界、fail-closed・決定論・zero-write・review 分離・RR-3。
+- condition coverage（synthetic 18/18 ×2、cross-layer 17/18、#17 の分類を固定）。
+- B6-DEF-1 の canonical 登録と将来 gate P6-B6R1 の最低目的、B6-DEF-2〜6 の deferred register、
+  real-data shadow = NOT_RUN（NON_BLOCKING_DEFERRED_UNTIL_REAL_AUTHORITY_EXISTS）、security、import / layering。
+
+### 改善 — `docs/databank/PHASE6_THEME_MONITORING_E2E_RERUN.md`
+
+§15 の提案に、B6-DEF-1 の監督判定と canonical 登録先への参照を 1 行追加（cross-reference のみ）。
+
 ## v5.30 (2026-09-24) — Phase 6 P6-B6E-RERUN monitoring E2E 再検証（TEST / AUDIT / DOC ONLY）
 
 B6D-R1 の PIT remediation 後に、B6 monitoring 全体を adversarial E2E で再検証した。**runtime は変更していない**

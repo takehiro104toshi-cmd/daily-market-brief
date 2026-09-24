@@ -206,6 +206,8 @@ day70 の cross-layer world（4 condition すべてが成立し得る状態）�
 
 **提案: C — NON_BLOCKING_DEFERRED_WITH_CONTRACT**
 
+> **監督判定（P6-B6 closeout audit）**: B6-DEF-1 = NON_BLOCKING_FOR_B6_CLOSEOUT / MANDATORY_PRE_B7_REMEDIATION。canonical な登録は `PHASE6_THEME_B6_COMPLETION_AUDIT.md` §17。
+
 - **A を採らない理由**: 現挙動は B6A / B6B / B6C の wording と矛盾する。受け入れれば `COMPLETE` の意味を黙って変えることになる。
 - **closeout を止めない理由**: authority・PIT・finding の正しさに影響しない。report の consumer がまだ存在しない。
   欠落は runner の surface で決定的に開示されている。どの修正案も既定 run の意味（例: 既定 run が常に PARTIAL になる）を
