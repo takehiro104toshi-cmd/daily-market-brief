@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.41 (2026-09-25) — Phase 6 P6-B7 closeout audit（LLM PROPOSAL LAYER FINAL CLOSEOUT）
+
+B7A〜B7G の LLM 提案層全体の最終監査。新しい能力なし・production runtime の変更なし（文書と凍結台帳の test だけ）。
+不変条件「LLM PROPOSES. / DETERMINISTIC CODE VALIDATES. / HUMAN DECIDES. / AUTHORITY LAYER RECORDS.」と、authority の上限が
+L1 提案だけであることを、B7G の E2E・各 gate の mutation・凍結台帳・最終回帰で再確認した。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_B7_CLOSEOUT.md`【新規】
+
+closeout 文書（22 節）: 結論、最終 architecture、全 B7 artifact の authority 分類、信頼境界、PIT / replay、identity、
+提案と再利用の意味論、SOURCE_ASSERTED、Theme evidence の意味論、生成監査、提出の境界、generation_ref の判定
+（ACCEPTABLE_BOUNDARY）、実在しない root の判定（ACCEPTABLE_BOUNDARY / DEFERRED_DEFENSE_IN_DEPTH）、security / 秘匿、
+凍結の連鎖（B6・B7A〜B7G の anchor）、検証台帳、mutation / 敵対的検証の証拠、実データの状態（NOT_RUN・non-blocking）、
+統合 deferred 登録簿（B7-DEF-1〜27 の分類）、blocker（なし）、推奨、次の gate との境界。
+
+### 追加 — `tests/intelligence/test_theme_llm_closeout.py`【新規】
+
+凍結台帳の test（24）: anchor の祖先鎖、各 gate の runtime 差分 ＝ 宣言した新規 module の追加だけ（B7A・B7G は差分なし）、
+B6 以降に runtime・knowledge・config・workflow・scripts・公開出力・data へ入ったのは新規 `llm_*.py` だけ、B7G 以降の差分なし、
+B7 の 7 文書の anchor での凍結、B6 の llm 例外が導入時から広げられていないこと、closeout 文書の anchor 表との一致。
+
 ## v5.40 (2026-09-25) — Phase 6 P6-B7G adversarial end-to-end validation（B7B → B7C → B7E → B7D → B7F）
 
 B7 の LLM 提案経路全体（上流 PIT authority → B7C manifest → B7E 生成入力 → Fake / Recorded provider → B7B 厳格 parse →
