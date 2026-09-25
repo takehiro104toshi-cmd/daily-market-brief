@@ -4,6 +4,51 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.39 (2026-09-25) — Phase 6 P6-B7F validated plan → existing proposal authority（CHECK-THEN-REUSE SUBMISSION BRIDGE）
+
+B7D の検証済み plan を、既存の B3 提案 journal / B5C 関係提案 journal へ check-then-reuse で提出する bridge を実装した。
+書き込みは既存 `append_proposal` による提案 1 行だけ。decision・SourceClaimVerification・Theme / evidence / relation /
+governance・B6 review・生成監査 journal・公開出力には書かない。新しい journal・authority・proposal type は無い。実 LLM・
+network・API key は無い。B7B（`e2aa991`）・B7C（`95e04ae`）・B7D（`c240f68`）・B7E（`695227a`）・B3 / B5C の model と
+store・Foundation / B1〜B6 の runtime、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_submission_model.py`【新規】
+
+提出結果の純 model（`SubmissionResult` / `PlanSubmission`）。action（NEW_PROPOSAL_APPENDED / EXISTING_PROPOSAL_REUSED /
+DUPLICATE_IN_SUBMISSION / NOT_SUBMITTED）、再利用の種類（EXACT / CONVERGENT）、status（SUBMITTED / REJECTED /
+PARTIAL_SUBMISSION）、失敗 code 7 種、凍結文言（`PROPOSAL_IS_NOT_DECISION` / `SUBMISSION_IS_NOT_A_BACKTEST`）。
+score・順位・確信度は持たない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_submission.py`【新規】
+
+`submit_proposals`: 提出境界での再検証（plan・入れ子・検証結果を凍結 constructor で組み直し id を照合）→ 凍結済み
+B3 / B5C constructor での再構築（id ＝ plan の `upstream_proposal_id`）→ 既存 store で照合（在れば再利用・無ければ新規・
+意味が違えば PROPOSAL_CONFLICT）→ 全 plan の pre-flight が通ったときだけ family → 上流 id の順で追記 → 読み直し。
+provenance は既存 field だけ（proposer_ref ＝ B7E 試行 id、rule_version ＝ prompt contract、理由 ＝ 検証結果 id の
+参照文。provider / model は入れない）。部分失敗は PARTIAL_SUBMISSION（巻き戻さない）。
+
+### 追加 — test
+
+- `tests/intelligence/test_theme_llm_submission.py`【新規】: test matrix A〜BB（新規 / 再利用・改竄 plan・
+  SOURCE_ASSERTED・zero-write・重複・順序・pre-flight・部分書き込み・冪等・書き込み面・security・凍結 pin・guard 登録）と
+  結果 model・秘匿。scratch copy での mutation 13 種（必須 M1〜M10、M8 は時計と乱数の 2 種、＋ 2 種）をすべて検出。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: B7F の 2 module を登録。`LLM_SUBMISSION_MODULES`（提出 bridge だけ）に
+  B3 / B5C の proposal store と `append_proposal` だけを許し、decision・SourceClaimVerification・assertion・governance・
+  Theme / relation / review store・生成監査 journal・Foundation bridge への経路が無いことを確認する test を追加。
+  他の B7 module が proposal store を import しないことも確認する。B7B〜B7E の guard は緩めていない。
+- `test_theme_llm_generation.py`（B7E test）: `test_ao` が後続 B7 の新規 module（`LATER_B7_MODULES`）を許すように
+  した（test 側だけ。B7E runtime は不変）。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_PROPOSAL_SUBMISSION_CONTRACT.md`【新規】
+
+authority 境界、対応 plan type、pipeline、再検証、上流の再構築、check-then-reuse、conflict の意味論、provenance、
+SOURCE_ASSERTED、複数 plan の pre-flight、追記の順序、部分書き込みの境界、冪等性、結果 model、failure の分類、
+zero-write、生成監査 journal との境界、no-decision / no-execution、security（PIT・時刻の分類）、凍結の連鎖、deferred、
+B7G への引き継ぎ（22 節）。
+
 ## v5.38 (2026-09-25) — Phase 6 P6-B7E generation adapter ＋ generation audit journal（FAKE / RECORDED PROVIDER ONLY）
 
 B7C manifest → 生成入力 → provider（fake / recorded のみ）→ B7B の厳格 parse → B7D の検証 → 生成結果、の非 authority な
