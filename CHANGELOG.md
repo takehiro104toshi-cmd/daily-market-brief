@@ -4,6 +4,48 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.37 (2026-09-25) — Phase 6 P6-B7D deterministic semantic validator（GROUNDING / NORMALIZATION / PROPOSAL PLAN ONLY）
+
+B7B の構造化出力を、その要求の B7C manifest に対してだけ決定論的に検証し、既存の B3 / B5C constructor へ意味の即興なしに
+渡せる「検証済み提案 plan」（DERIVED・非 authority・非永続）を作る層を実装した。LLM・provider・network・prompt・
+generation journal・B3 / B5C への提出・書き込みは無い。Foundation / B1〜B6 の runtime、B7B model（`e2aa991`）、
+B7C modules（`95e04ae`）、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_plan_model.py`【新規】
+
+- plan 3 種（evidence → B3 EVIDENCE_CANDIDATE、Theme → B3 THEME_CANDIDATE、relation → B5C RELATION_CANDIDATE）と
+  検証結果。`upstream_arguments()` が凍結 constructor の引数をそのまま返す。
+- provenance lock（B3 `LLM_PROPOSAL` / B5C `LLM`、component 主張と attachment role provenance も `LLM_PROPOSAL`、確度
+  `HYPOTHESIZED_MECHANISM`。これより強い値は `PROVENANCE_ESCALATION`）。出典帰属は常に `UNVERIFIED`（確認済みの値は無い）。
+- identity に入る文（B3 `reason` / B5C `rationale`）は検証済み field だけの template。LLM の説明文は監査用で identity 外。
+  `plan_id` は正規化済み材料の content id で、上流の提案 id（`upstream_proposal_id`）とは別物。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_validator.py`【新規】
+
+- `validate_generation(request, envelope, manifest)`（純関数）: request ↔ manifest の束縛（digest・task・cutoff・schema・
+  knowledge pin）→ 棄権 → canonical 形・task 整合 → 候補ごとの grounding（B7C 内部対応表だけ）・凍結語彙の検査・
+  Foundation `normalize_text` による正規化・role ごとの target component・MON は文脈だけ・出典帰属は文章 evidence の
+  origin だけ → 凍結 B3 / B5C constructor の試行 → 同一生成内の意味的重複の拒否。違反が 1 件でもあれば生成全体を拒否。
+- error は有界な 19 code。LLM の文・出典の文・秘密値を error に写さない。
+
+### 追加 — `tests/intelligence/test_theme_llm_validator.py`【新規】
+
+test matrix A〜AM（束縛・grounding・role と target・Theme 正規化・語彙・entity・relation・SOURCE_ASSERTED・言い換え収束・
+provider / model / 順序の非依存・重複・棄権・knowledge pin・隠れた未来状態の不変・prompt injection・provenance lock・
+zero-write・I/O なし・replay・process 間の identity・error の秘匿・凍結・guard）と、全体拒否・上流 constructor の
+identity 一致・template・時刻欠落・推移辺・数値の不在。scratch copy での mutation 13 種（必須 M1〜M7 ＋ 6 種）をすべて検出。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: `llm_plan_model` / `llm_validator` を登録（MODULES・LLM_MODULES・
+  LLM_PURE_MODULES・閉包・識別 module・Foundation 操作の禁止語彙）。B7D は data root・store・bridge・provider を持たない。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_SEMANTIC_VALIDATOR_CONTRACT.md`【新規】
+
+authority 分類、入力、束縛、grounding、plan model、evidence / Theme / relation の検証、monitoring 境界、provenance lock、
+確度、正規化、identity template、重複、棄権、knowledge pin、PIT、prompt injection、failure 分類、security、zero-write、
+deferred（監督判断の論点を含む）。
+
 ## v5.36 (2026-09-25) — Phase 6 P6-B7C LLM input manifest / point-in-time grounding（DETERMINISTIC INPUT LAYER ONLY）
 
 caller が決めた cutoff 時点で LLM に見せてよい data を、決定論的な非 authority の manifest として組む層だけを実装した。

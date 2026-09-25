@@ -37,11 +37,13 @@ MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "propo
            # P6-B7B: LLM 提案層の純 model / schema（provider・network・bridge・store なし）
            "llm_proposal_model",
            # P6-B7C: LLM 入力 manifest（純 model と、PIT 入口だけを読む read-only builder）
-           "llm_manifest_model", "llm_manifest_builder")
+           "llm_manifest_model", "llm_manifest_builder",
+           # P6-B7D: 検証済み提案 plan の純 model と決定論的な意味検証（純。data root・store・provider を持たない）
+           "llm_plan_model", "llm_validator")
 #: P6-B7: LLM 提案層（authority の手前の非 authority 層）。上流は B7 を import しない
-LLM_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_manifest_builder")
+LLM_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_manifest_builder", "llm_plan_model", "llm_validator")
 #: B7 のうち I/O を一切持たない純 module
-LLM_PURE_MODULES = ("llm_proposal_model", "llm_manifest_model")
+LLM_PURE_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_plan_model", "llm_validator")
 #: B7 のうち既存の PIT 入口（read-only）だけを通して data root を読む module。許すのは data_root という語と次の import だけ
 LLM_READ_MODULES = ("llm_manifest_builder",)
 LLM_READ_ENTRY_POINTS = {"..themes.resolver": {"ResolutionStatus", "resolve_at_data_root"},
@@ -52,7 +54,8 @@ MONITORING_MODULES = ("monitoring_model", "monitoring_rules", "monitoring_engine
 IO_MODULES = ("proposal_store", "relation_store", "relation_proposal_store",
               "monitoring_store", "monitoring_runner")   # 追記専用 JSONL と read-only な読み取りのみ
 IDENTITY_MODULES = ("proposal_model", "relation_model", "relation_proposal_model",
-                    "monitoring_model", "monitoring_adapter", "llm_proposal_model", "llm_manifest_model")            # content id を計算する module
+                    "monitoring_model", "monitoring_adapter", "llm_proposal_model", "llm_manifest_model",
+                    "llm_plan_model")            # content id を計算する module
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
 KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules", "monitoring_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
 INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
@@ -77,8 +80,8 @@ ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fin
                     # P6-B5B / P6-B5C
                     ".relation_model", ".relation_resolution", ".relation_proposal_model",
                     ".relation_proposal_resolution",
-                    # P6-B7B / P6-B7C（B7 内部の依存。上流から B7 への import は別 test が禁止する）
-                    ".llm_proposal_model", ".llm_manifest_model"}
+                    # P6-B7B / P6-B7C / P6-B7D（B7 内部の依存。上流から B7 への import は別 test が禁止する）
+                    ".llm_proposal_model", ".llm_manifest_model", ".llm_plan_model"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
@@ -109,7 +112,9 @@ ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.
     "src.intelligence.theme_intelligence.llm_proposal_model",
     # P6-B7C: LLM 入力 manifest（純 model と read-only builder）。B6 の純 model は finding の型としてだけ読む（B7 → B6 の向き）
     "src.intelligence.theme_intelligence.llm_manifest_model", "src.intelligence.theme_intelligence.llm_manifest_builder",
-    "src.intelligence.theme_intelligence.monitoring_model"}
+    "src.intelligence.theme_intelligence.monitoring_model",
+    # P6-B7D: plan model と validator（B3 / B5C の model を材料の型としてだけ読む。store / bridge は含まれない）
+    "src.intelligence.theme_intelligence.llm_plan_model", "src.intelligence.theme_intelligence.llm_validator"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
@@ -171,6 +176,7 @@ def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> N
             "import src.intelligence.theme_intelligence.relation_proposal_resolution, src.intelligence.theme_intelligence.relation_proposal_bridge\n"
             "import src.intelligence.theme_intelligence.llm_proposal_model\n"
             "import src.intelligence.theme_intelligence.llm_manifest_model, src.intelligence.theme_intelligence.llm_manifest_builder\n"
+            "import src.intelligence.theme_intelligence.llm_plan_model, src.intelligence.theme_intelligence.llm_validator\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
@@ -242,7 +248,7 @@ def test_proposal_modules_never_execute_foundation_operations_or_append_to_found
                  "relation_graph", "relation_store", "relation_proposal_model", "relation_proposal_resolution",
                  "relation_proposal_bridge", "relation_proposal_store",
                  "monitoring_store", "monitoring_adapter", "monitoring_runner", "llm_proposal_model",
-                 "llm_manifest_model", "llm_manifest_builder"):
+                 "llm_manifest_model", "llm_manifest_builder", "llm_plan_model", "llm_validator"):
         source = executable_source(PACKAGE_DIR / f"{name}.py")
         for token in ("execute_candidate", "execute_declaration", "plan_candidate", "plan_merge", "append_root",
                       "append_observation", "append_governance", "append_metadata", "append_mapping", "new_root_id", "new_id(",
