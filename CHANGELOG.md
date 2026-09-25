@@ -4,6 +4,51 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.36 (2026-09-25) — Phase 6 P6-B7C LLM input manifest / point-in-time grounding（DETERMINISTIC INPUT LAYER ONLY）
+
+caller が決めた cutoff 時点で LLM に見せてよい data を、決定論的な非 authority の manifest として組む層だけを実装した。
+provider・prompt・意味検証・bridge・store・generation journal は実装していない。Foundation / B1〜B6 の runtime、
+B7B model（`e2aa991` と byte 一致）、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_manifest_model.py`【新規】
+
+- 純 model（I/O なし）: 最小投影（evidence / Theme ＋ CQ / IC / relation / entity / finding）、opaque handle の割り当て
+  （authority ref の辞書順・3 桁・入力順 / path / mtime / 時計に非依存）、visible に入らない内部対応表、
+  `manifest_digest`（`thllmin_`。visible ＋ 内部対応表を束縛）と `visible_digest`（`thllmvis_`）。
+- task → family matrix（必須 / 任意 / 導出）、使った knowledge だけの pin、文は書き換えず長さ・制御文字・path・URL・秘密を
+  fail closed、handle 以外が同じ投影は `DUPLICATE_PROJECTION`、finding は許可 condition / fact だけ。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_manifest_builder.py`【新規】
+
+- `LlmManifestScope`（task・aware cutoff・family ごとに `None` ＝ 未供給 / 空 tuple ＝ 空で供給、暗黙の「全部」なし）と
+  `build_input_manifest`（read-only）。
+- 既存の PIT 入口だけを使う: Foundation `resolve_at_data_root`、B5B `resolve_relations_at_data_root`、B4 `adapt_inputs`。
+  破損・未解決・PIT 以外の除外・同 id の別内容・未来の knowledge は fail closed。B3 / B5C の提案状態は読まない。
+
+### 追加 — `tests/intelligence/test_theme_llm_input_manifest.py`【新規】
+
+test matrix A〜Z（scope・cutoff・task の family・handle の不透明性と安定性・8 family の未来漏れ・破損・security・
+決定論・zero-write）、重複の方針、prompt 境界、B7B request への接続、凍結 pin の述語、B7B model の byte 一致。
+
+### 追加 — `tests/intelligence/theme_freeze_pins.py`【新規】
+
+B6 凍結 pin の例外規則を 1 か所に集約（status 追加 `A` / `??` かつ `theme_intelligence/llm_<name>.py` 直下に完全一致のみ）。
+
+### 改善 — guard / 凍結 pin
+
+- `test_theme_intelligence_import_boundary.py`: B7C module を登録し、純 model と read-only builder を区別
+  （builder は PIT 入口だけを import でき、`data_root` は builder だけに許す。書き込み・store・network・provider・時計・乱数は禁止）。
+- B6 の凍結 pin 3 file（`test_theme_monitoring_e2e.py` / `test_theme_monitoring_e2e_rerun.py` /
+  `test_theme_monitoring_coverage_rerun.py`）: B7B で入れた `llm_` 例外（prefix 一致）を上記の厳密な述語へ絞った。
+- `test_theme_monitoring_model.py`（test_87）: package 内で `monitoring_model` を参照してよい module に `llm_manifest_model` を
+  名指しで追加（finding を型で検査するだけ。engine / rules / store / runner への到達は import boundary の閉包で禁止のまま）。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_INPUT_MANIFEST_CONTRACT.md`【新規】
+
+authority 分類、family の採否、task matrix、PIT、integrity-before-PIT、scope、投影 field と理由、text 方針、handle algorithm、
+逆引き表、manifest identity、knowledge pin、重複、finding 境界、B3 提案状態の除外判断、relation の意味、security、replay、
+failure mode、deferred、凍結 pin の監査。
+
 ## v5.35 (2026-09-25) — Phase 6 P6-B7B LLM proposal model / schema（PURE MODEL ONLY）
 
 B7 の純 model / schema だけを実装した。provider・network・bridge・store・input manifest・PIT 解決・意味検証は実装していない。

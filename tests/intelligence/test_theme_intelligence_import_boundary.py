@@ -35,16 +35,24 @@ MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "propo
            # P6-B6D: 人間の review 状態だけの追記専用 store / 上流 → snapshot の写像 / read-only な run orchestration
            "monitoring_store", "monitoring_adapter", "monitoring_runner",
            # P6-B7B: LLM 提案層の純 model / schema（provider・network・bridge・store なし）
-           "llm_proposal_model")
+           "llm_proposal_model",
+           # P6-B7C: LLM 入力 manifest（純 model と、PIT 入口だけを読む read-only builder）
+           "llm_manifest_model", "llm_manifest_builder")
 #: P6-B7: LLM 提案層（authority の手前の非 authority 層）。上流は B7 を import しない
-LLM_MODULES = ("llm_proposal_model",)
+LLM_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_manifest_builder")
+#: B7 のうち I/O を一切持たない純 module
+LLM_PURE_MODULES = ("llm_proposal_model", "llm_manifest_model")
+#: B7 のうち既存の PIT 入口（read-only）だけを通して data root を読む module。許すのは data_root という語と次の import だけ
+LLM_READ_MODULES = ("llm_manifest_builder",)
+LLM_READ_ENTRY_POINTS = {"..themes.resolver": {"ResolutionStatus", "resolve_at_data_root"},
+                         ".relation_store": {"resolve_relations_at_data_root"}}
 #: P6-B6: B5 の read-only な解決結果を読む層（package 内の逆方向依存ではない）
 MONITORING_MODULES = ("monitoring_model", "monitoring_rules", "monitoring_engine", "monitoring_store",
                       "monitoring_adapter", "monitoring_runner")
 IO_MODULES = ("proposal_store", "relation_store", "relation_proposal_store",
               "monitoring_store", "monitoring_runner")   # 追記専用 JSONL と read-only な読み取りのみ
 IDENTITY_MODULES = ("proposal_model", "relation_model", "relation_proposal_model",
-                    "monitoring_model", "monitoring_adapter", "llm_proposal_model")            # content id を計算する module
+                    "monitoring_model", "monitoring_adapter", "llm_proposal_model", "llm_manifest_model")            # content id を計算する module
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
 KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules", "monitoring_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
 INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
@@ -68,7 +76,9 @@ ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fin
                     ".evidence_bridge_model",
                     # P6-B5B / P6-B5C
                     ".relation_model", ".relation_resolution", ".relation_proposal_model",
-                    ".relation_proposal_resolution"}
+                    ".relation_proposal_resolution",
+                    # P6-B7B / P6-B7C（B7 内部の依存。上流から B7 への import は別 test が禁止する）
+                    ".llm_proposal_model", ".llm_manifest_model"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
@@ -96,7 +106,10 @@ ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.
     "src.intelligence.theme_intelligence.relation_proposal_bridge",
     "src.intelligence.theme_intelligence.relation_proposal_store",
     # P6-B7B: LLM 提案層の純 model（Foundation の語彙と B5B の relation 語彙だけを読む）
-    "src.intelligence.theme_intelligence.llm_proposal_model"}
+    "src.intelligence.theme_intelligence.llm_proposal_model",
+    # P6-B7C: LLM 入力 manifest（純 model と read-only builder）。B6 の純 model は finding の型としてだけ読む（B7 → B6 の向き）
+    "src.intelligence.theme_intelligence.llm_manifest_model", "src.intelligence.theme_intelligence.llm_manifest_builder",
+    "src.intelligence.theme_intelligence.monitoring_model"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
@@ -157,6 +170,7 @@ def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> N
             "import src.intelligence.theme_intelligence.relation_proposal_model, src.intelligence.theme_intelligence.relation_proposal_store\n"
             "import src.intelligence.theme_intelligence.relation_proposal_resolution, src.intelligence.theme_intelligence.relation_proposal_bridge\n"
             "import src.intelligence.theme_intelligence.llm_proposal_model\n"
+            "import src.intelligence.theme_intelligence.llm_manifest_model, src.intelligence.theme_intelligence.llm_manifest_builder\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
@@ -209,6 +223,8 @@ def test_no_io_clock_random_network_store_or_score_in_sources() -> None:
                               if t not in KNOWLEDGE_READ_ALLOWED_TOKENS)
         if name in IDENTITY_MODULES:                                                    # proposal / decision の content id を計算する module
             forbidden = tuple(t for t in forbidden if t != "content_id(")
+        if name in LLM_READ_MODULES:                                                    # P6-B7C: PIT 入口へ data root を渡すだけ
+            forbidden = tuple(t for t in forbidden if t != "data_root")
         for token in forbidden:
             assert token not in source, (name, token)
         for token in LIFECYCLE_TOKENS:
@@ -225,7 +241,8 @@ def test_proposal_modules_never_execute_foundation_operations_or_append_to_found
                  "evidence_bridge_model", "evidence_bridge", "relation_model", "relation_resolution",
                  "relation_graph", "relation_store", "relation_proposal_model", "relation_proposal_resolution",
                  "relation_proposal_bridge", "relation_proposal_store",
-                 "monitoring_store", "monitoring_adapter", "monitoring_runner", "llm_proposal_model"):
+                 "monitoring_store", "monitoring_adapter", "monitoring_runner", "llm_proposal_model",
+                 "llm_manifest_model", "llm_manifest_builder"):
         source = executable_source(PACKAGE_DIR / f"{name}.py")
         for token in ("execute_candidate", "execute_declaration", "plan_candidate", "plan_merge", "append_root",
                       "append_observation", "append_governance", "append_metadata", "append_mapping", "new_root_id", "new_id(",
@@ -288,34 +305,47 @@ def test_relation_proposal_modules_never_reach_the_relation_authority_store() ->
 
 
 def test_no_upstream_module_imports_the_llm_proposal_layer() -> None:
-    """Foundation / B1〜B6 は B7 を import しない（依存は B7 → 上流の一方向だけ）。"""
-    for name in MODULES:
-        if name in LLM_MODULES:
-            continue
-        imports = imported_modules(PACKAGE_DIR / f"{name}.py")
-        assert not any(m.lstrip(".").startswith("llm_") or ".llm_" in m for m in imports), name
-        assert "llm_proposal" not in (PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"), name
+    """Foundation / B1〜B6 と src 全体は B7 を import しない（依存は B7 → 上流の一方向だけ）。"""
     for path in (REPO_ROOT / "src").rglob("*.py"):
         if path.parent == PACKAGE_DIR and path.stem in LLM_MODULES:
             continue
-        assert "llm_proposal_model" not in path.read_text(encoding="utf-8"), str(path.relative_to(REPO_ROOT))
+        imports = imported_modules(path)
+        assert not any(segment.startswith("llm_") for m in imports for segment in m.split(".")), \
+            str(path.relative_to(REPO_ROOT))
+        assert "theme_intelligence.llm_" not in path.read_text(encoding="utf-8"), str(path.relative_to(REPO_ROOT))
 
 
 def test_every_llm_module_is_registered_and_guarded() -> None:
     present = sorted(p.stem for p in PACKAGE_DIR.glob("llm_*.py"))
     assert present == sorted(LLM_MODULES) and set(LLM_MODULES) <= set(MODULES)
+    assert set(LLM_PURE_MODULES) | set(LLM_READ_MODULES) == set(LLM_MODULES)
+    assert not set(LLM_PURE_MODULES) & set(LLM_READ_MODULES)
     assert not [p for p in PACKAGE_DIR.rglob("*.py") if p.parent != PACKAGE_DIR]          # subpackage で guard を逃れない
 
 
 def test_llm_modules_reach_no_store_bridge_network_provider_or_publication_path() -> None:
     for name in LLM_MODULES:
         imports = imported_modules(PACKAGE_DIR / f"{name}.py")
-        assert not any(m.endswith(("store", "bridge", "runner", "operations", "revision", "resolver", "resolution"))
-                       for m in imports), (name, imports)
+        reading = set(LLM_READ_ENTRY_POINTS) if name in LLM_READ_MODULES else set()
+        assert not any(m.endswith(("store", "bridge", "runner", "operations", "revision", "resolver"))
+                       for m in imports - reading), (name, imports)
         assert not any(token in m for m in imports for token in ("notifier", "publish", "report", "pages", "legacy",
                                                                   "compass", "corpus", "formal_review", "decision",
                                                                   "http", "requests", "urllib", "socket", "anthropic",
                                                                   "openai", "contracts")), (name, imports)
         source = executable_source(PACKAGE_DIR / f"{name}.py")
-        for token in ("append_", "execute_", "Store", "environ", "getenv", "LLMProvider", ".complete(", "uuid"):
+        for token in ("append_", "execute_", "Store", "environ", "getenv", "LLMProvider", ".complete(", "uuid",
+                      "open(", "write", "mkdir", "unlink"):
             assert token not in source, (name, token)
+        if name in LLM_PURE_MODULES:
+            assert "data_root" not in source, name
+
+
+def test_the_read_only_builder_uses_only_the_pit_entry_points() -> None:
+    """P6-B7C: builder が上流から取り込めるのは PIT 解決の入口だけ（store class・append API は取り込まない）。"""
+    for name in LLM_READ_MODULES:
+        tree = ast.parse((PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and ("." * node.level + (node.module or "")) in LLM_READ_ENTRY_POINTS:
+                module = "." * node.level + (node.module or "")
+                assert {alias.name for alias in node.names} <= LLM_READ_ENTRY_POINTS[module], (name, module)

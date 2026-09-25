@@ -612,7 +612,10 @@ def test_86_the_monitoring_model_imports_no_b1_to_b5_runtime() -> None:
 
 
 def test_87_nothing_outside_the_theme_intelligence_package_imports_the_model() -> None:
-    """model を参照してよいのは同じ package の monitoring 層だけ（B6C の engine / rules を含む）。"""
+    """model を参照してよいのは同じ package の monitoring 層だけ（B6C の engine / rules を含む）。
+
+    P6-B7C: input manifest の純 model だけは、caller が選んだ finding を型で検査するために参照する（CONTRADICTION task の
+    任意文脈・非 authority。engine / rules / store / runner への到達は import boundary の閉包で禁止）。"""
     hits = []
     for path in sorted((REPO_ROOT / "src").rglob("*.py")):
         if path == MODULE or path.parent == PACKAGE_DIR:
@@ -621,8 +624,8 @@ def test_87_nothing_outside_the_theme_intelligence_package_imports_the_model() -
             hits.append(str(path.relative_to(REPO_ROOT)))
     assert hits == [], hits
     inside = sorted(p.stem for p in PACKAGE_DIR.glob("*.py") if "monitoring_model" in executable_source(p))
-    assert inside == ["monitoring_adapter", "monitoring_engine", "monitoring_rules", "monitoring_runner",
-                      "monitoring_store"], inside                           # model 自身は自分を名指さない
+    assert inside == ["llm_manifest_model", "monitoring_adapter", "monitoring_engine", "monitoring_rules",
+                      "monitoring_runner", "monitoring_store"], inside      # model 自身は自分を名指さない
 
 
 def test_88_no_store_runner_scheduler_or_notifier_was_created() -> None:

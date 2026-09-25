@@ -51,6 +51,7 @@ from src.intelligence.theme_intelligence.relation_resolution import (RelationRes
                                                                      resolve_relation_graph)
 from src.intelligence.themes.resolver import resolve_at_data_root
 from tests.intelligence.test_prediction_record import executable_source
+from tests.intelligence.theme_freeze_pins import is_new_llm_module
 from tests.intelligence.test_theme_model import ROOT_A, ROOT_B, ROOT_C
 from tests.intelligence.test_theme_monitoring_e2e import (ARRIVED, RULES, SCOPE, STALE_POLICY, _seed_world,
                                                           journal_digests, run)
@@ -120,7 +121,7 @@ def test_01_no_runtime_surface_changed_since_the_r1_anchor() -> None:
                             ".github", "scripts"], cwd=REPO_ROOT, capture_output=True, text=True,
                            check=True).stdout.splitlines()
     changed = [path for status, path in (line.split("\t", 1) for line in lines)
-               if not (status == "A" and path.startswith("src/intelligence/theme_intelligence/llm_"))]   # P6-B7 の新規 module
+               if not is_new_llm_module(status, path)]                                  # P6-B7 の新規 module だけ
     assert set(changed) <= {f"src/intelligence/theme_intelligence/{name}" for name in B6R1_CHANGED}, changed
 
 

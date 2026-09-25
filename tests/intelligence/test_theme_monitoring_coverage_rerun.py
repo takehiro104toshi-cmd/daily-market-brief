@@ -50,6 +50,7 @@ from src.intelligence.theme_intelligence.relation_proposal_store import authorit
 from src.intelligence.theme_intelligence.relation_store import ThemeRelationStore
 from src.intelligence.themes.store import authority_paths as theme_paths
 from tests.intelligence.test_prediction_record import executable_source
+from tests.intelligence.theme_freeze_pins import is_new_llm_module
 from tests.intelligence.test_theme_model import ROOT_A, ROOT_B
 from tests.intelligence.test_theme_proposal import decision, evidence_candidate
 from tests.intelligence.test_theme_relation import causal, retraction
@@ -120,10 +121,8 @@ def git(*args: str, text: bool = True):
 # ================================================================ §1 / §18 runtime freeze
 
 def is_b7_addition(status: str, path: str) -> bool:
-    """P6-B7 以降に**新規追加**された LLM 提案層 module（`theme_intelligence/llm_*.py`）だけを除外する。既存 file の変更は除外しない。"""
-    parent, _, name = path.rpartition("/")
-    return (status in ("A", "??") and parent == "src/intelligence/theme_intelligence" and name.startswith("llm_")
-            and name.endswith(".py"))
+    """P6-B7 以降に**新規追加**された LLM 提案層 module だけを除外する（規則は `theme_freeze_pins` に一本化）。"""
+    return is_new_llm_module(status, path)
 
 
 def runtime_changes(anchor: str) -> set:

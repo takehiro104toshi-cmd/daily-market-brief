@@ -59,6 +59,7 @@ from src.intelligence.themes.revision import attach_evidence
 from src.intelligence.themes.store import ThemeStore
 from src.intelligence.themes.store import authority_paths as theme_paths
 from tests.intelligence.test_prediction_record import executable_source
+from tests.intelligence.theme_freeze_pins import is_new_llm_module
 from tests.intelligence.test_theme_model import ROOT_A, ROOT_B, ROOT_C, attachment, event, provenance
 from tests.intelligence.test_theme_proposal import decision, evidence_candidate
 from tests.intelligence.test_theme_relation import causal, retraction, sourced
@@ -740,7 +741,7 @@ def test_e01_the_frozen_runtime_is_untouched() -> None:
                             "src/intelligence/theme_intelligence", "knowledge/theme_intelligence"],
                            cwd=REPO_ROOT, capture_output=True, text=True, check=True).stdout.splitlines()
     changed = [path for status, path in (line.split("\t", 1) for line in lines)
-               if not (status == "A" and path.startswith("src/intelligence/theme_intelligence/llm_"))]   # P6-B7 の新規 module
+               if not is_new_llm_module(status, path)]                                  # P6-B7 の新規 module だけ
     assert set(changed) <= {f"src/intelligence/theme_intelligence/{name}" for name in CHANGED_SINCE_B6D}, changed
     for name in FROZEN_RUNTIME:
         if name in CHANGED_SINCE_B6D:
