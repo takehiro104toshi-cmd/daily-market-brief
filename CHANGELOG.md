@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.40 (2026-09-25) — Phase 6 P6-B7G adversarial end-to-end validation（B7B → B7C → B7E → B7D → B7F）
+
+B7 の LLM 提案経路全体（上流 PIT authority → B7C manifest → B7E 生成入力 → Fake / Recorded provider → B7B 厳格 parse →
+B7D 検証 → B7F check-then-reuse 提出 → 既存 B3 / B5C 提案 authority）を敵対的に end-to-end で検証した。検証 gate であり、
+production runtime は変更していない（B7B `e2aa991`・B7C `95e04ae`・B7D `c240f68`・B7E `695227a`・B7F `d06dd1b`・
+Foundation / B1〜B6、knowledge、config、workflow、scripts は不変）。実 provider・network・資格情報・人間の decision は無い。
+
+### 追加 — `tests/intelligence/test_theme_llm_adversarial_e2e.py`【新規】
+
+E2E matrix A〜BO ＋ BP / BQ（124 test）: 3 family の正常系・棄権・不正 JSON / schema / 検証・prompt injection・handle 攻撃・
+manifest 束縛・未来状態の分離（S〜X）・knowledge pin・provenance 昇格・SOURCE_ASSERTED・THEME evidence の CONTEXT・
+CONTRADICTS / INVALIDATES・再利用 / 収束 / 衝突・複数 plan / 部分書き込み・生成監査 journal の境界・generation_ref と
+実在しない root の境界分析・破損・秘匿・書き込み inventory・実 provider なし・凍結の連鎖（B6 llm 例外の再監査を含む）・
+guard の敵対的注入（10 種）。scratch の git clone での mutation campaign（必須 M1〜M16、M12 は 2 種）をすべて検出。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_ADVERSARIAL_E2E_VALIDATION_REPORT.md`【新規】
+
+検証報告（22 節）: 経路、authority の上限（L1）、正常系、棄権 / 拒否、攻撃、PIT、knowledge pin、provenance /
+SOURCE_ASSERTED、重複 / 再利用 / 衝突、複数 plan / 部分書き込み、生成監査 journal の境界、generation_ref の判定
+（ACCEPTABLE_BOUNDARY）、実在しない root の判定（ACCEPTABLE_BOUNDARY・監督判断の候補）、破損、秘匿、書き込み inventory、
+凍結の連鎖、guard / mutation、実データ shadow（NOT_RUN・理由付き）、blocker（なし）、deferred、判定。
+
 ## v5.39 (2026-09-25) — Phase 6 P6-B7F validated plan → existing proposal authority（CHECK-THEN-REUSE SUBMISSION BRIDGE）
 
 B7D の検証済み plan を、既存の B3 提案 journal / B5C 関係提案 journal へ check-then-reuse で提出する bridge を実装した。
