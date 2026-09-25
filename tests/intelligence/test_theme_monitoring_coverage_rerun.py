@@ -119,14 +119,31 @@ def git(*args: str, text: bool = True):
 
 # ================================================================ §1 / §18 runtime freeze
 
+def is_b7_addition(status: str, path: str) -> bool:
+    """P6-B7 以降に**新規追加**された LLM 提案層 module（`theme_intelligence/llm_*.py`）だけを除外する。既存 file の変更は除外しない。"""
+    parent, _, name = path.rpartition("/")
+    return (status in ("A", "??") and parent == "src/intelligence/theme_intelligence" and name.startswith("llm_")
+            and name.endswith(".py"))
+
+
+def runtime_changes(anchor: str) -> set:
+    changed = set()
+    for line in git("diff", "--name-status", anchor, "--", *RUNTIME_SURFACE).splitlines():
+        status, path = line.split("\t", 1)
+        if not is_b7_addition(status[:1], path):
+            changed.add(path)
+    return changed
+
+
 def test_01_no_runtime_file_changed_since_the_b6r1_anchor() -> None:
-    assert git("diff", "--name-only", B6R1_ANCHOR, "--", *RUNTIME_SURFACE).split() == []
-    assert git("status", "--porcelain", "--", *RUNTIME_SURFACE).strip() == ""
+    assert runtime_changes(B6R1_ANCHOR) == set()
+    pending = [line for line in git("status", "--porcelain", "--", *RUNTIME_SURFACE).splitlines()
+               if not is_b7_addition(line[:2].strip(), line[3:])]
+    assert pending == []
 
 
 def test_02_the_only_runtime_change_since_the_b6_freeze_is_the_three_approved_modules() -> None:
-    changed = set(git("diff", "--name-only", B6_FREEZE, "--", *RUNTIME_SURFACE).split())
-    assert changed == {f"src/intelligence/theme_intelligence/{name}" for name in B6R1_MODULES}
+    assert runtime_changes(B6_FREEZE) == {f"src/intelligence/theme_intelligence/{name}" for name in B6R1_MODULES}
 
 
 @pytest.mark.parametrize("path", ["src/intelligence/theme_intelligence/monitoring_model.py",

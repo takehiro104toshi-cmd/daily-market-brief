@@ -4,6 +4,43 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.35 (2026-09-25) — Phase 6 P6-B7B LLM proposal model / schema（PURE MODEL ONLY）
+
+B7 の純 model / schema だけを実装した。provider・network・bridge・store・input manifest・PIT 解決・意味検証は実装していない。
+Foundation / B1〜B6 の runtime、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_proposal_model.py`【新規】
+
+- 5 層を分離: 生成要求 `LlmGenerationRequest`（caller 注入の時刻、manifest digest、knowledge pin）、構造化出力
+  `LlmGenerationEnvelope`（`CANDIDATES` 1〜16 件か `ABSTAIN` のちょうど 1 つ）、候補 `LlmCandidate` と kind 別 payload
+  （EVIDENCE / THEME / RELATION。既存 B3 / B5C 型への対応だけ、DEDUP_REVIEW なし）、棄権 `LlmAbstention`（5 値）、
+  監査 record `LlmGenerationRecord`（raw response は digest のみ、provider / model は provenance だけ）。
+- opaque handle（`EV_` / `TH_` / `REL_` / `ENT_` / `MON_` / `CQ_` / `IC_`）を欄ごとの種別で検査。authority id ・path・URL は handle にならない。
+- 厳格 schema: 全 depth で未知 field を拒否（authority・score・秘密値・推論過程の field は存在しない）、重複 JSON key・NaN・
+  code fence・前後の説明文・数値を拒否、件数と長さの上限、1 か所でも違反すれば**生成全体を拒否**（部分採用なし）。
+- identity: request id（generated_at・provider・model を含まない）、生成 id（出来事の内容）、output digest、response digest。
+  候補には identity を与えない（最終 identity は handle 解決後の B3 / B5C 内容 id）。
+- canonical 化: 非意味的な list（候補・handle・component 等）を整列。文の Unicode / case は正規化しない（B7D の責務）。
+
+### 追加 — `tests/intelligence/test_theme_llm_proposal_model.py`【新規】
+
+正常形 4 種、未知 field（全 depth）、authority / 数値 / security field（50 種 × 2 階層）、schema version、enum、outcome の排他、
+空出力、全体拒否（無効候補をどの位置に置いても全体が失敗）、上限超過（切り詰めない）、JSON の崩れ、handle の書式と種別、
+Theme / relation の構造、文の検査、canonical replay、identity、provider / model の非意味性、時刻、record の整合、純粋性。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: B7 module を登録（MODULES / LLM_MODULES / IDENTITY_MODULES / 閉包）し、
+  上流が B7 を import しないこと、`llm_*.py` がすべて登録済みで subpackage に逃げないこと、B7 が store・bridge・network・
+  provider・公開経路へ到達しないことを追加。
+- B6 の凍結 pin（`test_theme_monitoring_e2e.py` / `test_theme_monitoring_e2e_rerun.py` / `test_theme_monitoring_coverage_rerun.py`）を、
+  **新規追加の `theme_intelligence/llm_*.py` だけ**を除外するよう更新（既存 file の変更は従来どおり検出）。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_PROPOSAL_MODEL_CONTRACT.md`【新規】
+
+authority 分類、層、candidate kind、field 表、有界語彙、identity、canonical 化、全体拒否、security の構造的排除、
+構造検査と意味検査の境界、deferred。
+
 ## v5.34 (2026-09-24) — Phase 6 P6-B7A LLM proposal layer の architecture / contract audit（DESIGN / AUDIT ONLY）
 
 B7（LLM 提案層）の実装前 audit。**runtime・test・knowledge・config・workflow・scripts は変更していない**

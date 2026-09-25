@@ -116,9 +116,11 @@ B6R1_CHANGED = ("monitoring_adapter.py", "monitoring_engine.py", "monitoring_run
 
 
 def test_01_no_runtime_surface_changed_since_the_r1_anchor() -> None:
-    changed = subprocess.run(["git", "diff", "--name-only", R1_ANCHOR, "--", "src", "knowledge", "config.yaml",
-                              ".github", "scripts"], cwd=REPO_ROOT, capture_output=True, text=True,
-                             check=True).stdout.split()
+    lines = subprocess.run(["git", "diff", "--name-status", R1_ANCHOR, "--", "src", "knowledge", "config.yaml",
+                            ".github", "scripts"], cwd=REPO_ROOT, capture_output=True, text=True,
+                           check=True).stdout.splitlines()
+    changed = [path for status, path in (line.split("\t", 1) for line in lines)
+               if not (status == "A" and path.startswith("src/intelligence/theme_intelligence/llm_"))]   # P6-B7 の新規 module
     assert set(changed) <= {f"src/intelligence/theme_intelligence/{name}" for name in B6R1_CHANGED}, changed
 
 

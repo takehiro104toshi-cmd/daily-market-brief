@@ -736,9 +736,11 @@ CHANGED_SINCE_B6D = ("monitoring_adapter.py", "monitoring_engine.py", "monitorin
 def test_e01_the_frozen_runtime_is_untouched() -> None:
     """B6D anchor 以降に変わってよい runtime は B6D-R1 と P6-B6R1 の remediation 対象だけである。"""
     import subprocess
-    changed = subprocess.run(["git", "diff", "--name-only", "8ef09ab1db447ad783defd0c6afecd3e943edcfe", "--",
-                              "src/intelligence/theme_intelligence", "knowledge/theme_intelligence"],
-                             cwd=REPO_ROOT, capture_output=True, text=True, check=True).stdout.split()
+    lines = subprocess.run(["git", "diff", "--name-status", "8ef09ab1db447ad783defd0c6afecd3e943edcfe", "--",
+                            "src/intelligence/theme_intelligence", "knowledge/theme_intelligence"],
+                           cwd=REPO_ROOT, capture_output=True, text=True, check=True).stdout.splitlines()
+    changed = [path for status, path in (line.split("\t", 1) for line in lines)
+               if not (status == "A" and path.startswith("src/intelligence/theme_intelligence/llm_"))]   # P6-B7 の新規 module
     assert set(changed) <= {f"src/intelligence/theme_intelligence/{name}" for name in CHANGED_SINCE_B6D}, changed
     for name in FROZEN_RUNTIME:
         if name in CHANGED_SINCE_B6D:
