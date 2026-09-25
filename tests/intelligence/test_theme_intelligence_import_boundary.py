@@ -39,11 +39,19 @@ MODULES = ("__init__", "model", "change", "lifecycle_model", "lifecycle", "propo
            # P6-B7C: LLM 入力 manifest（純 model と、PIT 入口だけを読む read-only builder）
            "llm_manifest_model", "llm_manifest_builder",
            # P6-B7D: 検証済み提案 plan の純 model と決定論的な意味検証（純。data root・store・provider を持たない）
-           "llm_plan_model", "llm_validator")
+           "llm_plan_model", "llm_validator",
+           # P6-B7E: 生成入力・provider protocol（fake / recorded のみ）・生成結果 / 監査 record・生成監査 journal・orchestration
+           "llm_generation_input", "llm_provider", "llm_generation_model", "llm_generation_journal", "llm_generation")
 #: P6-B7: LLM 提案層（authority の手前の非 authority 層）。上流は B7 を import しない
-LLM_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_manifest_builder", "llm_plan_model", "llm_validator")
+LLM_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_manifest_builder", "llm_plan_model", "llm_validator",
+               "llm_generation_input", "llm_provider", "llm_generation_model", "llm_generation_journal",
+               "llm_generation")
 #: B7 のうち I/O を一切持たない純 module
-LLM_PURE_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_plan_model", "llm_validator")
+LLM_PURE_MODULES = ("llm_proposal_model", "llm_manifest_model", "llm_plan_model", "llm_validator",
+                    "llm_generation_input", "llm_provider", "llm_generation_model", "llm_generation")
+#: P6-B7E: B7 で唯一の書き込み面（生成監査 journal。authority ではない）。書いてよいのは自分の 1 file だけ
+LLM_AUDIT_JOURNAL_MODULES = ("llm_generation_journal",)
+LLM_AUDIT_JOURNAL_TOKENS = ("open(", "write", "mkdir")
 #: B7 のうち既存の PIT 入口（read-only）だけを通して data root を読む module。許すのは data_root という語と次の import だけ
 LLM_READ_MODULES = ("llm_manifest_builder",)
 LLM_READ_ENTRY_POINTS = {"..themes.resolver": {"ResolutionStatus", "resolve_at_data_root"},
@@ -52,10 +60,10 @@ LLM_READ_ENTRY_POINTS = {"..themes.resolver": {"ResolutionStatus", "resolve_at_d
 MONITORING_MODULES = ("monitoring_model", "monitoring_rules", "monitoring_engine", "monitoring_store",
                       "monitoring_adapter", "monitoring_runner")
 IO_MODULES = ("proposal_store", "relation_store", "relation_proposal_store",
-              "monitoring_store", "monitoring_runner")   # 追記専用 JSONL と read-only な読み取りのみ
+              "monitoring_store", "monitoring_runner", "llm_generation_journal")   # 追記専用 JSONL と read-only な読み取りのみ
 IDENTITY_MODULES = ("proposal_model", "relation_model", "relation_proposal_model",
                     "monitoring_model", "monitoring_adapter", "llm_proposal_model", "llm_manifest_model",
-                    "llm_plan_model")            # content id を計算する module
+                    "llm_plan_model", "llm_generation_input", "llm_generation_model")            # content id を計算する module
 KNOWLEDGE_YAML_MODULES = ("knowledge_loader",)                           # P6-B4B: read-only YAML loader（書き込みなし）
 KNOWLEDGE_PATH_MODULES = ("taxonomy", "entity_catalog", "discovery_rules", "monitoring_rules")   # P6-B4B / B4C: pathlib.Path を型として受けるだけ
 INPUT_MODEL_MODULES = ("discovery_adapter",)                             # P6-B4C: 許可された入力 model module（model のみ）を import する唯一の module
@@ -81,7 +89,10 @@ ALLOWED_RELATIVE = {"..core.ids", "..core.time", "..themes.model", "..themes.fin
                     ".relation_model", ".relation_resolution", ".relation_proposal_model",
                     ".relation_proposal_resolution",
                     # P6-B7B / P6-B7C / P6-B7D（B7 内部の依存。上流から B7 への import は別 test が禁止する）
-                    ".llm_proposal_model", ".llm_manifest_model", ".llm_plan_model"}
+                    ".llm_proposal_model", ".llm_manifest_model", ".llm_plan_model",
+                    # P6-B7E（orchestration が B7B〜B7D と生成監査 journal を読む）
+                    ".llm_validator", ".llm_generation_input", ".llm_provider", ".llm_generation_model",
+                    ".llm_generation_journal"}
 #: resolver が store を import するため closure に store は含まれる（read-only API の到達性）。operations / revision は含まれない
 ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.intelligence.themes.revision"}) | {
     "src.intelligence.theme_intelligence", "src.intelligence.theme_intelligence.model",
@@ -114,7 +125,11 @@ ALLOWED_CLOSURE = (THEMES_CLOSURE - {"src.intelligence.themes.operations", "src.
     "src.intelligence.theme_intelligence.llm_manifest_model", "src.intelligence.theme_intelligence.llm_manifest_builder",
     "src.intelligence.theme_intelligence.monitoring_model",
     # P6-B7D: plan model と validator（B3 / B5C の model を材料の型としてだけ読む。store / bridge は含まれない）
-    "src.intelligence.theme_intelligence.llm_plan_model", "src.intelligence.theme_intelligence.llm_validator"}
+    "src.intelligence.theme_intelligence.llm_plan_model", "src.intelligence.theme_intelligence.llm_validator",
+    # P6-B7E: 生成層（fake / recorded provider のみ。network・SDK・authority store は含まれない）
+    "src.intelligence.theme_intelligence.llm_generation_input", "src.intelligence.theme_intelligence.llm_provider",
+    "src.intelligence.theme_intelligence.llm_generation_model",
+    "src.intelligence.theme_intelligence.llm_generation_journal", "src.intelligence.theme_intelligence.llm_generation"}
 FORBIDDEN_MODULE_TOKENS = ("compass", "reports", "predictions", "internals", "context", "market", "ingestion",
                            "normalization", "databank", "sources", "facts", "evidence", "notifiers", "analysis",
                            "collectors", "legacy", "paths", "sqlite3", "requests", "urllib", "socket", "http",
@@ -177,6 +192,7 @@ def test_runtime_closure_is_foundation_read_surface_and_this_package_only() -> N
             "import src.intelligence.theme_intelligence.llm_proposal_model\n"
             "import src.intelligence.theme_intelligence.llm_manifest_model, src.intelligence.theme_intelligence.llm_manifest_builder\n"
             "import src.intelligence.theme_intelligence.llm_plan_model, src.intelligence.theme_intelligence.llm_validator\n"
+            "import src.intelligence.theme_intelligence.llm_generation, src.intelligence.theme_intelligence.llm_provider\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src.'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
@@ -248,7 +264,9 @@ def test_proposal_modules_never_execute_foundation_operations_or_append_to_found
                  "relation_graph", "relation_store", "relation_proposal_model", "relation_proposal_resolution",
                  "relation_proposal_bridge", "relation_proposal_store",
                  "monitoring_store", "monitoring_adapter", "monitoring_runner", "llm_proposal_model",
-                 "llm_manifest_model", "llm_manifest_builder", "llm_plan_model", "llm_validator"):
+                 "llm_manifest_model", "llm_manifest_builder", "llm_plan_model", "llm_validator",
+                 "llm_generation_input", "llm_provider", "llm_generation_model", "llm_generation_journal",
+                 "llm_generation"):
         source = executable_source(PACKAGE_DIR / f"{name}.py")
         for token in ("execute_candidate", "execute_declaration", "plan_candidate", "plan_merge", "append_root",
                       "append_observation", "append_governance", "append_metadata", "append_mapping", "new_root_id", "new_id(",
@@ -324,8 +342,9 @@ def test_no_upstream_module_imports_the_llm_proposal_layer() -> None:
 def test_every_llm_module_is_registered_and_guarded() -> None:
     present = sorted(p.stem for p in PACKAGE_DIR.glob("llm_*.py"))
     assert present == sorted(LLM_MODULES) and set(LLM_MODULES) <= set(MODULES)
-    assert set(LLM_PURE_MODULES) | set(LLM_READ_MODULES) == set(LLM_MODULES)
+    assert set(LLM_PURE_MODULES) | set(LLM_READ_MODULES) | set(LLM_AUDIT_JOURNAL_MODULES) == set(LLM_MODULES)
     assert not set(LLM_PURE_MODULES) & set(LLM_READ_MODULES)
+    assert not (set(LLM_PURE_MODULES) | set(LLM_READ_MODULES)) & set(LLM_AUDIT_JOURNAL_MODULES)
     assert not [p for p in PACKAGE_DIR.rglob("*.py") if p.parent != PACKAGE_DIR]          # subpackage で guard を逃れない
 
 
@@ -342,6 +361,8 @@ def test_llm_modules_reach_no_store_bridge_network_provider_or_publication_path(
         source = executable_source(PACKAGE_DIR / f"{name}.py")
         for token in ("append_", "execute_", "Store", "environ", "getenv", "LLMProvider", ".complete(", "uuid",
                       "open(", "write", "mkdir", "unlink"):
+            if name in LLM_AUDIT_JOURNAL_MODULES and token in LLM_AUDIT_JOURNAL_TOKENS:
+                continue                                    # P6-B7E: 生成監査 journal 自身の 1 file への追記だけ
             assert token not in source, (name, token)
         if name in LLM_PURE_MODULES:
             assert "data_root" not in source, name
@@ -355,3 +376,25 @@ def test_the_read_only_builder_uses_only_the_pit_entry_points() -> None:
             if isinstance(node, ast.ImportFrom) and ("." * node.level + (node.module or "")) in LLM_READ_ENTRY_POINTS:
                 module = "." * node.level + (node.module or "")
                 assert {alias.name for alias in node.names} <= LLM_READ_ENTRY_POINTS[module], (name, module)
+
+
+def test_the_generation_audit_journal_is_the_only_llm_write_surface() -> None:
+    """P6-B7E §30: 書き込みは生成監査 journal の 1 file だけ。authority・提案・review・公開経路へは書かない。"""
+    journal = PACKAGE_DIR / "llm_generation_journal.py"
+    source = executable_source(journal)
+    assert source.count(".jsonl") == 1 and "llm_generation_records.jsonl" in source
+    assert {m for m in imported_modules(journal) if m.startswith(".")} == {".llm_generation_model"}
+    for name in LLM_MODULES:
+        text = executable_source(PACKAGE_DIR / f"{name}.py")
+        for token in ("append_proposal", "append_decision", "append_assertion", "append_event", "append_governance",
+                      "append_review_state", "append_root", "append_observation", "ProposalStore",
+                      "RelationProposalStore", "ThemeRelationStore", "MonitoringReviewStore", "ThemeStore",
+                      "attach_evidence", "notifier", "publish_", "publication"):
+            assert token not in text, (name, token)
+        if name not in LLM_AUDIT_JOURNAL_MODULES:
+            assert "fsync" not in text and "open(" not in text and ".jsonl" not in text, name
+    importers = sorted(str(path.relative_to(REPO_ROOT)) for path in (REPO_ROOT / "src").rglob("*.py")
+                       if any(m.endswith("llm_generation_journal") for m in imported_modules(path)))
+    assert importers == ["src/intelligence/theme_intelligence/llm_generation.py"], importers
+    assert not any(m.endswith(("llm_generation_journal", "llm_generation_model", "llm_generation"))
+                   for m in imported_modules(PACKAGE_DIR / "llm_generation_input.py"))   # 生成入力は journal を読まない

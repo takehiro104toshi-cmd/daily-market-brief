@@ -4,6 +4,59 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.38 (2026-09-25) — Phase 6 P6-B7E generation adapter ＋ generation audit journal（FAKE / RECORDED PROVIDER ONLY）
+
+B7C manifest → 生成入力 → provider（fake / recorded のみ）→ B7B の厳格 parse → B7D の検証 → 生成結果、の非 authority な
+orchestration と、B7A Option C の生成監査 journal（追記専用・OPERATIONAL / AUDIT）を実装した。実 provider・network・
+API key・提案の提出・人間の決定・公開出力は無い。B7B（`e2aa991`）・B7C（`95e04ae`）・B7D（`c240f68`）・Foundation /
+B1〜B6 の runtime、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation_input.py`【新規】
+
+versioned prompt contract（`theme_llm_prompt:0.1.0`）と task contract、`prepare_generation`（request ＋ manifest の visible
+JSON だけから byte 一致の生成入力を組む。指示と data を別の欄に分ける。束縛が違えば provider を呼ばない）。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_provider.py`【新規】
+
+狭い provider protocol（生成入力を受け取り raw の文字列を返すだけ）と `FakeProvider` / `RecordedProvider`（生成入力
+digest に束縛した offline replay）。network・SDK・資格情報なし。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation_model.py`【新規】
+
+生成結果（VALIDATED / ABSTAINED / REJECTED_GENERATION / RETRYABLE_FAILURE / INTEGRITY_FAILURE）と生成監査 record
+（request・試行・監査 record・提案 plan の identity を分離。raw response は digest だけ）。失敗の分類表
+（`classify_failure`）と凍結文言（`VALIDATED_MEANING` 等）。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation_journal.py`【新規】
+
+`<data_root>/theme_intelligence/llm_generation_records.jsonl`（B7E で唯一の書き込み面）。canonical JSONL・fsync・
+同一 record は冪等・同じ試行の異なる record は CONFLICT・破損は fail closed・修復なし。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation.py`【新規】
+
+`run_generation`: provider 呼び出しは 1 回だけ（引き直しなし）、修復なしの parse、B7D の検証、監査 record、journal への
+追記。journal が使えなければ生成しない。journal の内容を生成入力にしない。
+
+### 追加 — test
+
+- `tests/intelligence/test_theme_llm_generation.py`【新規】: test matrix A〜AP と identity の分離・監査 record の整合・
+  失敗の分類表・生成 record は evidence にならない・error の秘匿・prompt contract の文言。scratch copy での mutation
+  12 種（必須 M1〜M7 ＋ 5 種）をすべて検出。
+- `tests/intelligence/llm_generation_fixtures.py`【新規】: RecordedProvider の合成 fixture（生成入力 digest に束縛）。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: B7E の 5 module を登録。書き込み面を `LLM_AUDIT_JOURNAL_MODULES`
+  （生成監査 journal だけ）として区別し、その module だけに `open(` / `write` / `mkdir` を許す。journal を import できるのは
+  orchestration だけ、B3 / B5C / Foundation / review の追記 API・store class は全 B7 module で不在、を追加。B7B〜B7D の
+  guard は緩めていない。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_GENERATION_LAYER_CONTRACT.md`【新規】
+
+authority 分類、pipeline、provider protocol、prompt contract、生成入力、raw response の扱い、結果 model、監査 record、
+journal の意味論、identity と冪等性、棄権、failure の分類、replay、自己強化の禁止、security、zero-authority-write、
+破損、凍結の境界（B6 pin の llm 例外の再監査を含む）、deferred、実 provider の境界。
+
 ## v5.37 (2026-09-25) — Phase 6 P6-B7D deterministic semantic validator（GROUNDING / NORMALIZATION / PROPOSAL PLAN ONLY）
 
 B7B の構造化出力を、その要求の B7C manifest に対してだけ決定論的に検証し、既存の B3 / B5C constructor へ意味の即興なしに
