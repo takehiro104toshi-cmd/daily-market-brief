@@ -4,6 +4,48 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.44 (2026-09-26) — Phase 7 P7-A1 Narrative semantics ＋ pure model（DERIVED / NON-AUTHORITY / NON-PERSISTENT）
+
+Phase 7 Narrative Intelligence の意味論と純 model。PIT の組み立て・engine・描画・永続化・LLM・provider・公開出力は作っていない。
+Phase 6 の runtime・P4・P5・Production DNA・公開出力・workflow・config は変更していない（Phase 6 の test には §35 の test-only の
+登録だけ）。
+
+### 追加 — `src/intelligence/narrative_intelligence/`【新規 package】
+
+- `__init__.py`【新規】: package の境界の説明だけ。
+- `synthesis_model.py`【新規】: `NarrativeSynthesis`（THEME_STATE ／ THEME_SET）と `NarrativeClaim`。認識 class 5 つ（OBSERVED_FACT・
+  REVIEWED_INTERPRETATION・DERIVED_SYNTHESIS・UNCERTAINTY・ALTERNATIVE_HYPOTHESIS。SCENARIO_CONDITION は不採用で入力に現れたら拒否）、
+  claim kind 6 つ、predicate 11、許される (class, kind, predicate) の組 12、閉じた不確実性 code 5 つ、型付き opaque ref 7 型
+  （reviewed observation・機構 component・無効化条件・evidence attachment・evidence item・B1 の変化・B5B の relation）。reviewed の
+  天井は ACCEPTED だけ。事実と解釈の guard（解釈だけを引く事実・文書 ／ 報道の事実化・推定時刻の事実化を拒否）、role の書き換えの
+  検出、支持と反証・仮説の機構・無効化 evidence を隠さない規則、SOURCE_ASSERTED の帰属、直接の辺だけの relation、勝者なしの代替、
+  PIT（cutoff より後の ref を拒否）、content-addressed な claim id ／ synthesis id（時計・乱数・運用 metadata なし）、非意味的な集合の
+  正規化、厳格な直列化の復元（禁止 ／ 未知 ／ 欠落 field・型・非 canonical・id の改ざん・重複 key）。自由文・数値・順位・確信度の
+  field なし。import は標準 library と `core.ids` ／ `core.time` だけ（Phase 6 の語彙は複製し、一致を test で固定）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_synthesis_model.py`【新規】: matrix A〜AO（514 件。class × kind × predicate の総当たり 318 件を含む）。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`【新規】: matrix AP〜AS（import 境界・runtime closure・I/O ／ 時計 ／
+  乱数 ／ network ／ 永続化なし・上流からの非参照・production bundle 外・Phase 6 と A0 の凍結・登録の宣言との一致）と、Phase 6 の
+  語彙 ／ 形式との一致、Phase 6 の fixture の値を ref に写せること。
+- `tests/intelligence/phase7_runtime_registry.py`【新規】: Phase 7 runtime の登録 helper（登録 file の追加だけを Phase 6 の凍結 guard
+  から除く literal な pathspec と、Phase 6 の test に入れた登録の行の宣言）。
+
+### 改善 — Phase 6 の凍結 guard への test-only の登録（runtime 変更 0 行）
+
+Phase 6 の凍結 guard は HEAD の `src` 全体を固定していたため、登録した Phase 7 の file の追加だけを除く 1〜2 行を入れた:
+`test_theme_phase6_completion.py`・`test_theme_llm_closeout.py`（B6 pin を「B7C anchor ＋ 宣言した登録の行だけ」に）・
+`test_theme_llm_adversarial_e2e.py`・`test_theme_llm_generation.py`・`test_theme_llm_submission.py`・`test_theme_llm_validator.py`・
+`test_theme_monitoring_coverage_rerun.py`・`test_theme_monitoring_e2e_rerun.py`。未登録の file の追加は従来どおり失敗する。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、非目標、authority、型、認識 class（6 → 5 の監査）、claim kind、reference model、evidence の role、relation、
+SOURCE_ASSERTED、不確実性、代替、無効化、NarrativeClaim、NarrativeSynthesis、THEME_STATE、THEME_SET、identity、順序、text policy、
+検査、直列化、import 境界（Phase 6 の test への登録の報告を含む）、security、延期（P7-A1-DEF-01〜13）、A2 への引き継ぎ。監督判断
+D-P7-A1-1〜5。
+
 ## v5.43 (2026-09-26) — Phase 7 P7-A0 Narrative Intelligence architecture ＋ existing-system audit（READ-ONLY）
 
 Phase 7 Narrative Intelligence の実装前の architecture 監査。runtime・model・永続化・LLM 接続は作っていない。Phase 6（`5ef313a`）・

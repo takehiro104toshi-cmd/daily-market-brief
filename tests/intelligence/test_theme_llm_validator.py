@@ -53,6 +53,7 @@ from src.intelligence.themes.model import (AssertionProvenance, EvidenceKind, Ev
                                            MechanismCertainty, ProvenanceClass)
 from src.intelligence.themes.resolver import resolve_at_data_root
 from src.intelligence.themes.store import ThemeStore
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 from tests.intelligence.test_theme_llm_input_manifest import (B7B_ANCHOR, CUT, FUTURE, KNOWLEDGE_ROOT, LATER,
                                                               PACKAGE_DIR, REPO_ROOT, SCOPE, _seed, build,
@@ -792,6 +793,7 @@ def test_ak_the_b7c_modules_are_byte_identical_to_their_anchor(name: str) -> Non
 
 def test_al_upstream_runtime_is_unchanged_since_the_b7c_freeze() -> None:
     surface = ("src", "knowledge", "config.yaml", ".github", "scripts")
+    surface += PHASE7_EXCLUDED_PATHSPECS                                         # Phase 7 の登録済み runtime
     changes = [line.split("\t") for line in _git("diff", "--name-status", B7C_ANCHOR, "--", *surface).splitlines()]
     pending = [(line[:2].strip(), line[3:]) for line in _git("status", "--porcelain", "--", *surface).splitlines()]
     for status, path in [(c[0], c[-1]) for c in changes] + pending:

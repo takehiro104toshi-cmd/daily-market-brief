@@ -50,6 +50,7 @@ from src.intelligence.theme_intelligence.relation_resolution import (RelationRes
                                                                      endpoint_lookup_from_roots,
                                                                      resolve_relation_graph)
 from src.intelligence.themes.resolver import resolve_at_data_root
+from tests.intelligence.phase7_runtime_registry import is_phase7_addition
 from tests.intelligence.test_prediction_record import executable_source
 from tests.intelligence.theme_freeze_pins import is_new_llm_module
 from tests.intelligence.test_theme_model import ROOT_A, ROOT_B, ROOT_C
@@ -120,6 +121,7 @@ def test_01_no_runtime_surface_changed_since_the_r1_anchor() -> None:
     lines = subprocess.run(["git", "diff", "--name-status", R1_ANCHOR, "--", "src", "knowledge", "config.yaml",
                             ".github", "scripts"], cwd=REPO_ROOT, capture_output=True, text=True,
                            check=True).stdout.splitlines()
+    lines = [line for line in lines if not is_phase7_addition(*line.split("\t", 1))]   # Phase 7 の登録済み追加
     changed = [path for status, path in (line.split("\t", 1) for line in lines)
                if not is_new_llm_module(status, path)]                                  # P6-B7 の新規 module だけ
     assert set(changed) <= {f"src/intelligence/theme_intelligence/{name}" for name in B6R1_CHANGED}, changed

@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPLETION_DOC = REPO_ROOT / "docs" / "databank" / "PHASE6_THEME_INTELLIGENCE_COMPLETION_AUDIT.md"
 PHASE5_CLOSEOUT = "edbd0f203fd2b96a5dbfff921ccf0ba584cbef88"
@@ -52,6 +54,7 @@ ORDER = ("Foundation", "B1", "B2", "B3", "B4", "B5", "B6", "B7")
 #: runtime・knowledge・config・workflow・scripts・公開出力（Pages）・data・legacy entry・依存
 SURFACE = ("src", "knowledge", "config.yaml", ".github", "scripts", "docs/pages", "data", "main.py", "requirements.txt",
            "pyproject.toml")
+SURFACE += PHASE7_EXCLUDED_PATHSPECS   # Phase 7 の登録済み runtime だけを除く（phase7_runtime_registry）
 #: 後の gate が前の gate の test に加えた変更（guard / pin の登録だけ。runtime には効かない）
 TEST_ACCOMMODATIONS = {
     "B1": {"test_theme_import_boundary.py"},

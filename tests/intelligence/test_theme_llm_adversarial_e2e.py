@@ -72,6 +72,7 @@ from src.intelligence.themes.resolver import ResolutionStatus, resolve_at_data_r
 from src.intelligence.themes.revision import attach_evidence
 from src.intelligence.themes.store import ThemeStore
 from tests.intelligence import test_theme_intelligence_import_boundary as guard
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS
 from tests.intelligence.test_prediction_record import executable_source
 from tests.intelligence.test_theme_discovery import document, fact, news, observation
 from tests.intelligence.test_theme_llm_input_manifest import (B7B_ANCHOR, CUT, FUTURE, KNOWLEDGE_ROOT, LATER,
@@ -1146,6 +1147,7 @@ def test_bh_to_bl_every_frozen_b7_module_is_byte_identical_to_its_anchor(name: s
 
 def test_bm_upstream_runtime_is_frozen() -> None:
     surface = ("src", "knowledge", "config.yaml", ".github", "scripts", "docs/v2")
+    surface += PHASE7_EXCLUDED_PATHSPECS                                         # Phase 7 の登録済み runtime
     since_b6 = [line.split("\t") for line in _git("diff", "--name-status", B6_ANCHOR, "--", *surface).splitlines()]
     assert since_b6 and all(status == "A" and Path(path).stem in FROZEN_B7_MODULES for status, path in since_b6)
     assert _git("diff", "--name-status", B7F_ANCHOR, "--", *surface) == ""           # B7G は runtime を変えない

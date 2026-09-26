@@ -44,6 +44,7 @@ from src.intelligence.theme_intelligence.relation_proposal_model import Relation
 from src.intelligence.theme_intelligence.relation_proposal_store import RelationProposalStore
 from src.intelligence.theme_intelligence.taxonomy import load_taxonomy_version, taxonomy_path
 from src.intelligence.themes.model import AssertionProvenance, MechanismCertainty, ProvenanceClass
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 from tests.intelligence.test_theme_llm_input_manifest import (B7B_ANCHOR, CUT, KNOWLEDGE_ROOT, PACKAGE_DIR, REPO_ROOT,
                                                               _seed, build, inventory)
@@ -675,6 +676,7 @@ def test_aw_to_az_every_frozen_b7_module_is_byte_identical_to_its_anchor(name: s
 
 def test_ba_upstream_runtime_is_unchanged_since_the_b7e_freeze() -> None:
     surface = ("src", "knowledge", "config.yaml", ".github", "scripts")
+    surface += PHASE7_EXCLUDED_PATHSPECS                                         # Phase 7 の登録済み runtime
     changes = [line.split("\t") for line in _git("diff", "--name-status", B7E_ANCHOR, "--", *surface).splitlines()]
     pending = [(line[:2].strip(), line[3:]) for line in _git("status", "--porcelain", "--", *surface).splitlines()]
     for status, path in [(c[0], c[-1]) for c in changes] + pending:

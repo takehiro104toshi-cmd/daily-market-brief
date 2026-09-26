@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS, only_phase7_registration
 from tests.intelligence.theme_freeze_pins import ADDITION_STATUSES, NEW_LLM_MODULE_RE, is_new_llm_module
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -42,6 +43,7 @@ GATES = {
 ORDER = ("B7A", "B7B", "B7C", "B7D", "B7E", "B7F", "B7G")
 #: runtime・knowledge・config・workflow・scripts・公開出力（Pages）・データ root
 SURFACE = ("src", "knowledge", "config.yaml", ".github", "scripts", "docs/pages", "requirements.txt", "pyproject.toml")
+SURFACE += PHASE7_EXCLUDED_PATHSPECS   # Phase 7 の登録済み runtime だけを除く（phase7_runtime_registry）
 PACKAGE = "src/intelligence/theme_intelligence"
 #: B6 の凍結 pin の llm 例外（B7B / B7C で導入）。導入後に広げていないことを確かめる
 EXEMPTION_FILES = {"tests/intelligence/theme_freeze_pins.py": GATES["B7C"][0],
@@ -96,7 +98,8 @@ def test_every_b7_contract_document_is_frozen_at_its_anchor(gate: str) -> None:
 
 @pytest.mark.parametrize("path,anchor", sorted(EXEMPTION_FILES.items()))
 def test_the_historical_b6_llm_exemption_was_not_broadened(path: str, anchor: str) -> None:
-    assert _git("show", f"{anchor}:{path}").stdout == (REPO_ROOT / path).read_text(encoding="utf-8")
+    current = (REPO_ROOT / path).read_text(encoding="utf-8")
+    assert only_phase7_registration(path, _git("show", f"{anchor}:{path}").stdout, current)
 
 
 def test_the_exemption_covers_only_new_top_level_llm_modules() -> None:

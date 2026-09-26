@@ -43,6 +43,7 @@ from src.intelligence.theme_intelligence.llm_provider import (FakeProvider, Prov
 from src.intelligence.theme_intelligence.llm_validator import validate_generation
 from src.intelligence.theme_intelligence.taxonomy import load_taxonomy_version, taxonomy_path
 from tests.intelligence import llm_generation_fixtures as F
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 from tests.intelligence.test_theme_discovery import document, fact, news, observation
 from tests.intelligence.test_theme_llm_input_manifest import (B7B_ANCHOR, CUT, KNOWLEDGE_ROOT, PACKAGE_DIR, REPO_ROOT,
@@ -702,6 +703,7 @@ def test_al_am_an_every_frozen_b7_module_is_byte_identical_to_its_anchor(name: s
 
 def test_ao_upstream_runtime_is_unchanged_since_the_b7d_freeze() -> None:
     surface = ("src", "knowledge", "config.yaml", ".github", "scripts")
+    surface += PHASE7_EXCLUDED_PATHSPECS                                         # Phase 7 の登録済み runtime
     changes = [line.split("\t") for line in _git("diff", "--name-status", B7D_ANCHOR, "--", *surface).splitlines()]
     pending = [(line[:2].strip(), line[3:]) for line in _git("status", "--porcelain", "--", *surface).splitlines()]
     touched = [(c[0], c[-1]) for c in changes] + pending

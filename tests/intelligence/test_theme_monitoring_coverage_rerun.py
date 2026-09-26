@@ -49,6 +49,7 @@ from src.intelligence.theme_intelligence.relation_proposal_store import Relation
 from src.intelligence.theme_intelligence.relation_proposal_store import authority_paths as relation_proposal_paths
 from src.intelligence.theme_intelligence.relation_store import ThemeRelationStore
 from src.intelligence.themes.store import authority_paths as theme_paths
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS
 from tests.intelligence.test_prediction_record import executable_source
 from tests.intelligence.theme_freeze_pins import is_new_llm_module
 from tests.intelligence.test_theme_model import ROOT_A, ROOT_B
@@ -68,6 +69,7 @@ B6_FREEZE = "99d45ef0c1474d5bc66a19c1333eab0b28e2e339"
 B6R1_ANCHOR = "36209010810641c7f6a58c5b9bd0229d45d50401"
 B6R1_MODULES = ("monitoring_adapter.py", "monitoring_engine.py", "monitoring_runner.py")
 RUNTIME_SURFACE = ("src", "knowledge", "config.yaml", ".github", "scripts")
+RUNTIME_SURFACE += PHASE7_EXCLUDED_PATHSPECS   # Phase 7 の登録済み runtime だけを除く（phase7_runtime_registry）
 POLICY = default_lifecycle_policy()
 SCOPE = (ROOT_A, ROOT_B)
 #: runner 経路の cutoff: CA では ROOT_A が ACCEPTED、CR では RETIRED
