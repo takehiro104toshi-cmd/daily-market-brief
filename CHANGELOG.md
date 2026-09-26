@@ -4,6 +4,2577 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.50 (2026-09-26) — Phase 8 P8-A0 Screener Intelligence architecture ＋ data-capability audit（READ-ONLY・文書だけ）
+
+Phase 8 Screener の前提を read-only で監査した。**runtime・schema・model・永続化・J-Quants の live 接続・Theme → 企業の推定・
+順位 ／ score は作っていない**。network ／ API の呼び出しなし。Phase 7（`c1e95d3`）・Phase 6（`5ef313a`）・P4 ／ P5・公開出力は不変。
+
+### 追加 — `docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md`【新規】
+
+36 節の監査: 中核の区別（Company ≠ Security ≠ code、Candidate ≠ 推奨 ≠ thesis）、Phase 8 ／ 9 の境界、既存の資産の分類
+（HEAD の P4 closure・Phase 5〜7・legacy・現在の系統に無い履歴 branch）、J-Quants Light の能力の表（実測の記録だけ。再確認は未実施）、
+SecurityId ／ IssuerId の案、PIT の要件（master の履歴なし・調整後価格の遡及・財務の開示時刻）、財務 ／ 市場の指標の種類、
+Theme → 企業の exposure と受益の model（順位は延期）、authority の梯子、基準の表現、filter と rank、score の方針、Theme ／ P5 ／ DNA ／
+除外する入力の境界、data 品質の語彙、説明の鎖、推奨 ／ 個人化なし、実データの状況（repo と作業環境に実データ・credential なし）、
+package ／ 永続化 ／ governance ／ LLM ／ security、legacy の順位付けの監査、gate 案、Phase 9 への引き継ぎ、監督判断 12 件、所見 9 件
+（P8-OBS-1: HEAD の財務の既知の時刻が開示時刻を無視、P8-OBS-2: light store の索引のずれ ほか。いずれも Phase 6 ／ 7 の変更を要しない）。
+
+### 改善 — `tests/intelligence/test_narrative_intelligence_boundary.py`
+
+Phase 7 の文書の凍結 guard の許可集合に本監査文書の完全な path を 1 件だけ登録（`P8_A0_DOC`）。登録前に guard が本書の追加で落ちる
+ことを確かめた。Phase 7 の runtime ／ 契約 ／ 他の判定は不変。
+
+### 修正
+
+- なし
+
+## v5.49 (2026-09-26) — Phase 7 P7-A5 adversarial end-to-end validation + Phase 7 closeout（test ／ guard ／ 文書だけ）
+
+明示の範囲 ／ cutoff → A2 → A3 → A4a → A4b と、明示の T1 ／ T2 → 差分 → 描画までを、本物の Phase 6 authority（tmp の合成 world）で敵対的に
+検証した。**新しい機能・runtime の変更は無い**（A1〜A4b・Phase 6 の runtime は `b5f3a74` と byte 一致。凍結した runtime に欠陥は見つからず、
+remediation は不要）。実データでの E2E は未実施（`REAL_DATA_E2E = NOT_RUN`）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_phase7_e2e.py`【新規】: matrix E01〜E44（59 件）。THEME_STATE ／ THEME_SET の E2E、歴史の再現
+  （未来の governance ／ observation ／ evidence ／ relation を足しても 4 層の bytes が一致。Foundation の退役 → 取り消し → merge の world も）、
+  反証・無効化条件・INVALIDATES・CONTEXT・観測事実の天井・解釈の天井・機構の確度・relation の向き・SOURCE_ASSERTED・代替の全層での保持、
+  REQUIRED を落とす攻撃、D-P7-A4B-1（提示 ＋ 検証済みの裏付け）の A〜H の攻撃と走査を禁じた索引による証明、B3 ／ B4 ／ B5C ／ B6 ／ B7 ／ P5 の
+  毒入れ・破損・欠落・範囲 ／ cutoff ／ 文字の攻撃、推奨 ／ 順位 ／ 自己学習なし、別 process の byte 一致、書き込み 0 byte、import graph の
+  完全一致、差分の区分の完全一致と非評価、文 → 提示 item → claim → snapshot → Phase 6 authority の追跡の鎖。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: A5 節（Phase 7 の runtime 全体と A1〜A4b の契約が A4b の anchor と byte 一致、
+  `src` ／ `knowledge` ／ 公開面の変更なし）。新しい test file と監査文書を登録。
+- scratch の clone で mutation M01〜M25（未来の Theme ／ evidence ／ relation の漏れ・解釈の事実化・確度の強化・反証 ／ 無効化の削除・
+  CONTEXT → SUPPORTS・SOURCE_ASSERTED の限定の削除・relation の反転 ／ 推移・Theme の順位・確信度・推奨の文・提示の迂回・synthesis の探索・
+  辿れない claim の許可・類似の照合・強まった ／ 改善した・B7 ／ P5 の読み取り・暗黙の現在時刻・cache の書き込み・adapter 以外からの Phase 6 の
+  import）を A5 の E2E で検出（M01b を含む 26 件。M01 の最初の形は B2 が event を chain の id 引きにしか使わないため同値の
+  mutant で、絞り込みを外す形は構造の guard E04b で検出する）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_INTELLIGENCE_COMPLETION_AUDIT.md`【新規】
+
+closeout の監査（28 節）: 判定、範囲、architecture、authority の流れの表（9 状態）、PIT ／ synthesis ／ 提示 ／ 描画の保証、D-P7-A4B-1 の境界、
+反証 ／ 無効化 ／ relation ／ SOURCE_ASSERTED ／ 不確実性 ／ 代替 ／ 差分の保証、再現、書き込みなし、security（所見 P6-OBS-1: Phase 6 の key の
+検査が末尾の改行を受ける。Phase 7 は fail closed）、import の境界、自己学習なし、順位 ／ 推奨なし、合成データの限界、実データの状態、
+延期の登録簿、凍結の anchor、test ／ mutation の一覧、production 接続の前提、P8 への引き継ぎ、最終の判定。
+
+## v5.48 (2026-09-26) — Phase 7 P7-A4b deterministic human-readable narrative renderer（構造 → 日本語の平文。LLM なし）
+
+A4a の `NarrativePresentation` ／ `NarrativeDiff` を、固定の日本語の見出しと静的な template で読める平文にする純関数。
+文言は変えても認識上の意味は変えない。LLM・provider・永続化・公開 / P4 / P8 への接続・個人化・推奨は無い（A5 は未着手）。
+A1（`a02ad60`）・A2（`2dfd85c`）・A3（`9b33609`）・A4a（`50b24ef`）・Phase 6（`5ef313a`）の runtime は byte 一致のまま。
+
+### 追加 — `src/intelligence/narrative_intelligence/rendered_model.py`【新規】
+
+- 不変の描画済み model: `RenderedItem`（A4a の提示 item 1 つ・claim id・参照の印・平文）・`RenderedSection`・`RenderedNarrative`・
+  `RenderedDiffGroup`・`RenderedNarrativeDiff`。言語は日本語だけ（`ja`。0.1.0 で凍結）。
+- 平文の安全: 許可した文字の集合の外（HTML ／ Markdown の記号・`/`・制御文字・双方向制御文字）と URL ／ journal ／ 秘密の語は
+  `UNSAFE_TEXT`。長さ・件数の上限を超えたら `RENDER_LIMIT_EXCEEDED`（切り詰めない）。
+- identity は schema・`narrative_renderer_ja` 0.1.0・言語・提示 ／ 差分の id・描画した構造から決まる（時計・乱数・path なし）。
+
+### 追加 — `src/intelligence/narrative_intelligence/render_templates_ja.py`【新規】
+
+- A4a の規則 P01〜P14 と不確実性 code ごとにちょうど 1 つの template（T01〜T18）。各 template は対象の認識 class を宣言する。
+  解釈は「整理されています」、SOURCE_ASSERTED は「出典は…主張しています。これは出典による主張であり…」、事実は「存在します」、
+  反証は「一方、…矛盾する材料」、代替は「並列に記録されています（順不同）」。汎用の fallback は無い（未対応は `UNSUPPORTED_TEMPLATE`）。
+- 固定の見出し 9 つ ＋ 差分の 3 区分、enum → 日本語の label（component・evidence の種類・時刻の扱い・relation・変化の種類 30）。
+
+### 追加 — `src/intelligence/narrative_intelligence/text_renderer.py`【新規】
+
+- `render_presentation(presentation=..., synthesis=...)`: 提示を作り直して id を確かめ、さらに A4a の `plan_presentation` で synthesis から
+  作り直した提示と byte 一致することを確かめてから、提示の item の順に claim の ref の閉じた属性と key だけで文にする（FULL だけ。
+  REQUIRED を落とした提示・改ざん・別の synthesis は `PRESENTATION_INTEGRITY_FAILURE`）。
+- `render_diff(diff=..., previous=..., current=...)`: A4a の `diff_syntheses` で作り直した差分と一致を確かめ、追加 ／ なくなった ／ 変わらず
+  存在する の 3 区分で同じ template の文にする（強まった ／ 改善した などの評価の語なし）。
+- import は A4a の model ／ planner ／ diff と A1 の型と `core.ids` だけ（A2・A3 engine・adapter・Phase 6・P5・legacy・LLM なし）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_renderer.py`【新規】: matrix A〜BS（88 件）。THEME_STATE の描画の golden・registry の digest を
+  version ごとに固定、文の可変な部分がすべて claim の材料と一致、relation の向き、SOURCE_ASSERTED の限定、REQUIRED を落とした提示の
+  拒否、差分の文言、危険な文字 ／ URL の拒否、open / socket / 時計 / 乱数 / 環境変数を止めても同じ出力、別 process・別 path で byte 一致。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: A4b の import 許可一覧と runtime closure、A1 / A2 / A3 / A4a の byte 凍結
+  （BT〜BW）、Phase 6 の凍結（BX）、A4b を登録した後も未登録の runtime を検出（BY）、module 状態なしを追加。定義名の禁止語 `render` は
+  A4b の 3 module だけ例外。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に A4b の 3 module を登録（Phase 6 を import してよい module は増やさない）。
+- scratch の clone で mutation M1〜M15（解釈の断定化・支持の証明化・反証 / 無効化 / 不確実性の削除・代替の順位付け・SOURCE_ASSERTED の
+  限定の削除・relation の向きの反転・ADDED SUPPORTS → 強まった・REMOVED 反証 → 改善・raw HTML・machine path・推奨の文・LLM provider の
+  import・時計の identity）をすべて検出（内部の検査も外した上で test が検出）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_RENDERER_CONTRACT.md`【新規】
+
+契約（26 節）。設計判断 D-P7-A4B-1〜9（入力の境界は提示 ＋ A4a で検証した synthesis の ref の材料、FULL だけ、中立なテーマの label、
+claim id 由来の参照の印 など）。
+
+## v5.47 (2026-09-26) — Phase 7 P7-A4a narrative presentation model / diff / eligibility（構造だけ。自然文の描画なし）
+
+A1 の `NarrativeSynthesis` → `NarrativePresentation`（提示の構造）と、明示的な 2 つの synthesis → `NarrativeDiff`（構造の差分）の
+純関数。人が読む文章・要約・LLM・provider・永続化・公開 / P4 / P8 への接続は無い（A4b は未着手）。
+A1（`a02ad60`）・A2（`2dfd85c`）・A3（`9b33609`）・Phase 6（`5ef313a`）の runtime は byte 一致のまま。Phase 6 の test の変更も無い。
+
+### 追加 — `src/intelligence/narrative_intelligence/presentation_model.py`【新規】
+
+- 不変の model: `PresentationItem`（claim ちょうど 1 つ）・`PresentationSection`・`NarrativePresentation`・`NarrativeDiffItem`・
+  `NarrativeDiff`。閉じた `SectionKind`（STATE / MECHANISM / EVIDENCE / CONTRADICTION / INVALIDATION / UNCERTAINTY / CHANGE /
+  RELATION / ALTERNATIVES）・`Visibility`（REQUIRED / ELIGIBLE）・`DiffCategory`（ADDED / REMOVED / UNCHANGED だけ）。
+- 静的な規則表 `narrative_presentation_rules` 0.1.0（P01〜P14。A1 の claim の形すべてに 1 つずつ）。反証・無効化・すべての不確実性・
+  代替は REQUIRED。SOURCE_ASSERTED の relation は assertion class が必須。score・順位・確信度・勝者・推奨・文章の field は無い。
+- section の順は提示の順（重要度ではない）、section 内は root id の組 → claim id の canonical な順。並びは constructor が検査する。
+  identity は schema・元の synthesis id・規則表の version・構造から決まる（時計・乱数・path・mtime なし）。
+
+### 追加 — `src/intelligence/narrative_intelligence/presentation_planner.py`【新規】
+
+- `plan_presentation(synthesis)`: synthesis を A1 の厳格な復元で再検証（id・class・kind・predicate・ref・pin の改ざんは fail closed）
+  し、claim を規則表どおりに 1 回ずつ置く。A3 の規則表 pin（0.1.0）を要求する（A3 を import しない）。subject の外に触れる claim は拒否。
+- `validate_display_selection(presentation, claim_ids)`: A4b が一部を見せるとき、見せる Theme の REQUIRED の item を落とす選び方を
+  拒否する（SUPPORTS だけを見せて反証を隠せない）。
+
+### 追加 — `src/intelligence/narrative_intelligence/narrative_diff.py`【新規】
+
+- `diff_syntheses(*, previous, current)`: 両方を明示（keyword だけ・既定値なし・store を読まない）。同じ kind・同じ
+  `narrative_key`・同じ knowledge pin・previous の cutoff < current の cutoff のときだけ比べる（`INCOMPATIBLE_DIFF_INPUTS`）。
+  claim id の完全一致だけで ADDED / REMOVED / UNCHANGED に分ける（類似の照合・MODIFIED・改善 / 強化などの方向の評価なし）。
+- 失敗は INVALID_SYNTHESIS・UNSUPPORTED_SYNTHESIS_VERSION・SYNTHESIS_INTEGRITY_FAILURE・UNSUPPORTED_PRESENTATION_KIND・
+  PRESENTATION_CONFLICT・INCOMPATIBLE_DIFF_INPUTS。import は A1 の純 model と A4a の module だけ（A2・A3 engine・Phase 6 なし）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_presentation_diff.py`【新規】: matrix A〜BH（62 件）。A2 / A3 の本物の world の synthesis で
+  提示・差分を作り、規則表と独立に書き下した期待と 6 通りの synthesis で完全一致を確かめる。open / socket / 時計 / 乱数を止めても
+  同じ出力、別 process・別 hash seed・別 path・mtime の変更で byte 一致。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: A4a の import 許可一覧と runtime closure（A2・A3 engine・adapter・
+  Phase 6・P5・legacy・network に届かない）、A1 / A2 / A3 の byte 凍結（BI〜BK）、Phase 6 の凍結（BL）、A4a を登録した後も未登録の
+  runtime を検出（BM）、module 状態・cache・履歴なしを追加。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に A4a の 3 module を登録（Phase 6 を import してよい module は
+  増やさない）。
+- scratch の clone で mutation M1〜M15（反証 / 無効化の削除・SOURCE_ASSERTED の客観化・Theme の順位付け・確信度の field・重要度の
+  並び・claim の無い item・類似の照合・ADDED SUPPORTS → IMPROVED・REMOVED 反証 → STRENGTHENED・暗黙の前回・cache の書き込み・
+  Phase 6 の import・時計の identity・乱数の並び）をすべて検出（内部の検査も外した上で test が検出）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_PRESENTATION_DIFF_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、A4 の分割、authority の分類、純関数の境界、提示の model、適格、隠さない義務、分類、順序、THEME_STATE、THEME_SET、
+代替、不確実性、SOURCE_ASSERTED、追跡、identity と規則表、差分の目的、呼び出しの契約、比較できる条件、差分の区分、claim identity の
+照合、方向の評価をしない、失敗、security と import 境界、延期、A4b への引き継ぎ。設計判断 D-P7-A4A-1〜11。
+
+## v5.46 (2026-09-26) — Phase 7 P7-A3 deterministic narrative synthesis engine（構造化された claim だけ）
+
+A2 の `NarrativeInputSnapshot` → A1 の `NarrativeSynthesis` の純関数。文章・描画・LLM・provider・永続化・authority の変更は無い。
+A1（`a02ad60`）・A2（`2dfd85c`）・Phase 6（`5ef313a`）の runtime は byte 一致のまま。Phase 6 の test の変更も無い。
+
+### 追加 — `src/intelligence/narrative_intelligence/synthesis_engine.py`【新規】
+
+- `synthesize(snapshot)`: snapshot を A1 / A2 の constructor で作り直して再検証（型・属性の集合・ref の A1 検査・snapshot id と
+  canonical bytes・B2 の flag と attachment の関係）し、静的な規則表（`narrative_synthesis_rules` 0.1.0、R01〜R14）だけから claim を
+  作り、同じ claim id を収束させて A1 の constructor で synthesis を作る。
+- 規則: reviewed の状態・記録された機構 component・仮説の機構の不確実性・すべての role の attachment（CONTEXT は CONTEXT のまま）・
+  支持と反証の両方を示す CONTESTED・B2 の NO_VISIBLE_EVIDENCE / SINGLE_SOURCE / STALE の不確実性・無効化条件と INVALIDATES の
+  evidence・FACT / OBSERVATION の記録だけの観測事実（内容を発明しない）・比較 cutoff があるときだけの変化・THEME_SET の明示の
+  relation（SOURCE_ASSERTED はそのまま・逆向き / 推移なし）・同じ ref_id を SUPPORTS として持つ Theme の並びだけの代替（勝者なし）。
+- snapshot の provenance は A1 の `input_digest`（＝ snapshot id）、規則表の version は A1 の `knowledge_pins` に束ねる（A1 を
+  変えない）。失敗は INVALID_SNAPSHOT・UNSUPPORTED_SNAPSHOT_VERSION・UNSUPPORTED_KIND・SNAPSHOT_INTEGRITY_FAILURE・CLAIM_CONFLICT・
+  NO_JUSTIFIED_CLAIMS・MODEL_CONTRACT_MISMATCH。import は A1 / A2 の純 model と標準 library だけ（pit_assembler・Phase 6 なし）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_synthesis_engine.py`【新規】: matrix A〜BN（62 件。A2 の本物の組み立てから作った snapshot。
+  規則表を engine と独立に書き下した期待と 7 通りの snapshot で完全一致・改ざんの検出・open / socket / 時計 / 乱数を止めても同じ
+  出力・data_root を消しても同じ出力・別 process で byte 一致・実行順で変わらない）。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: engine の import 許可一覧と runtime closure（adapter・Phase 6・P5・
+  legacy・network に届かない）、A2 の byte 凍結、未登録の Phase 7 runtime の検出、engine の module 状態なしを追加。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に `synthesis_engine.py` を登録（Phase 6 を import してよい
+  module は増やさない）。
+- scratch の clone で mutation M1〜M15（M12 は pit_assembler と Phase 6 store の 2 通り）をすべて検出。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、authority、純関数の境界、入力の再検証、規則表、THEME_STATE、THEME_SET、解釈、機構、SUPPORTS、CONTRADICTS、
+CONTEXT、INVALIDATES、不確実性、代替、変化、relation、SOURCE_ASSERTED、観測事実の天井、収束、順序、identity と provenance、失敗、
+自己学習しない、security と import 境界、A4 への引き継ぎ。設計判断 D-P7-A3-1〜5。
+
+## v5.45 (2026-09-26) — Phase 7 P7-A2 point-in-time input assembly（認可された一方向の読み取り adapter）
+
+Narrative の入力材料（`NarrativeInputSnapshot`）を、凍結された Phase 6 の reviewed authority から PIT で組み立てる。
+`NarrativeSynthesis`・claim・文章・描画・LLM・永続化・authority の変更は無い。A1 の runtime（`a02ad60`）と Phase 6 の runtime
+（`5ef313a`）は byte 一致のまま。
+
+### 追加 — `src/intelligence/narrative_intelligence/`
+
+- `input_model.py`【新規】: `NarrativeInputRequest`（型・明示の Theme root・aware な cutoff・明示の freshness policy・任意の
+  比較 cutoff。暗黙の全件 / 最新 / 現在なし）、`NarrativeInputSnapshot`・`ThemeInput`・`EvidenceSource`（A1 の型付き ref をそのまま
+  使う）、`EvidenceConditionFlag`（B2 の複製）・`SourceCapability`（FACT / OBSERVATION だけが観測の記録。文書・報道・発言は格上げ
+  不可）、`NarrativeInputError`（安定した code・root ごとの failures）。content-addressed な `snapshot_id`、PIT で見えた id だけの
+  provenance digest。復元 API なし（保存しない）。Phase 6 を import しない。
+- `pit_assembler.py`【新規】: `assemble_input_snapshot`。Phase 6 を import してよい唯一の module（認可された read API だけ）。
+  Foundation store を 1 回だけ検証して読み（integrity-before-PIT）、要求 root だけを cutoff で解決、cutoff で ACCEPTED の Theme だけ
+  （無い / 未解決 / 非受理は root ごとの失敗で、黙って落とさない）。resolver の authoritative な evidence view を role を変えずに投影、
+  B2 lifecycle の flag、比較 cutoff があるときだけ B1 の変化、THEME_SET だけ要求集合の内側の ACTIVE な B5B の直接の辺（推移・推測・
+  提案・共同発見なし。SOURCE_ASSERTED はそのまま）。B3 / B4 / B5C / B6 / B7 / P5 / DNA / knowledge は読まない。書き込みなし。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_pit_assembler.py`【新規】: matrix A〜AX（67 件。実際の Phase 6 store API で書いた合成 journal
+  と Foundation の代表 world を使う。毒入りの B3 / B5C / B6 / B7 / P5 / knowledge でも snapshot が byte 一致、未来の governance /
+  observation / evidence / relation / 合併が過去を変えない、書き込み 0 byte・新規 file なし、破損は fail closed、A1 の synthesis を
+  snapshot の ref だけで組める）。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: module ごとの import 許可一覧と AY〜BH（A1 の byte 凍結・Phase 6
+  runtime の凍結・認可された adapter が決まった Phase 6 read API だけを import・A1 と入力 model は Phase 6 を import しない・未登録の
+  第 2 の importer の検出・network / 永続化 / 時計 / 乱数 / 機密の属性なし）を追加。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に 2 module を追加、`PHASE7_SANCTIONED_IMPORTERS`（adapter の
+  完全な path だけ）と `is_sanctioned_importer` を追加、Phase 6 の test に入れた登録の行を宣言。
+- scratch の clone で mutation M1〜M15（暗黙の全件列挙・現在の状態・未来の governance / observation / evidence の漏れ・role の書き換え・
+  B3 / B6 / B7 / B5C の読み・推移の relation・SOURCE_ASSERTED の格上げ・path への identity の依存・snapshot の cache の書き込み・
+  未認可の第 2 の importer）をすべて検出。
+
+### 改善 — Phase 6 の import guard への test-only の登録（runtime 変更 0 行）
+
+`test_theme_phase6_completion.py`・`test_theme_intelligence_import_boundary.py`・`test_theme_import_boundary.py` の「Phase 6 を
+import しない」guard が、認可された adapter の完全な path だけを飛ばす（package 全体は認可しない。未登録の importer は従来どおり
+失敗する）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、authority、caller の契約、範囲、認可された import 境界（Phase 6 の test への登録の報告を含む）、資格、歴史の
+再構成、observation の PIT、evidence の投影、出所の能力、lifecycle、変化と比較 cutoff、relation の投影、SOURCE_ASSERTED、除外する
+入力、P5 / DNA、knowledge の pin（作らない判断と reader の version）、snapshot の model、identity と digest、破損、無い / 資格の無い
+root、文章を持たない規則、書き込みなし、security、延期（P7-A2-DEF-01〜08）、A3 への引き継ぎ。設計判断 D-P7-A2-1〜5。
+
+## v5.44 (2026-09-26) — Phase 7 P7-A1 Narrative semantics ＋ pure model（DERIVED / NON-AUTHORITY / NON-PERSISTENT）
+
+Phase 7 Narrative Intelligence の意味論と純 model。PIT の組み立て・engine・描画・永続化・LLM・provider・公開出力は作っていない。
+Phase 6 の runtime・P4・P5・Production DNA・公開出力・workflow・config は変更していない（Phase 6 の test には §35 の test-only の
+登録だけ）。
+
+### 追加 — `src/intelligence/narrative_intelligence/`【新規 package】
+
+- `__init__.py`【新規】: package の境界の説明だけ。
+- `synthesis_model.py`【新規】: `NarrativeSynthesis`（THEME_STATE ／ THEME_SET）と `NarrativeClaim`。認識 class 5 つ（OBSERVED_FACT・
+  REVIEWED_INTERPRETATION・DERIVED_SYNTHESIS・UNCERTAINTY・ALTERNATIVE_HYPOTHESIS。SCENARIO_CONDITION は不採用で入力に現れたら拒否）、
+  claim kind 6 つ、predicate 11、許される (class, kind, predicate) の組 12、閉じた不確実性 code 5 つ、型付き opaque ref 7 型
+  （reviewed observation・機構 component・無効化条件・evidence attachment・evidence item・B1 の変化・B5B の relation）。reviewed の
+  天井は ACCEPTED だけ。事実と解釈の guard（解釈だけを引く事実・文書 ／ 報道の事実化・推定時刻の事実化を拒否）、role の書き換えの
+  検出、支持と反証・仮説の機構・無効化 evidence を隠さない規則、SOURCE_ASSERTED の帰属、直接の辺だけの relation、勝者なしの代替、
+  PIT（cutoff より後の ref を拒否）、content-addressed な claim id ／ synthesis id（時計・乱数・運用 metadata なし）、非意味的な集合の
+  正規化、厳格な直列化の復元（禁止 ／ 未知 ／ 欠落 field・型・非 canonical・id の改ざん・重複 key）。自由文・数値・順位・確信度の
+  field なし。import は標準 library と `core.ids` ／ `core.time` だけ（Phase 6 の語彙は複製し、一致を test で固定）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_synthesis_model.py`【新規】: matrix A〜AO（514 件。class × kind × predicate の総当たり 318 件を含む）。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`【新規】: matrix AP〜AS（import 境界・runtime closure・I/O ／ 時計 ／
+  乱数 ／ network ／ 永続化なし・上流からの非参照・production bundle 外・Phase 6 と A0 の凍結・登録の宣言との一致）と、Phase 6 の
+  語彙 ／ 形式との一致、Phase 6 の fixture の値を ref に写せること。
+- `tests/intelligence/phase7_runtime_registry.py`【新規】: Phase 7 runtime の登録 helper（登録 file の追加だけを Phase 6 の凍結 guard
+  から除く literal な pathspec と、Phase 6 の test に入れた登録の行の宣言）。
+
+### 改善 — Phase 6 の凍結 guard への test-only の登録（runtime 変更 0 行）
+
+Phase 6 の凍結 guard は HEAD の `src` 全体を固定していたため、登録した Phase 7 の file の追加だけを除く 1〜2 行を入れた:
+`test_theme_phase6_completion.py`・`test_theme_llm_closeout.py`（B6 pin を「B7C anchor ＋ 宣言した登録の行だけ」に）・
+`test_theme_llm_adversarial_e2e.py`・`test_theme_llm_generation.py`・`test_theme_llm_submission.py`・`test_theme_llm_validator.py`・
+`test_theme_monitoring_coverage_rerun.py`・`test_theme_monitoring_e2e_rerun.py`。未登録の file の追加は従来どおり失敗する。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、非目標、authority、型、認識 class（6 → 5 の監査）、claim kind、reference model、evidence の role、relation、
+SOURCE_ASSERTED、不確実性、代替、無効化、NarrativeClaim、NarrativeSynthesis、THEME_STATE、THEME_SET、identity、順序、text policy、
+検査、直列化、import 境界（Phase 6 の test への登録の報告を含む）、security、延期（P7-A1-DEF-01〜13）、A2 への引き継ぎ。監督判断
+D-P7-A1-1〜5。
+
+## v5.43 (2026-09-26) — Phase 7 P7-A0 Narrative Intelligence architecture ＋ existing-system audit（READ-ONLY）
+
+Phase 7 Narrative Intelligence の実装前の architecture 監査。runtime・model・永続化・LLM 接続は作っていない。Phase 6（`5ef313a`）・
+P4・P5・公開出力は変更していない（文書だけ）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_ARCHITECTURE_AUDIT.md`【新規】
+
+監査（28 節）: 結論、既存システムの棚卸し（legacy・P4・P5・Phase 6・履歴 branch。REUSE / REFERENCE_ONLY / LEGACY / CONFLICTING /
+UNRELATED）、目的と非目標、上流の入力の地図（P4・P5・Phase 6 の分類）、authority の推奨（派生 ＋ 任意の運用 journal。初期は
+journal なし）、Narrative の定義、型（初期は THEME_STATE・THEME_SET）、意味の構造、事実と解釈の境界（6 つの認識 class）、PIT と
+時間、identity と改訂（保存しない hybrid の content identity）、反証と代替、relation ／ monitoring ／ 未審査の知識の方針、LLM の
+役割（初期はなし）、決定論の core、選定の方針（明示の要求 ＋ 順位なしの適格性一覧）、P8 と production の境界、package と import、
+永続化、security（allowed-source の方針）、実データの準備、Phase 6 deferred の影響（blocker なし）、gate 案（A1〜A5）、blocker（なし）、
+監督判断 D-P7-1〜17。
+
+## v5.42 (2026-09-26) — Phase 6 final completion audit（THEME INTELLIGENCE PHASE-WIDE CLOSURE REVIEW）
+
+Phase 6 全体（Foundation ＋ B1〜B7）の完了監査。新しい能力なし・実 provider なし・実行なし・production runtime の変更なし
+（文書と完了の凍結 test だけ）。当初範囲の実装と凍結、authority / governance / 時間 / identity の model、層横断の不変条件、
+Production DNA と公開の境界を確認し、全 gate の deferred を 1 つの登録簿に統合した。
+
+### 追加 — `docs/databank/PHASE6_THEME_INTELLIGENCE_COMPLETION_AUDIT.md`【新規】
+
+完了監査（24 節）: 結論、当初範囲、architecture（目的・概念上の data flow）、authority model、時間 model（層ごとの PIT 対応）、
+identity / 履歴、governance（Option B）、Foundation・B1〜B7 の各監査、層横断の不変条件、Production DNA の境界、公開 / legacy の
+境界、検証の証拠（凍結の連鎖・test だけの変更・closure 時の全体結果・最終回帰）、実データの状態、統合 deferred 登録簿
+（P6-DEF-01〜32）、blocker の評価（なし）、Phase 7 への暫定 handoff、判定。
+
+### 追加 — `tests/intelligence/test_theme_phase6_completion.py`【新規】
+
+完了の凍結 test（21）: Phase 5 closeout → Foundation → B1〜B7 → HEAD の祖先鎖、各 gate の runtime 差分 ＝ その gate の新規
+file の追加だけ（計 62・変更 0）、後の gate が前の gate の test に加えた変更は guard / pin の登録だけ、Phase 6 の 3 名前空間の外
+（compass_dna・config・workflow・scripts・Pages・data・legacy entry を含む）は不変、Foundation の byte 一致、Phase 6 の package を
+import する外部 module なし、Phase 6 の package は Production DNA / P4 / P5 の module を import しない、完了文書の anchor 表との一致。
+
+## v5.41 (2026-09-25) — Phase 6 P6-B7 closeout audit（LLM PROPOSAL LAYER FINAL CLOSEOUT）
+
+B7A〜B7G の LLM 提案層全体の最終監査。新しい能力なし・production runtime の変更なし（文書と凍結台帳の test だけ）。
+不変条件「LLM PROPOSES. / DETERMINISTIC CODE VALIDATES. / HUMAN DECIDES. / AUTHORITY LAYER RECORDS.」と、authority の上限が
+L1 提案だけであることを、B7G の E2E・各 gate の mutation・凍結台帳・最終回帰で再確認した。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_B7_CLOSEOUT.md`【新規】
+
+closeout 文書（22 節）: 結論、最終 architecture、全 B7 artifact の authority 分類、信頼境界、PIT / replay、identity、
+提案と再利用の意味論、SOURCE_ASSERTED、Theme evidence の意味論、生成監査、提出の境界、generation_ref の判定
+（ACCEPTABLE_BOUNDARY）、実在しない root の判定（ACCEPTABLE_BOUNDARY / DEFERRED_DEFENSE_IN_DEPTH）、security / 秘匿、
+凍結の連鎖（B6・B7A〜B7G の anchor）、検証台帳、mutation / 敵対的検証の証拠、実データの状態（NOT_RUN・non-blocking）、
+統合 deferred 登録簿（B7-DEF-1〜27 の分類）、blocker（なし）、推奨、次の gate との境界。
+
+### 追加 — `tests/intelligence/test_theme_llm_closeout.py`【新規】
+
+凍結台帳の test（24）: anchor の祖先鎖、各 gate の runtime 差分 ＝ 宣言した新規 module の追加だけ（B7A・B7G は差分なし）、
+B6 以降に runtime・knowledge・config・workflow・scripts・公開出力・data へ入ったのは新規 `llm_*.py` だけ、B7G 以降の差分なし、
+B7 の 7 文書の anchor での凍結、B6 の llm 例外が導入時から広げられていないこと、closeout 文書の anchor 表との一致。
+
+## v5.40 (2026-09-25) — Phase 6 P6-B7G adversarial end-to-end validation（B7B → B7C → B7E → B7D → B7F）
+
+B7 の LLM 提案経路全体（上流 PIT authority → B7C manifest → B7E 生成入力 → Fake / Recorded provider → B7B 厳格 parse →
+B7D 検証 → B7F check-then-reuse 提出 → 既存 B3 / B5C 提案 authority）を敵対的に end-to-end で検証した。検証 gate であり、
+production runtime は変更していない（B7B `e2aa991`・B7C `95e04ae`・B7D `c240f68`・B7E `695227a`・B7F `d06dd1b`・
+Foundation / B1〜B6、knowledge、config、workflow、scripts は不変）。実 provider・network・資格情報・人間の decision は無い。
+
+### 追加 — `tests/intelligence/test_theme_llm_adversarial_e2e.py`【新規】
+
+E2E matrix A〜BO ＋ BP / BQ（124 test）: 3 family の正常系・棄権・不正 JSON / schema / 検証・prompt injection・handle 攻撃・
+manifest 束縛・未来状態の分離（S〜X）・knowledge pin・provenance 昇格・SOURCE_ASSERTED・THEME evidence の CONTEXT・
+CONTRADICTS / INVALIDATES・再利用 / 収束 / 衝突・複数 plan / 部分書き込み・生成監査 journal の境界・generation_ref と
+実在しない root の境界分析・破損・秘匿・書き込み inventory・実 provider なし・凍結の連鎖（B6 llm 例外の再監査を含む）・
+guard の敵対的注入（10 種）。scratch の git clone での mutation campaign（必須 M1〜M16、M12 は 2 種）をすべて検出。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_ADVERSARIAL_E2E_VALIDATION_REPORT.md`【新規】
+
+検証報告（22 節）: 経路、authority の上限（L1）、正常系、棄権 / 拒否、攻撃、PIT、knowledge pin、provenance /
+SOURCE_ASSERTED、重複 / 再利用 / 衝突、複数 plan / 部分書き込み、生成監査 journal の境界、generation_ref の判定
+（ACCEPTABLE_BOUNDARY）、実在しない root の判定（ACCEPTABLE_BOUNDARY・監督判断の候補）、破損、秘匿、書き込み inventory、
+凍結の連鎖、guard / mutation、実データ shadow（NOT_RUN・理由付き）、blocker（なし）、deferred、判定。
+
+## v5.39 (2026-09-25) — Phase 6 P6-B7F validated plan → existing proposal authority（CHECK-THEN-REUSE SUBMISSION BRIDGE）
+
+B7D の検証済み plan を、既存の B3 提案 journal / B5C 関係提案 journal へ check-then-reuse で提出する bridge を実装した。
+書き込みは既存 `append_proposal` による提案 1 行だけ。decision・SourceClaimVerification・Theme / evidence / relation /
+governance・B6 review・生成監査 journal・公開出力には書かない。新しい journal・authority・proposal type は無い。実 LLM・
+network・API key は無い。B7B（`e2aa991`）・B7C（`95e04ae`）・B7D（`c240f68`）・B7E（`695227a`）・B3 / B5C の model と
+store・Foundation / B1〜B6 の runtime、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_submission_model.py`【新規】
+
+提出結果の純 model（`SubmissionResult` / `PlanSubmission`）。action（NEW_PROPOSAL_APPENDED / EXISTING_PROPOSAL_REUSED /
+DUPLICATE_IN_SUBMISSION / NOT_SUBMITTED）、再利用の種類（EXACT / CONVERGENT）、status（SUBMITTED / REJECTED /
+PARTIAL_SUBMISSION）、失敗 code 7 種、凍結文言（`PROPOSAL_IS_NOT_DECISION` / `SUBMISSION_IS_NOT_A_BACKTEST`）。
+score・順位・確信度は持たない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_submission.py`【新規】
+
+`submit_proposals`: 提出境界での再検証（plan・入れ子・検証結果を凍結 constructor で組み直し id を照合）→ 凍結済み
+B3 / B5C constructor での再構築（id ＝ plan の `upstream_proposal_id`）→ 既存 store で照合（在れば再利用・無ければ新規・
+意味が違えば PROPOSAL_CONFLICT）→ 全 plan の pre-flight が通ったときだけ family → 上流 id の順で追記 → 読み直し。
+provenance は既存 field だけ（proposer_ref ＝ B7E 試行 id、rule_version ＝ prompt contract、理由 ＝ 検証結果 id の
+参照文。provider / model は入れない）。部分失敗は PARTIAL_SUBMISSION（巻き戻さない）。
+
+### 追加 — test
+
+- `tests/intelligence/test_theme_llm_submission.py`【新規】: test matrix A〜BB（新規 / 再利用・改竄 plan・
+  SOURCE_ASSERTED・zero-write・重複・順序・pre-flight・部分書き込み・冪等・書き込み面・security・凍結 pin・guard 登録）と
+  結果 model・秘匿。scratch copy での mutation 13 種（必須 M1〜M10、M8 は時計と乱数の 2 種、＋ 2 種）をすべて検出。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: B7F の 2 module を登録。`LLM_SUBMISSION_MODULES`（提出 bridge だけ）に
+  B3 / B5C の proposal store と `append_proposal` だけを許し、decision・SourceClaimVerification・assertion・governance・
+  Theme / relation / review store・生成監査 journal・Foundation bridge への経路が無いことを確認する test を追加。
+  他の B7 module が proposal store を import しないことも確認する。B7B〜B7E の guard は緩めていない。
+- `test_theme_llm_generation.py`（B7E test）: `test_ao` が後続 B7 の新規 module（`LATER_B7_MODULES`）を許すように
+  した（test 側だけ。B7E runtime は不変）。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_PROPOSAL_SUBMISSION_CONTRACT.md`【新規】
+
+authority 境界、対応 plan type、pipeline、再検証、上流の再構築、check-then-reuse、conflict の意味論、provenance、
+SOURCE_ASSERTED、複数 plan の pre-flight、追記の順序、部分書き込みの境界、冪等性、結果 model、failure の分類、
+zero-write、生成監査 journal との境界、no-decision / no-execution、security（PIT・時刻の分類）、凍結の連鎖、deferred、
+B7G への引き継ぎ（22 節）。
+
+## v5.38 (2026-09-25) — Phase 6 P6-B7E generation adapter ＋ generation audit journal（FAKE / RECORDED PROVIDER ONLY）
+
+B7C manifest → 生成入力 → provider（fake / recorded のみ）→ B7B の厳格 parse → B7D の検証 → 生成結果、の非 authority な
+orchestration と、B7A Option C の生成監査 journal（追記専用・OPERATIONAL / AUDIT）を実装した。実 provider・network・
+API key・提案の提出・人間の決定・公開出力は無い。B7B（`e2aa991`）・B7C（`95e04ae`）・B7D（`c240f68`）・Foundation /
+B1〜B6 の runtime、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation_input.py`【新規】
+
+versioned prompt contract（`theme_llm_prompt:0.1.0`）と task contract、`prepare_generation`（request ＋ manifest の visible
+JSON だけから byte 一致の生成入力を組む。指示と data を別の欄に分ける。束縛が違えば provider を呼ばない）。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_provider.py`【新規】
+
+狭い provider protocol（生成入力を受け取り raw の文字列を返すだけ）と `FakeProvider` / `RecordedProvider`（生成入力
+digest に束縛した offline replay）。network・SDK・資格情報なし。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation_model.py`【新規】
+
+生成結果（VALIDATED / ABSTAINED / REJECTED_GENERATION / RETRYABLE_FAILURE / INTEGRITY_FAILURE）と生成監査 record
+（request・試行・監査 record・提案 plan の identity を分離。raw response は digest だけ）。失敗の分類表
+（`classify_failure`）と凍結文言（`VALIDATED_MEANING` 等）。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation_journal.py`【新規】
+
+`<data_root>/theme_intelligence/llm_generation_records.jsonl`（B7E で唯一の書き込み面）。canonical JSONL・fsync・
+同一 record は冪等・同じ試行の異なる record は CONFLICT・破損は fail closed・修復なし。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_generation.py`【新規】
+
+`run_generation`: provider 呼び出しは 1 回だけ（引き直しなし）、修復なしの parse、B7D の検証、監査 record、journal への
+追記。journal が使えなければ生成しない。journal の内容を生成入力にしない。
+
+### 追加 — test
+
+- `tests/intelligence/test_theme_llm_generation.py`【新規】: test matrix A〜AP と identity の分離・監査 record の整合・
+  失敗の分類表・生成 record は evidence にならない・error の秘匿・prompt contract の文言。scratch copy での mutation
+  12 種（必須 M1〜M7 ＋ 5 種）をすべて検出。
+- `tests/intelligence/llm_generation_fixtures.py`【新規】: RecordedProvider の合成 fixture（生成入力 digest に束縛）。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: B7E の 5 module を登録。書き込み面を `LLM_AUDIT_JOURNAL_MODULES`
+  （生成監査 journal だけ）として区別し、その module だけに `open(` / `write` / `mkdir` を許す。journal を import できるのは
+  orchestration だけ、B3 / B5C / Foundation / review の追記 API・store class は全 B7 module で不在、を追加。B7B〜B7D の
+  guard は緩めていない。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_GENERATION_LAYER_CONTRACT.md`【新規】
+
+authority 分類、pipeline、provider protocol、prompt contract、生成入力、raw response の扱い、結果 model、監査 record、
+journal の意味論、identity と冪等性、棄権、failure の分類、replay、自己強化の禁止、security、zero-authority-write、
+破損、凍結の境界（B6 pin の llm 例外の再監査を含む）、deferred、実 provider の境界。
+
+## v5.37 (2026-09-25) — Phase 6 P6-B7D deterministic semantic validator（GROUNDING / NORMALIZATION / PROPOSAL PLAN ONLY）
+
+B7B の構造化出力を、その要求の B7C manifest に対してだけ決定論的に検証し、既存の B3 / B5C constructor へ意味の即興なしに
+渡せる「検証済み提案 plan」（DERIVED・非 authority・非永続）を作る層を実装した。LLM・provider・network・prompt・
+generation journal・B3 / B5C への提出・書き込みは無い。Foundation / B1〜B6 の runtime、B7B model（`e2aa991`）、
+B7C modules（`95e04ae`）、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_plan_model.py`【新規】
+
+- plan 3 種（evidence → B3 EVIDENCE_CANDIDATE、Theme → B3 THEME_CANDIDATE、relation → B5C RELATION_CANDIDATE）と
+  検証結果。`upstream_arguments()` が凍結 constructor の引数をそのまま返す。
+- provenance lock（B3 `LLM_PROPOSAL` / B5C `LLM`、component 主張と attachment role provenance も `LLM_PROPOSAL`、確度
+  `HYPOTHESIZED_MECHANISM`。これより強い値は `PROVENANCE_ESCALATION`）。出典帰属は常に `UNVERIFIED`（確認済みの値は無い）。
+- identity に入る文（B3 `reason` / B5C `rationale`）は検証済み field だけの template。LLM の説明文は監査用で identity 外。
+  `plan_id` は正規化済み材料の content id で、上流の提案 id（`upstream_proposal_id`）とは別物。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_validator.py`【新規】
+
+- `validate_generation(request, envelope, manifest)`（純関数）: request ↔ manifest の束縛（digest・task・cutoff・schema・
+  knowledge pin）→ 棄権 → canonical 形・task 整合 → 候補ごとの grounding（B7C 内部対応表だけ）・凍結語彙の検査・
+  Foundation `normalize_text` による正規化・role ごとの target component・MON は文脈だけ・出典帰属は文章 evidence の
+  origin だけ → 凍結 B3 / B5C constructor の試行 → 同一生成内の意味的重複の拒否。違反が 1 件でもあれば生成全体を拒否。
+- error は有界な 19 code。LLM の文・出典の文・秘密値を error に写さない。
+
+### 追加 — `tests/intelligence/test_theme_llm_validator.py`【新規】
+
+test matrix A〜AM（束縛・grounding・role と target・Theme 正規化・語彙・entity・relation・SOURCE_ASSERTED・言い換え収束・
+provider / model / 順序の非依存・重複・棄権・knowledge pin・隠れた未来状態の不変・prompt injection・provenance lock・
+zero-write・I/O なし・replay・process 間の identity・error の秘匿・凍結・guard）と、全体拒否・上流 constructor の
+identity 一致・template・時刻欠落・推移辺・数値の不在。scratch copy での mutation 13 種（必須 M1〜M7 ＋ 6 種）をすべて検出。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: `llm_plan_model` / `llm_validator` を登録（MODULES・LLM_MODULES・
+  LLM_PURE_MODULES・閉包・識別 module・Foundation 操作の禁止語彙）。B7D は data root・store・bridge・provider を持たない。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_SEMANTIC_VALIDATOR_CONTRACT.md`【新規】
+
+authority 分類、入力、束縛、grounding、plan model、evidence / Theme / relation の検証、monitoring 境界、provenance lock、
+確度、正規化、identity template、重複、棄権、knowledge pin、PIT、prompt injection、failure 分類、security、zero-write、
+deferred（監督判断の論点を含む）。
+
+## v5.36 (2026-09-25) — Phase 6 P6-B7C LLM input manifest / point-in-time grounding（DETERMINISTIC INPUT LAYER ONLY）
+
+caller が決めた cutoff 時点で LLM に見せてよい data を、決定論的な非 authority の manifest として組む層だけを実装した。
+provider・prompt・意味検証・bridge・store・generation journal は実装していない。Foundation / B1〜B6 の runtime、
+B7B model（`e2aa991` と byte 一致）、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_manifest_model.py`【新規】
+
+- 純 model（I/O なし）: 最小投影（evidence / Theme ＋ CQ / IC / relation / entity / finding）、opaque handle の割り当て
+  （authority ref の辞書順・3 桁・入力順 / path / mtime / 時計に非依存）、visible に入らない内部対応表、
+  `manifest_digest`（`thllmin_`。visible ＋ 内部対応表を束縛）と `visible_digest`（`thllmvis_`）。
+- task → family matrix（必須 / 任意 / 導出）、使った knowledge だけの pin、文は書き換えず長さ・制御文字・path・URL・秘密を
+  fail closed、handle 以外が同じ投影は `DUPLICATE_PROJECTION`、finding は許可 condition / fact だけ。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_manifest_builder.py`【新規】
+
+- `LlmManifestScope`（task・aware cutoff・family ごとに `None` ＝ 未供給 / 空 tuple ＝ 空で供給、暗黙の「全部」なし）と
+  `build_input_manifest`（read-only）。
+- 既存の PIT 入口だけを使う: Foundation `resolve_at_data_root`、B5B `resolve_relations_at_data_root`、B4 `adapt_inputs`。
+  破損・未解決・PIT 以外の除外・同 id の別内容・未来の knowledge は fail closed。B3 / B5C の提案状態は読まない。
+
+### 追加 — `tests/intelligence/test_theme_llm_input_manifest.py`【新規】
+
+test matrix A〜Z（scope・cutoff・task の family・handle の不透明性と安定性・8 family の未来漏れ・破損・security・
+決定論・zero-write）、重複の方針、prompt 境界、B7B request への接続、凍結 pin の述語、B7B model の byte 一致。
+
+### 追加 — `tests/intelligence/theme_freeze_pins.py`【新規】
+
+B6 凍結 pin の例外規則を 1 か所に集約（status 追加 `A` / `??` かつ `theme_intelligence/llm_<name>.py` 直下に完全一致のみ）。
+
+### 改善 — guard / 凍結 pin
+
+- `test_theme_intelligence_import_boundary.py`: B7C module を登録し、純 model と read-only builder を区別
+  （builder は PIT 入口だけを import でき、`data_root` は builder だけに許す。書き込み・store・network・provider・時計・乱数は禁止）。
+- B6 の凍結 pin 3 file（`test_theme_monitoring_e2e.py` / `test_theme_monitoring_e2e_rerun.py` /
+  `test_theme_monitoring_coverage_rerun.py`）: B7B で入れた `llm_` 例外（prefix 一致）を上記の厳密な述語へ絞った。
+- `test_theme_monitoring_model.py`（test_87）: package 内で `monitoring_model` を参照してよい module に `llm_manifest_model` を
+  名指しで追加（finding を型で検査するだけ。engine / rules / store / runner への到達は import boundary の閉包で禁止のまま）。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_INPUT_MANIFEST_CONTRACT.md`【新規】
+
+authority 分類、family の採否、task matrix、PIT、integrity-before-PIT、scope、投影 field と理由、text 方針、handle algorithm、
+逆引き表、manifest identity、knowledge pin、重複、finding 境界、B3 提案状態の除外判断、relation の意味、security、replay、
+failure mode、deferred、凍結 pin の監査。
+
+## v5.35 (2026-09-25) — Phase 6 P6-B7B LLM proposal model / schema（PURE MODEL ONLY）
+
+B7 の純 model / schema だけを実装した。provider・network・bridge・store・input manifest・PIT 解決・意味検証は実装していない。
+Foundation / B1〜B6 の runtime、knowledge、config、workflow、scripts は変更していない。
+
+### 追加 — `src/intelligence/theme_intelligence/llm_proposal_model.py`【新規】
+
+- 5 層を分離: 生成要求 `LlmGenerationRequest`（caller 注入の時刻、manifest digest、knowledge pin）、構造化出力
+  `LlmGenerationEnvelope`（`CANDIDATES` 1〜16 件か `ABSTAIN` のちょうど 1 つ）、候補 `LlmCandidate` と kind 別 payload
+  （EVIDENCE / THEME / RELATION。既存 B3 / B5C 型への対応だけ、DEDUP_REVIEW なし）、棄権 `LlmAbstention`（5 値）、
+  監査 record `LlmGenerationRecord`（raw response は digest のみ、provider / model は provenance だけ）。
+- opaque handle（`EV_` / `TH_` / `REL_` / `ENT_` / `MON_` / `CQ_` / `IC_`）を欄ごとの種別で検査。authority id ・path・URL は handle にならない。
+- 厳格 schema: 全 depth で未知 field を拒否（authority・score・秘密値・推論過程の field は存在しない）、重複 JSON key・NaN・
+  code fence・前後の説明文・数値を拒否、件数と長さの上限、1 か所でも違反すれば**生成全体を拒否**（部分採用なし）。
+- identity: request id（generated_at・provider・model を含まない）、生成 id（出来事の内容）、output digest、response digest。
+  候補には identity を与えない（最終 identity は handle 解決後の B3 / B5C 内容 id）。
+- canonical 化: 非意味的な list（候補・handle・component 等）を整列。文の Unicode / case は正規化しない（B7D の責務）。
+
+### 追加 — `tests/intelligence/test_theme_llm_proposal_model.py`【新規】
+
+正常形 4 種、未知 field（全 depth）、authority / 数値 / security field（50 種 × 2 階層）、schema version、enum、outcome の排他、
+空出力、全体拒否（無効候補をどの位置に置いても全体が失敗）、上限超過（切り詰めない）、JSON の崩れ、handle の書式と種別、
+Theme / relation の構造、文の検査、canonical replay、identity、provider / model の非意味性、時刻、record の整合、純粋性。
+
+### 改善 — guard
+
+- `test_theme_intelligence_import_boundary.py`: B7 module を登録（MODULES / LLM_MODULES / IDENTITY_MODULES / 閉包）し、
+  上流が B7 を import しないこと、`llm_*.py` がすべて登録済みで subpackage に逃げないこと、B7 が store・bridge・network・
+  provider・公開経路へ到達しないことを追加。
+- B6 の凍結 pin（`test_theme_monitoring_e2e.py` / `test_theme_monitoring_e2e_rerun.py` / `test_theme_monitoring_coverage_rerun.py`）を、
+  **新規追加の `theme_intelligence/llm_*.py` だけ**を除外するよう更新（既存 file の変更は従来どおり検出）。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_PROPOSAL_MODEL_CONTRACT.md`【新規】
+
+authority 分類、層、candidate kind、field 表、有界語彙、identity、canonical 化、全体拒否、security の構造的排除、
+構造検査と意味検査の境界、deferred。
+
+## v5.34 (2026-09-24) — Phase 6 P6-B7A LLM proposal layer の architecture / contract audit（DESIGN / AUDIT ONLY）
+
+B7（LLM 提案層）の実装前 audit。**runtime・test・knowledge・config・workflow・scripts は変更していない**
+（B6 最終 freeze `7a8f8a4` 以降、docs と CHANGELOG のみ）。LLM / network call は行っていない。
+
+結論（案）: B7 は新しい proposal authority を作らず、authority 手前の非 authority 層（PIT 入力 manifest → 生成 adapter →
+厳格 parser → 決定論 validator → 提案 plan）から、検証済み候補だけを既存の B3（EVIDENCE / THEME）と B5C（RELATION）へ
+check-then-reuse で渡す。上限は L1、decision・authority append・root 作成への経路なし。blocker なし。
+
+### 追加 — `docs/databank/PHASE6_THEME_LLM_PROPOSAL_ARCHITECTURE_AUDIT.md`【新規】
+
+- B3 / B4 / B5 / B6 の既存 interface 監査（B3 / B5C は LLM 提案者を予約済み、provenance を除く内容 id、同内容・別 provenance は
+  CONFLICT → check-then-reuse、identity に入る自由文 `reason` / `rationale` の template 化、THEME 候補の attachment / component
+  provenance を `LLM_PROPOSAL` に固定する必要、B4E は SUPPORTS / CONTEXT のみ、guard は module 名の列挙）。
+- authority ceiling、LLM role taxonomy（A〜H）、proposal type の対応（新 type なし）、package boundary（flat `llm_` module を推奨）、
+  input contract と output schema の概念（manifest handle による引用、数値確信度なし、棄権 code）、evidence grounding、
+  決定論 validator（違反時は生成全体を拒否）、hallucination / prompt injection の構造的拒否、非決定性の境界、identity 戦略、
+  PIT（LLM の知識は PIT ではない）、provenance、永続化 3 案（生成 journal を分離する Option C を推奨）、failure taxonomy、
+  provider 境界、data minimization、Compass / DNA 境界、B3 dedup / B5 relation / B6 monitoring との相互作用、security、
+  offline test、public surface の隔離、deferred register（B7-DEF-1〜8）、実装順の修正案（入力 manifest を独立 gate に、
+  実 provider 接続を B7 の外へ）、監督者の決定事項 D-B7-1〜12。
+
+## v5.33 (2026-09-24) — Phase 6 P6-B6R1-RERUN coverage completeness の独立再検証（TEST / AUDIT / DOC ONLY）
+
+B6R1 remediation（anchor `3620901`）を変更せずに独立再検証した。**runtime は変更していない**
+（`src/`・`knowledge/`・`config.yaml`・`.github/`・`scripts/` の `3620901` との diff 0）。
+
+判定: **B6-DEF-1 は CLOSED を確認**。依存表は source から再導出して監督指示の期待値と一致。B6 freeze（`99d45ef`）の
+runtime で B6-DEF-1 を同じ data root 上に再現し、B6R1 の runtime で閉じていることを確認した。finding の bytes・id、
+18 condition の意味・ruleset、PIT、決定論、zero-write、review / authority 分離、RR-3、fail closed はすべて保持。
+real-data shadow は NOT_RUN（Theme authority が実在しない）。runtime defect・blocker なし。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_coverage_rerun.py`【新規】
+
+B6R1 matrix の helper・world・期待値の定数を使わない独立検証（112 tests）: runtime freeze（anchor との diff・byte 同一・履歴）、
+依存表の AST 再導出、engine 経路（手組み snapshot）と runner 経路（`retired` stage の別 world・2 cutoff）の A〜F、
+report 1 行だけからの判別、3 状態の run_id / digest 分離・再実行一致・物理順、B6 freeze runtime（git から一時展開・別 process）
+との finding bytes 比較と欠陥の再現、engine AST の非回帰、B3 / B5C の未来 record 4 family の PIT（coverage 固定）、
+12 種の破損 × channel 欠落（未評価と diagnostics の厳密な和）、zero-write、review / authority / RR-3、既定 run、
+synthetic harness、closeout 履歴の保持。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_COVERAGE_RERUN.md`【新規】
+
+再検証の結果、mutation 検査（runtime の一時 copy を 7 通りに壊し全検出）、non-blocking の観測事項
+（OBS-1 空 scope が runner diagnostics のみ／OBS-2 governance events 未供給が runner diagnostics のみ（必要時は fail closed）／
+OBS-3 harness CLI に観測 option なし／OBS-4 engine は presence のみ束縛し内容の束縛は input digest の契約どおり）。
+
+## v5.32 (2026-09-24) — Phase 6 P6-B6R1 monitoring coverage-completeness remediation（NARROW REMEDIATION）
+
+B6-DEF-1（観測 channel の coverage 欠落）だけを是正した。観測 channel が未供給のとき、依存する condition を未評価にし、
+run を `COMPLETE` にしない。B6B の `COMPLETE` 定義（`COMPLETE ⟺ unevaluated_conditions == ()`）は変えていない。
+`FAILED` は使わない。finding identity・run identity の契約・18 condition の意味・ruleset・review・authority・PIT は不変。
+**B6-DEF-1 = CLOSED**（B6 closeout 時点の deferred 記録は保持）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_engine.py`
+
+- 依存表 `OBSERVATION_CHANNEL_CONDITIONS`（`arrived_attachment_keys` → `RETIRED_ROOT_RECEIVED_EVIDENCE`、
+  `semantic_revision_observation_ids` → `ACCEPTED_THEME_SEMANTIC_REVISION`、`discovery_outcome_tokens` →
+  `DISCOVERY_HIT_WITHOUT_ACCEPTED_PROPOSAL` / `ACCEPTED_CANDIDATE_WITHOUT_OBSERVED_EFFECT`）。
+- `MonitoringEvaluationInput.supplied_observation_channels`（既定 `()` = 何も供給されていない。未知の名前は
+  `INVALID_OBSERVATION_CHANNEL`）。
+- 未供給 channel の依存 condition を評価せず（finding を出さない）、有効なものを `unevaluated_conditions` へ入れ、
+  report diagnostics に `OBSERVATION_NOT_SUPPLIED:<channel>` を残す。authority 由来の未評価と同じ集合へ合流。
+- 供給状況 `observation_channels_supplied`（供給済み channel 名の `|` 連結、無ければ `none`）を report の
+  `input_digests` に束縛（呼び出し側は渡せない: `RESERVED_DIGEST_KEY`）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_adapter.py`
+
+- `MonitoringObservations` の 3 channel を `Optional[Mapping]`（**既定 `None` = 未供給**、`{}` = 空で供給）に。
+  mapping 以外は `INVALID_TYPE`。`supplied_channels()` / `missing_channels()` は `is not None` で判定。
+- `build_evaluation_input(observations=None)`: 省略時は全 channel 未供給。供給 channel ごとに内容 digest を
+  `observation:<channel>` として束縛（列は並べ替えてから digest するため物理順に依らない）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_runner.py`
+
+- 観測を adapter へ渡す（`observations=seen`）。snapshot 構築では未供給 channel を空として読む（評価は engine が止める）。
+  R1 の PIT 濾過は不変。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_coverage.py`【新規】
+
+regression matrix A〜R（全供給空 → COMPLETE、全省略 → PARTIAL、channel 単位の省略、未供給 ≠ 空供給の report / run_id /
+input digest、決定論、物理順、未供給 ＋ authority 破損、finding / review / authority を作らないこと、finding identity 不変、
+PIT 回帰）と入力検証・既定値・report 単体での判別・shadow harness の PARTIAL。
+
+### 改善 — 既存 test（削除・弱化なし）
+
+- `test_theme_monitoring_engine.py` / `test_theme_monitoring_e2e.py`: 評価 helper が観測 channel を明示的に供給する
+  （従来の「空 = 供給済み」前提を明示化）。B6E の frozen pin に B6R1 の変更 3 file を登録。
+- `test_theme_monitoring_runner.py`: presence binding と「空供給 → COMPLETE / 省略 → PARTIAL」を固定。
+- `test_theme_monitoring_e2e_rerun.py`: `test_70` / `test_71` の期待値を反転（未供給 → PARTIAL、未供給 ≠ 空供給）。
+  frozen pin に B6R1 の変更 3 file を登録。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_COVERAGE_REMEDIATION.md`【新規】
+
+根本原因、channel 依存表、設計案 A / A' / B / C の比較（編集前に記録）、選定 B ＋ C、identity・status・digest の規則、
+regression matrix の結果。
+
+### 改善 — docs
+
+- `PHASE6_THEME_B6_COMPLETION_AUDIT.md`: B6-DEF-1 の deadline 表記を **BEFORE B7 ENTRY** に訂正（旧「BEFORE P7 ENTRY」は
+  監督指示上の表記ミス）。§23 に B6-DEF-1 の closure を追記（closeout 時点の deferred 履歴は保持）。
+- `PHASE6_THEME_MONITORING_ENGINE_CONTRACT.md` §13.3、`PHASE6_THEME_MONITORING_OPERATIONAL_CONTRACT.md` §8 / §10 / §12 / §19、
+  `PHASE6_THEME_MONITORING_E2E_RERUN.md` §15 に P6-B6R1 の追記。
+
+## v5.31 (2026-09-24) — Phase 6 P6-B6 Theme Monitoring completion audit（AUDIT / DOC ONLY）
+
+B6A〜B6E-RERUN（B6D-R1 を含む）の completion audit を行った。**runtime・test・knowledge・config・workflow・scripts は
+変更していない**（B6E-RERUN anchor `00bb5a2` 以降の diff 0）。
+
+結論: B6 は完了条件を満たす。B6-DEF-1（観測 channel の coverage 欠落）は監督判定どおり
+**NON_BLOCKING_FOR_B6_CLOSEOUT / MANDATORY_PRE_B7_REMEDIATION** として登録した。
+B6 closeout 後の次の gate は **P6-B6R1（MONITORING COVERAGE-COMPLETENESS REMEDIATION）** であり、B7 ではない。
+
+### 追加 — `docs/databank/PHASE6_THEME_B6_COMPLETION_AUDIT.md`【新規】
+
+- phase lineage と anchor、authority map（finding / run report は derived・非永続、review state は人間専用の運用 journal）、
+  最終 pipeline と「存在しない近道」の一覧。
+- B6A D-B6-1〜14 の全件 audit（IMPLEMENTED / 精緻化 / 一部 SUPERSEDED / DEFERRED を記録先付きで分類。記録の無い drift 0）。
+- B6B model・B6C engine・B6D operational の audit、PIT blocker の履歴（FOUND → REMEDIATED → CLOSED）と
+  B6E 証跡の訂正、6 family PIT matrix と PIT 保証の境界、fail-closed・決定論・zero-write・review 分離・RR-3。
+- condition coverage（synthetic 18/18 ×2、cross-layer 17/18、#17 の分類を固定）。
+- B6-DEF-1 の canonical 登録と将来 gate P6-B6R1 の最低目的、B6-DEF-2〜6 の deferred register、
+  real-data shadow = NOT_RUN（NON_BLOCKING_DEFERRED_UNTIL_REAL_AUTHORITY_EXISTS）、security、import / layering。
+
+### 改善 — `docs/databank/PHASE6_THEME_MONITORING_E2E_RERUN.md`
+
+§15 の提案に、B6-DEF-1 の監督判定と canonical 登録先への参照を 1 行追加（cross-reference のみ）。
+
+## v5.30 (2026-09-24) — Phase 6 P6-B6E-RERUN monitoring E2E 再検証（TEST / AUDIT / DOC ONLY）
+
+B6D-R1 の PIT remediation 後に、B6 monitoring 全体を adversarial E2E で再検証した。**runtime は変更していない**
+（R1 anchor `e67a546` 以降、`src/` ・`knowledge/` ・`config.yaml` ・`.github/` ・`scripts/` の diff 0）。
+B6E の証跡 commit `8655d8d` は履歴に残したまま。
+
+判定: **BLOCKER-1 = CLOSED**。6 family PIT・zero-write・決定論・fail closed・review 分離・RR-3・security は全 PASS。
+観測 channel の blind spot は **NON_BLOCKING_DEFERRED_WITH_CONTRACT** として提案（監督者判断待ち）。
+real-data shadow は NOT_RUN（Theme authority がどの環境にも存在しない）。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_e2e_rerun.py`【新規】（48 件）
+
+- frozen surface（R1 anchor 以降 runtime diff 0、monitoring 6 module が anchor と byte 一致、8655d8d が祖先に残る）。
+- BLOCKER-1 の close 基準: 未来の B3 / B5C 提案・決定・後継・fork が、過去 cutoff の run の
+  run_id / input digest / status / finding bytes / diagnostics を変えないこと（R1 とは独立の fixture）。
+- 解決前濾過の証明: 挙動、全 record を解いた結果に過去の終端が残らないこと、濾過を外した runner では漏れる負の対照。
+- PIT 保証の境界: 正規の append 経路では fork を書けないこと、経路外の B5C fork は全 cutoff で fail closed になること。
+- corruption の追加: B3 / B5C の unsupported schema / unknown field / 重複 / dangling predecessor / 未来日付の破損行。
+- review 分離: ACK / DISMISSED / DEFERRED のいずれも finding・authority・Theme resolution を変えない、
+  review の DEFERRED は提案の DEFER ではない。
+- RR-3: monitoring が authority record を構築・変更する経路が無い。
+- blind spot の実験（3 channel の全供給 / 1 つ欠落 / 全欠落）と、report 単体では欠落が読み取れないこと、
+  engine が入力欠落を既に未評価として扱う先例、runner が 3 channel の供給元を持たないこと。
+- condition #17 が in-memory 解決では到達可能であること（dead code ではなく防御的 condition）。
+- shadow harness の自己 replay 一致、tracked file の security 走査。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_E2E_RERUN.md`【新規】
+
+B6E 証跡の整理（BLOCKER-1 は実在、`test_d08` / `test_d09` / `test_d04` の証拠上の問題）、close 基準、
+6 family PIT、解決前濾過、PIT 保証の境界、corruption、zero-write、決定論、review 分離、RR-3、
+18 condition coverage と #17 の分類、blind spot の実験・意味論分析（7 問）・disposition 提案と契約・remediation 候補、
+real-data shadow の状態、deferred register、closeout readiness。
+
+### 改善 — `docs/databank/PHASE6_THEME_MONITORING_E2E_VALIDATION.md`
+
+冒頭の状態を BLOCKER-1 = CLOSED に更新し、再検証 doc への参照を追加（§1〜§23 は監査証跡としてそのまま）。
+
+## v5.29 (2026-09-24) — Phase 6 P6-B6D-R1 monitoring runner の point-in-time remediation
+
+B6E（`8655d8d`）で見つかった BLOCKER-1 だけを修正した。B3 / B5C の提案・決定が monitoring run の cutoff で
+濾過されず、cutoff より未来の record が過去 cutoff の finding / input digest / run_id に影響していた。
+**変更した runtime は `monitoring_runner.py` だけ**。model / engine / rules / YAML / store / adapter、
+Foundation・B1〜B5 は無変更。B3 / B5C の resolver に cutoff 引数は足していない。
+B6E の証跡 commit は残したまま（revert / squash / history 書き換えなし）。
+BLOCKER-1 の状態は **REMEDIATED_PENDING_RERUN**（close の判定は B6E-RERUN で行う）。
+
+### 修正 — `src/intelligence/theme_intelligence/monitoring_runner.py`
+
+- `_visible_at()` を追加。canonical に load・検証済みの record のうち、提案は `created_at <= cutoff`、
+  決定は `recorded_at <= cutoff` のものだけを残す（cutoff ちょうどは可視、+1µs は不可視）。
+- `_read_proposals()` / `_read_relation_proposals()` は **解決の前に**この濾過を行い、その後で既存の
+  `derive_proposal_status` / `resolve_active_decision` / `derive_relation_proposal_status` に渡す。
+  全 record を解いてから結果を補正する形にはしていない。
+- 未来の record は存在しないものとして扱い、除外件数も diagnostics に残さない（残すこと自体が漏洩になるため）。
+- aware datetime でない時刻を持つ record は読み飛ばさず、`INVALID_RECORD_TIME` の authority 失敗（PARTIAL）にする。
+- store の load / 検証は従来どおり濾過より先。破損行を「未来だから」と読み飛ばさない。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_runner_pit.py`【新規】
+
+- A〜R の回帰 matrix（B3 提案・決定の境界 A〜F、未来 ACCEPT G、未来の提案 H、過去 run 不変 I、
+  B5C 提案・決定の境界 J〜O、未来の ACCEPT / REJECT / DEFER P、未来の関係提案 Q、過去 run 不変 R）。
+- 解決前濾過の証明（未来の決定で初めて fork になる chain / 未来の後継が終端を変える chain）。
+- fail closed（破損行・解析不能な時刻・naive な時刻）、未来 record が diagnostics に痕跡を残さないこと、
+  6 family の PIT 境界、zero-write、現在時刻不使用、write 側 API 不到達。
+- 修正前の runner で 17 件が fail し、修正後に 37 件すべて pass することを確認した。
+
+### 改善 — `tests/intelligence/test_theme_monitoring_e2e.py`（B6E test の更新）
+
+- strict xfail 2 件（`test_d07` / `test_d08`）の mark を除去し、通常の test として pass。
+- `test_d08` を訂正: B6E 版は撤回 edge の無い A→C へ「未来」の提案を置いており、xfail の原因は day(5) 記録の
+  既存提案による PIT 上正しい衝突だった（欠陥を検査していなかった）。未来の提案を撤回済み edge B→A に向け、
+  その提案 id だけを検査するよう修正した。契約（day(20) の提案は day(5) で衝突を起こさない）は不変。
+- `test_d09` を置換: B6E 版は修正の前後どちらでも成立する判別力の無い観測だったため、
+  「提案 family の digest は cutoff 以前の record に束縛される」を検査する test にした。
+- `test_d04`: `theme_governance` と名付けていた case が genesis observation の境界だったため label を訂正し、
+  退役 event による本物の governance 境界 case を追加。
+- `test_e01`: B6D anchor 以降に変わってよい runtime を `monitoring_runner.py` だけとし、他の frozen file が
+  anchor と byte 一致することを検査するよう更新。
+- 修正版の `test_d07` / `test_d08` / `test_d09` は、修正前の runner で fail・修正後に pass することを確認した。
+
+### 改善 — docs
+
+- `PHASE6_THEME_MONITORING_OPERATIONAL_CONTRACT.md`: §8 の PIT 列と §9.1（family ごとの PIT 入口と規則）を改訂。
+- `PHASE6_THEME_MONITORING_E2E_VALIDATION.md`: BLOCKER-1 を REMEDIATED_PENDING_RERUN に更新し、
+  §23 に remediation 状態と B6E 証跡の訂正（`test_d08` / `test_d09` / `test_d04`）を追記。
+
+### 変更していないもの
+
+`OBSERVATION_NOT_SUPPLIED` と `COMPLETE` の関係（blind spot）、観測 channel の供給設計、#17 の到達性、
+condition 語彙、閾値、ruleset、finding / run identity、review 意味論、real-data shadow、scheduler、notification、
+B5 execution gate、B7。
+
+## v5.28 (2026-09-24) — Phase 6 P6-B6E monitoring E2E / adversarial validation gate
+
+B6A architecture / B6B model / B6C engine / B6D operational layer を **1 系として** 検証した。
+**runtime は 1 byte も変更していない**（`git diff 8ef09ab -- src/intelligence/theme_intelligence knowledge/theme_intelligence`
+が空であることを test で固定）。閾値調整・condition 追加・identity 変更・review semantics 変更は一切していない。
+
+**判定は BLOCKER_FOUND。** B3 / B5C の提案 record が run cutoff で濾過されず、cutoff より後に記録された
+関係提案が過去 cutoff の run で finding を生む。remediation は P6-B6D（runner）の担当であり、本 gate では修正しない。
+
+### 追加 — `tests/intelligence/test_theme_monitoring_e2e.py`【新規】
+
+- §A: B6C の 18 condition すべてに positive / negative fixture（36 件）。category / subject_kind /
+  salient_state_kind / cutoff 非依存の finding identity / COMPLETE・PARTIAL 挙動を検証。
+- §B: corruption matrix（Foundation / B3 / B5B / B5C / review × malformed / truncated / non-canonical /
+  not-an-object / blank / 欠損 / duplicate conflicting / unsupported schema / unknown field）。
+  すべて fail closed・PARTIAL・自動修復なし・byte 不変。
+- §C: cross-layer E2E（authority journal → resolver → B2 / B3 / B5 derived → adapter → engine → review lookup）。
+  合成 world から **17/18 condition** を実 authority 経由で発火。review-state の全生涯（ACK → 消失 → 再出現 →
+  同一 finding_id → 自動 reopen しない）と chain 異常 4 種を固定。
+- §D: 同一 cutoff の replay 一致、独立 record の物理順 shuffle 11 seed、PIT 境界（cutoff / −1µs）。
+- §E: data_root 全 file の inventory 比較による zero-write、authority / knowledge hash 不変、
+  finding・run report 非永続、RR-3、hidden authority、source-origin 安全性、security。
+- §F: read-only shadow harness の検証と real-data precheck。
+
+### 追加 — `tests/intelligence/theme_monitoring_shadow.py`【新規】
+
+- 実 data_root 用の **READ-ONLY shadow validation harness（1 command）**。
+  実行前後の file inventory（sha256）比較で zero-write を証明し、同一 cutoff の 2 回 run を自動比較する。
+- review append なし / finding 保存なし / scheduler なし / notification なし / network なし / 現在時刻なし。
+- summary は counts・安定 id・diagnostic code・version・hash のみ。本文・note・actor・絶対 path を出さない。
+- production entry point ではないため `scripts/` ではなく test helper として置く
+  （`.github/` ・`config.yaml` ・`scripts/` が `theme_intelligence` を参照しない既存不変条件を保つ）。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_E2E_VALIDATION.md`【新規】
+
+18 condition coverage matrix、cross-layer 結果、zero-write 証明、PIT matrix、corruption matrix、
+PARTIAL 品質監査、blind-spot 監査（B6D limitation #1）、noise 監査、BLOCKER の再現手順と remediation 提案、
+real-data precheck（**REAL_DATA_SHADOW_NOT_RUN**: Theme authority journal がどの環境にも存在しない）、
+B6 closeout entry contract。
+
+### 記録 — 検出した BLOCKER（本 gate では修正しない）
+
+- `monitoring_runner._read_proposals()` / `_read_relation_proposals()` が B3 / B5C の record を
+  run cutoff で濾過しない。`theme_proposals` / `theme_relation_proposals` の input digest が cutoff に依存せず、
+  未来の関係提案が過去 cutoff の run で `RETRACTED_RELATION_HAS_NEW_PROPOSAL` を発火させる。
+- Foundation（`resolve_at_data_root`）と B5B（`resolve_relations_at_data_root`）は PIT 正しい。
+  B3 / B5C の derive API は cutoff 引数を持たないため、濾過は runner 側の責務である。
+- PIT 契約を述べる test 2 件を **strict xfail** として残した（defect に合わせて test を弱めない）。
+
+## v5.27 (2026-09-23) — Phase 6 P6-B6D 運用 review store ＋ read-only monitoring runner
+
+B6B（model）と B6C（engine / ruleset）を **無変更**のまま、monitoring の運用層を追加した。
+読むのは authority、書くのは **人間の review 状態だけ**である。
+`MonitoringFinding` は保存しない（B6A Option C）。**scheduler / notification / 実データ監視 /
+B5 execution gate / B7 は作っていない。** Foundation・B1〜B5 の runtime も無変更
+（frozen anchor 14 件すべてに対して `src/` ・`knowledge/` ・`config.yaml` ・workflow の変更 0。新規追加のみ）。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_store.py`【新規】
+
+- `<data_root>/theme_intelligence/monitoring_review_states.jsonl` の **追記専用 journal**。
+  `append_review_state()` が唯一の書き込み経路で、人間が明示的に行った review だけを通す。
+- 明示 `data_root`（空・空白・`~` 始まりは `DATA_ROOT_REQUIRED`）、canonical 行のみ、
+  `open('ab')` → flush → `os.fsync`、同 id ＋ byte 一致 ＝ `ALREADY_PRESENT`、同 id ＋ 異 bytes ＝ `CONFLICT`、
+  外部変更は byte 長で検知（single writer）。修復・migration・読み飛ばし・現在時刻の参照は無い。
+- 破損語彙 12 種（`AUTHORITY_MISSING` / `NON_CANONICAL_LINE` / `UNSUPPORTED_SCHEMA_VERSION` ほか）と
+  chain 規律 5 種（`MISSING_PREDECESSOR` / `CROSS_FINDING_PREDECESSOR` / `NOT_TERMINAL_PREDECESSOR` /
+  `NON_MONOTONIC_RECORDED_AT` / `INVALID_TYPE`）で fail closed。
+- 終端の決定は B6B の `resolve_review_state` だけが行う。store は独自の latest-wins を持たない。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_adapter.py`【新規】
+
+- 上流の resolved / derived state（Foundation resolution・B2 lifecycle view・B3 提案 status・
+  B5 relation resolution・B5C 提案 status）→ B6C `MonitoringEvaluationInput` の **純写像**。
+  B6C limitation #1（snapshot 構築が engine の外にある）を閉じた。
+- silent coercion を禁止: `None` を false にしない、`UNRESOLVED` を「存在しない」にしない、
+  store 破損を「条件が無い」にしない、未知 root を「不活性」にしない。すべて
+  `SubjectAvailability.UNAVAILABLE` ＋ `failure_class` として engine へ渡る。
+- 決定論的 `input_digests`（`content_id("thmin", canonical JSON)`）。物理順に依存せず、
+  mtime / inode / 絶対 path / 現在時刻を含まない。
+- B6B の token 語彙・長さ制限を超える識別子は **捨てず**に `content_id("thmloc", …)` の安定 locator へ畳む。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_runner.py`【新規】
+
+- `run_monitoring()`: 明示入力 → version 固定の knowledge 読み込み → authority の read-only 読み取り →
+  cutoff 固定の PIT 解決 → adapter → `evaluate_monitoring()` → finding ごとの review 状態解決、という
+  orchestration のみ。intelligence semantics を持たない。
+- **shadow flag を持たず、構造として read-only**。`append_review_state` を import も参照もしない。
+- `MonitoringRunResult`（`runner_version` / `report` / `findings` / `reviews` / `review_status` /
+  `diagnostics`）。governance command・実行計画・推奨 action・優先度・severity・投資 signal・予測を持たない。
+- `ReviewLookupStatus`（`AVAILABLE` / `NOT_INITIALIZED` / `UNUSABLE`）。review journal が読めないことを
+  「誰も review していない」にしない。
+- 上流の失敗（store 破損 / `NO_STATE` / governance 未解決 / lifecycle の推測拒否 / 端点不明）は
+  空 snapshot にならず、`unevaluated_conditions` ＋ INTEGRITY finding ＋ run status `PARTIAL` として伝播する。
+
+### 追加 — test / docs
+
+- `tests/intelligence/test_theme_monitoring_store.py`【新規】51 件（§24 matrix）。
+- `tests/intelligence/test_theme_monitoring_runner.py`【新規】78 件（§25 / §26 matrix。
+  synthetic な代表 world ＋ 合成 B3 / B5B / B5C record 上での E2E と、run 前後の journal SHA-256 比較を含む）。
+- `docs/databank/PHASE6_THEME_MONITORING_OPERATIONAL_CONTRACT.md`【新規】: 権限境界・永続化方式の決定（A 採用）・
+  authority read/write map・store 契約・chain 規律・runner 構成・adapter contract 表・PIT・digest・
+  knowledge binding・PARTIAL 伝播・再出現の意味論・非変更の証明・限界・B6E entry contract。
+
+### 改善 — guard（既存 test の追加更新。意図は不変）
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py`: B6D の 3 module を `MODULES` へ追加し、
+  `monitoring_store` / `monitoring_runner` を IO module、`monitoring_adapter` を identity module として登録。
+  B6 は B5 の read-only な解決結果を読む下流層であるため、B5 逆方向依存 guard の対象から除外した。
+- `tests/intelligence/test_theme_monitoring_model.py` / `test_theme_monitoring_engine.py`:
+  「store / runner を作っていない」ことの固定を「monitoring 層は B6B/B6C/B6D の 6 module だけで、
+  scheduler / notifier / finding store は存在しない」へ更新した。
+
+## v5.26 (2026-09-23) — Phase 6 P6-B6C 決定論的 monitoring engine ＋ versioned ruleset
+
+B6B の frozen model を用い、read-only な resolved state ＋ 明示 cutoff ＋ versioned ruleset から
+`MonitoringFinding` 群と `MonitoringRunReport` を純関数的に導く engine を実装した。
+**store / review-state store / runner / scheduler / notification / 実データ監視は作っていない。**
+B6B model は無変更。Foundation・B1〜B5 の runtime も無変更（frozen anchor 13 件すべてに対して
+`src/` ・`knowledge/` ・`config.yaml` ・workflow の変更 0。新規追加のみ）。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_rules.py`【新規】
+
+- `CONDITION_REGISTRY`: B6A MVP（§4 の ✅ 21 行）を **18 condition_id** へ写した凍結対応。
+  condition_id → category / subject_kind / salient_state_kind / 閾値要求 を固定し、ruleset は宣言し直せるだけで
+  変更できない。18 件すべてが B6B の frozen 14 `SalientStateKind` へ写っている。
+- strict loader `load_monitoring_rules_version`: schema version 厳密一致・expected version 完全一致・
+  `published_at <= cutoff`・digest 一致・未知 key 拒否・重複 condition 拒否・全 condition 必須・
+  registry と異なる分類の拒否・閾値の範囲検査・YAML の緩い型変換の拒否（`"yes"` は bool でない、
+  version は str のみ）。`PROHIBITED_RULE_KEYS` 22 種（expression / python / eval / regex / prompt / model /
+  weight / score / priority / probability / severity / rank / confidence / stance / target_price ほか）を schema で拒否。
+- engine を I/O-free に保つため loader を分離した（`discovery_rules` と同じ分担。YAML の読み取りは
+  `knowledge_loader.read_yaml_document` 経由のみ）。
+
+### 追加 — `knowledge/theme_intelligence/monitoring_rules.0.1.0.yaml`【新規】
+
+18 condition の versioned policy。閾値は B6 が所有する提案の滞留日数 2 件（OPEN 60 日 / DEFERRED 30 日）だけで、
+**stale の日数は B2 `LifecyclePolicy` が所有するため置いていない。**
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_engine.py`【新規】
+
+- `evaluate_monitoring(evaluation_input, *, ruleset, recorded_at)` の純 API。
+  file / network / 現在時刻 / 乱数 / 環境変数を一切触らない（import は `..core.time` と monitoring の
+  2 module と stdlib だけ）。
+- 入力は typed で不変な最小 snapshot（`ThemeSnapshot` / `ProposalSnapshot` / `RelationSnapshot` /
+  `RelationProposalSnapshot` / `KnowledgeDriftSnapshot` / `AuthorityFailureSnapshot`）。generic dict dump を受けない。
+- **上流 derived 意味論を再実装しない**。`CONTESTED` / `STALE` / 端点状態 / chain 解決は B1 / B2 / B4 / B5 の
+  結果をそのまま読む。stale の日数計算を engine に二重実装していない（test が token 不在を固定）。
+- **判定不能を「条件が偽」にしない**。subject が読めない / B2 policy token が無い / 提案の作成時刻が無い場合は
+  `unevaluated_conditions` に入れ、INTEGRITY finding を出し、run status を `PARTIAL` にする。
+  静かな COMPLETE ＋ finding 0 になる経路が存在しない。
+- 同じ障害は fingerprint が同じなので finding も diagnostics も 1 件に収束する（無制限の重複生成をしない）。
+- 出力順は `finding_id` 昇順に固定（**順序に優先度の意味は無い**）。score / 順位 / 確率 / severity /
+  予測 / 投資スタンス / 実行命令の語彙を持たない。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_monitoring_engine.py`【新規】98 test。ruleset loader の拒否条件、
+  18 condition の TRUE / FALSE / UNAVAILABLE、§24 の identity test A〜K（同じ状態は cutoff / ruleset version /
+  文言 / 追加参照が変わっても同じ finding、stale と滞留は日々変化しない、矛盾 evidence が増えても同じ）、
+  11 seed の順序不変性、合成 false-positive gate（**synthetic gate result only**）、入力非改変、
+  file 書き込み不在、時計 / 乱数 / network / LLM 不在、import 境界。
+- `docs/databank/PHASE6_THEME_MONITORING_ENGINE_CONTRACT.md`【新規】: module 分割の理由、
+  21 行 → 18 condition_id の対応表、ruleset schema と拒否条件、入力 model、上流再実装の不在、
+  閾値の所有、evidence / proposal / relation / discovery の意味論、integrity routing と PARTIAL、
+  version binding、決定論、B6D への entry contract。
+
+### 改善 — 既存 test の additive 更新（3 件）
+
+- `test_theme_intelligence_import_boundary.py`: `MODULES` へ `monitoring_rules` / `monitoring_engine` を、
+  `KNOWLEDGE_PATH_MODULES` へ `monitoring_rules` を、`ALLOWED_RELATIVE` へ `.monitoring_model` /
+  `.monitoring_rules` を追加。
+- `test_theme_monitoring_model.py`: B6B の 2 assertion が「B6C はまだ無い」ことを主張していたため、
+  意図（package 外から model を参照しない／store・runner・scheduler・notifier が無い）を保ったまま更新。
+- `test_theme_taxonomy_entity_boundary.py`: knowledge 直下に同居してよい ruleset の pattern へ
+  `monitoring_rules.<version>.yaml` を additive に追加（signal / keyword 系 file を拒否する意図は不変）。
+
+## v5.25 (2026-09-23) — Phase 6 P6-B6B monitoring model / vocabulary（model gate）
+
+B6A で凍結した Monitoring architecture を、最小・不変・決定論的な runtime model と語彙に落とした。
+**engine / ruleset YAML / condition evaluator / store / runner / notification は作っていない。**
+実データ監視もしていない。Foundation・B1〜B5 の runtime は無変更（frozen anchor すべてに対して
+`src/` ・`knowledge/` ・`config.yaml` ・workflow の変更 0）。
+
+### 追加 — `src/intelligence/theme_intelligence/monitoring_model.py`【新規】
+
+- **語彙**: `MonitoringCategory`（名義 7 種。順序を持たず severity / priority の意味を持たない）、
+  `MonitoringSubjectKind`（閉じた 8 種。`OTHER` / `GENERIC` なし）、`MonitoringRunStatus`（COMPLETE / PARTIAL のみ。
+  `FAILED` な report は存在しない）、`ReviewDisposition`（ACKNOWLEDGED / DISMISSED / DEFERRED。
+  `RESOLVED` も `APPROVED` / `REJECTED` も無い）。
+- **`MonitoringFinding`**: 条件成立の derived record。identity は
+  `(schema_version, condition_id, category, subject_kind, subject_ref, salient_state)` の content id で、
+  **cutoff / ruleset version / knowledge version / 表示文言 / 参照 / diagnostics を含まない**。
+  同じ状態は cutoff や ruleset version が変わっても同じ finding になる。
+  条件の意味が変わるときは version を上げず `condition_id` を変える（`CONDITION_ID_IS_SEMANTIC`）。
+- **`SalientState`**: 自由な JSON ではなく、`SalientStateKind` 14 種ごとに identity を担う key 集合を凍結した
+  typed value object。値は bounded な token 文字列のみで、**数値・時刻・score を構造的に保持できない**。
+  そのため「何日 stale か」「滞留何日か」が identity に混入せず、毎日別 finding にならない。
+  逆に撤退 root への evidence は 1 件ごとに identity を担う。
+  `ALLOWED_CATEGORIES_BY_STATE_KIND` が state kind と category の誤った組み合わせを拒否する。
+- **`MonitoringReference`**: 根拠の参照 identity のみ。identity を担わないため、矛盾 evidence が増えても
+  finding は同じまま。本文・引用を保持しない。
+- **`MonitoringRunReport`**: `run_id` は **cutoff ＋ ruleset version ＋ knowledge version ＋ 入力 digest** の
+  content id（finding とは逆に cutoff が identity を担う）。実行時刻と結果は identity 外。
+  `COMPLETE` は `unevaluated_conditions` が空であることを要求し、`PARTIAL` は理由を必ず持つ。
+  **authority が読めなかった run を「finding 0 件の COMPLETE」にできない。**
+- **`ReviewItemState`**: 再導出できない人間入力だけを保持する operational record。actor は HUMAN 固定。
+  `recorded_at` は identity 外。`resolve_review_state` が `supersedes` graph だけで終端を解き、
+  fork / 複数 genesis / dangling / 別 finding の predecessor / cycle を fail closed にする（latest-wins なし）。
+- 現在時刻・乱数・network・storage・LLM を使わない。import は `..core.ids` / `..core.time` /
+  `..themes.model` と stdlib だけで、B1〜B5 の runtime module を 1 つも import しない。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_monitoring_model.py`【新規】111 test。語彙の厳密一致、不変性、
+  canonical round-trip、identity の除外項目、salient state の粒度（stale / 滞留が毎日別 finding にならないこと、
+  矛盾 evidence 追加で再 surface しないこと、integrity fingerprint の収束）、run identity、
+  silent failure の禁止、review chain の fail-closed、隠れた authority と score 語彙の不在、
+  時計 / 乱数 / network / LLM の不在、import 境界、engine / ruleset / store / runner が存在しないこと。
+- `docs/databank/PHASE6_THEME_MONITORING_MODEL_CONTRACT.md`【新規】: authority 境界・語彙・identity contract・
+  condition family ごとの salient state 表・provenance・run report・integrity・review chain・
+  時間 / PIT・直列化・security・隠れた authority の不在・B6C への entry contract。
+
+### 改善 — 既存 test の additive 更新（2 件）
+
+- `test_theme_intelligence_import_boundary.py`: `MODULES` と `IDENTITY_MODULES` へ `monitoring_model` を追加。
+- `test_theme_relation_rerun.py`: `test_rr_105` が package の module 総数を 30 と直書きしており、
+  B5 の非改変とは無関係な将来の module 追加で壊れる状態だった。B5 の面（`relation*.py` の集合）を見る
+  assertion に改め、package 全体の inventory は import boundary guard に委ねた。
+
+## v5.24 (2026-09-23) — Phase 6 P6-B6A Monitoring architecture / design audit（docs のみ）
+
+次工程 B6 Monitoring の architecture を設計・凍結するための READ-ONLY / DOCS-ONLY 監査。
+**実装は一切行っていない**（`src/` ・`tests/` ・`knowledge/` ・`config.yaml` ・workflow の diff は
+B5 freeze anchor に対して 0）。B6B 実装も B5 execution gate も開始していない。
+判定は `P6_B6A_MONITORING_ARCHITECTURE_AUDIT_PASS`。blocker は無い。
+
+### 追加 — `docs/databank/PHASE6_THEME_MONITORING_ARCHITECTURE_AUDIT.md`【新規】
+
+- **既存系の再監査**: Foundation / B1 / B2 / B3 / B4 / B5 を source と docs から独立に確認した。
+  とくに B2 の `EvidenceConditionFlag` が `CONTESTED` / `INVALIDATION_EVIDENCE_PRESENT` / `STALE` を
+  すでに derived view として出していること、`LifecyclePolicy` が現在時刻を読まず cutoff との差で
+  判定していることを確認し、B6 はこれらを**再実装せず参照する**方針とした。
+- **6 つの意味論層の分離**: Observation / Derived Change / Monitoring Condition / Monitoring Finding /
+  Review Candidate / Governance Action。`Monitoring Finding ≠ Governance Action`、
+  `Review Candidate ≠ Theme mutation / Relation mutation / Evidence attachment / Prediction / Trading signal`、
+  `Acknowledgement ≠ Governance decision` を明文化した。
+- **用語の判断**: 本 codebase で `Event` はすでに authority を意味する（`ThemeGovernanceEvent` /
+  `ThemeRelationGovernanceEvent`）。derived record に `MonitoringEvent` の名を与えると
+  「隠れた governance authority」の誤読を生むため、`MonitoringFinding` を推奨した。
+- **persistence の結論（Option C）**: finding は authority ＋ knowledge version ＋ cutoff の純関数なので
+  永続化しない。**再導出できない人間入力（acknowledgement / disposition）だけ**を operational journal に置く。
+  finding を永続化しないため B5C の「同 id ＋ 異 bytes → CONFLICT」問題が構造的に発生しない。
+- **identity**: `finding_key = content id over (condition_id, subject_kind, subject_ref, salient_state)`。
+  run 時刻を identity に混ぜない。同じ状態なら同じ key（再提示されない）、状態が変われば別 key（= reopen）、
+  条件が消えれば finding が生成されない（= resolved）。閾値や抑制ヒューリスティクスを持たない。
+- **severity を MVP から外すことを推奨**。順序尺度は score / ranking へ転用されるため、
+  名義分類の `MonitoringCategory` で routing する。
+- **fail-closed の monitoring 版**: authority が読めないことを「条件が成立しない」と同一視しない。
+  `PARTIAL` ＋ `INTEGRITY` finding とし、静かな無検出を作らない。
+- **contradiction / invalidation**、**relation monitoring**、**proposal / discovery monitoring** の
+  condition 案と禁止事項、**diagnostics aggregation**（技術 integrity と intelligence review condition を
+  別 category に分離。B4 繰越 #3 を回収）、**operational runner の責務と既定禁止**（B4 繰越 #15 を回収）、
+  **real-data shadow 段階**（synthetic → fixture → read-only shadow → internal operational）。
+- **監督者決定候補 D-B6-1〜D-B6-14**、**B6 MVP と明示的 non-goals**、**test matrix**、
+  **実装 sequence（B6B model → B6C engine → B6D review store ＋ runner → B6E 敵対的 gate → closeout）**。
+- **B5 繰越 register の分類**: B6_REQUIRED 2 件（B4 繰越 #3 / #15）、B6_RELEVANT_BUT_DEFER 4 件、
+  OUTSIDE_B6 7 件、POLICY_LOCKED 1 件（RR-3）、OPTIONAL 1 件、HISTORICAL_ONLY 1 件。
+  **B5 RR-3 POLICY LOCK を明示的に継承**しつつ、execution gate 自体は B6 の scope に含めない
+  （Monitoring と execution authority を混同しない）。
+
+## v5.23 (2026-09-22) — Phase 6 P6-B5 closeout audit（docs のみ）
+
+B5A → B5B → B5C → B5C-R1 → B5D-RERUN を 1 つの系として監査した完了監査。**READ-ONLY / DOCS-ONLY** で、
+runtime・test・既存 B5 doc・knowledge・config・workflow・公開出力はいずれも無変更。新規 doc と本 CHANGELOG のみ。
+判定は `P6_B5_COMPLETION_AUDIT_PASS_WITH_NON_BLOCKING_DEFERRED_ITEMS`。blocker は無い。
+
+### 追加 — `docs/databank/PHASE6_THEME_B5_COMPLETION_AUDIT.md`【新規】
+
+- **authority map**: 意味論 contract / B5B relation authority / B5C 提案 authority / 人間の決定 authority /
+  決定に埋め込まれた出典主張確認 / 派生 plan / 未実装の実行 gate を層として分離し、
+  「提案 ≠ authority」「ACCEPT ≠ authority」「確認 ≠ authority」「plan ≠ authority」
+  「B5C は B5B に append しない」「RULE / LLM の出自 ≠ HUMAN の出自」「SOURCE_ASSERTED ≠ 客観的真実」を明示。
+- **B5A 照合**: 監督者決定 B5-D1〜D10 をすべて実装と突き合わせ、意図的な逸脱 1 件（B5-D1 の file 名が
+  `relations.jsonl` ではなく `relation_assertions.jsonl` / `relation_governance.jsonl` として確定したこと）を記録。
+- **B5B / B5C 監査**、**R1 の欠陥と remediation**、**B5D-RERUN の結果**、
+  **人間の統治 flow 5 本**（撤回済み関係が ACCEPT だけで復帰しないことを実機確認）、
+  **保証しないことの明示**（出典の真実性 / 自動意味論検証 / 相関から因果 / 共起・taxonomy・entity・時間近接・
+  graph 経路から関係）、**identity 監査**、**時間軸 7 種の PIT 監査**、
+  **永続化 map**（永続 authority 4 file と派生 4 種を分離。出典主張確認は決定 record の一部であり独立 journal を持たない）、
+  **依存方向**（B5C は B5B の model / resolution を read-only 参照するが `relation_store` を import しない。
+  Foundation は B5 を import しない。循環なし）。
+- **RR-1 / RR-2 を NON_BLOCKING_DEFERRED、RR-3 を POLICY_LOCKED / FUTURE_GATE_REQUIRED** として確定。
+  将来の実行 gate は渡された plan object を信頼せず、authoritative な提案と決定から再導出するか同等の
+  不変条件を完全に再検証すること。
+- **B5 繰越 register の正本**（D3〜D5 / RR-1〜RR-3 / 実行 gate / 実世界精度測定 / 自動発見 / 意味論 verifier /
+  所在の表記規約 / B4 繰越 #17 / B5A の語彙・世界時間・移行 gate）。
+
+## v5.22 (2026-09-22) — Phase 6 P6-B5D-RERUN 再検証 gate（test ＋ doc のみ）
+
+B5C-R1 に対して B5D の敵対的 gate を独立に再実行した。**runtime は 1 byte も変更していない**
+（`src/` の diff は R1 anchor に対して 0）。B5B・Foundation・B1〜B4・P4・P5・config・workflow・公開出力も無変更。
+判定は `P6_B5D_RERUN_VALIDATED`。B5D が示した SOURCE_ASSERTED の authority laundering blocker は
+構造的に閉じており、HUMAN_ASSERTED・決定 graph・提案 provenance・PIT 決定性・store の fail closed 挙動・
+先行凍結面のいずれにも退行は無い。
+
+### 追加 — `tests/intelligence/test_theme_relation_rerun.py`【新規】
+
+- 受理述語の一意性: 決定の構築 / 解決 / plan 構築 / 直列化と復元 / store load / 適格判定の各 runtime 経路を
+  列挙し、2 つ目の弱い述語が無いことを固定。R1 前の `source_authority_available` は `src/` 全体で呼び出し 0 件。
+- A〜N matrix を bridge と store の両方で再実行し、正確な失敗 code を固定。
+- RULE / LLM 抽出 matrix（出典裏付き ＋ 人間の確認 → 許可、citation を貼っただけ → 拒否）と、
+  提案者 class が plan provenance に保存され HUMAN に書き換えられないことの確認。
+- 確認の identity と再利用、帰属 / citation の束縛（正規化の境界・publisher 等価推定の不在・
+  複数 citation のうち確認された 1 件）、所在 contract、時刻の包含境界と ±1 マイクロ秒、
+  決定 graph の不変、HUMAN_ASSERTED の非退行、B5B 互換性、authority 非改変、因果安全性 corpus、
+  推移的推論の不在、収束の不変、store の fail closed（改ざんされた確認 record を含む）、
+  import / 自動化の境界。116 test。
+
+### 改善 — `docs/databank/`
+
+- `PHASE6_THEME_RELATION_PROPOSAL_CONTRACT.md`: 帰属一致の正確な意味を明記した。
+  `normalize_text`（NFKC → 空白圧縮 → strip → casefold）を両辺に適用したうえでの完全一致であり、
+  citation・端点・関係型は正規化せず値の完全一致である。
+- `PHASE6_THEME_RELATION_E2E_AUTHORITY_GATE.md`: 付録 §18 に再検証の結果と findings を追記。
+
+### findings（いずれも NON-BLOCKING・本 gate では未修正）
+
+- RR-1: `relation_proposal_store.py` の module docstring だけが R1 前の文言のまま。実行経路は正しい。
+  本 gate は `src/` を変更できないため、docstring のみの後続修正として申し送る。
+- RR-2: 復元経路の naive 時刻が素の `ValueError` になる（既存の `from_iso` 規約。fail closed で bypass ではない）。
+- RR-3: `RelationAssertionPlan` は値 object で自前の検査を持たない。将来の実行 gate は渡された plan を
+  信頼せず、提案と決定から再導出するか再検査すること。
+
+## v5.21 (2026-09-22) — Phase 6 P6-B5C-R1 出典主張の確認（SOURCE_ASSERTED remediation）
+
+B5D が示した欠陥（`SOURCE_ASSERTED` の適格判定が「帰属 field が非 None ＋ citation 1 件以上」という
+構造的存在だけで成立し、「出典がその関係を主張した」ことと「citation が存在する」ことを区別できない）を
+閉じる narrow remediation。**意味論を機械が判定する機構は導入していない。** 人間が確認した事実を
+record として要求する。B5B relation authority は無変更。Foundation・B1・B2・B3・B4 も無変更。
+config・workflow・公開出力・P4・P5 も無変更。提案 identity と store の収束挙動は B5D の判定どおり据え置き。
+
+### 追加 — `src/intelligence/theme_intelligence/relation_proposal_model.py`
+
+- `SourceClaimVerification`: 人間が「引用した出典のこの箇所が、この関係を述べている」と確認した不変 record。
+  出典の帰属 / citation（kind ＋ ref id）/ 主張の所在 / 主張の要約 / 両端点 / 関係型 / 確認者 / 確認時刻を
+  1 つに束ね、別の出典・別の citation・別の Theme・別の関係型へ使い回せない。確認者は HUMAN 固定。
+  汎用の真偽 flag は持たない。長文引用を要求せず、短い所在と要約だけを記録する。
+- `source_asserted_refusal(proposal, decision)`: `SOURCE_ASSERTED` 受理の単一述語。store と bridge が共有する。
+  `SOURCE_ASSERTED_REFUSAL_CODES` として 9 種の拒否理由を凍結した。
+- 凍結文言 `SOURCE_CLAIM_VERIFICATION_MEANING` / `SOURCE_CLAIM_VERIFICATION_NON_MEANING` /
+  `CITATION_PRESENCE_IS_NOT_SOURCE_AUTHORITY`。
+
+### 改善 — `relation_proposal_model.py` / `relation_proposal_store.py` / `relation_proposal_bridge.py`
+
+- `RelationProposalDecision` が `source_claim_verification` を持つ。`SOURCE_ASSERTED` の ACCEPT では必須、
+  それ以外では禁止。確認時刻は決定時刻を超えられない。確認は決定の identity payload に入るため、
+  所在の違う 2 つの ACCEPT が黙って同一視されない。確認は提案ではなく決定に束ねる
+  （提案は「何が提案されたか」、決定は「人間が何を authorize したか」）。
+- store と bridge の `SOURCE_ASSERTED` 検査を `source_asserted_refusal` へ一本化した。
+  従来の `FORBIDDEN_SOURCE_AUTHORITY` は、原因を名指しする 9 種の code に置き換わった。
+- `RelationAssertionPlan` に `verification_origin`（`RelationVerificationOrigin`）を追加。
+  誰が / どの出典を / どの citation の / どの所在で / どの関係意味論を / いつ確認したか、および
+  authorize した決定を監査できる。凍結文言を併記し「客観的真実の検証」とは読ませない。
+
+### 改善 — tests / docs
+
+- `tests/intelligence/test_theme_relation_proposal.py`: 確認 model の matrix 80〜95 を追加（16 test）。
+- `tests/intelligence/test_theme_relation_e2e.py`: B5D の case A〜F を R1 の期待値へ更新し、
+  不一致 matrix G〜N（確認の出典 / citation / source root / target root / 関係型 / 非人間確認者 /
+  決定より後の確認 / 別意味論への使い回し）を追加（31 test）。
+- `tests/intelligence/test_theme_relation_causal_safety.py`: corpus 行の拒否 code を R1 に合わせた。
+- `docs/databank/PHASE6_THEME_RELATION_PROPOSAL_CONTRACT.md`: §6 / §11 / §20 を更新し、
+  付録 §24 に確認 model・配置・identity・意味の境界・B5B 互換性を追記。
+- `docs/databank/PHASE6_THEME_RELATION_E2E_AUTHORITY_GATE.md`: §17 に remediation 結果の付録を追記。
+
+### 残る限界
+
+人間は誤った確認を行いうる。系はそれを検出しない。R1 が閉じたのは「構造だけ整えた提案が、人間の明示的な
+確認なしに `SOURCE_ASSERTED` になる」経路であって、「出典が真にその関係を述べている」ことの保証ではない。
+
+## v5.20 (2026-09-22) — Phase 6 P6-B5D relation E2E / authority laundering / 収束 gate（test ＋ doc のみ）
+
+B5B relation authority と B5C 提案・決定層の鎖を `RelationAssertionPlan` まで通す敵対的 gate。
+**runtime は 1 byte も変更していない**（test / doc / CHANGELOG のみ）。B5B authority への追記は本 gate に存在しない。
+Foundation・B1・B2・B3・B4・B5B・B5C の runtime と knowledge、P4・P5、config・workflow・公開出力はいずれも無変更。
+
+判定は `P6_B5C_REMEDIATION_REQUIRED`。`SOURCE_ASSERTED` の適格判定が構造的存在（帰属 field が非 None ＋
+citation 1 件以上）だけで成立し、「出典が relation semantics を主張した」ことと「citation が存在する」ことを
+区別できないため。詳細と監督者の決定事項は gate doc を参照。
+
+### 追加 — `tests/intelligence/`
+
+- `test_theme_relation_e2e.py`【新規】: 提案 → 人間の決定 → plan の鎖（plan で停止）、
+  authority laundering matrix（4 提案者 class × 2 受理 class ＋ case A〜F）、B5C 報告 §8 の述語一致、
+  提案収束 matrix（5 case ＋ 冪等 replay ＋ created_at）、決定 graph の敵対的集合（fork / 複数 genesis /
+  dangling / 別 proposal / cycle / 11 seed の順序不変性）、訂正と governance の相互作用（撤回済み関係は
+  ACCEPT だけで復帰しない）、PIT と決定論、store の破損と conflict、
+  Foundation 5 authority ＋ B5B 2 authority の byte 同一性。113 test。
+- `test_theme_relation_causal_safety.py`【新規】: 14 行の合成因果 corpus（**synthetic gate result only**）、
+  自動的な関係発見の不在、推移的 authority の不在（`A CAUSES B` ＋ `B CAUSES C` から `A CAUSES C` は生まれない）。
+  70 test。
+
+### 追加 — `docs/databank/`
+
+- `PHASE6_THEME_RELATION_E2E_AUTHORITY_GATE.md`【新規】: `SOURCE_ASSERTED` の意味論監査（GAP 3 点）、
+  B5C 報告 §8 の決着（矛盾ではなく同一述語の 2 分岐）、収束判定（intentional and operationally safe。
+  B4C との差異は producer 層の有無であって identity 規則ではない）、因果安全性 corpus、
+  運用契約の明確化（check-then-reuse）、監督者の決定事項 B5D-D1〜D6。
+
+## v5.19 (2026-09-21) — Phase 6 P6-B5C relation 候補と人間の決定（contract ＋ implementation）
+
+B5B relation authority の直前に立つ提案・決定層を追加した。提案も ACCEPT も plan も authority ではなく、
+B5B への追記は本 gate に存在しない。Foundation・B1・B2・B3・B4・B5B の runtime と knowledge、P4・P5、
+config・workflow・公開出力はいずれも無変更。関係の自動生成は実装していない。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `relation_proposal_model.py`: 不変の `RelationProposal`（提案 type は RELATION_CANDIDATE の 1 つ）と
+  `RelationProposalDecision`（ACCEPT / REJECT / DEFER の 3 つ、actor は HUMAN 固定）。提案者 class は
+  HUMAN / SOURCE / RULE / LLM で、これは「誰が提案したか」であり authority の主張 class ではない。
+  提案 identity は候補となる主張そのもので、発見機構（提案者）と created_at を含まない。出典の帰属は
+  意味を変えるため identity に入る。ACCEPT は最終 authority（HUMAN_ASSERTED / SOURCE_ASSERTED）を明示する。
+  自己辺は提案段階で拒否する。
+- `relation_proposal_resolution.py`: decision chain を predecessor graph だけで解く純関数。latest-wins は無く、
+  fork / 複数 start は OPEN_UNRESOLVED、dangling / 別 proposal 参照 / 閉路は INVALID_DECISION_HISTORY。
+- `relation_proposal_bridge.py`: 受理済み候補 → 不変の `RelationAssertionPlan`。plan は journal identity を持たず
+  永続化しない。SOURCE_ASSERTED は提案に出典の帰属と citation が実在する場合のみ許し、提案者が RULE / LLM で
+  あることは出典の権威の代わりにならない（authority laundering の禁止）。CAUSES は evidence 必須。
+  端点は呼び出し側の read-only lookup が答え、退役 / 後継でも書き換えない。既存 authority と同内容なら
+  RELATION_ALREADY_AUTHORITATIVE、撤回済みなら RELATION_RETRACTED_REQUIRES_GOVERNANCE で fail closed。
+  NEW_RELATION と CORRECTION を明示し、訂正の predecessor は推測しない。
+- `relation_proposal_store.py`: `relation_proposals.jsonl` と `relation_proposal_decisions.jsonl` の
+  2 authority を持つ追記専用 store。冪等 / 衝突 / 破損 fail closed / 修復なし / single writer / 明示 data_root。
+  決定の追記時に対象 proposal の実在・chain の非分岐・SOURCE_ASSERTED 受理の資格を検査する。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_relation_proposal.py`（40 件）と
+  `tests/intelligence/test_theme_relation_proposal_store.py`（19 件）。
+- `docs/databank/PHASE6_THEME_RELATION_PROPOSAL_CONTRACT.md`。
+
+### 改善
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B5C module の列挙、
+  IO / identity module、相対 import の許可、runtime closure、提案層が B5B の追記 API に到達しないことの検査）。
+
+## v5.18 (2026-09-21) — Phase 6 P6-B5B Theme relation authority（contract ＋ implementation）
+
+Theme root どうしの意味論的関係を記録する別 authority を追加した。Foundation・B1・B2・B3・B4 の runtime と
+knowledge、P4・P5、config・workflow・公開出力はいずれも無変更。関係の提案層（B5C 以降）・関係の自動生成・
+graph の順位付けは実装していない。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `relation_model.py`: 不変の `ThemeRelationAssertion` と `ThemeRelationGovernanceEvent`。関係語彙は
+  CAUSES / AMPLIFIES / MITIGATES / DEPENDS_ON の 4 型ちょうど（すべて有向）。authority になれる主張 class は
+  HUMAN_ASSERTED / SOURCE_ASSERTED の 2 つちょうどで、rule / LLM に相当する値を持たず、記録者は HUMAN 固定。
+  CAUSES は両 class とも evidence 参照必須。SOURCE_ASSERTED は帰属と citation 必須。自己辺は禁止。
+  identity は内容から決まる content id（`threl_` / `thrgov_`）で、provenance と recorded_at は identity の外。
+  辺 key は derived で、同じ関係履歴に属する assertion をまとめる。
+- `relation_resolution.py`: 純 PIT resolver。chain は predecessor graph だけで解き、fork / 複数 start は
+  UNRESOLVED、dangling / 閉路 / 非単調 / 不正な governance 列は INVALID_HISTORY。両端点の Theme root が
+  cutoff までに存在することを要求し、ThemeObservation の解決は要求しない。端点判定は呼び出し側が渡す
+  read-only lookup が答える（Foundation store を読まない）。
+- `relation_graph.py`: 記述的な read view（outgoing / incoming / neighbors / relations_between /
+  relations_by_type）。順位付け・score・中心性・推奨を持たず、推移的に導出した辺を作らない。撤回辺は
+  既定の active 集合から外れ、明示要求でのみ返る。
+- `relation_store.py`: `relation_assertions.jsonl` と `relation_governance.jsonl` の 2 authority を持つ
+  追記専用 store。canonical 行のみ・冪等・同 id 異 bytes は CONFLICT・破損は fail closed・修復なし・
+  single writer・明示 data_root。分岐 append を許さない。store 経由の解決は破損を status として返す。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_relation.py`（41 件）と `tests/intelligence/test_theme_relation_store.py`（21 件）。
+- `docs/databank/PHASE6_THEME_RELATION_AUTHORITY_CONTRACT.md`。
+
+### 改善
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B5B module の列挙、
+  IO / identity module、相対 import の許可、runtime closure、凍結 module が relation authority を
+  import しないことの検査）。
+
+## v5.17 (2026-09-21) — Phase 6 P6-B5A Theme relation graph 読み取り専用 architecture 監査（docs のみ）
+
+Theme root どうしの意味論的関係を表す永続 relation graph の architecture を、読み取り専用で設計監査した。
+runtime・test・knowledge・config・workflow・data・公開出力はいずれも無変更。graph runtime は実装していない。
+
+### 追加
+
+- `docs/databank/PHASE6_THEME_RELATION_GRAPH_AUDIT.md`: Foundation lineage との素な分離と強制方法、
+  relation authority の 4 案比較（別 append-only authority を推奨）、assertion ＋ governance event の
+  二層 record model と identity / 辺 key の区別、MVP 語彙 4 型（CAUSES / AMPLIFIES / MITIGATES / DEPENDS_ON。
+  RELATED_TO 不採用、PARENT_OF は MVP 外）、因果安全性（出典の主張の記録と系の推論の区別、RULE / LLM は提案止まり）、
+  提案 architecture、方向性と derived 逆辺、自己辺 / 重複辺、訂正 / 撤回、PIT の端点意味論、lifecycle 非干渉、
+  merge / split の自動移行禁止、evidence 要求、taxonomy / entity は hint のみ、discovery 非拡張、
+  記述的 query 面（順位付けなし・推移的導出辺なし）、循環意味論、数値強度の不採用、歴史資産の分類、
+  package 境界、永続化規律、公開境界、失敗語彙 17 種、将来 test matrix 32 項目、監督者決定 B5-D1〜D10。
+
+### 検証結果
+
+- 凍結面（Foundation / B1 / B2 / B3 / B4B / B4C / B4D / B4E / P4 / P5）の diff はすべて 0。
+- 監督者決定 10 件はいずれも Foundation / B3 / B4 の変更を必要としない。
+
+## v5.16 (2026-09-20) — Phase 6 P6-B4 完了監査（docs のみ）
+
+B4A〜B4E の読み取り専用の完了監査を実施し、結果を 1 本の監査 doc にまとめた。runtime・knowledge・test・config・
+workflow・公開出力はいずれも無変更。繰延項目の解消も行っていない。
+
+### 追加
+
+- `docs/databank/PHASE6_THEME_B4_COMPLETION_AUDIT.md`: authority map（versioned knowledge / derived discovery output /
+  proposal authority / derived bridge output / Foundation authority）と境界の証明、B4A の D-B4-1〜10 の照合、
+  B4D の D-B4D-1〜5 ＋ FC-1 と B4E の D-B4E-1〜4 の確定記録、identity 監査、8 つの時間軸の PIT 監査、
+  source origin と独立性の監査、false positive 監査、人間 governance 監査、dedup 監査、knowledge version 監査、
+  機密監査、import / 依存監査（循環なし）、永続化監査、繰延項目の canonical 登録簿 17 件、凍結面監査、
+  test / guard の件数、完了条件の照合。
+
+### 検証結果
+
+- Foundation authority は discovery → 提案 → 人間 ACCEPT → attachment plan の全段階を通しても byte 単位で不変。
+- 逆方向の依存（Foundation / B1 / B2 / B3 / P4 / P5 / 公開 bundle → B4）は 0 件。循環依存なし。
+- 凍結面（Foundation / B1 / B2 / B3 runtime / B4B / B4C / B4D / B4E / P4 / P5）の diff はすべて 0。
+- 自動の Theme 作成・evidence 付与・decision 追記・勝者選択・順位付けはいずれも実装に存在しない。
+- 繰延 17 件を NON_BLOCKING / FUTURE_GATE_REQUIRED / OPTIONAL / POLICY_LOCKED で分類して登録した。
+
+## v5.15 (2026-09-20) — Phase 6 P6-B4E 受理済み evidence 候補 → Foundation attachment plan（計画境界）
+
+人間が ACCEPT した `EvidenceCandidateProposal` から、後で Foundation の `EvidenceAttachment` を組み立てるための
+不変 plan を導く純関数を追加した。Foundation への追記・observation の改訂・root 生成・governance event・
+proposal / decision 履歴の変更・discovery / lifecycle / 資格判定の実行は一切行わない。Foundation・B1・B2・B3 runtime・
+B4B / B4C の runtime と knowledge・B4D の test / docs・P4・P5・config・workflow・公開出力は無変更。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `evidence_bridge_model.py`: `EvidenceAttachmentPlan`（frozen。content id を持たず永続化しない）、提案の出自
+  `ProposalOrigin` と受理の `DecisionOrigin`、`EvidenceBridgeError`、橋渡し可能な役割（SUPPORTS / CONTEXT）、
+  役割 authority は HUMAN 固定、authority class は PRIMARY_OBSERVATIONAL 固定。`to_plain()` / `canonical_line()` は決定論的。
+- `evidence_bridge.py`: `plan_evidence_attachment_from_accepted_proposal(proposal, decisions, *, target_resolution,
+  created_at, consequence_ref=None, invalidation_ref=None)`。B3 の decision chain resolver をそのまま使った受理判定、
+  明示 Foundation root のみを対象にする検証、SUPPORTS の consequence ref 必須 ＋ 実在検査、CONTEXT の consequence 禁止、
+  invalidation の全面禁止、重複 attachment key の fail closed、時刻の前後関係（等号は許可）、参照 identity の完全保存。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_evidence_bridge.py`（40 件）: 実 Foundation world の read-only resolution を対象に、
+  受理状態 6 種・proposal type・対象規則・resolution 状態 4 種・consequence / invalidation / 役割・時刻境界・
+  重複・保存・provenance・決定性（10 seed の decision 順入れ替え）・無変更（authority bytes / proposal / resolution）・
+  source / import 境界を固定する。
+- `docs/databank/PHASE6_THEME_EVIDENCE_BRIDGE_CONTRACT.md`。
+
+### 改善
+
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B4E module の列挙・
+  `.evidence_bridge_model` の許可・runtime closure・Foundation 実行 API 非参照の検査対象に追加）。
+
+## v5.14 (2026-09-20) — Phase 6 P6-B4D Theme discovery E2E ＋ false-positive gate（検証のみ）
+
+B4C の discovery 層に対する敵対的 E2E gate を追加した。test と docs だけを追加し、runtime（discovery module、taxonomy /
+entity catalog / discovery rules の公開 snapshot）・Foundation・B1・B2・B3・B4B・P4・P5・config・workflow・公開出力は無変更。
+期待値は `discover()` の出力の snapshot ではなく、契約から独立に authoring した golden fixture である。
+
+### 追加 — tests
+
+- `tests/intelligence/test_theme_discovery_e2e.py`: 35 件の golden case corpus（正例 8、L2 攻撃 6、entity lifecycle 4、
+  taxonomy 階層 4、negative predicate 2、source origin 4、PIT 2、機構 firewall 3、MIN_DISTINCT 2）と、
+  EvidenceCandidate / ThemeCandidate を別々に数える混同行列（group 別内訳つき）。機構 firewall、矛盾 rule の非仲裁、
+  proposal id の収束と分岐、decision 履歴 4 状態の抑制、ThemeResolution との exact dedup、FC-1（Foundation OTHER 使用数）、
+  score / rank / 独立 source 主張の不在、成果物の機密 token 検査。
+- `tests/intelligence/test_theme_discovery_false_positive.py`: L2 正規化攻撃（別語内の部分文字列、句読点、NFKC、casefold、
+  空白、最長一致、alias 反復、URL / author のみ、context alias）、taxonomy 階層（親子非伝播、多親、deprecated slug）、
+  entity lifecycle（rename / ticker 変更 / supersession / inactive / ambiguous）、negative predicate stress、
+  MIN_DISTINCT 4 次元の stress。
+- `tests/intelligence/test_theme_discovery_replay.py`: cutoff 等号は可・1 マイクロ秒超過は除外（入力 4 種 ＋ knowledge 3 種）、
+  旧 version に pin した replay、旧 ruleset × 新 knowledge の pin 不一致、10 seed の入力 shuffle・既存 proposal / decision の
+  shuffle・knowledge 再読み込みでの proposal id / canonical bytes / run report 一致、run report 順序の canonical 性。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_DISCOVERY_E2E_GATE.md`: corpus の構成、golden 期待値の作り方、group 別混同行列、
+  L1 / L2 結果、taxonomy 階層・entity lifecycle・source origin・機構 firewall・negative predicate・MIN_DISTINCT の結果、
+  proposal id 収束、decision 履歴、dedup、PIT / replay、FC-1、限界、supervisor 決定事項（D-B4D-1〜5）。
+
+### 検証結果
+
+- ThemeCandidate の false positive 0、EvidenceCandidate の false positive 0。
+- ThemeCandidate の false negative は 1 件のみで、L2 だけの theme 的文面に対する意図的な fail closed
+  （診断 `THEME_CANDIDATE_REQUIRES_L1_HIT`）。
+- 生成された THEME_CANDIDATE 9 件はいずれも Foundation の OTHER category を必要としない。
+- 数値は合成 corpus 上の契約適合の計数であり、実運用の precision / recall の推定ではない。
+
+## v5.13 (2026-09-20) — Phase 6 P6-B4C deterministic Theme discovery（contract ＋ implementation）
+
+許可された構造化入力（SourceDocument / NewsItem / usable Fact / market Observation）から、B3 の EvidenceCandidateProposal /
+ThemeCandidateProposal と derived な DiscoveryRunReport を決定論的に生成する discovery 層を追加した。Theme root を作らず、
+Foundation / ProposalStore に書かず、decision を変えず、EvidenceCandidate を自動 promotion せず、fuzzy / LLM / score / rank を
+持たない。ruleset は B4B と同じ VERSIONED KNOWLEDGE で taxonomy / catalog version を正確に pin する。
+Foundation・B1・B2・B3・B4B runtime・P4・P5・config・workflow・公開出力は無変更。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `discovery_model.py`: ruleset / rule / predicate / template（subject / mechanism / scope / invalidation / limitation）の純 model と
+  検証（rule_id 不変、SUPPORTS / CONTEXT のみ、THEME rule は template 完全 ＋ PERIOD_FRAME 1 個 ＋ invalidation ≥ 1、binding
+  `${entity}` / `${entity.<attr>}` / `${series}` の一意性）、`DiscoveryInputRecord`、`RuleEvaluation` / `DiscoveryRunReport` /
+  `DiscoveryResult`。certainty は authoring 不可（HYPOTHESIZED_MECHANISM 固定）。
+- `discovery_predicates.py`: ALL / ANY / NOT / ENTITY_PRESENT / TAXONOMY_SIGNAL / FACT_TYPE / OBSERVATION_SERIES / SOURCE_KIND /
+  MIN_DISTINCT（入力単位と rule 単位）の評価。件数は充足だけを決め、親 slug は数えない。
+- `discovery_rules.py`: `load_discovery_rules_version(path, *, expected_version, cutoff, taxonomy, entity_catalog)`（version / cutoff /
+  digest / pin 一致 / ACTIVE rule の deprecated taxonomy・retired / superseded entity・未知参照・binding 属性を fail closed）。
+- `discovery_adapter.py`: 4 入力 model → 共通 record。L1（明示 entity ref / identifier / fact_type / series / source kind）と L2
+  （headline / title / summary に対する alias の正規化完全一致。longest alias wins、本文非走査）。source origin の保守的導出
+  （同一記事の NewsItem / SourceDocument / Fact は同じ origin。独立数は数えない）。cutoff 後に知り得た入力・USABLE でない Fact は除外。
+- `discovery.py`: `discover(inputs, *, taxonomy, entity_catalog, ruleset, cutoff, run_created_at, existing_proposals, existing_decisions,
+  theme_resolutions, include_dedup)`。negative predicate による除外、集約 MIN_DISTINCT、EVIDENCE_CANDIDATE（rule 非依存の canonical
+  reason）、THEME_CANDIDATE（L1 hit 必須、template ＋ binding ＋ 同一 rule 内集約）、等価提案の rule 跨ぎ収束、既存 id の抑制と
+  decision 状態の診断、B3 exact dedup の任意呼び出し、run report。
+
+### 追加 — knowledge / tests / docs
+
+- `knowledge/theme_intelligence/discovery_rules.0.1.0.yaml`（pins taxonomy 0.2.0 / catalog 0.2.0。L1 entity・L2 alias・FACT_TYPE・
+  OBSERVATION の evidence rule、negative ＋ MIN_DISTINCT 付き THEME rule、同 template の収束用 rule、DEPRECATED rule。generic のみ）。
+- `tests/intelligence/test_theme_discovery_rules.py`（matrix 1〜14）、`test_theme_discovery.py`（15〜68）、
+  `test_theme_discovery_boundary.py`（74〜79）。`test_theme_intelligence_import_boundary.py` と
+  `test_theme_taxonomy_entity_boundary.py` を additive に拡張（B4C module の列挙・入力 model module の許可・ruleset file の同居）。
+- `docs/databank/PHASE6_THEME_DISCOVERY_CONTRACT.md`。
+- full suite 1846 passed（xfail 0 / skip 0）。
+
+## v5.12 (2026-09-20) — Phase 6 P6-B4B Theme taxonomy ＋ entity catalog（versioned knowledge）実装
+
+B4C discovery の前提となる決定論的 normalization knowledge を追加した。taxonomy / entity catalog は **VERSIONED KNOWLEDGE**
+（Foundation authority・proposal authority・evidence・governance ではない）で、`knowledge/theme_intelligence/` の不変 YAML
+snapshot を明示 version ＋ cutoff ＋ content digest 照合でのみ読む。「latest」loader・現在時刻・書き込み・network はない。
+Discovery・rule・proposal 生成・bridge・LLM・graph・monitoring は含まない。Foundation・B1・B2・B3 runtime・P4・P5 は無変更。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `knowledge_loader.py`: 共通 primitive（`KnowledgeError`、`KnowledgeProvenance`、version 解析、`normalize_token` ＝ NFKC /
+  空白圧縮 / casefold、canonical JSON、sha256 content digest、published_at / date 解析）と strict YAML loader（重複 key・
+  複数 document・非 mapping を拒否、unknown field / 型不一致は fail closed）、envelope 検証、version / cutoff / digest gate。
+- `taxonomy_model.py` / `taxonomy.py`: `TaxonomyNode` / `TaxonomySnapshot`（DAG、multi-parent 可、RELATED edge なし、親の自動
+  伝播なし、slug 不変、rename ＝ 新 slug ＋ deprecated_in_version / superseded_by、alias 所有の一意性、cycle 検出）、
+  `load_taxonomy_version`、`resolve_taxonomy_token`（EXACT_SLUG / EXACT_ALIAS / DEPRECATED / AMBIGUOUS / UNKNOWN。fuzzy なし）、
+  `validate_theme_taxonomy_refs`（Foundation METADATA TAXONOMY 値の純検証。書かない）。
+- `entity_model.py` / `entity_catalog.py`: `EntityType` 9 種（Foundation `ThemeEntityKind` へ単射で写像。PERSON / TICKER /
+  TECHNOLOGY / POLICY_PROGRAM は語彙外）、`EntityIdentifier`（TICKER / INSTRUMENT_ID / ISO_COUNTRY / ISO_CURRENCY、TICKER のみ
+  期間非重複なら再利用可）、`EntityRecord`（`<kind>:<immutable-slug>`、safe / context alias ＋ context_terms、valid_from /
+  valid_to、superseded_by、retired_in_version）、`EntityCatalogSnapshot`（alias 所有・shadow・identifier 衝突・lifecycle 検証）、
+  `load_entity_catalog_version`、`resolve_entity_token`（EXACT_ID / EXACT_SAFE_ALIAS / CONTEXT_ALIAS / AMBIGUOUS / UNKNOWN /
+  INACTIVE / SUPERSEDED。先頭選択・順位付けなし。後継への自動付け替えなし）。
+
+### 追加 — knowledge / tests / docs
+
+- `knowledge/theme_intelligence/theme_taxonomy.0.1.0.yaml` / `0.2.0.yaml`（historical slug 名 8 件の seed、0.2.0 で
+  `supply_chain_theme` → `supply_chain` の rename via new slug）、`entity_catalog.0.1.0.yaml` / `0.2.0.yaml`（公開標準 entity
+  と架空 MVP fixture company。0.2.0 で rename・ticker 変更・merger を表現）。顧客 watchlist・PERSON・信号語・Compass 文言なし。
+- `tests/intelligence/test_theme_taxonomy.py`（matrix 1〜24）、`test_theme_entity.py`（25〜50）、
+  `test_theme_taxonomy_entity_boundary.py`（55〜64）、`test_theme_intelligence_import_boundary.py` を additive に拡張。
+- `docs/databank/PHASE6_THEME_TAXONOMY_ENTITY_CONTRACT.md`。
+- full suite 1782 passed（xfail 0 / skip 0）。
+
+## v5.11 (2026-09-19) — Phase 6 P6-B4A Theme taxonomy / entity / discovery architecture audit（docs only）
+
+B4 runtime を設計する前の read-only 監査。runtime・tests・knowledge・config・workflow は無変更。Foundation・B1・B2・B3 は
+凍結のまま（FOUNDATION / B1 / B2 / B3 CHANGE_REQUIRED いずれも NO。B3.1 候補は OPTIONAL_FUTURE として列挙）。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_TAXONOMY_ENTITY_DISCOVERY_AUDIT.md`: B3 intake surface の監査（proposal id は provenance を
+  含まない ＝ rule 非依存 identity、`reason` は EVIDENCE_CANDIDATE の identity 内、knowledge pin の構造化 field 不在）、
+  TaxonomyNode / EntityRecord 案、taxonomy content の置き場所比較（推奨: `knowledge/theme_intelligence/` YAML ＋ versioned code
+  model）、entity type は Foundation `ThemeEntityKind` の部分集合 9 種（TECHNOLOGY / POLICY_PROGRAM は taxonomy / mechanism で
+  表す）、entity id は `<kind>:<slug>` 不変 token（typed_reference が identity core に入るため）、historical 資産 12 件の
+  PORT / REDESIGN / REFERENCE_ONLY / REJECT 再評価、discovery 入力 authority 表、proposal-only の出力 pipeline（自動 promotion
+  NO）、rule model、rule versioning（proposer_ref ＋ rule_version で足りる）、matching level（L1 ＋ 限定 L2、L3 は B7）、
+  mechanism assembly（template ＋ binding のみ、共起から CAUSES を作らない）、EvidenceCandidate bridge（別 gate B4E 推奨）、
+  false positive containment、source independence、PIT / time、governance 境界、機密性、package 境界、sub-gate
+  B4B / B4C / B4D / B4E、将来 test、監督者決定 D-B4-1〜10。
+
+## v5.10 (2026-09-19) — Phase 6 P6-B3 Theme proposal journal ＋ dedup review 実装
+
+「Theme 候補」「重複候補」「人間 review decision」を Foundation とは別の append-only proposal authority
+（`<data_root>/theme_intelligence/proposals.jsonl` / `proposal_decisions.jsonl`）に記録する層を追加した。Proposal ≠ Theme:
+proposal が存在しても ThemeRootRecord / ThemeObservation / governance は作られず、B3 は Foundation へ自動 write しない。
+Foundation・B1・B2 runtime・P4・P5 は無変更。config / workflow / 公開出力の変更なし。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `proposal_model.py`: `ThemeCandidateProposal`（A1 / A2 の Theme 定義を満たす構造。Foundation の純関数で semantic /
+  identity core fingerprint を計算し保持値と照合）、`EvidenceCandidateProposal`、`DedupReviewProposal`（RULE のみ、exact class
+  のみ）、`ProposalDecision`（HUMAN のみ、ACCEPT / REJECT / DEFER / NOT_DUPLICATE、`supersedes_decision_id`）。content id
+  `thprop_` / `thdec_`（created_at / recorded_at / provenance は identity 外）。全 datetime は aware UTC・caller 注入。
+- `proposal_store.py`: `ProposalStore`（明示 data_root、追記専用 JSONL、canonical 行、flush ＋ fsync、同 id 同 bytes 冪等 /
+  異 bytes CONFLICT、破損 fail closed、byte 長で外部変更検知、read-only、修復 / migration / SQLite なし）。decision chain の
+  validate-before-append（proposal 存在、種別別の許可 decision、predecessor の terminal 性、時刻単調性、fork 診断）。
+- `proposal_resolution.py`: `resolve_active_decision`（predecessor graph のみ。唯一 terminal ＝ RESOLVED、fork / 複数 start ＝
+  UNRESOLVED、dangling / cycle ＝ INVALID、時刻 / 物理順で選ばない）、`derive_proposal_status`（OPEN / OPEN_DEFERRED /
+  OPEN_UNRESOLVED / ACCEPTED / REJECTED / CLOSED_NOT_DUPLICATE / INVALID_DECISION_HISTORY）、`derive_open_proposals`。
+- `dedup.py`: `detect_exact_duplicates`（semantic fingerprint exact ＋ identity core fingerprint exact のみ。counterpart は
+  RESOLVED な ThemeResolution と他の THEME_CANDIDATE。複数 exact は全列挙、score / rank / nearest / embedding なし、
+  SCOPE / SUBJECT / MECHANISM / PARENT_CHILD の自動分類なし）。active NOT_DUPLICATE による derived suppression
+  （同 subject fingerprint・同 basis・同 dedup model version の同 counterpart は再提示しない。fingerprint / version 変更で再提示）。
+- `proposal_bridge.py`: `plan_theme_creation_from_accepted_proposal`（active ACCEPT の THEME_CANDIDATE だけを Foundation
+  candidate 作成の材料 `ThemeCreationPlan` にする。root_id を持たず生成せず、`execute_candidate` / `ThemeStore.append_*` を
+  呼ばない。plan に proposal id / decision id / actor の provenance）。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_proposal.py`（matrix 1〜30・40〜50）、`tests/intelligence/test_theme_dedup.py`（31〜39）。
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（B3 module の import 境界と closure、
+  IO は proposal_store の追記のみ、operations / store 非 import、Foundation 非 write、root id 非生成、score / embedding token 不在）。
+- `docs/databank/PHASE6_THEME_PROPOSAL_DEDUP_CONTRACT.md`。
+- full suite 1723 passed（xfail 0 / skip 0）。
+
+## v5.09 (2026-09-19) — Phase 6 P6-B2 Theme lifecycle view 実装
+
+Foundation の `ThemeResolution` 1 つから 2 層の lifecycle snapshot（governance 層 ＋ evidence 層）を導く純 derived 層を
+`src/intelligence/theme_intelligence/` に追加した（監督者決定 L-1〜L-8）。Foundation 7 file・B1 runtime（`change.py` /
+`model.py`）・P4・P5 は無変更。journal・content id・config.yaml・workflow を持たない。B1 ChangeSet は入力にしない
+（lifecycle ＝ snapshot、ChangeSet ＝ delta）。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `lifecycle_model.py`: `GovernanceLifecycleState`（UNREVIEWED / ACCEPTED / REJECTED / RETIRED / MERGED / SPLIT / SUPERSEDED /
+  UNRESOLVED / NOT_AVAILABLE）、`EvidenceConditionFlag`（NO_VISIBLE_EVIDENCE / HAS_CONTEXT_ONLY / HAS_SUPPORT / SINGLE_SOURCE /
+  MULTI_SOURCE / SINGLE_EVIDENCE_DATE / MULTI_DATE / QUALIFIES / CONTESTED / INVALIDATION_EVIDENCE_PRESENT / STALE）、
+  `LifecycleViewStatus`（AVAILABLE / PARTIALLY_AVAILABLE / UNAVAILABLE）、`EvidenceConditionStatus`（EVALUATED / UNRESOLVED /
+  NOT_EVALUATED）、`LifecyclePolicy`（`stale_after_days`、既定 90 calendar days、`theme_lifecycle_policy:0.1.0`）、
+  `ThemeLifecycleView`（`theme_lifecycle_view:0.1.0` / `theme_lifecycle_model:0.1.0`、policy 値を結果に保持）。
+  勢い・方向・投資判断・総合評価・score / rank / tier の語は無い。
+- `lifecycle.py`: `derive_lifecycle(resolution, *, policy, governance_events=None)`。governance 層は Foundation の
+  `governance.status` / effective event / lineage だけから決める（独自 latest-wins なし。EVENT_REVERSED は resolver の
+  畳み込み結果を使う。correction event が terminal のときは渡された governance event で chain を遡り、無ければ fail
+  closed。merge / split / successor の result root は origin event だけでは UNREVIEWED）。evidence 層は Foundation の
+  `DerivedView` / `EvidenceView` を再 count せず参照。STALE は最新 dated counted evidence の日付から cutoff の日付までの
+  calendar 日数が `stale_after_days` 以上（89 日 false / 90 日 true）。dated counted evidence 0 件は STALE を付けず診断
+  STALE_NOT_EVALUABLE_NO_DATED_EVIDENCE。NO_STATE / INVALID_HISTORY / STORE_CORRUPTION は UNAVAILABLE、governance または
+  semantic の UNRESOLVED は PARTIALLY_AVAILABLE、metadata / mapping の UNRESOLVED は影響なし。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_lifecycle.py`（41 test。matrix 1〜37 ＋ 失敗入力）。
+- `tests/intelligence/test_theme_intelligence_import_boundary.py` を additive に拡張（lifecycle module の import 境界と
+  closure、P5 / 較正 / 価格 / production authority token の不在、Foundation 結果の再 count 禁止）。
+- `docs/databank/PHASE6_THEME_LIFECYCLE_CONTRACT.md`（snapshot vs delta、2 層分離、governance state、evidence flag、
+  freshness policy と STALE 境界、qualification 再利用、contradiction / invalidation、partial availability、
+  NO_STATE / UNRESOLVED、除外、要確認事項、versioning、import 境界、tests）。
+
+## v5.08 (2026-09-19) — Phase 6 P6-B1 Theme change detection 実装
+
+Theme Foundation（凍結、anchor `12847bf`）の上に Theme Intelligence layer `src/intelligence/theme_intelligence/` を新設し、
+その最初の module として change detection を実装した。2 つの点時刻再構成 `ThemeResolution(root, T1)` / `(root, T2)` を
+比較し「Theme について何が変わったか」を決定論的な `ThemeChangeSet` で表す純 derived 層。authority ではなく journal に
+保存しない。Foundation 7 file・P4 production bundle・P5 凍結 source / test は無変更。lifecycle / discovery / dedup /
+graph / taxonomy / LLM / monitoring は含まない（監督者決定 D-B2〜D-B8）。
+
+### 追加 — `src/intelligence/theme_intelligence/`
+
+- `__init__.py` / `model.py`: `ThemeChangeSet`（frozen。schema `theme_change_set:0.1.0`、model `theme_change_model:0.1.0`）、
+  `Change`、`ChangeKind` 語彙（ROOT_APPEARED / ROOT_BECAME_OBSERVED / OBSERVATION_REVISED / SEMANTIC_FIELD_CHANGED /
+  EVIDENCE_ADDED・CARRIED・DROPPED・ROLE_CHANGED・REF_REVISED・ATTRIBUTE_CHANGED / NEW_SOURCE_ORIGIN・SOURCE_ORIGIN_LOST /
+  NEW_EVIDENCE_DATE・EVIDENCE_DATE_LOST / QUALIFICATION_CHANGED / CONTRADICTION・INVALIDATION の APPEARED・CLEARED /
+  GOVERNANCE・METADATA・MAPPING・LINEAGE_CHANGED / PENDING_APPEARED・CLEARED / SEMANTIC・FACET_BECAME_UNRESOLVED・RESOLVED /
+  DEREFERENCE_CHANGED）、knowledge 軸（attached_at / recorded_at）と evidence-time 軸（evidence_time の window 関係）、
+  `ChangeSetStatus`（COMPUTED / UNAVAILABLE）、`ThemeChangeError`。lifecycle / 強弱 / 方向 / score の語は無い。
+- `change.py`: `compare_resolutions(before, after)`（主 authority）と `detect_changes(history, root_id, T1, T2,
+  dereference_before, dereference_after)`（resolver 公開 entry point を 2 回呼ぶ wrapper）。attachment_key 対応、決定論的
+  1:1 の role 訂正 / 上流 revision 対応（曖昧なら ADDED / DROPPED のまま）、carried evidence の区別、DerivedView の
+  diversity 比較（origin grouping を再定義しない）、facet 独立、UNRESOLVED / NO_STATE / dereference の分離、T1 > T2・root
+  不一致・resolver version 不一致は fail closed、INVALID_HISTORY / STORE_CORRUPTION は UNAVAILABLE な結果。
+
+### 追加 — tests / docs
+
+- `tests/intelligence/test_theme_change.py`（43 test。matrix 1〜42 ＋ 上流 revision 対応）、
+  `tests/intelligence/test_theme_intelligence_import_boundary.py`（7 test。語彙 / score / IO・時計・乱数 / import 境界 /
+  production closure / Foundation からの非参照）。
+- `docs/databank/PHASE6_THEME_CHANGE_DETECTION_CONTRACT.md`（authority 境界・語彙・二軸・evidence 対応・diversity・
+  qualification・contradiction / invalidation・facet 独立・UNRESOLVED / NO_STATE・dereference・決定論・除外・API・test・
+  versioning）。
+
+### 改善
+
+- `tests/intelligence/test_theme_import_boundary.py`: 「他 package は themes を import しない」の走査から、D-B1 で
+  Foundation の read-only surface を import してよい `theme_intelligence` だけを除外（その境界は新 boundary test が固定）。
+- full suite 1640 passed（xfail 0 / skip 0）。
+
+## v5.07 (2026-09-19) — Phase 6 P6-B0 Theme Intelligence 設計監査（docs only）
+
+Theme Foundation（P6-A1〜A4d.1、anchor `12847bf`）は COMPLETE / CLOSED / FROZEN。その上に置く Theme Intelligence layer
+（D10 graph / D11 lifecycle / D12 discovery / D13 dedup / D14 granularity、taxonomy / entity linkage / mechanism 語彙 /
+monitoring / 支持・反証の推移 / change detection / human governance / LLM 境界）の設計監査を行った。runtime・test・
+knowledge・config・workflow は無変更。historical branch の参考資産 11 件は read only（port / merge / cherry-pick なし）。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_INTELLIGENCE_ARCHITECTURE_AUDIT.md`（25 節）: Foundation の現能力と欠落能力、D10〜D14 の
+  選択肢比較、taxonomy / entity / monitoring / evidence 推移 / governance / LLM / Phase 7 境界、historical 資産分類
+  （PORT / REDESIGN / REFERENCE_ONLY / REJECT）、依存 graph、推奨実装順序（F: Change Detection → Lifecycle → Proposal ＋ Dedup →
+  Taxonomy ＋ Entity ＋ Discovery（proposal-only）→ Graph → Monitoring runner ＋ index → LLM）、P6-B subphase 案、schema /
+  interface 案、Foundation 変更候補（必須なし。FC-1 mechanism 語彙 version の複数受理は B4 前に再評価）、risk、
+  後続 test / guard、次 gate 推奨（P6-B1 Change Detection）。
+
+### 改善
+
+- `docs/databank/PHASE6_FOUNDATION_DECISIONS.md` §14 に Foundation freeze と P6-B0 監査の参照を追記（決定内容は不変）。
+
+## v5.06 (2026-09-19) — Phase 6 P6-A4d.1 Theme foundation BLOCKER 修正
+
+A4d で発見した contract / implementation の不一致 3 件（A4D-1 / A4D-2 / A4D-3）を、`src/intelligence/themes/store.py` と
+`resolver.py` だけの最小修正で解消した。model / fingerprint / qualification / revision / operations は無変更。
+schema version・語彙 version・canonical payload・既存 id・authority file 名・load 順・既存 journal bytes は不変（migration なし）。
+P4 production bundle・P5 凍結 source / test は無変更。
+
+### 修正
+
+- A4D-1: 同一 root 内で identity core（subject / driver / channel / domain）が変わる observation を store が受理していた。
+  `store._validate_observation_chain` で predecessor と `identity_core_unchanged` を比較し、append は
+  IDENTITY_CORE_CHANGED で拒否、既存 file 内の違反は load で INVALID_HISTORY。resolver も同じ不変条件を検査し
+  INVALID_HISTORY を返す（勝者選択・自動 successor 化なし）。semantic 変更は引き続き同一 root の revision。
+- A4D-2: METADATA_CORRECTION_APPROVED（related record ＝ metadata）を含む journal が固定 load 順のため再 open できなかった。
+  related record 検査を `_validate_event_related` に切り出し、metadata 参照は第 2 pass（cross authority）で検査する。
+  load 順・append 時の検査・governance の canonical bytes / id は不変。参照先不在 / 別 root / 時刻逆行は引き続き fail closed。
+- A4D-3: 宣言済みだが RootRecord 未作成の result root を解決すると UNKNOWN_ROOT だけで PENDING_EVENT / lineage が付かず、
+  後日の RootRecord が過去 T の診断を変えていた。resolver `_resolve` は T で可視な宣言 event を集め、宣言があれば
+  NO_STATE ＋ ROOT_AFTER_CUTOFF（related ＝ 宣言 event）＋ PENDING_EVENT ＋ 宣言由来 lineage を返す（root / observation は None、
+  未来の RootRecord / genesis を参照しない）。宣言の無い root id は従来どおり UNKNOWN_ROOT。同じ result root の二重宣言は
+  RESULT_ROOT_REDECLARED として INVALID_HISTORY。
+
+### 追加 — tests/intelligence
+
+- `test_theme_foundation_remediation.py`（27 test）: A4D-1（driver / channel / domain / subject の append 拒否、semantic
+  revision の受理、既存 file の違反の再 open 拒否、synthetic history の INVALID_HISTORY、successor 経路の有効性）、
+  A4D-2（append / 再 open / read-only 再 open / audit、参照先不在・別 root・種別違い・時刻逆行の fail closed、bytes 不変）、
+  A4D-3（merge / split / successor の未作成 result root の PENDING_EVENT ＋ lineage、完了後の同一 T の完全一致、宣言前 /
+  未宣言 root の UNKNOWN_ROOT、宣言前の lineage 非漏洩、二重宣言の INVALID_HISTORY）。
+
+### 改善
+
+- A4d の strict xfail 5 件を通常 test に戻し、assertion を強化（宣言済み result root の診断・pending・lineage の完全一致、
+  後段 stage 比較から A4D-3 key の除外を撤去）。`test_declared_result_root_diagnostics_do_not_depend_on_later_root_record`
+  は xfail 下で 2 つ目の key が KeyError（stage 取り違え）になっていたため、各 checkpoint を最初に観測できた stage を
+  明示して比較するよう修正。
+- `docs/databank/PHASE6_THEME_FOUNDATION_INVARIANT_MATRIX.md`: 31 / 65 / 83 を BLOCKED → PROVEN、75 / 92 の注記を更新
+  （PROVEN 81 / STRUCTURAL 13 / DEFERRED 3 / BLOCKED 0）。
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §34 に A4d.1 の修正状態を追記（契約の意味論は変更していない）。
+- full suite 1590 passed（xfail 0 / skip 0）。
+
+## v5.05 (2026-09-19) — Phase 6 P6-A4d Theme foundation E2E 検証（BLOCKER_FOUND）
+
+A1〜A4c が canonical journal を通じて 1 つの system として動くことを E2E で検証した gate。runtime source
+（`src/intelligence/themes/` の 7 file）は凍結のまま無変更。P4 production bundle・P5 凍結 source / test も無変更。
+E2E で contract / implementation の不一致を 3 件発見したため、修正せず strict xfail で再現を固定し
+**BLOCKER_FOUND** として停止した（freeze 宣言はしない）。
+
+### 追加 — tests/intelligence
+
+- `theme_foundation_fixtures.py`: 代表 E2E world（Theme A の T0〜T13: root → genesis → 独立 2 源の evidence →
+  contradiction → label / taxonomy / mapping → 受理 → semantic revision → 遅延付与 → 上流改訂 → retire → 取消、
+  Theme B、Theme A＋B → C の merge を crash 段階込みで記録）、checkpoint 別 snapshot、byte 単位 replay
+  （依存順を守る 5 queue 併合）、resolution digest。
+- `test_theme_foundation_e2e.py`: 時間旅行 checkpoint（literal 期待値）、再起動 / 再読込（別 process 含む）、
+  correction / revision の区別、merge / split / successor、上流改訂（dereference のみ変化）、derived 値の
+  非保存、A1 / A2 / A3 traceability。
+- `test_theme_foundation_replay.py`: byte 単位 replay の再現、入力順 shuffle の決定論、後段 stage による
+  過去 checkpoint の不変、future record matrix、後追い backdated root。
+- `test_theme_foundation_failures.py`: candidate / merge / split / successor の crash → PENDING → 再開、
+  fork の facet 隔離（observation / governance / label / mapping）、破損 data_root の fail closed
+  （malformed / noncanonical / truncated / duplicate conflicting id / authority 欠落）。
+- 新規 test は 47 passed ＋ 5 xfailed（strict。BLOCKER の再現）。
+
+### 追加 — docs
+
+- `docs/databank/PHASE6_THEME_FOUNDATION_INVARIANT_MATRIX.md`: 不変条件 1〜97 の layer / test / status 対応表
+  （PROVEN 78 / STRUCTURAL 13 / DEFERRED 3 / BLOCKED 3）と BLOCKER 3 件の最小修正候補・影響範囲。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §33 に A4d の検証状態と BLOCKER を追記
+  （契約の意味論は変更していない）。
+
+### 未修正（BLOCKER。次 gate で修正）
+
+- A4D-1: store が identity core の置換を同一 root の revision として受理する（A3 §7 / §23 は IDENTITY_CORE_CHANGED
+  を要求）。候補: `store._validate_observation_chain` と resolver `_resolve` に fingerprint 比較を追加。
+- A4D-2: METADATA_CORRECTION_APPROVED（metadata id を参照）を含む store が再 open できない（load 順により
+  intra pass で GOVERNANCE_REFERENCE_MISSING）。候補: 当該検査を cross pass `_validate_event_results` へ移す。
+- A4D-3: 宣言済み・未作成の result root を解決すると UNKNOWN_ROOT のみで PENDING_EVENT / lineage が付かず、
+  後日の RootRecord が過去 T の診断を変える。候補: resolver `_resolve` の root 不在分岐にも宣言 event の
+  PENDING_EVENT ＋ lineage 注釈を付ける。
+
+## v5.04 (2026-09-19) — Phase 6 P6-A4c Theme point-in-time resolver 実装
+
+A3 §13（D17）の点時刻再構成を実装した。resolver は canonical history の読み取り専用の解釈器であり、authority ではない。
+lifecycle / discovery / dedup / graph / LLM / Compass・Brief・P5 連携 / SQLite / 修復 / append は含まない。
+A4a / A4b の凍結 file、P4 production bundle、P5 凍結 source / test は無変更。開発 branch を
+`claude/investment-intelligence-phase6`（A4b anchor から分岐）へ移行した。
+
+### 追加 — `src/intelligence/themes/resolver.py`
+
+- `resolve(history, root_id, cutoff)` / `resolve_from_store` / `resolve_at_data_root`（read-only）。cutoff は aware 必須。
+- eligibility（root created_at / observation・governance・metadata recorded_at / mapping recorded_at ＋ valid_from /
+  attachment evidence_time ＋ attached_at のすべて ≤ T）。T 後の record は影響しない。
+- status: RESOLVED / NO_STATE / UNRESOLVED / INVALID_HISTORY / STORE_CORRUPTION、facet 別 status
+  （NO_GOVERNANCE / NO_METADATA / NO_MAPPING / UNRESOLVED / NOT_EVALUATED）。潰さない。
+- observation chain は predecessor graph のみで解決（fork / 複数 terminal ＝ UNRESOLVED、recorded_at 最大・物理順を
+  使わない）。evidence view（visible / not_yet_attached / evidence_after_cutoff / context_without_time）。
+- governance facet（chain、EVENT_REVERSED の畳み込みで effective event、取消の取消）、lineage 注釈（MERGED_INTO /
+  MERGE_OF / SPLIT_INTO / SPLIT_FROM / SUPERSEDED_BY / SUCCESSOR_OF）、metadata field 別 facet、mapping facet
+  （並行 chain 正当、fork のみ UNRESOLVED）。facet 間で曖昧を伝播しない。
+- PENDING_GENESIS / PENDING_EVENT を T 時点の事実として診断（修復なし、後日完了は遡及しない）。
+- carried evidence lineage（origin event の配分 ＋ byte 同一 attachment）、DERIVED（fingerprint / 資格判定 /
+  DIRECTLY_EVIDENCED link）を visible evidence だけから A4a 純関数で再計算、caller 供給の upstream dereference。
+
+### 追加 — tests/intelligence
+
+- `test_theme_resolver.py` / `test_theme_resolver_facets.py`（cutoff 境界、遅延付与の非遡及、fork / latest-wins 否定、
+  PENDING の保持、決定論と入力順独立、read-only、store failure の boundary、governance / reversal / merge / split /
+  successor / metadata / mapping / lineage / dereference / facet 独立）。boundary test を resolver に拡張。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §32 に resolver の実装状態を追記。
+
+## v5.03 (2026-09-19) — Phase 6 P6-A4b Theme canonical store 実装
+
+A3 の永続化意味論を実装した。resolver / 点時刻状態 / lifecycle / discovery / graph / SQLite / LLM / Compass・P4・P5
+連携 / 自動修復 / 歴史 port は含まない。production bundle（P4）・P5 凍結 source / test・A4a golden vector は無変更。
+
+### 追加 — `src/intelligence/themes/store.py` / `operations.py`
+
+- `ThemeStore`: `<data_root>/themes/` の 5 canonical authority（roots / observations / governance / metadata /
+  series_mappings）を 1 writer が所有する追記専用 JSONL store。明示 data_root 必須（repository fallback なし）、
+  `initialize`（唯一の file 作成）/ `open`（read-only load。作らない・書かない・直さない）/ `audit`。
+- append: A4a canonical 行のみ、write → flush → fsync、byte 一致 ＝ 冪等 no-op、同一 id ＋ 異 bytes ＝ ThemeConflict
+  （provenance / recorded_at の差でも）。validate-before-append（root / genesis、物理 predecessor・同一 root・
+  recorded_at 非減少・物理 terminal、attached_at 範囲、governance の物理参照と result root 宣言、metadata / mapping
+  の chain、evidence 配分）。file ごとの byte 長で外部増減を検知（SINGLE_WRITER の検知。lock ではない）。
+- load: 非 canonical / 破損 / 未知 schema / id 不一致 / physical duplicate ＝ STORE_CORRUPTION（authority・行番号・
+  reason code）、履歴として不可能 ＝ INVALID_HISTORY、file 上の fork ＝ 診断（選ばない・直さない。当該 root への append
+  は FORKED_ROOT）。2 pass（同一 file / 先行 authority → 後続 authority 参照）。
+- 宣言先行の論理操作: candidate（RootRecord → genesis）、MERGE / SPLIT / SUCCESSOR（event → 結果 root → 結果 genesis）。
+  plan は全 id を事前確定し、同じ入力で冪等に再試行できる。PENDING_GENESIS / PENDING_EVENT を `pending()` で明示。
+- carried evidence: 宣言 event の `evidence_allocation` が lineage を保持し、結果 genesis の attachment は source と
+  byte 同一（元 attached_at / provenance 保持）、配分の部分集合のみ（暗黙 carry なし）。
+
+### 追加 — tests/intelligence
+
+- `test_theme_store.py` / `test_theme_store_corruption.py` / `test_theme_store_operations.py`（初期化・read-only・
+  canonical bytes・fsync・冪等 / conflict・破損 11 区分・外部改変・INVALID_HISTORY・fork 診断・chain 規則・
+  governance 参照・merge / split / successor の全 crash 境界での PENDING と再試行・配分違反・API 表面）。
+- `test_theme_import_boundary.py` を store / operations に拡張（closure 11 module、IO は追記のみ、resolver / 時計 /
+  乱数 / SQLite / repository fallback 不在）。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §31 に store の実装状態（authority path、append /
+  冪等 / conflict、writer 保証、改変検知、初期化、PENDING、操作順序、失敗 code 台帳、A4c への繰越）を追記。
+
+## v5.02 (2026-09-19) — Phase 6 P6-A4a Theme 土台 model 実装
+
+Phase 6 Theme の **最初の runtime 実装 gate**。`src/intelligence/themes/` に純 model 層だけを追加した。
+store / JSONL IO / resolver / SQLite / discovery / lifecycle / graph / LLM / Compass・Reports・P5 連携 / 歴史 port は
+含まない。production bundle（P4）・P5 凍結 source / test は無変更。
+
+### 追加 — `src/intelligence/themes/`（model.py / fingerprint.py / qualification.py / revision.py）
+
+- A3 の 5 canonical record（ThemeRootRecord / ThemeObservation / ThemeGovernanceEvent / ThemeMetadataRecord /
+  ThemeSeriesMapping）を frozen dataclass として実装（schema version `*:0.1.0`、fail closed の `ThemeModelError`
+  ＋ 機械可読 code、`as_dict` / `from_dict` 往復、未知 field 拒否）。
+- A1 / A2 の語彙（機構確度 4 class、authority 4 class、role 4 値、provenance 3 値、component 4 型、evidence kind 5、
+  time basis / quality、entity link 3 class、governance event 11 種、metadata field 4、mapping role 3）。
+- 構造化された機構（driver / channel / domain / expected observable consequence、語彙 version 付き category、
+  typed reference、正規化文、assertion provenance）、主題、scope token、limitation、invalidation condition、
+  INFERRED_EXPOSURE link、evidence attachment（二重時点・basis / quality・source origin・role ＋ provenance・
+  consequence / invalidation ref・flag・QA snapshot・locator / excerpt）、observation provenance。
+- content id: observation / event / metadata / mapping は identity payload だけから `content_id`、root は生成 id
+  （`new_root_id`）。canonical 直列化は P5 と同じ canonical JSON、集合的 field は構築時に canonical sort。
+- DERIVED 純関数: 二段 fingerprint（identity core / semantic）、source origin group（保守的独立性）、temporal
+  diversity、資格判定（A1 Q1〜Q8 ＋ A2 §19。score なし）、DIRECTLY_EVIDENCED link。
+- 同一 root revision helper（`revise_observation` / `attach_evidence`。identity core 変化は IDENTITY_CORE_CHANGED）。
+
+### 追加 — tests/intelligence
+
+- `test_theme_model.py` / `test_theme_identity.py`（golden vector 6 本）/ `test_theme_evidence.py` /
+  `test_theme_governance_model.py` / `test_theme_import_boundary.py`（closure 9 module、IO / 時計 / 乱数 / store 不在、
+  production bundle からの排除、凍結 package からの非参照）。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md` §30 に実装状態（schema / id / payload 材料 /
+  実装判断）を追記。契約本文は変更していない。
+
+## v5.01 (2026-09-19) — Phase 6 P6-A3 Theme persistence ＋ revision 契約（設計のみ）
+
+Family C（D7 履歴 model / D8 永続化 authority と writer model / D17 点時刻再構成の全体）を凍結した。
+**runtime source・test・package・knowledge・workflow の変更は無い。** ThemeStore / `src/intelligence/themes/` /
+discovery / lifecycle / graph / LLM は実装していない。歴史 runtime の port なし。新 hash chain は導入しない。
+
+### 追加 — `docs/databank/PHASE6_THEME_PERSISTENCE_REVISION_CONTRACT.md`
+
+- 前例監査（P5 store / resolver を floor として全面継承、Fact / Context / Compass / ArticleIdentity の破損行 skip は
+  floor 未満、歴史 Decision の hash chain は不要と判断）。
+- D7: HYBRID（不変 ThemeObservation chain ＋ 追記専用 governance event stream ＋ 追記専用 metadata 履歴 ＋ 不変
+  RootRecord ＋ version 付き mapping 記録、derived 点時刻状態）。latest-wins / 可変行 / 単一巨大 stream より安全な理由。
+- canonical authority 5 本（roots / observations / governance / metadata / series_mappings）と固定 load 順。
+  RootRecord は作成事実のみ（`genesis_observation_id` を作成時に固定、current_* 禁止）。root と genesis の論理的対、
+  PENDING_GENESIS / orphan の扱い。
+- observation chain（predecessor 厳密 1・物理先行・同一 root・recorded_at 非減少・fork を生む append は拒否・file 上の
+  fork は当該 root のみ UNRESOLVED・revert は新 observation・latest-wins なし）。canonical bytes の内訳
+  （semantic ＋ attachment ＋ provenance ＋ recorded_at を含み、DERIVED は含まない）。
+- append 検証表（byte 冪等 / CONFLICT / ROOT_NOT_FOUND / GENESIS_MISMATCH / DANGLING / WRONG_ROOT /
+  NON_TERMINAL / 時刻範囲 / 禁止 evidence / IDENTITY_CORE_CHANGED / PROHIBITED_CONTENT）。
+- D8: 追記専用 JSONL、明示 data_root（repository fallback なし）、SINGLE_WRITER、1 store が 5 authority を所有、
+  byte 長による改変検知。cross-file 原子性は「宣言が先・完了が後・宣言が id を固定・未完了は明示 PENDING」で解決
+  （transaction 機構・authority としての SQLite なし）。
+- governance event stream（field・最小 event 種別 11・root ごとの event chain）と解決規則（競合 terminal は
+  UNRESOLVED、EVENT_REVERSED）。metadata 履歴（Option A、(root, field) chain、集合 field は snapshot、field 単位の
+  UNRESOLVED）。
+- D17: 点時刻再構成の純関数（RESOLVED / NO_STATE / UNRESOLVED / INVALID_HISTORY / STORE_CORRUPTION、facet 独立、
+  evidence は evidence_time ≤ T かつ attached_at ≤ T、T 以後の record は無影響、derived は再計算）。recorded_at の
+  意味論（aware UTC、時計注入、chain 単調）。
+- revision / correction の区別と訂正例の永続化先、A2 §16 全分類の永続化先対応、上流 evidence 改訂時の不変性、
+  merge（Option B 新 root）/ split / successor の永続化、derived SQLite の境界、rebuild 決定論、schema versioning
+  （in-place migration 経路なし）、失敗状態 4 区分と code 表、単一 writer、repository / security 境界、
+  不変条件 61〜97、実装順序の推奨（A4a model / A4b store / A4c resolver / A4d E2E）。
+
+### 改善
+
+- `PHASE6_THEME_IDENTITY_EVIDENCE_CONTRACT.md` §23、`PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md` §23、
+  `PHASE6_FOUNDATION_DECISIONS.md` §14 に P6-A3 の結果（Family C 解決）を追記。意味論・決定内容は変更していない。
+
+## v5.00 (2026-09-19) — Phase 6 P6-A2 Theme identity ＋ evidence 契約（設計のみ）
+
+Family B（D5 evidence authority / D6 identity model / D9 evidence 役割 / D15 entity 連結境界 / D19 市場確認 mapping /
+D17 evidence 側二重時点）を凍結した。**runtime source・test・package・knowledge・workflow の変更は無い。**
+ThemeStore / 永続化 / discovery / lifecycle / graph / LLM は実装していない。歴史 runtime の port なし。
+
+### 追加 — `docs/databank/PHASE6_THEME_IDENTITY_EVIDENCE_CONTRACT.md`
+
+- 現行 primitive（Fact / Observation / SourceDocument / NewsItem / Statement）の id 導出・時点 field・lineage field の検証表。
+- 二層 identity（不透明な生成 root id ＋ 内容住所の不変 observation）。root 生成は生成 id ＋ 別途 fingerprint を採用
+  （内容導出 root は等価候補の構築上の自動 merge を招くため却下）。12 変更の root 影響分類、identity core の置換は
+  NEW_ROOT_REQUIRED（fail closed）。
+- 不変 observation の内容分類（IDENTITY / SEMANTIC・PROVENANCE・AUDIT・DERIVED。P5 の identity subset ＋ canonical
+  JSON ＋ conflict fail closed を継承）。label / description / taxonomy は observation 外の metadata。
+- evidence authority class 4 値（PRIMARY_OBSERVATIONAL / DERIVED_INTERPRETIVE / PROPOSAL_ONLY / NOT_THEME_EVIDENCE）と
+  19 種以上の kind 分類。Theme は ContextItem 無しで資格を満たせること。
+- evidence 参照の field（kind / class / revision 固有 ref_id / source origin / evidence_time（basis・quality）/
+  attached_at / role / role provenance / consequence_ref / metadata flag）。値・本文の複製禁止。
+- 二重時点 model（EVIDENCE_TIME vs ATTACHED_AT vs AUDIT）。kind ごとの evidence_time 由来（known_at / as_of /
+  published_at ＋ date_quality / event_time）。ingestion 時刻の代替禁止、MISSING は fail closed、再構成条件は両時点。
+- source 独立性（evidence item / lineage / source origin / independent source origin）、転載・派生・同一 series
+  複数日付の扱い、SOURCE DIVERSITY と TEMPORAL DIVERSITY の分離（score なし）。
+- 役割 4 値（SUPPORTS / CONTRADICTS / CONTEXT / INVALIDATES）、TRIGGER は metadata、1 attachment 1 role、role
+  provenance 3 値（RULE / HUMAN / LLM_PROPOSAL。LLM は資格に算入しない）。
+- 構造化された機構（DRIVER / TRANSMISSION_CHANNEL / AFFECTED_DOMAIN / EXPECTED_OBSERVABLE_CONSEQUENCE の型付き
+  component ＋ provenance）、確度 class は observation level に 1 つ、二段 fingerprint（identity core / semantic）と
+  除外規則、fingerprint ≠ identity・自動 merge なし。
+- entity 連結 3 class（DIRECTLY_EVIDENCED / INFERRED_EXPOSURE / TAXONOMIC_ASSOCIATION）、市場確認 mapping は別の
+  version 付き記録（Option C）、limitation / invalidation condition / contradicting evidence の区別、revision 境界
+  23 例、merge / split の明示 governance、資格判定の再述、例 14、不変条件 26〜60。
+
+### 改善
+
+- `docs/databank/PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md` §23 と `docs/databank/PHASE6_FOUNDATION_DECISIONS.md`
+  §14 に P6-A2 の結果（Family B 解決）を追記。意味論・決定内容は変更していない。
+
+## v4.99 (2026-09-19) — Phase 6 P6-A1 Theme 意味論 ＋ authority 契約（設計のみ）
+
+Family A（D1 Theme の形式意味論 / D2 Theme vs Narrative / D3 Theme vs Context / D4 Theme vs Compass /
+D16 人間 governance）を凍結した。**runtime source・test・package・knowledge・workflow の変更は無い。**
+ThemeRecord / ThemeStore / discovery / lifecycle / graph / LLM は実装していない。歴史 runtime の port なし。
+
+### 追加 — `docs/databank/PHASE6_THEME_SEMANTICS_AUTHORITY_CONTRACT.md`
+
+- Theme の形式定義（主題 ＋ 機構、機構確度 class の明示、scope、時間を跨ぐ持続性、evidence 参照能力、
+  反証可能性、不変履歴、内部知識としての位置）と資格判定（QUALIFIES_SEMANTICALLY / THEME_CANDIDATE_POSSIBLE /
+  DOES_NOT_QUALIFY の条件 Q1〜Q8）。
+- 「keyword の袋ではない」の凍結、意味論構成要素の分類（REQUIRED / OPTIONAL / LATER / MUST_NOT）、機構の確度
+  class（観測された連関 / 仮説 / evidence に支持された機構 / source の明示的因果主張、co-occurrence ≠ causality、
+  件数で class を上げない）、持続性の意味論（数値閾値なし、lifecycle と分離）、支持 / 反証 / limitations
+  （能力必須、反証 0 件は正当、不在 ≠ 確証、limitations 非空は reviewed の governance 要件）。
+- Theme vs Topic / Event / Context（Context は Theme ではなく DERIVED context としてのみ後日消費、Theme は Context
+  無しで存在可）/ Narrative（prose は authority ではない、Phase 7）/ Compass（Phase 6 で恒久分離）/ Prediction /
+  Recommendation の境界。
+- authority 階層 L0〜L3（Phase 6 では L3 production interpretive authority に到達不可）、人間 governance
+  Option B（自動候補 ≠ reviewed Theme ≠ Compass authority、自動 system の可 / 不可）、LLM authority 境界、
+  粒度の暫定境界（企業固有 thesis は Phase 9）、資格判定表 14 例、意味論的不変条件 25 項、既存 "theme" 語彙
+  （ThemeReference / Statement.themes / legacy config）は topic tag であって Theme ではないという衝突監査、
+  Family B / C / D の未解決事項。
+
+### 改善 — `docs/databank/PHASE6_FOUNDATION_DECISIONS.md`
+
+- §14 に P6-A1 の結果（Family A 凍結、次 gate P6-A2）を追記。他節は不変。
+
+### 未実施
+
+- P6-A2（Theme Identity ＋ Evidence Contract）以降は着手していない。
+
+## v4.98 (2026-09-19) — Phase 6 P6-A0.5 土台 / port / 境界の決定（設計のみ）
+
+Phase 6（Theme）の P6-A0 監査（受理済み）を受け、監督者決定 F-1〜F-10 と D0（歴史資産の port 方針）を
+凍結した。**runtime source・test・package・knowledge・workflow の変更は無い。** ThemeRecord / ThemeStore /
+discovery / lifecycle / graph / LLM は実装していない。
+
+### 追加 — `docs/databank/PHASE6_FOUNDATION_DECISIONS.md`
+
+- F-1 開発土台（現 branch 継続、歴史 branch は参照のみ・merge / rebase / wholesale port 禁止）、F-2 架構位置
+  （新しい内部層。Compass / Brief / Signal / P5 に依存せず、凍結 module から import されない）、F-3 作業定義、
+  F-4 MVP 順序（identity → evidence → 支持 / 反証 → 不変履歴 → 点時刻再構成 → change 表現。discovery は後）、
+  F-5 evidence authority（PRIMARY / OBSERVATIONAL と DERIVED / INTERPRETIVE の区別）、F-6 EvidencePackage
+  非再利用、F-7 履歴原則、F-8 永続化の品質下限（P5 append-only 規律以上）、F-9 legacy theme learning の
+  precedent 除外、F-10 較正の分離。
+- D0 解決: **土台に必要な歴史 runtime port は無い**（A ＝ 空）。歴史資産 22 件を A / B / C / D に分類
+  （B: taxonomy・themes・theme_graph・entity catalog・theme_matcher・taxonomy loader・news_builder は各 gate の
+  個別認可で後日、C: causal_rules・LLM 境界・store / override・evidence jsonl_store・lifecycle / patterns /
+  review_queue・THEME_DISCOVERY_RULES（機密注意）・spec 2 本、D: corpus 結合の risk / why / regime、
+  decision / formal_review、歴史 placeholder、legacy theme_learning）。
+- 文書 evidence gap（contract first / producer later。SourceDocument / NewsItem 参照で十分）、entity gap
+  （linkage は identity より後）、taxonomy gap（独立 identity ＋ discovery 語彙。slug ＝ identity にしない）、
+  歴史 lifecycle / governance（原則のみ継承）、将来 `themes` package の import 境界（許可 model module と
+  禁止 package）、evidence authority 境界、土台 MVP の contract 目標と除外、非目標、D1〜D22 の 4 family 再編、
+  最小 guard 方針、機密 / security 点検。
+
+### 未実施
+
+- P6-A1（Theme Semantics ＋ Authority Contract）以降は着手していない。
+
+## v4.97 (2026-09-19) — Phase 5 完了監査 / closeout
+
+Phase 5（Prediction Journal）を 1 つの chain として読み取り監査し、
+**PHASE_5_COMPLETION_AUDIT_PASS_WITH_NON_BLOCKING_DEFERRED_ITEMS / PHASE_5_COMPLETE_READY_FOR_SUPERVISOR_FREEZE**
+とした。新機能・runtime 統合・persistence・実 journal 実行・較正 feedback・P4 / P5 意味論の変更・
+Phase 6 は含まない。
+
+### 追加 — `docs/databank/PHASE5_COMPLETION_AUDIT.md`
+
+- 判定・scope・freeze anchor・N-1〜N-6 監査（全 PASS）・P5-1 / P5-2 / P5-3 監査・cross-phase chain
+  （合成的完全性は完了、production runtime 統合は N-6 により未着手）・persistence / 訂正 / 棄権 /
+  coverage model・版 inventory・依存境界・security・production 非回帰・実データ status
+  （MACHINERY VALIDATED / REAL LIVE HISTORY NOT ACCUMULATED）・deferred 11 項目・テスト結果・
+  blocker 無し・次 Phase。
+
+### 追加 — `tests/intelligence/test_phase5_chain_e2e.py`（2 tests）
+
+- 既存の凍結 API と既存 E2E の fixture だけで、P4 凍結 object 4 種 → ingest → predictions.jsonl →
+  権威 reload → engine（訂正 1 件込み）→ evaluations.jsonl → 権威 reload → analyzer →
+  CalibrationReport を 1 本の隔離 root で合成し、in-memory record からの report と一致・journal bytes
+  不変・入力順非依存・LIVE / REPLAY 非 pool を証明（新しい runtime 統合ではない）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §21「Phase 5 closeout」を追加（P5-1 / P5-2 / P5-3 CLOSED / FROZEN、PHASE 5 COMPLETE —
+  supervisor acceptance pending）。§13 / §17 / §19 / §20 の gate 時点 status 文言 4 箇所を
+  「時点の記録」と明示する最小修正。N-1〜N-6 は不変。
+
+### 改善 — `src/intelligence/predictions/__init__.py`（docstring のみ）
+
+- 「P5-3C 未実装」の stale 記述を Phase 5 機構検証済み・runtime 運用は別 gate に更新。
+
+### 未実施
+
+- Phase 5 operationalization（runtime capture / 直列化 / 評価 scheduling / 履歴蓄積）・Phase 6 は
+  着手していない。
+
+## v4.96 (2026-09-19) — Phase 5 P5-3C 較正 end-to-end OFFLINE 検証
+
+P5-3A（契約）＋ P5-3B（analyzer）を 1 つの分析系として OFFLINE で検証した（VALIDATION のみ。
+新機能・runtime 統合・persistence・実 journal 実行・較正 feedback・production tuning は含まない）。
+凍結 P5-3A / P5-3B への corrective patch は不要だった。
+
+### 追加 — `tests/intelligence/test_calibration_e2e.py`（41 tests）
+
+- 代表的な意味世界（LIVE available 14 ＋ 棄権 4、REPLAY 3、期間外 2、評価 28: chain・fork・独立
+  terminal・DEFERRED→EVALUATED・orphan・foreign）を凍結 builder のみで構築し、
+  `analyze_calibration` → `calibration_report:0.1.0` → `as_dict()` → builder / 凍結 `from_dict` からの
+  再構築 → 同一 report を証明。
+- gate §3〜§19: 件数の真実性（18 / 13 / 23 / 28 / 23 / 5）、coverage 分割 (12,1,2,3)、5×3 行列の明示
+  期待値と合計 11 = exact match 分母、一致 6 = 凍結写像で一致する cell の和、level / confidence /
+  15 cell の期待値、訂正（A→B で active・行列・return・active digest が変わり cohort digest と履歴は
+  不変。A→B→C は入力順に依らず C）、DEFERRED→EVALUATED（分母 10→11）、fork / 独立 terminal の
+  UNRESOLVED（分母不参加・shuffle 不変）、棄権 4 種（confidence 保持棄権は bucket 外）、coverage
+  分割の全 group 成立、LIVE / REPLAY 分離、disclosure 境界 N = 0/1/9/10/29/30、空 cohort、重複
+  fail closed（意味的同一 object 含む）、foreign / cohort 外の影響範囲、8 通り shuffle の byte 一致、
+  JSON / Decimal / timestamp なし直列化、入力不変、runtime import closure 14 module、P5-3A / P5-3B /
+  本書 §18〜§19 の整合監査。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §20「P5-3 完了検証（P5-3C）」を追加（PASS・監督者 freeze 待ち）。§14〜§19・N-1〜N-6 は不変。
+
+### 未実施
+
+- Phase 5 completion audit / closeout・P5-4・Phase 6 は着手していない。
+
+## v4.95 (2026-09-19) — Phase 5 P5-3B 純粋 OFFLINE 較正 analyzer
+
+P5-3A（FROZEN）の契約を**そのまま適用する**純粋 offline analyzer を追加した。store / filesystem /
+network / market / calendar / evaluation_engine に触れず、journal を変更せず、較正を永続化せず、
+P4 MarketSignal / Compass DNA / 閾値 / confidence を変更しない。較正は観測的 analytics であり
+production authority ではない。
+
+### 追加 — `src/intelligence/predictions/calibration_analyzer.py`
+
+- `analyze_calibration(predictions, evaluations, cohort) -> CalibrationReport`
+  （`calibration_report:0.1.0`）。凍結 PredictionRecord / EvaluationRecord の iterable と明示
+  `CohortBoundary` だけを受ける純関数（read-only・決定論的）。
+- cohort 選択は origin ＋ session_date 閉区間のみ（created_at / 物理位置 / 現在日付を使わない）。
+  同一 session の複数 prediction_id は dedupe しない（`prediction_count` ＋ `unique_session_count`）。
+- 対応付けは `prediction_id` のみで、予測ごとに凍結 `resolve_active_evaluation()` を呼ぶ
+  （第二の resolver・「最新」選択なし）。coverage は ACTIVE_EVALUATED / ACTIVE_DEFERRED /
+  NO_EVALUATION / UNRESOLVED の分割（`CoverageCounts` が検証）。UNRESOLVED は件数・診断別件数・
+  prediction_id で露出し分母に入らない（率は凍結 `METRIC_DEFINITIONS` に無いため件数のみ）。
+- cohort 外の予測・foreign evaluation は metric に影響しない。lineage の record 件数は供給 source
+  件数、`associated_evaluation_count` / `foreign_evaluation_count` は report 本体で別途報告。
+- report: `versions`・coverage 率・棄権（率 ＋ 棄権予測の outcome / return 診断、方向 exact match
+  なし）・方向 exact match（分母 = available かつ active EVALUATED）・overall outcome / Decimal return
+  統計・5×3 混同行列（零行可視）・level 別 5 行・confidence 別 3 bucket（AVAILABLE 予測のみ）・
+  level × confidence 15 cell。すべての率は凍結 `Rate`（分子・分母・disclosure、生件数を保持）。
+- 空 cohort は有効な report。重複 prediction_id / evaluation_id は `CalibrationInputError` で
+  fail closed。JSON 化して float を含まない。
+- 依存: `calibration_contract` / `evaluation_record` / `prediction_record` / `reports.market_signal`
+  と stdlib のみ。
+
+### 追加 — `tests/intelligence/test_calibration_analyzer.py`（35 tests）
+
+- gate §26 の 80 項目（cohort 境界・origin 分離・同一 session 複数予測・prediction_id のみの対応付け・
+  ACTIVE_DEFERRED / NO_EVALUATION / UNRESOLVED の分母除外・棄権の除外と保持・exact match の
+  分子分母・混同行列の形と合計・level / confidence / level×confidence の固定行と零 bucket・
+  棄権 outcome・Decimal return・sample disclosure の閾値・空 cohort・shuffle 決定論・重複 id
+  fail closed・orphan / cohort 外評価の除外・訂正での active と digest の変化・created_at / 物理順の
+  非使用・read-only・store / engine / market / network 非依存・公開 / 取引語彙不在・lineage 版・
+  report 版の明示・全 rate の分子分母露出）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §19「P5-3B 純粋 OFFLINE 較正 analyzer」を追加。§14〜§18 は不変。
+
+### 改善 — `src/intelligence/predictions/__init__.py`（docstring のみ）
+
+- `calibration_analyzer` を現在の内容に追記し、未実装を P5-3C に更新。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py` / `test_evaluation_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `calibration_analyzer.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-3C（較正 end-to-end offline 検証）以降は着手していない。
+
+## v4.94 (2026-09-19) — Phase 5 P5-3A 較正の分析契約 ＋ metric 仕様
+
+P5-1 / P5-2（CLOSED / FROZEN）の上に、較正の**分析契約だけ**を凍結した（SPECIFICATION FIRST）。
+journal を読む analyzer（P5-3B）・persistence・P4 MarketSignal / Compass DNA / 閾値 / confidence
+の変更・runtime 統合・公開出力は**含まない**。較正は観測的 analytics であり production authority
+ではない。
+
+### 追加 — `src/intelligence/predictions/calibration_contract.py`
+
+- 分析用 5→3 方向写像 `prediction_direction_mapping:1.0.0`（UPWARD_LEAN / SLIGHT_UPWARD_LEAN → UP、
+  NEUTRAL_RANGE → RANGE、SLIGHT_DOWNWARD_LEAN / DOWNWARD_LEAN → DOWN）。P4 `LEVEL_BY_STATE` の
+  方向成分の逆射影と一致することをテストで証明。保存 record の 5 level は畳まない。
+- `directional_exact_match`（歴史的 exact match。確率・将来精度・skill score ではない）。
+- active evaluation resolver `active_evaluation_resolver:1.0.0`: supersession graph の意味論で
+  terminal 1 つを active に。fork / 独立 terminal 複数 / dangling / subject 不一致 / 同 id 別内容は
+  診断付きで除外（`ResolutionStatus`）。created_at と物理順を使わない。
+- cohort: `CohortBoundary(origin, start_session, end_session)`（session_date の閉区間、既定なし）、
+  `PredictionCohort` ALL / AVAILABLE / ABSTAINED、LIVE / REPLAY 分離（COMBINED なし）、
+  同一 session の複数予測を dedupe しない（unique session 件数を併記）。
+- coverage `EvaluationCoverage`（ACTIVE_EVALUATED / ACTIVE_DEFERRED / NO_EVALUATION / UNRESOLVED）。
+  DEFERRED は outcome の分母に入らない。棄権は採点しない。
+- 分母の凍結語彙 `Denominator` と 9 つの `MetricDefinition`（分母を名指し）、`Rate`
+  （numerator / denominator / Decimal value / disclosure）。
+- `sample_disclosure:1.0.0`（0 NO_DATA / 1–9 INSUFFICIENT_SAMPLE / 10–29 LIMITED_SAMPLE /
+  30+ REPORTABLE）。有意性・信頼区間は主張しない。
+- `OutcomeCounts` / `summarize_returns`（Decimal・prec 28 固定 context・mean / median / mean_abs /
+  min / max・Sharpe / 年率化 / P&L なし）。
+- lineage: `content_digest` / `cohort_digest` / `active_evaluation_digest` / `CalibrationLineage`
+  （版 4 種 ＋ record 件数 ＋ digest 2 種。hash chain ではない）。
+- 依存: PredictionRecord / EvaluationRecord / `core.ids` / `reports.market_signal` と stdlib のみ。
+
+### 追加 — `tests/intelligence/test_calibration_contract.py`（48 tests）
+
+- gate §24 の 60 項目（写像と版・P4 逆射影一致・exact match 定義・棄権 / DEFERRED / 評価なしの
+  cohort と分母・resolver の chain / fork / 独立 terminal / dangling / subject 不一致・created_at と
+  物理順の非使用・LIVE / REPLAY 分離・5×3 行列・rate の分子分母・level 条件付き Decimal 率・
+  confidence・棄権 / coverage・unique session と非 dedupe・cohort 境界・disclosure 閾値・生件数の
+  保持・有意性不主張・Decimal / float 非権威・digest の決定論と訂正での変化・不変性・
+  Compass DNA / 閾値 / confidence 非調整・market / calendar / engine 非依存・公開 / 取引語彙不在）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §18「P5-3A 較正の分析契約 ＋ metric 仕様」を追加。N-1〜N-6・§14〜§17 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py` / `test_evaluation_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `calibration_contract.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-3B（offline 較正 analyzer）以降は着手していない。
+
+## v4.93 (2026-09-18) — Phase 5 P5-2D Evaluation end-to-end OFFLINE 検証（P5-2 完了）
+
+P5-2A / P5-2B / P5-2C を 1 つの系として検証する gate。新機能・runtime 統合・CLI は追加せず、
+テストを唯一の検証 artifact とした。P5-2A/B/C に欠陥は見つからず、修正パッチは無い。
+
+### 追加 — `tests/intelligence/test_evaluation_e2e.py`（38 tests）
+
+- happy path A–Q を 1 本の E2E（PredictionRecord → カレンダー証拠 → TOPIX Observation →
+  `evaluate_and_append` → EVALUATED / APPENDED → Decimal return と分類の一致 → 物理 1 行 →
+  instance 破棄 → 権威 reload → 同一 record / id / provenance → 同じ証拠での再評価
+  ALREADY_PRESENT・bytes 不変）。
+- outcome state（UP / 境界 RANGE 3 点 / DOWN と各境界のすぐ外側）の reload 後の連続 return 保存、
+  予測 state 非依存（方向 / NEUTRAL_RANGE / 棄権）、週末＋祝日 gap のカレンダー証明、
+  calendar / previous session の DEFERRED journal、欠落 / 無効 / 未対応 source の DEFERRED journal、
+  凍結 defer 優先順位の順序非依存と reload、複数記録 journal の再起動、engine 境界からの冪等、
+  created_at / provenance の conflict、A→B→C 訂正 chain、DEFERRED→EVALUATED 履歴、破損 8 種の
+  fail closed、process 再起動、predictions.jsonl 非依存（closure 18 module）、point-in-time /
+  look-ahead 境界、single-writer 検知、P5-2A/B/C 整合監査、runner / CLI 不在。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §17「P5-2 完了検証（P5-2D）」を追加（検証結果・完了監査・P5-2 status CLOSED / FROZEN
+  監督者受理待ち）。N-1〜N-6・§14〜§16 は不変。
+
+### 未実施
+
+- P5-3A（Calibration contract ＋ metrics specification）以降は着手していない。
+
+## v4.92 (2026-09-18) — Phase 5 P5-2C OFFLINE 評価 engine
+
+凍結 PredictionRecord ＋ 東京カレンダー証拠 ＋ TOPIX close 観測 → 凍結 EvaluationRecord を
+決定論的に生成する**offline 純関数**を実装した。評価するのは市場 outcome のみで、予測の正誤・
+較正・network / J-Quants 取得・runtime 統合・公開出力は**含まない**。P5-1 / P5-2A / P5-2B の
+実装・P4・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/evaluation_engine.py`
+
+- `evaluate_prediction(prediction, calendar_evidence, market_evidence, *, created_at,
+  supersedes_evaluation_id="")` と薄い `evaluate_and_append(store, …)`。
+- 入力境界: 凍結 `PredictionRecord`、`CalendarEvidence`（J-Quants カレンダー行 ＋ source id ＋
+  区分値）、既存 `market.model.Observation`（TOPIX raw、`trading_date` 完全一致、改定は既存
+  `latest_revisions` で解決）。第二の市場 schema を作らない。
+- カレンダー検証は既存 `validate_divisions` / `trading_days` を使い、供給された TOPIX 観測の全日付と
+  区分値を実測で突き合わせて `SessionVerification` へ写す。weekday 演算・金→月推定なし。
+- realized return は `prec 28 / ROUND_HALF_EVEN` 固定 context の Decimal で計算し、分類は P5-2A の
+  凍結 helper に委ねる（閾値定数を持たない）。
+- 支持 source は `jquants`、schema は `core.types.SCHEMA_VERSION`。reference / target の source と
+  schema は一致必須。
+- defer 優先順位（凍結）: source_unsupported → calendar_unverified → reference_session_unverified →
+  observation_invalid → reference_close_unavailable → target_close_unavailable。証拠 list の順序に
+  依存しない。DEFERRED でも通った側の証拠を保持する。
+- unavailable / 棄権の予測も証拠が揃えば EVALUATED（棄権を理由に DEFERRED にしない）。
+- `created_at` / `supersedes_evaluation_id` は呼び出し側が明示。現在時刻・filesystem・環境変数・
+  network・git に触れない。P4 本番 closure から到達不能。
+
+### 追加 — `tests/intelligence/test_evaluation_engine.py`（57 tests）
+
+- gate §21 の 70 項目（EVALUATED・Decimal 算術・境界 5 点・丸め無し・週末＋祝日 gap・weekday
+  fallback 不在・calendar / previous session / closes / invalid / source の defer・重複 / 改定・
+  nearest / fill / 補間の不在・棄権と NEUTRAL_RANGE の評価・予測 state 非依存・created_at 明示・
+  provenance 写し・凍結 target / 版・決定論・優先順位・順序非依存・supersedes 透過・store helper・
+  DEFERRED ≠ RANGE・禁止概念・純粋性・P4 非到達・下流専用・source object 不変・矛盾 / NaN・
+  ambient decimal context 非依存）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §16「P5-2C OFFLINE 評価 engine」を追加。N-1〜N-6・§14・§15 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `evaluation_engine.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-2D（Evaluation end-to-end offline 検証）以降は着手していない。
+
+## v4.91 (2026-09-18) — Phase 5 P5-2B 追記専用 EvaluationStore（evaluations.jsonl）
+
+P5-2A（凍結）の EvaluationRecord の**永続化層だけ**を実装した。評価 engine・PredictionRecord →
+EvaluationRecord の自動化・TOPIX / カレンダー / J-Quants 参照・return 計算・較正・「現在の評価」の
+解決・runtime 統合・公開出力は**含まない**。P5-1 / P5-2A の実装・P4・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/evaluation_store.py`
+
+- `EvaluationStore(data_root)`: `<data_root>/predictions/evaluations.jsonl` を唯一の権威とする
+  追記専用 journal（predictions.jsonl とは別の権威。PredictionStore を import せず
+  predictions.jsonl を開かない）。読むだけではディレクトリを作らない。
+- append 意味論（P5-1B と同じ規律）: 未知 id → `APPENDED`、既知 id ＋ canonical 行 byte 一致 →
+  `ALREADY_PRESENT`、既知 id ＋ provenance / created_at を含むいずれかの field 差 →
+  `EvaluationConflict`（fail closed）。
+- supersession は append であって update ではない: 訂正は `supersedes_evaluation_id` を持つ
+  新しい物理行、前の行は不変。前任が同じ journal に物理的に先行して存在し（dangling / forward
+  reference は `SupersessionRejected` / `DANGLING_SUPERSESSION`）、`prediction_id` / `target` /
+  `reference_session` / `session_date` / `classification_version` が一致すること
+  （`INCOMPATIBLE_SUPERSESSION`）を append 時・load 時に要求。数値の変化は要求しない。
+  DEFERRED → EVALUATED / EVALUATED → EVALUATED / DEFERRED → DEFERRED の履歴を許す。
+- 権威 load は fail closed（理由コード 11 種）。物理順を保存し、latest / current / resolve の
+  API を持たない。`open("a", newline="\n")` → 1 write → `flush` → `fsync`。SINGLE WRITER
+  （外部変更は `ConcurrentModificationDetected`）。SQLite / hash chain / transaction / network /
+  git なし。
+
+### 追加 — `tests/intelligence/test_evaluation_store.py`（53 tests）
+
+- gate §18 の 70 項目（不在 journal・append / 冪等 / conflict・決定論的直列化・reload・物理順・
+  共存・A→B→C の supersession chain と prefix bytes・DEFERRED→EVALUATED 等の履歴・同数値訂正・
+  dangling / forward / cross-prediction / session / classification 不一致の拒否・自己 supersession・
+  破損 10 種・skip / 修復 / migration 不在・latest-wins 不在・prefix 保存・fsync 規律・
+  single-writer・caller-controlled root・evaluations.jsonl のみ生成・predictions.jsonl 非アクセス・
+  PredictionStore 非 import・禁止依存・JSONL 権威・SQLite / hash chain / transaction 不在・
+  EvaluationRecord 権威）。すべて `tmp_path` 隔離。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §15「P5-2B 追記専用 evaluation journal / store」を追加。N-1〜N-6・§14 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py`（テストのみ）
+
+- predictions package のファイル一覧に `evaluation_store.py` を追加（検査意図は不変）。
+
+### 未実施
+
+- P5-2C（offline 評価 engine）以降は着手していない。
+
+## v4.90 (2026-09-18) — Phase 5 P5-2A EvaluationRecord schema ＋ outcome contract
+
+P5-1（CLOSED / FROZEN）の上に、**不変の評価記録 object だけ**を凍結した。EvaluationStore /
+`evaluations.jsonl`・TOPIX 取得・取引カレンダー照会・return 計算・自動評価・較正・正誤判定・
+runtime 統合・公開出力は**含まない**。P5-1 実装・P4・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/evaluation_record.py`
+
+- `EvaluationRecord`（frozen）: A identity 入力（`schema_version` = `evaluation_record:0.1.0` /
+  `prediction_id` / `target` / `reference_session` / `session_date` / `classification_version` /
+  `status` / `realized_return` / `realized_outcome` / `defer_reason` / `supersedes_evaluation_id`）、
+  B provenance（closes・observation id・source・schema 版・`SessionVerification`）、
+  C audit（`created_at`）。hit / miss / accuracy / score・予測 level の複製・表示文字列は存在しない。
+- realized_return は Decimal（float / NaN / Infinity 拒否・丸めない）。`canonical_decimal` は
+  context 非依存で末尾ゼロだけを落とす平文十進（`0.0100`→`0.01`、`-0`→`0`、`1E-7`→`0.0000001`、
+  40 桁保持）。同値の表現は同じ evaluation_id。`from_dict` は非 canonical 文字列を拒否。
+- 分類 `topix_neutral_band:1.0.0`: UP > +0.003 / RANGE −0.003..+0.003（閉区間）/ DOWN < −0.003
+  （Decimal 比較）。realized の区分名は予測 level と分けて `RANGE`（境界不変）。
+- 状態機械: EVALUATED（return・outcome・closes・検証済み `SessionVerification` 必須、outcome は
+  分類と一致）/ DEFERRED（return・outcome 無し、defer_reason 6 値のいずれか必須）。
+  DEFERRED は RANGE でも零 return でも「予測 unavailable」でもない。棄権を理由に DEFERRED にしない。
+- `SessionVerification`（既存 `CalendarValidation` と同じ実測検証の要約 ＋ 検証済み session /
+  直前 session）。EVALUATED では validated かつ session_date / reference_session と一致を要求。
+- 訂正は `supersedes_evaluation_id` を持つ新しい record（新 id）。自己 supersession・不正 id 拒否。
+  in-place 変更・「最新が勝つ」・chain 走査は無い。
+- `created_at` は呼び出し側が明示（identity 外）。module は現在時刻を読まない。
+- 依存: `core.ids` / `core.time` / `prediction_record`（prefix 定数）と stdlib のみ。
+
+### 追加 — `tests/intelligence/test_evaluation_record.py`（162 tests）
+
+- gate §20 の 50 項目（境界 ±0.003 の閉区間、Decimal canonical 化 15 パターン、同値表現の
+  同一 id、負の零、極小値、float / NaN / Infinity 拒否、prediction_id / target / session 検証、
+  EVALUATED / DEFERRED の矛盾拒否、分類不一致拒否、3 版分離、golden id ＋ hashlib 独立再計算、
+  created_at / provenance 非依存、意味論依存、supersession、不変性、偽造 id、未知 field、
+  round-trip、禁止概念、依存境界、LIVE / REPLAY、棄権と DEFERRED の分離、datetime.now 不在）
+  ＋ `SessionVerification` 不変条件・strict parse。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §14「P5-2A EvaluationRecord schema ＋ outcome contract」を追加（目的・target / horizon・
+  Decimal・分類・状態機械・defer 理由・session 証拠・provenance・identity 分類・supersession・
+  較正との分離・依存境界）。N-1〜N-6 は不変。
+
+### 改善 — `tests/intelligence/test_prediction_journal_e2e.py`（テストのみ）
+
+- P5-1D が固定していた predictions package のファイル一覧に `evaluation_record.py` を加えた
+  （「runner / CLI を追加していない」という検査意図は不変）。P5-1 の実装 3 module と専用テストは
+  無変更。
+
+### 未実施
+
+- P5-2B（追記専用 evaluation journal / store）以降は着手していない。
+
+## v4.89 (2026-09-18) — Phase 5 P5-1D Prediction Journal end-to-end OFFLINE 検証（P5-1 完了）
+
+P5-1A / P5-1B / P5-1C を 1 つの系として検証する gate。新機能・runtime 統合・CLI は追加せず、
+テストを唯一の検証 artifact とした。P5-1A/B/C に欠陥は見つからず、修正パッチは無い。
+
+### 追加 — `tests/intelligence/test_prediction_journal_e2e.py`（28 tests）
+
+- happy path A–L を 1 本の E2E（available / LIVE → APPENDED → 物理 1 行 → instance 破棄 →
+  新しい store の権威 reload → 同一 PredictionRecord / 同一 id / provenance・audit 完全一致 →
+  canonical bytes → ingestion 境界からの再投入 ALREADY_PRESENT・bytes 不変）。
+- state coverage: available 方向 / NEUTRAL_RANGE / direction_mixed / draft_abstained ×
+  LIVE / REPLAY の 8 通りが再起動後も同じ state・相異なる id。
+- 複数記録 journal（3 session・同一 session の別意味論・REPLAY）の物理順 / 件数 / get の保存と
+  date-based overwrite の不在、再起動 → 正確な再投入 ALREADY_PRESENT → 新規 APPENDED → 再 reload。
+- ingestion 境界からの冪等性と conflict（provenance / recorded_at / cutoff /
+  outlook_rule_version）の fail closed（bytes 不変・reload 成功・元記録無傷）。
+- 正常 journal の隔離コピーに対する破損 6 種の fail closed（修復・skip・部分 load なし）。
+- single-writer 検知（lock 追加なし）、point-in-time（保存 audit は source 由来で検証時刻を
+  含まない）、runtime import closure が 13 module に閉じること、P4 本番 closure から
+  `predictions` へ到達しないこと、validation runner / CLI を追加していないこと。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §13「P5-1 完了検証（P5-1D）」を追加（検証結果・完了監査・P5-1 status CLOSED / FROZEN
+  監督者受理待ち）。N-1〜N-6 と §5 / §8 系は不変。
+
+### 未実施
+
+- P5-2A（EvaluationRecord schema ＋ outcome contract）以降は着手していない。
+
+## v4.88 (2026-09-18) — Phase 5 P5-1C OFFLINE P4 → PredictionRecord ingestion adapter
+
+P5-1A / P5-1B で凍結した PredictionRecord / PredictionStore へ、**既に生成された** P4 意味論
+（MorningBrief ＋ MarketSignal ＋ 生成 context）を**写す**境界だけを実装した
+（COPY, DO NOT ANALYZE）。MarketSignal / MorningBrief / outlook の再計算・市場観測 / TOPIX /
+取引カレンダー参照・採点・較正・EvaluationRecord・runtime producer 統合・Actions・Pages /
+公開出力は**含まない**。本番 runtime closure・Phase 4 コード・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/prediction_ingest.py`
+
+- 権威 source の特定: MorningBrief と MarketSignal が両方揃うのは
+  `delivery_pilot.main()` の in-process 境界（`build_morning_brief(draft, package)` →
+  `build_market_signal(brief)`）だけ。P4 は内部 artifact に両者を書かず、公開 `/v2` JSON は
+  level / confidence / horizon を含まない。よって adapter は in-process の凍結オブジェクトを
+  入力とし、公開 JSON / Markdown / HTML / 表示ラベル / 通知 payload を source にしない。
+  安定した offline artifact が無いため CLI / file format は発明しない（handoff は後続 gate）。
+- `validate_sources` / `build_prediction_record` / `ingest_prediction`（A 検証 → B 構築 →
+  C 凍結 store append）。`origin` は `PredictionOrigin` の明示必須（既定値・推定なし）。
+- field 対応: session は MorningBrief、signal 5 field は MarketSignal をそのまま、
+  `recorded_at` は `CompassDraft.generated_at`（P4 生成時刻。無ければ拒否し ingestion 時刻で
+  代用しない）、`cutoff` は `EvidencePackage.cutoff`、`principle_refs` は tier3、
+  `market_principle_version` は brief.points の非空版（高々 1 種）、`outlook_rule_version` は
+  `draft.outlook.rule_version`。回復不能な field は無い。
+- cross-object 整合を fail closed: `signal.brief_id == brief.brief_id`、draft / package の id、
+  session 一致、brief_id / signal_id の content-address 再検証、schema 版、verdict /
+  generator、brief.tier3.outlook と draft.outlook の一致。日付だけで結合しない。
+- unavailable も journal に載せ、NEUTRAL_RANGE は available のまま、`direction_mixed` /
+  `direction_uncertain` の confidence / horizon は P4 のまま写す。
+- `compass.evidence_package` を import せず（closure が context.builders / facts へ広がる）、
+  EvidencePackage は 4 属性の Protocol で受ける。`PredictionConflict` は伝播（握り潰さない）。
+
+### 追加 — `tests/intelligence/test_prediction_ingest.py`（74 tests）
+
+- gate §17 の 45 項目（コピー意味論・cross-object 整合・schema 版・origin・truthful
+  recorded_at / cutoff / 版・store 相互作用・禁止依存 13 種・権威・非変更・決定論・矛盾状態
+  15 パターン）＋ 実 EvidencePackage の受理・source 境界宣言。P4 自身の `make_brief_id` /
+  `build_market_signal` で作った本物の frozen object と `tmp_path` 隔離 store だけを使う。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §5.2 を追加（P4 source 境界・field 対応表・cross-object 整合・state コピー・依存境界・
+  store 相互作用）。§5 / §5.1 / §8.1 と N-1〜N-6 は不変。
+
+### 未実施
+
+- P5-1D（Prediction Journal end-to-end offline 検証）以降は着手していない。
+
+## v4.87 (2026-09-18) — Phase 5 P5-1B 追記専用 PredictionStore（JSONL journal）
+
+P5-1A（v4.86）で凍結した PredictionRecord の**永続化層だけ**を実装した。P4 出力の
+ingestion（P5-1C）・EvaluationRecord / `evaluations.jsonl`・TOPIX / 取引カレンダー評価・
+較正・runtime producer・Actions・Pages / 公開出力は**含まない**。本番 runtime closure・
+Phase 4 コード・workflow・config は不変。
+
+### 追加 — `src/intelligence/predictions/prediction_store.py`
+
+- `PredictionStore(data_root)`: `<data_root>/predictions/predictions.jsonl` を唯一の権威と
+  する追記専用 journal。data_root は呼び出し側が明示（`core.paths` / 環境変数 / config への
+  fallback なし）。読むだけではディレクトリを作らない。
+- append 意味論: 未知 id → `APPENDED`（1 行追記）、既知 id ＋ canonical 行 byte 一致 →
+  `ALREADY_PRESENT`（書かない）、既知 id ＋ provenance / audit を含むいずれかの field 差 →
+  `PredictionConflict`（fail closed。merge・更新・2 行目追記なし）。`AppendResult` は
+  `wrote_line` と物理行番号を持つ。
+- journal 直列化（identity 直列化とは別）: `as_dict()` を key 昇順・compact・UTF-8・`\n`
+  終端の 1 行に。
+- 権威 load は fail closed: 不正 JSON / 空行 / 非 object / 未知 field / schema 違反 /
+  偽造・失効 id / 非 canonical 行 / 終端改行の無い最終行 / 非 UTF-8 / 物理重複（同一内容でも）
+  を `PredictionJournalCorrupt`（行番号＋理由コード 9 種）で拒否。skip・dedup・修復・
+  migration-on-read をしない。
+- 書き込み規律: 親 dir 作成 → `open("a", newline="\n")` → 1 write → `flush` → `fsync`
+  （既存 ledger / normalization store と同じ最小規律。hash chain / transaction / lock なし）。
+- SINGLE WRITER: 開いてからの byte 長変化を append 前に検知し
+  `ConcurrentModificationDetected` で fail closed（検知であり排他ではない）。
+- 最小 read API: `iter_records()`（物理行順）/ `get()` / `in` / `len()` / `reload()`。
+  日付 key・「最新が勝つ」・dedup を持たない。SQLite / network / git を持たない。
+
+### 追加 — `tests/intelligence/test_prediction_store.py`
+
+- gate §14 の 30 項目（初回 append・冪等・bytes 不変・provenance / audit 差の fail closed・
+  同一 session / LIVE-REPLAY 共存・NEUTRAL_RANGE / 棄権の保存・round-trip・破損 8 種・
+  追記専用経路・prefix bytes 保存・JSONL 権威・SQLite / network / git 非依存・本番非到達・
+  outcome field 不在・single-writer 境界・caller-controlled root・secret / path 非直列化）
+  ＋ 空 / 不在 journal・write 規律（fsync 1 回）・result 語彙。すべて `tmp_path` 隔離。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §8.1 を追加（JSONL 権威・append / 冪等 / conflict 意味論・物理重複規則・load の
+  fail closed・書き込み規律・single-writer 境界・point-in-time）。§8 と N-1〜N-6 は不変。
+
+### 未実施
+
+- P5-1C（offline P4 → PredictionRecord ingestion）以降は着手していない。
+
+## v4.86 (2026-09-18) — Phase 5 P5-1A PredictionRecord schema ＋ 決定論的 identity
+
+Entry Contract（v4.85）の §11 明確化 3 点を監督者が LOCKED とし、P5-1A として
+「1 件の point-in-time 予測観測」の型と identity だけを凍結した。persistence（P5-1B）・
+ingestion（P5-1C）・EvaluationRecord / TOPIX 参照（P5-2）・較正（P5-3）・runtime 統合・
+公開出力は**含まない**。本番 runtime closure・Phase 4 コード・workflow・Pages・config は不変。
+
+### 追加 — `src/intelligence/predictions/prediction_record.py`
+
+- `PredictionRecord`（frozen dataclass）: field を A identity 入力（`schema_version` /
+  `session_date` / `reference_session` / `origin` / `available` / `level` / `confidence` /
+  `horizon` / `unavailable_reason`）、B provenance（`brief_id` / `signal_id` / `package_id` /
+  `draft_id` / source schema 版）、C audit（`recorded_at` / `cutoff` / `principle_refs` /
+  `market_principle_version` / `outlook_rule_version`）に分類。表示文字列・`delivery_id`・
+  realized outcome・評価状態・閾値版の field は**存在しない**（受け取る引数も無い）。
+- 決定論的 identity（N-1）: A の 9 key だけを key 昇順・compact・UTF-8 の JSON へ直列化し
+  SHA-256 先頭 24 hex を `pred_` に付ける（`core.ids.content_id` と同一機構。新 hash chain なし）。
+  `brief_id` / `signal_id` / `recorded_at` を変えても同じ ID、意味論のどれか 1 つ
+  （LIVE / REPLAY を含む）を変えれば別 ID。
+- fail closed: P4 凍結語彙（5 level / 3 confidence / 6 unavailable reason / 既知 horizon）の外、
+  P4 が生成しえない `(level, confidence)` 組、available / unavailable の矛盾、
+  `reference_session >= session_date`、非 ISO 日付、naive datetime、偽造 `prediction_id`、
+  未知 field を `InvalidPredictionRecord` で拒否。正規化・推測をしない。
+- schema 版 `prediction_record:0.1.0`（N-2 の分類版 `topix_neutral_band:1.0.0` とは別概念）。
+- `as_dict` / `from_dict` の決定論的 round-trip（JSON 互換・secret / 表示文字列を含まない）。
+- 依存境界: `compass.model` / `core.ids` / `core.time` / `reports.market_signal` /
+  `reports.model` のみ。network / store / calendar / J-Quants / persistence を import しない。
+
+### 追加 — `tests/intelligence/test_prediction_record.py`（145 tests）
+
+- golden canonical 文字列と、hashlib による独立再計算での ID 一致。
+- provenance / audit 差分 → 同一 ID、意味論差分（全 level・confidence・reason・origin・
+  session）→ 別 ID、payload 水準で `horizon` / `schema_version` も hash に入ること。
+- 矛盾状態・語彙外・順序違反・naive datetime・偽造 ID・未知 field・表示 / outcome kwargs の拒否。
+- 不変性、round-trip、P4 語彙との整合（`LEVEL_BY_STATE` 値域 7 組、
+  `delivery.PUBLIC_UNAVAILABLE_REASONS`、`CompassConfig.outlook_horizon`）、依存境界、
+  本番 closure 非到達（`predictions` は `EXCLUDED_PACKAGES`）。
+
+### 改善 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- §5.1 を追加（P5-1A の field 対応表・identity 直列化契約・状態機械・schema-local と
+  verified-calendar 検証の分離）。§5 の分類と N-1〜N-6 は変更していない。
+- §11 の 3 点を **LOCKED** と明記（(1) は「直前の**検証済み**東京取引 session」の文言）。
+
+### 未実施
+
+- P5-1B（追記専用 journal / store）以降は着手していない。
+
+## v4.85 (2026-09-17) — Phase 5 Entry Contract の凍結（documentation only）
+
+Phase 4 の閉幕（`PHASE_4_COMPLETE / CLOSED / FROZEN`）、Phase 5 Entry Contract A0 監査、
+A0.7B-R2 の TOPIX 実データ取得（J-Quants v2・2021-09-17〜2026-09-17・観測 1,223 件）、
+A0.5R の分布実測（realized returns 1,222 件・19 検証すべて true）を経て、監督者が
+N-1〜N-6 を凍結した。本エントリはその**文書化のみ**であり、実装を含まない。
+
+### 追加 — `docs/databank/PHASE5_ENTRY_CONTRACT.md`
+
+- **N-1 identity**: `prediction_id` は表示非依存の prediction semantics から content-address する。
+  `brief_id` / `signal_id` は provenance reference として保持するが hash payload に含めない。
+  `delivery_id` を identity に使わない。
+- **N-2 realized outcome**: target = TOPIX、`close(session) / close(前取引 session) − 1` を
+  Decimal で丸めずに分類。`UP > +0.30%` / `NEUTRAL_RANGE −0.30%〜+0.30%（閉区間）` /
+  `DOWN < −0.30%`。版識別子 `topix_neutral_band:1.0.0`。経験的根拠（|return| nearest-rank
+  P25 = 0.299648%、±0.30% で NEUTRAL_RANGE 25.20%、FULL 年の spread 5.19pp）を provenance
+  として記録。**MarketSignal の成績は閾値決定に使っていない。** 歴史的 realized_return は
+  版変更で書き戻さない。
+- **N-3 integrity**: 新しい hash chain を作らない（content ID ＋ 追記専用 ＋ 既存 backup manifest）。
+- **N-4 target**: 評価対象は TOPIX のみ。Phase 4 MarketSignal の意味論は不変。
+- **N-5 horizon**: 1 東京取引 session の close-to-close。取引カレンダーを検証し、weekday
+  演算へフォールバックしない。検証不能なら DEFER。
+- **N-6 runtime**: P5-1 は OFFLINE から。repository-commit persistence を追加せず、公開 `/v2`
+  に結合しない。runtime 同居は別の認可 gate。
+- source 分類（STABLE_INPUT / REFERENCE_ONLY / DO_NOT_COUPLE）、PredictionRecord の field 分類、
+  abstention の意味論（棄権は coverage から消えず・NEUTRAL_RANGE にも方向予測にもならない）、
+  point-in-time の意味論（不変・追記専用・DEFER・supersede・live/replay 分離）、persistence
+  契約（`<data_root>/predictions/*.jsonl`・legacy journal を権威にしない・同一日付上書きなし）、
+  INTERNAL ONLY 境界、Phase の順序（P5-1A → P5-1B → P5-1C → P5-2 → P5-3）を凍結。
+- 凍結決定から導いた明確化 3 点を「監督者確認事項」として明示（§11）。
+
+### 未実施
+
+- P5-1A（PredictionRecord schema ＋ identity 設計）以降は着手していない。
+- Phase 4 コード・workflow・`config.yaml`・Compass DNA・公開 artifact・production data root は
+  いずれも不変。J-Quants 再取得・閾値再測定も行っていない。
+
+## v4.84 (2026-09-17) — Phase 5 TOPIX neutral-band 分布測定 runner（offline・threshold は決めない）
+
+A0.7B-R2 で取得した隔離 research dataset（J-Quants v2 / 2021-09-17〜2026-09-17 /
+TOPIX 観測 1,223 件・derived return_1d 1,222 件）を入力に、TOPIX の実現 close-to-close
+日次 return 分布と候補 band ごとの UP / RANGE / DOWN 件数を**機械的に数える** runner を
+搬入する。監督者決定 N-2（`NEUTRAL_RANGE` band）の材料であり、**threshold の選択・推奨・
+最適化は行わない**。
+
+### 追加 — `src/intelligence/predictions/topix_neutral_band_measure.py`
+
+- 入力の権威は research root の `acquisition.json` と canonical `observations.jsonl` だけ。
+  J-Quants / legacy journal / MarketSignal / CompassDraft / 公開 `/v2` / 代替 source は読まない。
+  ネットワーク module を import しない（runner 自身が実行時に検査する）。
+- **research root は読むだけ。** SQLite index を開かず canonical JSONL を直接読む。実行前後で
+  root 配下全 file の sha256 が一致することを runner が検証する（`research_root_unmodified`）。
+- realized_return = `close(session) / close(previous Tokyo trading session) - 1`（Decimal・
+  **分類前に丸めない**）。derived `return_1d` は同じ式・同じ丸めで独立再計算し厳密一致を要求する。
+- 分類は `UP: r > +X` / `RANGE: -X <= r <= +X`（**閉区間**）/ `DOWN: r < -X`。正式候補
+  ±0.20 / 0.30 / 0.40 / 0.50% と文脈用 ±0.10 / 0.60 / 0.75 / 1.00% を同じ表で出す。
+- 分布統計（N / 範囲 / mean / median / 標本 stdev / mean|r| / min / max / |r| の P25・P50・
+  P75・P90・P95）。percentile は **nearest-rank**（補間なし）、method 名を出力へ記録する。
+- 年別表（端の年は PARTIAL・内側は FULL）と、FULL 年だけの RANGE% min / max / spread。
+  記述のみで、年安定性に対する最適化は行わない。
+- 取得 marker と実データが食い違えば黙って続けない（件数・範囲・provider・derived 一致・
+  合計保存・secret 不在など 19 項目を検証し、1 つでも落ちれば `MEASUREMENT_VALIDATION_FAILED`）。
+  監督者承認値は `--expect-*` で明示 pin する（runner が期待値を作らない）。
+- 出力は `::P5_TOPIX_NEUTRAL_BAND::{json}` ＋ 人間可読表。絶対 path・credential・
+  顧客向け文言・推奨・MarketSignal 成績を含まない。任意の `--output` は research root 外・
+  リポジトリ外・未存在 file のみ。
+- `tests/intelligence/test_topix_neutral_band_measure.py`（26 tests・決定論的 fixture のみ）。
+  境界の閉区間性・丸めない Decimal・nearest-rank・年別 PARTIAL/FULL・件数保存・取得 marker
+  不一致と derived 不一致の fail closed・read-only・決定論・production 非依存を固定する。
+
+### 未実施
+
+- threshold の決定・Entry Contract 記述・P5-1 / P5-2・production 連携・Windows 実行は
+  いずれも行っていない。Phase 4・workflow・config・production data root は不変。
+
+pytest: 587 passed（production-derived suite 524 ＋ research driver guard 37 ＋ 測定 runner guard 26）
+
+## v4.83 (2026-09-16) — Phase 5 一回限りの TOPIX research acquisition driver（取得はまだ行わない）
+
+Phase 5 の `NEUTRAL_RANGE` band は、リポジトリが意図的に閾値を定義していないため
+（`context/model.py`: `MAGNITUDE_CATEGORIES_ENABLED = False`「正当化できる閾値が
+現時点のデータからは得られない」）、TOPIX の実データ分布を測ってから監督者が決める。
+その測定に必要な実データがこの環境に 1 件も無いため（Market Bank は producer の
+`runner.temp` へ毎回ゼロから再構築され永続化されない設計）、**production から完全に
+隔離された one-time research dataset** を取得するための driver だけを搬入する。
+
+### 追加 — Phase 5 research acquisition driver（offline 実装のみ）
+
+- `src/intelligence/predictions/topix_research_acquire.py` を追加する。到達してよい
+  endpoint は `/v2/indices/bars/daily/topix` と `/v2/markets/calendar` の **2 つだけ**で、
+  他 provider（yfinance / stooq / treasury_gov / mof_japan）を 1 つも登録しないため
+  構造的に到達できない。`pilot_runner` も呼ばない。
+- **第二の J-Quants client を作らない。HTTP も ingest も再実装しない。** 既存の
+  `JQuantsV2TopixProvider` / `JQuantsV2Client` / `MarketBankStore` / `ingest` /
+  `derive_per_series` / `tokyo_calendar` をそのまま再利用する。
+- **暗黙の production fallback を持たない。** `--research-root`（絶対 path）/
+  `--start-date` / `--end-date` はすべて必須で、`data_root()` を読まない。
+  リポジトリ配下・`data/vnext`・`output`・`docs`・`knowledge`・`.git` は拒否し、
+  既存ディレクトリは空のときだけ許可する（非空は `NON_EMPTY_RESEARCH_ROOT`）。
+  誤指定はネットワークアクセス前に fail closed。
+- **期間を driver 自身が計算しない**（10 年を内部で作らない）。研究条件が実行ログから
+  再現できるよう、start / end は常に明示引数で受け取る。
+- credential は `JQUANTS_API_KEY` の runtime injection のみ。CLI 引数にも file にも
+  log にも URL にも載せない。未設定ならネットワーク 0 回・ディレクトリ作成 0 回で停止する。
+- 既存 provider の **20 page 安全上限を変更しない**。上限へ到達したら truncation を
+  否定できないため、期間を勝手に短縮も分割もせず
+  `RESEARCH_WINDOW_EXCEEDS_EXISTING_PAGINATION_CONTRACT` で停止する。
+- 営業日判定は J-Quants 取引カレンダーの**実測検証済み区分だけ**で行う。weekday 演算へ
+  フォールバックしない（検証できなければ fail closed）。
+- 取得後、成功扱いする前に 13 項目を検証する（観測件数 / 合成 source 混入 /
+  provider identity / 重複 trading_date / close 欠測 / 非正 close / カレンダー検証 /
+  session gap / weekday fallback / raw close からの独立再計算と derived `return_1d` の
+  一致 / secret 漏れ / repository 書き込み / production data root 書き込み）。
+  1 つでも失敗すれば `ACQUISITION_VALIDATION_FAILED` とし、測定へ進まない。
+- `tests/intelligence/test_topix_research_acquire.py` を追加する（34 tests・すべて
+  offline。HTTP は注入した fake のみで実 API を使わない）。production isolation
+  （legacy journal / publication / Pages / governance / Compass DNA / workflow /
+  producer / `data_root` fallback への非依存）も機械的に固定する。
+
+### 未実施（本エントリは取得を主張しない）
+
+- **J-Quants API へのアクセスは 1 回も行っていない。** 実データ取得・分布測定・
+  threshold 決定・Entry Contract の記述・P5-1 / P5-2 実装はいずれも未着手。
+- production 面は一切変更していない。workflow・`config.yaml`・trust anchor・
+  Compass DNA・Pages・`/v2`・producer スケジュールはすべて不変。`predictions` は
+  production runtime closure から到達しない研究 subsystem のままである。
+
+pytest: 558 passed（production-derived suite 524 ＋ 新規 research driver guard 34）
+
 ## v4.82 (2026-09-16) — 顧客向け Morning Brief「提示できない理由」の表示語彙修正
 
 実機（iPhone）での表示レビューで、公開 `/v2` の Morning Brief Markdown に Compass
