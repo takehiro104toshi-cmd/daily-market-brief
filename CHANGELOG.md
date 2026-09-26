@@ -4,6 +4,57 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.47 (2026-09-26) — Phase 7 P7-A4a narrative presentation model / diff / eligibility（構造だけ。自然文の描画なし）
+
+A1 の `NarrativeSynthesis` → `NarrativePresentation`（提示の構造）と、明示的な 2 つの synthesis → `NarrativeDiff`（構造の差分）の
+純関数。人が読む文章・要約・LLM・provider・永続化・公開 / P4 / P8 への接続は無い（A4b は未着手）。
+A1（`a02ad60`）・A2（`2dfd85c`）・A3（`9b33609`）・Phase 6（`5ef313a`）の runtime は byte 一致のまま。Phase 6 の test の変更も無い。
+
+### 追加 — `src/intelligence/narrative_intelligence/presentation_model.py`【新規】
+
+- 不変の model: `PresentationItem`（claim ちょうど 1 つ）・`PresentationSection`・`NarrativePresentation`・`NarrativeDiffItem`・
+  `NarrativeDiff`。閉じた `SectionKind`（STATE / MECHANISM / EVIDENCE / CONTRADICTION / INVALIDATION / UNCERTAINTY / CHANGE /
+  RELATION / ALTERNATIVES）・`Visibility`（REQUIRED / ELIGIBLE）・`DiffCategory`（ADDED / REMOVED / UNCHANGED だけ）。
+- 静的な規則表 `narrative_presentation_rules` 0.1.0（P01〜P14。A1 の claim の形すべてに 1 つずつ）。反証・無効化・すべての不確実性・
+  代替は REQUIRED。SOURCE_ASSERTED の relation は assertion class が必須。score・順位・確信度・勝者・推奨・文章の field は無い。
+- section の順は提示の順（重要度ではない）、section 内は root id の組 → claim id の canonical な順。並びは constructor が検査する。
+  identity は schema・元の synthesis id・規則表の version・構造から決まる（時計・乱数・path・mtime なし）。
+
+### 追加 — `src/intelligence/narrative_intelligence/presentation_planner.py`【新規】
+
+- `plan_presentation(synthesis)`: synthesis を A1 の厳格な復元で再検証（id・class・kind・predicate・ref・pin の改ざんは fail closed）
+  し、claim を規則表どおりに 1 回ずつ置く。A3 の規則表 pin（0.1.0）を要求する（A3 を import しない）。subject の外に触れる claim は拒否。
+- `validate_display_selection(presentation, claim_ids)`: A4b が一部を見せるとき、見せる Theme の REQUIRED の item を落とす選び方を
+  拒否する（SUPPORTS だけを見せて反証を隠せない）。
+
+### 追加 — `src/intelligence/narrative_intelligence/narrative_diff.py`【新規】
+
+- `diff_syntheses(*, previous, current)`: 両方を明示（keyword だけ・既定値なし・store を読まない）。同じ kind・同じ
+  `narrative_key`・同じ knowledge pin・previous の cutoff < current の cutoff のときだけ比べる（`INCOMPATIBLE_DIFF_INPUTS`）。
+  claim id の完全一致だけで ADDED / REMOVED / UNCHANGED に分ける（類似の照合・MODIFIED・改善 / 強化などの方向の評価なし）。
+- 失敗は INVALID_SYNTHESIS・UNSUPPORTED_SYNTHESIS_VERSION・SYNTHESIS_INTEGRITY_FAILURE・UNSUPPORTED_PRESENTATION_KIND・
+  PRESENTATION_CONFLICT・INCOMPATIBLE_DIFF_INPUTS。import は A1 の純 model と A4a の module だけ（A2・A3 engine・Phase 6 なし）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_presentation_diff.py`【新規】: matrix A〜BH（62 件）。A2 / A3 の本物の world の synthesis で
+  提示・差分を作り、規則表と独立に書き下した期待と 6 通りの synthesis で完全一致を確かめる。open / socket / 時計 / 乱数を止めても
+  同じ出力、別 process・別 hash seed・別 path・mtime の変更で byte 一致。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: A4a の import 許可一覧と runtime closure（A2・A3 engine・adapter・
+  Phase 6・P5・legacy・network に届かない）、A1 / A2 / A3 の byte 凍結（BI〜BK）、Phase 6 の凍結（BL）、A4a を登録した後も未登録の
+  runtime を検出（BM）、module 状態・cache・履歴なしを追加。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に A4a の 3 module を登録（Phase 6 を import してよい module は
+  増やさない）。
+- scratch の clone で mutation M1〜M15（反証 / 無効化の削除・SOURCE_ASSERTED の客観化・Theme の順位付け・確信度の field・重要度の
+  並び・claim の無い item・類似の照合・ADDED SUPPORTS → IMPROVED・REMOVED 反証 → STRENGTHENED・暗黙の前回・cache の書き込み・
+  Phase 6 の import・時計の identity・乱数の並び）をすべて検出（内部の検査も外した上で test が検出）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_PRESENTATION_DIFF_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、A4 の分割、authority の分類、純関数の境界、提示の model、適格、隠さない義務、分類、順序、THEME_STATE、THEME_SET、
+代替、不確実性、SOURCE_ASSERTED、追跡、identity と規則表、差分の目的、呼び出しの契約、比較できる条件、差分の区分、claim identity の
+照合、方向の評価をしない、失敗、security と import 境界、延期、A4b への引き継ぎ。設計判断 D-P7-A4A-1〜11。
+
 ## v5.46 (2026-09-26) — Phase 7 P7-A3 deterministic narrative synthesis engine（構造化された claim だけ）
 
 A2 の `NarrativeInputSnapshot` → A1 の `NarrativeSynthesis` の純関数。文章・描画・LLM・provider・永続化・authority の変更は無い。

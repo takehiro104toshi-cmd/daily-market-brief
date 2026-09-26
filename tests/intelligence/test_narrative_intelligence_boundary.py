@@ -9,9 +9,12 @@
   永続化 / 時計 / 乱数 / 機密の field なし
 - P7-A3: synthesis engine は A1 / A2 の純 model だけを import する（adapter・Phase 6・P5・legacy・provider・公開 /
   通知 / 売買なし）・A2 の byte 凍結・未登録の Phase 7 runtime は検出される
+- P7-A4a（BI〜BM）: 提示 ／ 差分の module は A1 の純 model と A4a の model だけを import する（A2・A3 engine・adapter・
+  Phase 6・P5・legacy・provider・公開 / 通知 / 売買なし）・module の状態を持たない・A1 / A2 / A3 の byte 凍結・
+  未登録の Phase 7 runtime は引き続き検出される
 
 契約: `docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md`（A1）・`PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md`（A2）・
-`PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md`（A3）。
+`PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md`（A3）・`PHASE7_NARRATIVE_PRESENTATION_DIFF_CONTRACT.md`（A4a）。
 """
 from __future__ import annotations
 
@@ -39,9 +42,12 @@ from tests.intelligence.test_theme_model import observation
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE7_PACKAGE
-MODULES = ("__init__", "input_model", "pit_assembler", "synthesis_engine", "synthesis_model")
+MODULES = ("__init__", "input_model", "narrative_diff", "pit_assembler", "presentation_model", "presentation_planner",
+           "synthesis_engine", "synthesis_model")
 #: Phase 6 を import しない純 module（A1 の model・A2 の入力 model・A3 の engine）
-PURE_MODULES = ("__init__", "input_model", "synthesis_engine", "synthesis_model")
+PURE_MODULES = ("__init__", "input_model", "narrative_diff", "presentation_model", "presentation_planner",
+                "synthesis_engine", "synthesis_model")
+A4A_MODULES = ("narrative_diff", "presentation_model", "presentation_planner")
 ADAPTER = "pit_assembler"
 PHASE6_COMPLETION = "5ef313a6a9477f05b4e46756fb8b79c0f0c3d685"
 P7_A0 = "2fe7d0f03c3c8ab2e566508079b788f9e69fcb71"
@@ -49,6 +55,9 @@ A0_DOC = "docs/databank/PHASE7_NARRATIVE_ARCHITECTURE_AUDIT.md"
 A1_DOC = "docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md"
 A2_DOC = "docs/databank/PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md"
 A3_DOC = "docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md"
+A4A_DOC = "docs/databank/PHASE7_NARRATIVE_PRESENTATION_DIFF_CONTRACT.md"
+P7_A3 = "9b336091b2348cc2311872b76a7b4c1d82f92ccf"
+A3_RUNTIME = (f"{PHASE7_PACKAGE}/synthesis_engine.py",)
 P7_A2 = "2dfd85c757d96b3b546f6723f88d70b94a191f97"
 A2_RUNTIME = (f"{PHASE7_PACKAGE}/input_model.py", f"{PHASE7_PACKAGE}/pit_assembler.py")
 P7_A1 = "a02ad60878054b5846b11acac720fa2811f32505"
@@ -58,7 +67,8 @@ SURFACE = ("src", "knowledge", "config.yaml", ".github", "scripts", "docs/pages"
 PHASE7_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_synthesis_model.py",
                 "tests/intelligence/test_narrative_intelligence_boundary.py",
                 "tests/intelligence/test_narrative_pit_assembler.py",
-                "tests/intelligence/test_narrative_synthesis_engine.py")
+                "tests/intelligence/test_narrative_synthesis_engine.py",
+                "tests/intelligence/test_narrative_presentation_diff.py")
 _BASE_IMPORTS = {"__future__", "json", "re", "dataclasses", "datetime", "enum", "typing", "..core.ids", "..core.time"}
 #: P7-A2 の監督判断: 読み取り adapter が import してよい Phase 6 の read API（module → 名前。完全一致）
 SANCTIONED_PHASE6_IMPORTS = {
@@ -75,6 +85,12 @@ SANCTIONED_PHASE6_IMPORTS = {
 ALLOWED_IMPORTS = {"__init__": set(), "synthesis_model": _BASE_IMPORTS,
                    "input_model": _BASE_IMPORTS | {".synthesis_model"},
                    "synthesis_engine": {"__future__", "dataclasses", "typing", ".input_model", ".synthesis_model"},
+                   "presentation_model": {"__future__", "re", "dataclasses", "enum", "typing", "..core.ids",
+                                          ".synthesis_model"},
+                   "presentation_planner": {"__future__", "dataclasses", "typing", ".presentation_model",
+                                            ".synthesis_model"},
+                   "narrative_diff": {"__future__", "typing", ".presentation_model", ".presentation_planner",
+                                      ".synthesis_model"},
                    "pit_assembler": {"__future__", "typing", ".input_model", ".synthesis_model"}
                    | set(SANCTIONED_PHASE6_IMPORTS)}
 ALLOWED_CLOSURE = {"src", "src.intelligence", "src.intelligence.core", "src.intelligence.core.ids",
@@ -107,14 +123,17 @@ def test_ap_modules_import_only_their_allowed_modules(name, path) -> None:
     assert imported_modules(path) <= ALLOWED_IMPORTS[name], imported_modules(path) - ALLOWED_IMPORTS[name]
 
 
-@pytest.mark.parametrize("module", ["synthesis_model", "input_model", "synthesis_engine"])
+@pytest.mark.parametrize("module", ["synthesis_model", "input_model", "synthesis_engine", *A4A_MODULES])
 def test_ap_the_runtime_closure_of_the_pure_models_is_core_and_this_package_only(module) -> None:
     code = (f"import sys\nimport src.intelligence.narrative_intelligence.{module}\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
     extra = {"synthesis_model": set(), "input_model": {"input_model"}, "synthesis_engine": {"input_model",
-                                                                                        "synthesis_engine"}}[module]
+                                                                                        "synthesis_engine"},
+             "presentation_model": {"presentation_model"},
+             "presentation_planner": {"presentation_model", "presentation_planner"},
+             "narrative_diff": {"presentation_model", "presentation_planner", "narrative_diff"}}[module]
     expected = ALLOWED_CLOSURE | {f"src.intelligence.narrative_intelligence.{name}" for name in extra}
     assert set(proc.stdout.split()) == expected
 
@@ -136,7 +155,9 @@ def test_ap_no_phase6_p4_p5_legacy_provider_or_network_import(name, path) -> Non
 
 
 def test_ap_the_p4_narrative_names_are_not_reused() -> None:
-    names = set(dir(m))
+    import importlib
+    names = set(dir(m)).union(*(dir(importlib.import_module(f"src.intelligence.narrative_intelligence.{name}"))
+                                for name in A4A_MODULES))
     assert not names & {"NarrativePlan", "NarrativeGenerator", "DeterministicNarrativeGenerator",
                         "FakeNarrativeGenerator", "LLMNarrativeGenerator"}
 
@@ -229,7 +250,7 @@ def test_as_since_the_phase6_completion_only_the_registered_runtime_was_added() 
 def test_as_phase6_documents_and_the_a0_audit_are_frozen() -> None:
     changes = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A0, "--",
                                                         "docs").splitlines()}
-    assert changes <= {("A", A1_DOC), ("A", A2_DOC), ("A", A3_DOC)}
+    assert changes <= {("A", A1_DOC), ("A", A2_DOC), ("A", A3_DOC), ("A", A4A_DOC)}
     assert _git("show", f"{P7_A0}:{A0_DOC}") == (REPO_ROOT / A0_DOC).read_text(encoding="utf-8")
 
 
@@ -509,3 +530,69 @@ def test_the_engine_has_no_module_state_or_history_input() -> None:
     assert not any(isinstance(node, (ast.Global, ast.Nonlocal)) for node in ast.walk(tree))
     names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
     assert not names & {"history", "previous", "feedback", "win_rate", "acceptance_rate", "clicks", "calibration"}
+
+
+# ================================================================ P7-A4a の境界（BI〜BM ほか）
+
+def test_bi_bj_bk_a1_a2_and_a3_are_byte_identical_to_the_a3_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P7_A3, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    for path in (*A1_RUNTIME, A1_DOC, *A2_RUNTIME, A2_DOC, *A3_RUNTIME, A3_DOC):
+        assert _git("show", f"{P7_A3}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    for path in (*A1_RUNTIME, *A2_RUNTIME, *A3_RUNTIME):                                  # index ／ 作業木にも変更なし
+        assert _git("diff", "--name-status", P7_A3, "--", path) == "", path
+        assert _git("status", "--porcelain", "--", path) == "", path
+
+
+def test_bl_phase6_runtime_stays_frozen_after_a4a() -> None:
+    namespaces = ("src/intelligence/themes", "src/intelligence/theme_intelligence", "knowledge")
+    assert _git("diff", "--name-status", PHASE6_COMPLETION, "--", *namespaces) == ""
+    changed = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A3, "--", "src",
+                                                        "knowledge").splitlines()}
+    assert changed <= {("A", f"{PHASE7_PACKAGE}/{name}.py") for name in A4A_MODULES}    # A3 の後は A4a の追加だけ
+
+
+@pytest.mark.parametrize("module", A4A_MODULES)
+def test_bb_bc_bd_be_the_a4a_modules_never_reach_a2_a3_phase6_p5_legacy_or_network_at_runtime(module) -> None:
+    code = (f"import sys\nimport src.intelligence.narrative_intelligence.{module}\n"
+            "print('\\n'.join(sorted(sys.modules)))\n")
+    proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+                          env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
+    loaded = set(proc.stdout.split())
+    assert not {m for m in loaded if any(token in m for token in (
+        "pit_assembler", "input_model", "synthesis_engine", ".themes", "theme_intelligence", "predictions",
+        "evaluation", "calibration", "compass", "reports", "anthropic", "openai"))
+        or m.startswith(("src.analysis", "src.report", "src.notifier"))}
+    assert not loaded & {"socket", "ssl", "http", "http.client", "urllib.request", "sqlite3"}
+
+
+def test_bm_an_unregistered_runtime_is_still_detected_with_a4a_registered(tmp_path) -> None:
+    assert unregistered_runtime(PACKAGE_DIR, REPO_ROOT) == []
+    for name in A4A_MODULES:
+        assert f"{PHASE7_PACKAGE}/{name}.py" in PHASE7_RUNTIME
+        assert f"{PHASE7_PACKAGE}/{name}.py" not in PHASE7_SANCTIONED_IMPORTERS      # A4a は Phase 6 を読めない
+    assert PHASE7_SANCTIONED_IMPORTERS == (f"{PHASE7_PACKAGE}/{ADAPTER}.py",)           # A2→P6 の例外は広げない
+    package = tmp_path / PHASE7_PACKAGE
+    package.mkdir(parents=True)
+    for _, path in _sources():
+        (package / path.name).write_bytes(path.read_bytes())
+    for name in ("narrative_renderer.py", "presentation_cache.py"):
+        (package / name).write_text('"""not registered."""\n', encoding="utf-8")
+    assert unregistered_runtime(package, tmp_path) == [f"{PHASE7_PACKAGE}/narrative_renderer.py",
+                                                       f"{PHASE7_PACKAGE}/presentation_cache.py"]
+
+
+@pytest.mark.parametrize("module", A4A_MODULES)
+def test_the_a4a_modules_hold_no_module_state_cache_or_history(module) -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{module}.py").read_text(encoding="utf-8"))
+    assert not any(isinstance(node, (ast.Global, ast.Nonlocal)) for node in ast.walk(tree))
+    for node in tree.body:                                                               # module 直下の可変な入れ物なし
+        targets = node.targets if isinstance(node, ast.Assign) else [getattr(node, "target", None)]
+        if any(isinstance(target, ast.Name) and target.id == "__all__" for target in targets):
+            continue                                                                    # 公開名の一覧だけは除く
+        if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None:
+            assert not isinstance(node.value, (ast.Dict, ast.List, ast.Set, ast.DictComp, ast.ListComp, ast.SetComp))
+            assert not (isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name)
+                        and node.value.func.id in ("dict", "list", "set", "defaultdict", "OrderedDict"))
+    names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    assert not names & {"history", "feedback", "win_rate", "acceptance_rate", "clicks", "calibration", "latest",
+                        "last_run", "yesterday", "cache", "lru_cache"}
