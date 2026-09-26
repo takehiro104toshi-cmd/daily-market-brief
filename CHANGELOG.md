@@ -4,6 +4,54 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.48 (2026-09-26) — Phase 7 P7-A4b deterministic human-readable narrative renderer（構造 → 日本語の平文。LLM なし）
+
+A4a の `NarrativePresentation` ／ `NarrativeDiff` を、固定の日本語の見出しと静的な template で読める平文にする純関数。
+文言は変えても認識上の意味は変えない。LLM・provider・永続化・公開 / P4 / P8 への接続・個人化・推奨は無い（A5 は未着手）。
+A1（`a02ad60`）・A2（`2dfd85c`）・A3（`9b33609`）・A4a（`50b24ef`）・Phase 6（`5ef313a`）の runtime は byte 一致のまま。
+
+### 追加 — `src/intelligence/narrative_intelligence/rendered_model.py`【新規】
+
+- 不変の描画済み model: `RenderedItem`（A4a の提示 item 1 つ・claim id・参照の印・平文）・`RenderedSection`・`RenderedNarrative`・
+  `RenderedDiffGroup`・`RenderedNarrativeDiff`。言語は日本語だけ（`ja`。0.1.0 で凍結）。
+- 平文の安全: 許可した文字の集合の外（HTML ／ Markdown の記号・`/`・制御文字・双方向制御文字）と URL ／ journal ／ 秘密の語は
+  `UNSAFE_TEXT`。長さ・件数の上限を超えたら `RENDER_LIMIT_EXCEEDED`（切り詰めない）。
+- identity は schema・`narrative_renderer_ja` 0.1.0・言語・提示 ／ 差分の id・描画した構造から決まる（時計・乱数・path なし）。
+
+### 追加 — `src/intelligence/narrative_intelligence/render_templates_ja.py`【新規】
+
+- A4a の規則 P01〜P14 と不確実性 code ごとにちょうど 1 つの template（T01〜T18）。各 template は対象の認識 class を宣言する。
+  解釈は「整理されています」、SOURCE_ASSERTED は「出典は…主張しています。これは出典による主張であり…」、事実は「存在します」、
+  反証は「一方、…矛盾する材料」、代替は「並列に記録されています（順不同）」。汎用の fallback は無い（未対応は `UNSUPPORTED_TEMPLATE`）。
+- 固定の見出し 9 つ ＋ 差分の 3 区分、enum → 日本語の label（component・evidence の種類・時刻の扱い・relation・変化の種類 30）。
+
+### 追加 — `src/intelligence/narrative_intelligence/text_renderer.py`【新規】
+
+- `render_presentation(presentation=..., synthesis=...)`: 提示を作り直して id を確かめ、さらに A4a の `plan_presentation` で synthesis から
+  作り直した提示と byte 一致することを確かめてから、提示の item の順に claim の ref の閉じた属性と key だけで文にする（FULL だけ。
+  REQUIRED を落とした提示・改ざん・別の synthesis は `PRESENTATION_INTEGRITY_FAILURE`）。
+- `render_diff(diff=..., previous=..., current=...)`: A4a の `diff_syntheses` で作り直した差分と一致を確かめ、追加 ／ なくなった ／ 変わらず
+  存在する の 3 区分で同じ template の文にする（強まった ／ 改善した などの評価の語なし）。
+- import は A4a の model ／ planner ／ diff と A1 の型と `core.ids` だけ（A2・A3 engine・adapter・Phase 6・P5・legacy・LLM なし）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_renderer.py`【新規】: matrix A〜BS（88 件）。THEME_STATE の描画の golden・registry の digest を
+  version ごとに固定、文の可変な部分がすべて claim の材料と一致、relation の向き、SOURCE_ASSERTED の限定、REQUIRED を落とした提示の
+  拒否、差分の文言、危険な文字 ／ URL の拒否、open / socket / 時計 / 乱数 / 環境変数を止めても同じ出力、別 process・別 path で byte 一致。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: A4b の import 許可一覧と runtime closure、A1 / A2 / A3 / A4a の byte 凍結
+  （BT〜BW）、Phase 6 の凍結（BX）、A4b を登録した後も未登録の runtime を検出（BY）、module 状態なしを追加。定義名の禁止語 `render` は
+  A4b の 3 module だけ例外。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に A4b の 3 module を登録（Phase 6 を import してよい module は増やさない）。
+- scratch の clone で mutation M1〜M15（解釈の断定化・支持の証明化・反証 / 無効化 / 不確実性の削除・代替の順位付け・SOURCE_ASSERTED の
+  限定の削除・relation の向きの反転・ADDED SUPPORTS → 強まった・REMOVED 反証 → 改善・raw HTML・machine path・推奨の文・LLM provider の
+  import・時計の identity）をすべて検出（内部の検査も外した上で test が検出）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_RENDERER_CONTRACT.md`【新規】
+
+契約（26 節）。設計判断 D-P7-A4B-1〜9（入力の境界は提示 ＋ A4a で検証した synthesis の ref の材料、FULL だけ、中立なテーマの label、
+claim id 由来の参照の印 など）。
+
 ## v5.47 (2026-09-26) — Phase 7 P7-A4a narrative presentation model / diff / eligibility（構造だけ。自然文の描画なし）
 
 A1 の `NarrativeSynthesis` → `NarrativePresentation`（提示の構造）と、明示的な 2 つの synthesis → `NarrativeDiff`（構造の差分）の
