@@ -63,6 +63,8 @@ A3_DOC = "docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md"
 A4A_DOC = "docs/databank/PHASE7_NARRATIVE_PRESENTATION_DIFF_CONTRACT.md"
 A4B_DOC = "docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_RENDERER_CONTRACT.md"
 A5_DOC = "docs/databank/PHASE7_NARRATIVE_INTELLIGENCE_COMPLETION_AUDIT.md"
+#: P8-A0 の監督指示で作る read-only の監査文書（Phase 7 の文書の凍結の外。完全な path だけを登録）
+P8_A0_DOC = "docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md"
 P7_A4B = "b5f3a741fc10bb069112b385fe69cd7273fbb4b7"
 P7_A4A = "50b24ef6325da82999eae76c0b2982285a6ce3d5"
 A4A_RUNTIME = tuple(f"{PHASE7_PACKAGE}/{name}.py" for name in ("narrative_diff", "presentation_model",
@@ -275,7 +277,8 @@ def test_as_since_the_phase6_completion_only_the_registered_runtime_was_added() 
 def test_as_phase6_documents_and_the_a0_audit_are_frozen() -> None:
     changes = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A0, "--",
                                                         "docs").splitlines()}
-    assert changes <= {("A", A1_DOC), ("A", A2_DOC), ("A", A3_DOC), ("A", A4A_DOC), ("A", A4B_DOC), ("A", A5_DOC)}
+    assert changes <= {("A", A1_DOC), ("A", A2_DOC), ("A", A3_DOC), ("A", A4A_DOC), ("A", A4B_DOC), ("A", A5_DOC),
+                       ("A", P8_A0_DOC)}
     assert _git("show", f"{P7_A0}:{A0_DOC}") == (REPO_ROOT / A0_DOC).read_text(encoding="utf-8")
 
 

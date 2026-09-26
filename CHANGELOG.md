@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.50 (2026-09-26) — Phase 8 P8-A0 Screener Intelligence architecture ＋ data-capability audit（READ-ONLY・文書だけ）
+
+Phase 8 Screener の前提を read-only で監査した。**runtime・schema・model・永続化・J-Quants の live 接続・Theme → 企業の推定・
+順位 ／ score は作っていない**。network ／ API の呼び出しなし。Phase 7（`c1e95d3`）・Phase 6（`5ef313a`）・P4 ／ P5・公開出力は不変。
+
+### 追加 — `docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md`【新規】
+
+36 節の監査: 中核の区別（Company ≠ Security ≠ code、Candidate ≠ 推奨 ≠ thesis）、Phase 8 ／ 9 の境界、既存の資産の分類
+（HEAD の P4 closure・Phase 5〜7・legacy・現在の系統に無い履歴 branch）、J-Quants Light の能力の表（実測の記録だけ。再確認は未実施）、
+SecurityId ／ IssuerId の案、PIT の要件（master の履歴なし・調整後価格の遡及・財務の開示時刻）、財務 ／ 市場の指標の種類、
+Theme → 企業の exposure と受益の model（順位は延期）、authority の梯子、基準の表現、filter と rank、score の方針、Theme ／ P5 ／ DNA ／
+除外する入力の境界、data 品質の語彙、説明の鎖、推奨 ／ 個人化なし、実データの状況（repo と作業環境に実データ・credential なし）、
+package ／ 永続化 ／ governance ／ LLM ／ security、legacy の順位付けの監査、gate 案、Phase 9 への引き継ぎ、監督判断 12 件、所見 9 件
+（P8-OBS-1: HEAD の財務の既知の時刻が開示時刻を無視、P8-OBS-2: light store の索引のずれ ほか。いずれも Phase 6 ／ 7 の変更を要しない）。
+
+### 改善 — `tests/intelligence/test_narrative_intelligence_boundary.py`
+
+Phase 7 の文書の凍結 guard の許可集合に本監査文書の完全な path を 1 件だけ登録（`P8_A0_DOC`）。登録前に guard が本書の追加で落ちる
+ことを確かめた。Phase 7 の runtime ／ 契約 ／ 他の判定は不変。
+
+### 修正
+
+- なし
+
 ## v5.49 (2026-09-26) — Phase 7 P7-A5 adversarial end-to-end validation + Phase 7 closeout（test ／ guard ／ 文書だけ）
 
 明示の範囲 ／ cutoff → A2 → A3 → A4a → A4b と、明示の T1 ／ T2 → 差分 → 描画までを、本物の Phase 6 authority（tmp の合成 world）で敵対的に
