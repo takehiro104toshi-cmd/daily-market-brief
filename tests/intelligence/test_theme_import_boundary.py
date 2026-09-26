@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.intelligence.phase7_runtime_registry import PHASE7_SANCTIONED_IMPORTERS
 from tests.intelligence.test_p43b2c_production_bundle import EXCLUDED_PACKAGES, runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 
@@ -89,6 +90,8 @@ def test_themes_is_excluded_from_production_bundle_and_no_frozen_package_imports
     intelligence_layer = REPO_ROOT / "src" / "intelligence" / "theme_intelligence"
     for path in (REPO_ROOT / "src" / "intelligence").rglob("*.py"):
         if THEMES_DIR in path.parents or intelligence_layer in path.parents:
+            continue
+        if path.relative_to(REPO_ROOT).as_posix() in PHASE7_SANCTIONED_IMPORTERS:   # P7-A2 の認可済み読み取り adapter だけ
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):

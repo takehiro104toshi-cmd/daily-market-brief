@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.intelligence.phase7_runtime_registry import PHASE7_SANCTIONED_IMPORTERS
 from tests.intelligence.test_p43b2c_production_bundle import EXCLUDED_PACKAGES, runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 from tests.intelligence.test_theme_import_boundary import ALLOWED_CLOSURE as THEMES_CLOSURE
@@ -220,6 +221,8 @@ def test_foundation_and_frozen_packages_never_import_theme_intelligence() -> Non
     offenders = []
     for path in (REPO_ROOT / "src").rglob("*.py"):
         if PACKAGE_DIR in path.parents:
+            continue
+        if path.relative_to(REPO_ROOT).as_posix() in PHASE7_SANCTIONED_IMPORTERS:   # P7-A2 の認可済み読み取り adapter だけ
             continue
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):

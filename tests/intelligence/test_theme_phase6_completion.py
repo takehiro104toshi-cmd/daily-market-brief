@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS
+from tests.intelligence.phase7_runtime_registry import PHASE7_EXCLUDED_PATHSPECS, PHASE7_SANCTIONED_IMPORTERS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPLETION_DOC = REPO_ROOT / "docs" / "databank" / "PHASE6_THEME_INTELLIGENCE_COMPLETION_AUDIT.md"
@@ -119,6 +119,8 @@ def test_no_module_outside_phase6_imports_the_phase6_packages() -> None:
     offenders = []
     for path in [REPO_ROOT / "main.py", *sorted((REPO_ROOT / "src").rglob("*.py")), *sorted((REPO_ROOT / "scripts").rglob("*.py"))]:
         if not path.exists() or (REPO_ROOT / THEMES) in path.parents or (REPO_ROOT / LAYER) in path.parents:
+            continue
+        if path.relative_to(REPO_ROOT).as_posix() in PHASE7_SANCTIONED_IMPORTERS:   # P7-A2 の認可済み読み取り adapter だけ
             continue
         if pattern.search(path.read_text(encoding="utf-8", errors="replace")):
             offenders.append(str(path.relative_to(REPO_ROOT)))

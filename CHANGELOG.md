@@ -4,6 +4,53 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.45 (2026-09-26) — Phase 7 P7-A2 point-in-time input assembly（認可された一方向の読み取り adapter）
+
+Narrative の入力材料（`NarrativeInputSnapshot`）を、凍結された Phase 6 の reviewed authority から PIT で組み立てる。
+`NarrativeSynthesis`・claim・文章・描画・LLM・永続化・authority の変更は無い。A1 の runtime（`a02ad60`）と Phase 6 の runtime
+（`5ef313a`）は byte 一致のまま。
+
+### 追加 — `src/intelligence/narrative_intelligence/`
+
+- `input_model.py`【新規】: `NarrativeInputRequest`（型・明示の Theme root・aware な cutoff・明示の freshness policy・任意の
+  比較 cutoff。暗黙の全件 / 最新 / 現在なし）、`NarrativeInputSnapshot`・`ThemeInput`・`EvidenceSource`（A1 の型付き ref をそのまま
+  使う）、`EvidenceConditionFlag`（B2 の複製）・`SourceCapability`（FACT / OBSERVATION だけが観測の記録。文書・報道・発言は格上げ
+  不可）、`NarrativeInputError`（安定した code・root ごとの failures）。content-addressed な `snapshot_id`、PIT で見えた id だけの
+  provenance digest。復元 API なし（保存しない）。Phase 6 を import しない。
+- `pit_assembler.py`【新規】: `assemble_input_snapshot`。Phase 6 を import してよい唯一の module（認可された read API だけ）。
+  Foundation store を 1 回だけ検証して読み（integrity-before-PIT）、要求 root だけを cutoff で解決、cutoff で ACCEPTED の Theme だけ
+  （無い / 未解決 / 非受理は root ごとの失敗で、黙って落とさない）。resolver の authoritative な evidence view を role を変えずに投影、
+  B2 lifecycle の flag、比較 cutoff があるときだけ B1 の変化、THEME_SET だけ要求集合の内側の ACTIVE な B5B の直接の辺（推移・推測・
+  提案・共同発見なし。SOURCE_ASSERTED はそのまま）。B3 / B4 / B5C / B6 / B7 / P5 / DNA / knowledge は読まない。書き込みなし。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_pit_assembler.py`【新規】: matrix A〜AX（67 件。実際の Phase 6 store API で書いた合成 journal
+  と Foundation の代表 world を使う。毒入りの B3 / B5C / B6 / B7 / P5 / knowledge でも snapshot が byte 一致、未来の governance /
+  observation / evidence / relation / 合併が過去を変えない、書き込み 0 byte・新規 file なし、破損は fail closed、A1 の synthesis を
+  snapshot の ref だけで組める）。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: module ごとの import 許可一覧と AY〜BH（A1 の byte 凍結・Phase 6
+  runtime の凍結・認可された adapter が決まった Phase 6 read API だけを import・A1 と入力 model は Phase 6 を import しない・未登録の
+  第 2 の importer の検出・network / 永続化 / 時計 / 乱数 / 機密の属性なし）を追加。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に 2 module を追加、`PHASE7_SANCTIONED_IMPORTERS`（adapter の
+  完全な path だけ）と `is_sanctioned_importer` を追加、Phase 6 の test に入れた登録の行を宣言。
+- scratch の clone で mutation M1〜M15（暗黙の全件列挙・現在の状態・未来の governance / observation / evidence の漏れ・role の書き換え・
+  B3 / B6 / B7 / B5C の読み・推移の relation・SOURCE_ASSERTED の格上げ・path への identity の依存・snapshot の cache の書き込み・
+  未認可の第 2 の importer）をすべて検出。
+
+### 改善 — Phase 6 の import guard への test-only の登録（runtime 変更 0 行）
+
+`test_theme_phase6_completion.py`・`test_theme_intelligence_import_boundary.py`・`test_theme_import_boundary.py` の「Phase 6 を
+import しない」guard が、認可された adapter の完全な path だけを飛ばす（package 全体は認可しない。未登録の importer は従来どおり
+失敗する）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、authority、caller の契約、範囲、認可された import 境界（Phase 6 の test への登録の報告を含む）、資格、歴史の
+再構成、observation の PIT、evidence の投影、出所の能力、lifecycle、変化と比較 cutoff、relation の投影、SOURCE_ASSERTED、除外する
+入力、P5 / DNA、knowledge の pin（作らない判断と reader の version）、snapshot の model、identity と digest、破損、無い / 資格の無い
+root、文章を持たない規則、書き込みなし、security、延期（P7-A2-DEF-01〜08）、A3 への引き継ぎ。設計判断 D-P7-A2-1〜5。
+
 ## v5.44 (2026-09-26) — Phase 7 P7-A1 Narrative semantics ＋ pure model（DERIVED / NON-AUTHORITY / NON-PERSISTENT）
 
 Phase 7 Narrative Intelligence の意味論と純 model。PIT の組み立て・engine・描画・永続化・LLM・provider・公開出力は作っていない。

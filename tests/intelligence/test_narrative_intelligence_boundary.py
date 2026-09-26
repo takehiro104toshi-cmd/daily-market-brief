@@ -1,11 +1,14 @@
-"""P7-A1 — Phase 7 Narrative Intelligence の境界 guard（test matrix AP〜AS）と、Phase 6 の語彙の複製の一致。
+"""Phase 7 Narrative Intelligence の境界 guard（P7-A1 の matrix AP〜AS、P7-A2 の matrix AY〜BH）と語彙の一致。
 
-- AP: import 境界（package の module・直接の import・runtime closure）
+- AP: import 境界（module ごとの許可一覧・runtime closure）
 - AQ: I/O・時計・乱数・network・永続化・LLM・公開経路の不在
 - AR: 上流（Phase 6・P4・legacy・scripts）は Narrative を import しない
 - AS: production bundle の閉包から外れている／Phase 6 と A0 は凍結のまま／Phase 6 の test への登録は宣言どおりだけ
+- AY〜BH（P7-A2）: A1 の byte 凍結・Phase 6 runtime の凍結・認可された読み取り adapter だけが Phase 6 の決まった
+  read API を import する・A1 と入力 model は Phase 6 を import しない・未登録の importer は検出される・network /
+  永続化 / 時計 / 乱数 / 機密の field なし
 
-契約: `docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md`。
+契約: `docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md`（A1）・`PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md`（A2）。
 """
 from __future__ import annotations
 
@@ -16,6 +19,7 @@ from pathlib import Path
 
 import pytest
 
+from src.intelligence.narrative_intelligence import input_model
 from src.intelligence.narrative_intelligence import synthesis_model as m
 from src.intelligence.theme_intelligence import change as b1_change
 from src.intelligence.theme_intelligence import lifecycle_model, relation_model
@@ -23,7 +27,8 @@ from src.intelligence.theme_intelligence import model as b1_model
 from src.intelligence.themes import model as foundation
 from tests.intelligence.phase7_runtime_registry import (ADDITION_STATUSES, PHASE6_TEST_REGISTRATION,
                                                         PHASE7_EXCLUDED_PATHSPECS, PHASE7_PACKAGE, PHASE7_RUNTIME,
-                                                        is_phase7_addition, only_phase7_registration,
+                                                        PHASE7_SANCTIONED_IMPORTERS, is_phase7_addition,
+                                                        is_sanctioned_importer, only_phase7_registration,
                                                         registration_diff)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
@@ -31,17 +36,39 @@ from tests.intelligence.test_theme_model import observation
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE7_PACKAGE
-MODULES = ("__init__", "synthesis_model")
+MODULES = ("__init__", "input_model", "pit_assembler", "synthesis_model")
+#: Phase 6 を import しない純 module（A1 の model と A2 の入力 model）
+PURE_MODULES = ("__init__", "input_model", "synthesis_model")
+ADAPTER = "pit_assembler"
 PHASE6_COMPLETION = "5ef313a6a9477f05b4e46756fb8b79c0f0c3d685"
 P7_A0 = "2fe7d0f03c3c8ab2e566508079b788f9e69fcb71"
 A0_DOC = "docs/databank/PHASE7_NARRATIVE_ARCHITECTURE_AUDIT.md"
 A1_DOC = "docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md"
+A2_DOC = "docs/databank/PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md"
+P7_A1 = "a02ad60878054b5846b11acac720fa2811f32505"
+A1_RUNTIME = (f"{PHASE7_PACKAGE}/__init__.py", f"{PHASE7_PACKAGE}/synthesis_model.py")
 SURFACE = ("src", "knowledge", "config.yaml", ".github", "scripts", "docs/pages", "docs/v2", "data", "main.py",
            "requirements.txt", "pyproject.toml")
 PHASE7_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_synthesis_model.py",
-                "tests/intelligence/test_narrative_intelligence_boundary.py")
-ALLOWED_IMPORTS = {"__future__", "json", "re", "dataclasses", "datetime", "enum", "typing", "..core.ids",
-                   "..core.time"}
+                "tests/intelligence/test_narrative_intelligence_boundary.py",
+                "tests/intelligence/test_narrative_pit_assembler.py")
+_BASE_IMPORTS = {"__future__", "json", "re", "dataclasses", "datetime", "enum", "typing", "..core.ids", "..core.time"}
+#: P7-A2 の監督判断: 読み取り adapter が import してよい Phase 6 の read API（module → 名前。完全一致）
+SANCTIONED_PHASE6_IMPORTS = {
+    "..themes.store": {"ThemeInvalidHistory", "ThemeStore", "ThemeStoreCorrupt", "ThemeStoreError"},
+    "..themes.resolver": {"ResolutionStatus", "ThemeHistory", "resolve"},
+    "..theme_intelligence.lifecycle": {"derive_lifecycle"},
+    "..theme_intelligence.lifecycle_model": {"GovernanceLifecycleState", "LifecyclePolicy", "LifecycleViewStatus",
+                                             "ThemeLifecycleError"},
+    "..theme_intelligence.model": {"ChangeSetStatus"},
+    "..theme_intelligence.change": {"compare_resolutions"},
+    "..theme_intelligence.relation_resolution": {"EdgeState", "RelationResolutionStatus", "endpoint_lookup_from_roots"},
+    "..theme_intelligence.relation_store": {"resolve_relations_at_data_root"},
+}
+ALLOWED_IMPORTS = {"__init__": set(), "synthesis_model": _BASE_IMPORTS,
+                   "input_model": _BASE_IMPORTS | {".synthesis_model"},
+                   "pit_assembler": {"__future__", "typing", ".input_model", ".synthesis_model"}
+                   | set(SANCTIONED_PHASE6_IMPORTS)}
 ALLOWED_CLOSURE = {"src", "src.intelligence", "src.intelligence.core", "src.intelligence.core.ids",
                    "src.intelligence.core.time", "src.intelligence.narrative_intelligence",
                    "src.intelligence.narrative_intelligence.synthesis_model"}
@@ -55,6 +82,10 @@ def _sources():
     return [(path.stem, path) for path in sorted(PACKAGE_DIR.glob("*.py"))]
 
 
+def _pure_sources():
+    return [(stem, path) for stem, path in _sources() if stem in PURE_MODULES]
+
+
 # ================================================================ AP import 境界
 
 def test_ap_the_package_holds_only_the_registered_modules() -> None:
@@ -64,16 +95,19 @@ def test_ap_the_package_holds_only_the_registered_modules() -> None:
 
 
 @pytest.mark.parametrize("name,path", _sources())
-def test_ap_modules_import_only_core_and_the_standard_library(name, path) -> None:
-    assert imported_modules(path) <= ALLOWED_IMPORTS, imported_modules(path) - ALLOWED_IMPORTS
+def test_ap_modules_import_only_their_allowed_modules(name, path) -> None:
+    assert imported_modules(path) <= ALLOWED_IMPORTS[name], imported_modules(path) - ALLOWED_IMPORTS[name]
 
 
-def test_ap_the_runtime_closure_is_core_and_this_package_only() -> None:
-    code = ("import sys\nimport src.intelligence.narrative_intelligence.synthesis_model\n"
+@pytest.mark.parametrize("module", ["synthesis_model", "input_model"])
+def test_ap_the_runtime_closure_of_the_pure_models_is_core_and_this_package_only(module) -> None:
+    code = (f"import sys\nimport src.intelligence.narrative_intelligence.{module}\n"
             "print('\\n'.join(sorted(m for m in sys.modules if m.startswith('src'))))\n")
     proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, text=True, check=True,
                           env={"PYTHONPATH": str(REPO_ROOT), "PATH": ""})
-    assert set(proc.stdout.split()) == ALLOWED_CLOSURE
+    expected = ALLOWED_CLOSURE | ({"src.intelligence.narrative_intelligence.input_model"} if module == "input_model"
+                                  else set())
+    assert set(proc.stdout.split()) == expected
 
 
 FORBIDDEN_MODULE_TOKENS = ("themes", "theme_intelligence", "compass", "reports", "facts", "context", "internals",
@@ -85,8 +119,10 @@ FORBIDDEN_MODULE_TOKENS = ("themes", "theme_intelligence", "compass", "reports",
 
 @pytest.mark.parametrize("name,path", _sources())
 def test_ap_no_phase6_p4_p5_legacy_provider_or_network_import(name, path) -> None:
+    tokens = FORBIDDEN_MODULE_TOKENS if name in PURE_MODULES else tuple(
+        t for t in FORBIDDEN_MODULE_TOKENS if t not in ("themes", "theme_intelligence"))   # adapter は許可一覧で別に固定
     for module in imported_modules(path):
-        assert not any(token in module.split(".") for token in FORBIDDEN_MODULE_TOKENS), module
+        assert not any(token in module.split(".") for token in tokens), module
 
 
 def test_ap_the_p4_narrative_names_are_not_reused() -> None:
@@ -121,11 +157,13 @@ def test_aq_no_io_clock_randomness_network_or_dynamic_code(name, path) -> None:
 def test_aq_nothing_persists_journals_or_publishes(name, path) -> None:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     defined = {node.name.lower() for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
-    for word in ("save", "persist", "store", "journal", "append", "write", "publish", "render", "notify", "send",
-                 "assemble", "engine", "generate", "provider", "llm", "prompt"):
+    words = ("save", "persist", "store", "journal", "append", "write", "publish", "render", "notify", "send",
+             "assemble", "engine", "generate", "provider", "llm", "prompt")
+    for word in words if name != ADAPTER else tuple(w for w in words if w != "assemble"):   # adapter の入口の名前だけ
         assert not any(word in item for item in defined), (name, word)
     source = executable_source(path)
-    for token in ("data_root", "jsonl", ".github", "docs/pages", "docs/v2", "Authorization", "Bearer"):
+    tokens = ("data_root", "jsonl", ".github", "docs/pages", "docs/v2", "Authorization", "Bearer")
+    for token in tokens if name != ADAPTER else tokens[1:]:                                  # adapter は data_root を受け取る
         assert token not in source, (name, token)
 
 
@@ -181,7 +219,7 @@ def test_as_since_the_phase6_completion_only_the_registered_runtime_was_added() 
 def test_as_phase6_documents_and_the_a0_audit_are_frozen() -> None:
     changes = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A0, "--",
                                                         "docs").splitlines()}
-    assert changes <= {("A", A1_DOC)}
+    assert changes <= {("A", A1_DOC), ("A", A2_DOC)}
     assert _git("show", f"{P7_A0}:{A0_DOC}") == (REPO_ROOT / A0_DOC).read_text(encoding="utf-8")
 
 
@@ -231,7 +269,8 @@ def test_as_the_registry_exempts_only_additions_of_registered_files() -> None:
     (m.ComponentType, foundation.ComponentType), (m.EvidenceKind, foundation.EvidenceKind),
     (m.EvidenceRole, foundation.EvidenceRole), (m.ProvenanceClass, foundation.ProvenanceClass),
     (m.EvidenceTimeQuality, foundation.EvidenceTimeQuality), (m.RelationType, relation_model.RelationType),
-    (m.AssertionClass, relation_model.AssertionClass), (m.ChangeKind, b1_model.ChangeKind)])
+    (m.AssertionClass, relation_model.AssertionClass), (m.ChangeKind, b1_model.ChangeKind),
+    (input_model.EvidenceConditionFlag, lifecycle_model.EvidenceConditionFlag)])
 def test_mirrored_vocabularies_equal_the_phase6_vocabularies(mirror, upstream) -> None:
     assert [e.value for e in mirror] == [e.value for e in upstream]
 
@@ -245,6 +284,7 @@ def test_mirrored_formats_equal_the_phase6_formats() -> None:
     assert m._RELATION_ID_RE.pattern == relation_model._ID_RE[relation_model.ASSERTION_ID_PREFIX].pattern
     assert m._EVIDENCE_REF_RE.pattern.endswith("{0,%d}$" % (foundation.MAX_REF_LEN - 1))
     assert m.REVIEWED_POSITIONS == (m.GovernancePosition.ACCEPTED,)
+    assert input_model._ROOT_ID_RE.pattern == foundation._ROOT_ID_RE.pattern
 
 
 def test_real_phase6_values_fit_the_narrative_refs_without_any_runtime_link() -> None:
@@ -286,3 +326,131 @@ def test_real_phase6_values_fit_the_narrative_refs_without_any_runtime_link() ->
     for field_value in foundation.MetadataField:
         m.ThemeChangeRef(root_id=theme.root_id, from_cutoff=cutoff.replace(year=cutoff.year - 1), to_cutoff=cutoff,
                          change_kind="METADATA_CHANGED", facet=f"metadata:{field_value.value}", subject_id="thmeta_x")
+
+
+# ================================================================ AY〜BH P7-A2 の境界
+
+PHASE6_SEGMENTS = ("themes", "theme_intelligence")
+CONFIDENTIAL_ATTRIBUTES = {"excerpt", "note", "locator", "normalized_statement", "normalized_subject", "reason",
+                           "actor_ref", "role_asserted_by", "rationale", "source_attribution", "attributed_to",
+                           "attribution", "typed_reference", "provenance_ref", "evidence_refs", "subject_refs",
+                           "source_origin", "before", "after", "limitations", "subject", "creation_provenance",
+                           "writer_ref", "detail"}
+WRITE_ATTRIBUTES = {"append_root", "append_observation", "append_governance", "append_metadata", "append_mapping",
+                    "append_assertion", "append_event", "append_proposal", "append_decision", "initialize",
+                    "write", "write_text", "write_bytes", "mkdir", "touch", "unlink", "rename", "replace"}
+
+
+def phase6_imports(path: Path) -> dict:
+    """module の Phase 6 import（module → 名前の集合）。相対 import も絶対 import も数える。"""
+    found: dict = {}
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.ImportFrom) and node.module and any(
+                segment in PHASE6_SEGMENTS for segment in node.module.split(".")):
+            found.setdefault("." * node.level + node.module, set()).update(alias.name for alias in node.names)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if any(segment in PHASE6_SEGMENTS for segment in alias.name.split(".")):
+                    found.setdefault(alias.name, set()).add("*")
+    return found
+
+
+def unauthorized_phase6_importers(package_dir: Path, repo_root: Path) -> list:
+    return sorted(path.relative_to(repo_root).as_posix() for path in sorted(package_dir.glob("*.py"))
+                  if phase6_imports(path) and not is_sanctioned_importer(path.relative_to(repo_root).as_posix()))
+
+
+def test_ay_the_a1_runtime_and_contract_are_byte_identical_to_the_a1_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P7_A1, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    for path in (*A1_RUNTIME, A1_DOC):
+        assert _git("show", f"{P7_A1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+
+
+def test_az_the_phase6_runtime_is_frozen() -> None:
+    namespaces = ("src/intelligence/themes", "src/intelligence/theme_intelligence", "knowledge")
+    assert _git("diff", "--name-status", PHASE6_COMPLETION, "--", *namespaces) == ""
+    assert _git("status", "--porcelain", "--", *namespaces) == ""
+
+
+def test_ba_only_the_sanctioned_adapter_imports_exactly_the_sanctioned_phase6_read_api() -> None:
+    assert PHASE7_SANCTIONED_IMPORTERS == (f"{PHASE7_PACKAGE}/{ADAPTER}.py",)
+    assert phase6_imports(PACKAGE_DIR / f"{ADAPTER}.py") == SANCTIONED_PHASE6_IMPORTS
+    assert unauthorized_phase6_importers(PACKAGE_DIR, REPO_ROOT) == []
+
+
+def test_ba_the_adapter_reads_only_through_read_only_entry_points() -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{ADAPTER}.py").read_text(encoding="utf-8"))
+    attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    assert not attributes & WRITE_ATTRIBUTES, attributes & WRITE_ATTRIBUTES
+    opens = [node for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+             and node.func.attr == "open"]
+    assert len(opens) == 1 and [(k.arg, k.value.value) for k in opens[0].keywords] == [("read_only", True)]
+
+
+@pytest.mark.parametrize("name", PURE_MODULES)
+def test_bb_the_a1_model_and_the_input_model_never_import_phase6_or_the_adapter(name) -> None:
+    path = PACKAGE_DIR / f"{name}.py"
+    assert phase6_imports(path) == {}
+    assert not any(module.endswith(ADAPTER) for module in imported_modules(path))
+
+
+def test_bc_an_undeclared_second_phase6_importer_is_detected(tmp_path) -> None:
+    package = tmp_path / PHASE7_PACKAGE
+    package.mkdir(parents=True)
+    for _, path in _sources():
+        (package / path.name).write_bytes(path.read_bytes())
+    (package / "snapshot_cache.py").write_text("from ..themes.store import ThemeStore\n", encoding="utf-8")
+    (package / "lifecycle_reader.py").write_text("import src.intelligence.theme_intelligence.lifecycle\n",
+                                                 encoding="utf-8")
+    assert unauthorized_phase6_importers(package, tmp_path) == [f"{PHASE7_PACKAGE}/lifecycle_reader.py",
+                                                                f"{PHASE7_PACKAGE}/snapshot_cache.py"]
+    assert not is_sanctioned_importer(f"{PHASE7_PACKAGE}/snapshot_cache.py")
+    assert not is_sanctioned_importer(f"{PHASE7_PACKAGE}/sub/{ADAPTER}.py")
+    assert not is_sanctioned_importer(PHASE7_PACKAGE)
+
+
+def test_bd_phase6_never_imports_phase7() -> None:
+    for namespace in ("themes", "theme_intelligence"):
+        for path in sorted((REPO_ROOT / "src" / "intelligence" / namespace).glob("*.py")):
+            assert not any("narrative" in module for module in imported_modules(path)), path
+            assert "narrative_intelligence" not in path.read_text(encoding="utf-8"), path
+
+
+@pytest.mark.parametrize("name,path", _sources())
+def test_be_no_network_provider_or_llm_path(name, path) -> None:
+    for module in imported_modules(path):
+        assert not any(token in module for token in ("requests", "urllib", "socket", "http", "anthropic", "openai",
+                                                     "contracts", "enrichment", "llm_", "provider")), module
+    names = {node.id for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))) if isinstance(node, ast.Name)}
+    assert not names & {"LLMProvider", "FakeProvider", "LlmProvider"}
+
+
+@pytest.mark.parametrize("name,path", _sources())
+def test_bf_no_persistence_or_cache(name, path) -> None:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    assert not attributes & WRITE_ATTRIBUTES, (name, attributes & WRITE_ATTRIBUTES)
+    names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    assert not names & {"open", "lru_cache", "cache", "shelve", "pickle", "sqlite3", "tempfile"}
+
+
+@pytest.mark.parametrize("name,path", _sources())
+def test_bg_no_clock_or_randomness(name, path) -> None:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    names = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
+    attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    assert not names & {"random", "secrets", "uuid", "time", "new_id", "new_ulid", "monotonic"}
+    assert not attributes & {"now", "utcnow", "today", "time", "monotonic", "perf_counter", "random", "uuid4"}
+
+
+def test_bh_no_confidential_or_raw_field_is_read_or_modelled() -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{ADAPTER}.py").read_text(encoding="utf-8"))
+    attributes = {node.attr for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    assert not attributes & CONFIDENTIAL_ATTRIBUTES, attributes & CONFIDENTIAL_ATTRIBUTES
+    import dataclasses
+    text_like = ("text", "prose", "summary", "statement", "note", "excerpt", "locator", "title", "description",
+                 "rationale", "reason", "body", "comment", "label", "score", "rank", "confidence", "path", "mtime")
+    for model_type in (input_model.NarrativeInputRequest, input_model.NarrativeInputSnapshot, input_model.ThemeInput,
+                       input_model.EvidenceSource):
+        for f in dataclasses.fields(model_type):
+            assert not any(word in f.name for word in text_like), (model_type.__name__, f.name)

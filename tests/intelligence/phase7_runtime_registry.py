@@ -8,6 +8,9 @@ Phase 6 の凍結 guard は「HEAD までに runtime surface（`src` ほか）�
 - `PHASE7_EXCLUDED_PATHSPECS` は git の literal な除外 pathspec（登録 file の完全 path だけを除く）。
 - Phase 6 の namespace（themes / theme_intelligence / knowledge/theme_intelligence）の file は登録できない。
 - 登録した file の中身は Phase 7 の guard（`test_narrative_intelligence_boundary.py`）が守る。
+- Phase 6 を import してよい Phase 7 の module は `PHASE7_SANCTIONED_IMPORTERS`（P7-A2 の読み取り adapter）だけ。Phase 6 の
+  import guard（completion・theme_intelligence・Foundation）はこの完全な path だけを飛ばし、その import の中身は Phase 7 の
+  guard が許可一覧で固定する。
 - Phase 6 の test に入れた登録の行は `PHASE6_TEST_REGISTRATION` に完全に列挙し、`only_phase7_registration` で anchor との
   差分がそれと完全に一致することを確かめる（登録以外の変更を許さない。B7 closeout の pin と Phase 7 の guard が使う）。
 """
@@ -17,19 +20,31 @@ import difflib
 from typing import Mapping, Sequence, Tuple
 
 PHASE7_PACKAGE = "src/intelligence/narrative_intelligence"
-#: 登録済みの Phase 7 runtime（P7-A1）
-PHASE7_RUNTIME: Tuple[str, ...] = (f"{PHASE7_PACKAGE}/__init__.py", f"{PHASE7_PACKAGE}/synthesis_model.py")
+#: 登録済みの Phase 7 runtime（P7-A1: __init__ / synthesis_model、P7-A2: input_model / pit_assembler）
+PHASE7_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE7_PACKAGE}/{name}.py" for name in (
+    "__init__", "input_model", "pit_assembler", "synthesis_model"))
 ADDITION_STATUSES = ("A", "??")
 PHASE7_EXCLUDED_PATHSPECS: Tuple[str, ...] = tuple(f":(exclude,literal){path}" for path in PHASE7_RUNTIME)
+#: Phase 6 の read-only API を import してよい Phase 7 の module（P7-A2 の監督判断。完全な path だけ）
+PHASE7_SANCTIONED_IMPORTERS: Tuple[str, ...] = (f"{PHASE7_PACKAGE}/pit_assembler.py",)
 
 _IMPORT = "from tests.intelligence.phase7_runtime_registry import {}"
 _TEST_DIR = "tests/intelligence"
+#: Phase 6 の import guard に入れる、認可された importer だけを飛ばす 2 行（P7-A2）
+_SANCTIONED_SKIP = ("        if path.relative_to(REPO_ROOT).as_posix() in PHASE7_SANCTIONED_IMPORTERS:   "
+                    "# P7-A2 の認可済み読み取り adapter だけ")
+_CONTINUE = "            continue"
 #: Phase 6 の test に入れた登録（path → (取り除いた行, 加えた行)）。行は改行を含まない
 PHASE6_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {
     f"{_TEST_DIR}/test_theme_phase6_completion.py": ((), (
         "",
-        _IMPORT.format("PHASE7_EXCLUDED_PATHSPECS"),
-        "SURFACE += PHASE7_EXCLUDED_PATHSPECS   # Phase 7 の登録済み runtime だけを除く（phase7_runtime_registry）")),
+        _IMPORT.format("PHASE7_EXCLUDED_PATHSPECS, PHASE7_SANCTIONED_IMPORTERS"),
+        "SURFACE += PHASE7_EXCLUDED_PATHSPECS   # Phase 7 の登録済み runtime だけを除く（phase7_runtime_registry）",
+        _SANCTIONED_SKIP, _CONTINUE)),
+    f"{_TEST_DIR}/test_theme_intelligence_import_boundary.py": ((), (
+        _IMPORT.format("PHASE7_SANCTIONED_IMPORTERS"), _SANCTIONED_SKIP, _CONTINUE)),
+    f"{_TEST_DIR}/test_theme_import_boundary.py": ((), (
+        _IMPORT.format("PHASE7_SANCTIONED_IMPORTERS"), _SANCTIONED_SKIP, _CONTINUE)),
     f"{_TEST_DIR}/test_theme_llm_closeout.py": ((
         "    assert _git(\"show\", f\"{anchor}:{path}\").stdout == (REPO_ROOT / path).read_text(encoding=\"utf-8\")",
     ), (
@@ -62,6 +77,11 @@ def is_phase7_addition(status: str, path: str) -> bool:
     return status in ADDITION_STATUSES and path in PHASE7_RUNTIME
 
 
+def is_sanctioned_importer(path: str) -> bool:
+    """repo からの相対 path（POSIX）が、Phase 6 を import してよい Phase 7 の module か（完全一致だけ）。"""
+    return path in PHASE7_SANCTIONED_IMPORTERS
+
+
 def only_phase7_registration(path: str, anchored: str, current: str) -> bool:
     """anchor と現在の差が、宣言した登録（取り除いた行・加えた行）と完全に一致する（未登録の file は byte 一致）。"""
     declared_removed, declared_added = PHASE6_TEST_REGISTRATION.get(path, ((), ()))
@@ -82,4 +102,5 @@ def registration_diff(anchored: str, current: str) -> Tuple[Sequence[str], Seque
 
 
 __all__ = ["ADDITION_STATUSES", "PHASE6_TEST_REGISTRATION", "PHASE7_EXCLUDED_PATHSPECS", "PHASE7_PACKAGE",
-           "PHASE7_RUNTIME", "is_phase7_addition", "only_phase7_registration", "registration_diff"]
+           "PHASE7_RUNTIME", "PHASE7_SANCTIONED_IMPORTERS", "is_phase7_addition", "is_sanctioned_importer",
+           "only_phase7_registration", "registration_diff"]
