@@ -4,6 +4,21 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.43 (2026-09-26) — Phase 7 P7-A0 Narrative Intelligence architecture ＋ existing-system audit（READ-ONLY）
+
+Phase 7 Narrative Intelligence の実装前の architecture 監査。runtime・model・永続化・LLM 接続は作っていない。Phase 6（`5ef313a`）・
+P4・P5・公開出力は変更していない（文書だけ）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_ARCHITECTURE_AUDIT.md`【新規】
+
+監査（28 節）: 結論、既存システムの棚卸し（legacy・P4・P5・Phase 6・履歴 branch。REUSE / REFERENCE_ONLY / LEGACY / CONFLICTING /
+UNRELATED）、目的と非目標、上流の入力の地図（P4・P5・Phase 6 の分類）、authority の推奨（派生 ＋ 任意の運用 journal。初期は
+journal なし）、Narrative の定義、型（初期は THEME_STATE・THEME_SET）、意味の構造、事実と解釈の境界（6 つの認識 class）、PIT と
+時間、identity と改訂（保存しない hybrid の content identity）、反証と代替、relation ／ monitoring ／ 未審査の知識の方針、LLM の
+役割（初期はなし）、決定論の core、選定の方針（明示の要求 ＋ 順位なしの適格性一覧）、P8 と production の境界、package と import、
+永続化、security（allowed-source の方針）、実データの準備、Phase 6 deferred の影響（blocker なし）、gate 案（A1〜A5）、blocker（なし）、
+監督判断 D-P7-1〜17。
+
 ## v5.42 (2026-09-26) — Phase 6 final completion audit（THEME INTELLIGENCE PHASE-WIDE CLOSURE REVIEW）
 
 Phase 6 全体（Foundation ＋ B1〜B7）の完了監査。新しい能力なし・実 provider なし・実行なし・production runtime の変更なし
