@@ -20,9 +20,10 @@ import difflib
 from typing import Mapping, Sequence, Tuple
 
 PHASE7_PACKAGE = "src/intelligence/narrative_intelligence"
-#: 登録済みの Phase 7 runtime（P7-A1: __init__ / synthesis_model、P7-A2: input_model / pit_assembler）
+#: 登録済みの Phase 7 runtime（P7-A1: __init__ / synthesis_model、P7-A2: input_model / pit_assembler、
+#: P7-A3: synthesis_engine）
 PHASE7_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE7_PACKAGE}/{name}.py" for name in (
-    "__init__", "input_model", "pit_assembler", "synthesis_model"))
+    "__init__", "input_model", "pit_assembler", "synthesis_engine", "synthesis_model"))
 ADDITION_STATUSES = ("A", "??")
 PHASE7_EXCLUDED_PATHSPECS: Tuple[str, ...] = tuple(f":(exclude,literal){path}" for path in PHASE7_RUNTIME)
 #: Phase 6 の read-only API を import してよい Phase 7 の module（P7-A2 の監督判断。完全な path だけ）

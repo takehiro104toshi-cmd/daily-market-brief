@@ -4,6 +4,41 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.46 (2026-09-26) — Phase 7 P7-A3 deterministic narrative synthesis engine（構造化された claim だけ）
+
+A2 の `NarrativeInputSnapshot` → A1 の `NarrativeSynthesis` の純関数。文章・描画・LLM・provider・永続化・authority の変更は無い。
+A1（`a02ad60`）・A2（`2dfd85c`）・Phase 6（`5ef313a`）の runtime は byte 一致のまま。Phase 6 の test の変更も無い。
+
+### 追加 — `src/intelligence/narrative_intelligence/synthesis_engine.py`【新規】
+
+- `synthesize(snapshot)`: snapshot を A1 / A2 の constructor で作り直して再検証（型・属性の集合・ref の A1 検査・snapshot id と
+  canonical bytes・B2 の flag と attachment の関係）し、静的な規則表（`narrative_synthesis_rules` 0.1.0、R01〜R14）だけから claim を
+  作り、同じ claim id を収束させて A1 の constructor で synthesis を作る。
+- 規則: reviewed の状態・記録された機構 component・仮説の機構の不確実性・すべての role の attachment（CONTEXT は CONTEXT のまま）・
+  支持と反証の両方を示す CONTESTED・B2 の NO_VISIBLE_EVIDENCE / SINGLE_SOURCE / STALE の不確実性・無効化条件と INVALIDATES の
+  evidence・FACT / OBSERVATION の記録だけの観測事実（内容を発明しない）・比較 cutoff があるときだけの変化・THEME_SET の明示の
+  relation（SOURCE_ASSERTED はそのまま・逆向き / 推移なし）・同じ ref_id を SUPPORTS として持つ Theme の並びだけの代替（勝者なし）。
+- snapshot の provenance は A1 の `input_digest`（＝ snapshot id）、規則表の version は A1 の `knowledge_pins` に束ねる（A1 を
+  変えない）。失敗は INVALID_SNAPSHOT・UNSUPPORTED_SNAPSHOT_VERSION・UNSUPPORTED_KIND・SNAPSHOT_INTEGRITY_FAILURE・CLAIM_CONFLICT・
+  NO_JUSTIFIED_CLAIMS・MODEL_CONTRACT_MISMATCH。import は A1 / A2 の純 model と標準 library だけ（pit_assembler・Phase 6 なし）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_synthesis_engine.py`【新規】: matrix A〜BN（62 件。A2 の本物の組み立てから作った snapshot。
+  規則表を engine と独立に書き下した期待と 7 通りの snapshot で完全一致・改ざんの検出・open / socket / 時計 / 乱数を止めても同じ
+  出力・data_root を消しても同じ出力・別 process で byte 一致・実行順で変わらない）。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: engine の import 許可一覧と runtime closure（adapter・Phase 6・P5・
+  legacy・network に届かない）、A2 の byte 凍結、未登録の Phase 7 runtime の検出、engine の module 状態なしを追加。
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_RUNTIME` に `synthesis_engine.py` を登録（Phase 6 を import してよい
+  module は増やさない）。
+- scratch の clone で mutation M1〜M15（M12 は pit_assembler と Phase 6 store の 2 通り）をすべて検出。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md`【新規】
+
+契約（26 節）: 目的、authority、純関数の境界、入力の再検証、規則表、THEME_STATE、THEME_SET、解釈、機構、SUPPORTS、CONTRADICTS、
+CONTEXT、INVALIDATES、不確実性、代替、変化、relation、SOURCE_ASSERTED、観測事実の天井、収束、順序、identity と provenance、失敗、
+自己学習しない、security と import 境界、A4 への引き継ぎ。設計判断 D-P7-A3-1〜5。
+
 ## v5.45 (2026-09-26) — Phase 7 P7-A2 point-in-time input assembly（認可された一方向の読み取り adapter）
 
 Narrative の入力材料（`NarrativeInputSnapshot`）を、凍結された Phase 6 の reviewed authority から PIT で組み立てる。
