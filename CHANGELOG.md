@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.49 (2026-09-26) — Phase 7 P7-A5 adversarial end-to-end validation + Phase 7 closeout（test ／ guard ／ 文書だけ）
+
+明示の範囲 ／ cutoff → A2 → A3 → A4a → A4b と、明示の T1 ／ T2 → 差分 → 描画までを、本物の Phase 6 authority（tmp の合成 world）で敵対的に
+検証した。**新しい機能・runtime の変更は無い**（A1〜A4b・Phase 6 の runtime は `b5f3a74` と byte 一致。凍結した runtime に欠陥は見つからず、
+remediation は不要）。実データでの E2E は未実施（`REAL_DATA_E2E = NOT_RUN`）。
+
+### 追加 — test
+
+- `tests/intelligence/test_narrative_phase7_e2e.py`【新規】: matrix E01〜E44（59 件）。THEME_STATE ／ THEME_SET の E2E、歴史の再現
+  （未来の governance ／ observation ／ evidence ／ relation を足しても 4 層の bytes が一致。Foundation の退役 → 取り消し → merge の world も）、
+  反証・無効化条件・INVALIDATES・CONTEXT・観測事実の天井・解釈の天井・機構の確度・relation の向き・SOURCE_ASSERTED・代替の全層での保持、
+  REQUIRED を落とす攻撃、D-P7-A4B-1（提示 ＋ 検証済みの裏付け）の A〜H の攻撃と走査を禁じた索引による証明、B3 ／ B4 ／ B5C ／ B6 ／ B7 ／ P5 の
+  毒入れ・破損・欠落・範囲 ／ cutoff ／ 文字の攻撃、推奨 ／ 順位 ／ 自己学習なし、別 process の byte 一致、書き込み 0 byte、import graph の
+  完全一致、差分の区分の完全一致と非評価、文 → 提示 item → claim → snapshot → Phase 6 authority の追跡の鎖。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: A5 節（Phase 7 の runtime 全体と A1〜A4b の契約が A4b の anchor と byte 一致、
+  `src` ／ `knowledge` ／ 公開面の変更なし）。新しい test file と監査文書を登録。
+- scratch の clone で mutation M01〜M25（未来の Theme ／ evidence ／ relation の漏れ・解釈の事実化・確度の強化・反証 ／ 無効化の削除・
+  CONTEXT → SUPPORTS・SOURCE_ASSERTED の限定の削除・relation の反転 ／ 推移・Theme の順位・確信度・推奨の文・提示の迂回・synthesis の探索・
+  辿れない claim の許可・類似の照合・強まった ／ 改善した・B7 ／ P5 の読み取り・暗黙の現在時刻・cache の書き込み・adapter 以外からの Phase 6 の
+  import）を A5 の E2E で検出（M01b を含む 26 件。M01 の最初の形は B2 が event を chain の id 引きにしか使わないため同値の
+  mutant で、絞り込みを外す形は構造の guard E04b で検出する）。
+
+### 追加 — `docs/databank/PHASE7_NARRATIVE_INTELLIGENCE_COMPLETION_AUDIT.md`【新規】
+
+closeout の監査（28 節）: 判定、範囲、architecture、authority の流れの表（9 状態）、PIT ／ synthesis ／ 提示 ／ 描画の保証、D-P7-A4B-1 の境界、
+反証 ／ 無効化 ／ relation ／ SOURCE_ASSERTED ／ 不確実性 ／ 代替 ／ 差分の保証、再現、書き込みなし、security（所見 P6-OBS-1: Phase 6 の key の
+検査が末尾の改行を受ける。Phase 7 は fail closed）、import の境界、自己学習なし、順位 ／ 推奨なし、合成データの限界、実データの状態、
+延期の登録簿、凍結の anchor、test ／ mutation の一覧、production 接続の前提、P8 への引き継ぎ、最終の判定。
+
 ## v5.48 (2026-09-26) — Phase 7 P7-A4b deterministic human-readable narrative renderer（構造 → 日本語の平文。LLM なし）
 
 A4a の `NarrativePresentation` ／ `NarrativeDiff` を、固定の日本語の見出しと静的な template で読める平文にする純関数。

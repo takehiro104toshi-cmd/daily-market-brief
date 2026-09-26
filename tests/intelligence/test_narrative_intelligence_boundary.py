@@ -15,6 +15,7 @@
 - P7-A4b（BT〜BY）: 描画の module は A4a の model ／ planner の検証 API と A1 の型と core だけを import する（A2・A3 engine・
   adapter・Phase 6・P5・legacy・provider / LLM・公開 / 通知 / 売買なし）・module の状態を持たない・A1 / A2 / A3 / A4a の
   byte 凍結・未登録の Phase 7 runtime は引き続き検出される
+- P7-A5（closeout）: Phase 7 の runtime 全体と A1〜A4b の契約は A4b の anchor と byte 一致（A5 は runtime を変えない）
 
 契約: `docs/databank/PHASE7_NARRATIVE_SEMANTICS_MODEL_CONTRACT.md`（A1）・`PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md`（A2）・
 `PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md`（A3）・`PHASE7_NARRATIVE_PRESENTATION_DIFF_CONTRACT.md`（A4a）・`PHASE7_NARRATIVE_DETERMINISTIC_RENDERER_CONTRACT.md`（A4b）。
@@ -61,6 +62,8 @@ A2_DOC = "docs/databank/PHASE7_NARRATIVE_PIT_INPUT_CONTRACT.md"
 A3_DOC = "docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT.md"
 A4A_DOC = "docs/databank/PHASE7_NARRATIVE_PRESENTATION_DIFF_CONTRACT.md"
 A4B_DOC = "docs/databank/PHASE7_NARRATIVE_DETERMINISTIC_RENDERER_CONTRACT.md"
+A5_DOC = "docs/databank/PHASE7_NARRATIVE_INTELLIGENCE_COMPLETION_AUDIT.md"
+P7_A4B = "b5f3a741fc10bb069112b385fe69cd7273fbb4b7"
 P7_A4A = "50b24ef6325da82999eae76c0b2982285a6ce3d5"
 A4A_RUNTIME = tuple(f"{PHASE7_PACKAGE}/{name}.py" for name in ("narrative_diff", "presentation_model",
                                                                 "presentation_planner"))
@@ -77,7 +80,8 @@ PHASE7_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intellig
                 "tests/intelligence/test_narrative_pit_assembler.py",
                 "tests/intelligence/test_narrative_synthesis_engine.py",
                 "tests/intelligence/test_narrative_presentation_diff.py",
-                "tests/intelligence/test_narrative_renderer.py")
+                "tests/intelligence/test_narrative_renderer.py",
+                "tests/intelligence/test_narrative_phase7_e2e.py")
 _BASE_IMPORTS = {"__future__", "json", "re", "dataclasses", "datetime", "enum", "typing", "..core.ids", "..core.time"}
 #: P7-A2 の監督判断: 読み取り adapter が import してよい Phase 6 の read API（module → 名前。完全一致）
 SANCTIONED_PHASE6_IMPORTS = {
@@ -271,7 +275,7 @@ def test_as_since_the_phase6_completion_only_the_registered_runtime_was_added() 
 def test_as_phase6_documents_and_the_a0_audit_are_frozen() -> None:
     changes = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A0, "--",
                                                         "docs").splitlines()}
-    assert changes <= {("A", A1_DOC), ("A", A2_DOC), ("A", A3_DOC), ("A", A4A_DOC), ("A", A4B_DOC)}
+    assert changes <= {("A", A1_DOC), ("A", A2_DOC), ("A", A3_DOC), ("A", A4A_DOC), ("A", A4B_DOC), ("A", A5_DOC)}
     assert _git("show", f"{P7_A0}:{A0_DOC}") == (REPO_ROOT / A0_DOC).read_text(encoding="utf-8")
 
 
@@ -667,3 +671,16 @@ def test_by_an_unregistered_runtime_is_still_detected_with_a4b_registered(tmp_pa
         (package / name).write_text('"""not registered."""\n', encoding="utf-8")
     assert unregistered_runtime(package, tmp_path) == [f"{PHASE7_PACKAGE}/narrative_renderer.py",
                                                        f"{PHASE7_PACKAGE}/rendered_html.py"]
+
+
+# ================================================================ P7-A5 の凍結（closeout。A5 は runtime を変えない）
+
+def test_a5_every_phase7_runtime_and_contract_is_byte_identical_to_the_a4b_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P7_A4B, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    for path in (*PHASE7_RUNTIME, A1_DOC, A2_DOC, A3_DOC, A4A_DOC, A4B_DOC):
+        assert _git("show", f"{P7_A4B}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P7_A4B, "--", "src", "knowledge", "config.yaml", ".github", "docs/v2",
+                "docs/pages") == ""                                                         # runtime ／ 公開面の変更なし
+    assert _git("status", "--porcelain", "--", *PHASE7_RUNTIME) == ""
+    for anchor in (P7_A1, P7_A2, P7_A3, P7_A4A, P7_A4B, PHASE6_COMPLETION):
+        assert subprocess.run(["git", "merge-base", "--is-ancestor", anchor, "HEAD"], cwd=REPO_ROOT).returncode == 0
