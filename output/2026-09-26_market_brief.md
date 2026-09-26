@@ -2179,7 +2179,7 @@ NYダウ上昇
 | ドル指数（DXY） | 100.97 | -0.32% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 92.41 | -2.33% | ★★★ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,321.20 | +0.54% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 84,041.33 | +0.01% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 84,234.13 | +0.24% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2970,7 +2970,7 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「憲法改正巡り 注目される自民布陣」（Yahoo!ニュース トピックス）
+- 「関東 10月はじめにかけ雨多い予想」（Yahoo!ニュース トピックス）
 - 「ロンドン地盤沈下 識者が悪化警告」（Yahoo!ニュース トピックス）
 - 「AIを「SI」と呼称 米中が合意」（Yahoo!ニュース トピックス）
 
@@ -3251,14 +3251,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/microsofts-stock-has-roared-back-to-life-and-is-now-headed-for-its-highest-close-of-the-year-89e4d596?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/apples-expensive-new-iphones-could-be-a-double-edged-sword-for-the-company-21c4fefb?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/micron-investors-should-get-ready-for-a-seesaw-ride-analyst-says-1c0cc651?mod=mw_rss_topstories)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/elon-musk-in-a-post-on-x-says-some-of-his-trump-posts-went-too-far-and-that-he-regrets-them-90e73a6a?mod=mw_rss_realtimeheadlines)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/bank-of-england-decision-on-thursday-will-be-at-12-02-p-m-local-time-instead-of-12-p-m-due-to-ve-day-two-minutes-of-silence-1f6bed66?mod=mw_rss_realtimeheadlines)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/swiss-national-bank-cuts-interest-rates-by-a-half-point-to-0-5-ed1fce78?mod=mw_rss_realtimeheadlines)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/dollar-jumps-0-5-to-0-8890-francs-047c6b4d?mod=mw_rss_realtimeheadlines)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-manufacturing-pmi-rises-to-4-month-high-of-43-2-b9e50a64?mod=mw_rss_realtimeheadlines)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
-- [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/proto-labs-cfo-daniel-schumacher-sells-476604-in-stock-93CH-4918493)
 - [Investing.com News](https://www.investing.com/news/economy-news/germany-has-the-fiscal-package-finally-reached-the-economy-4918488)
 - [Investing.com News](https://www.investing.com/news/economy-news/taiwan-says-us-arms-support-serves-american-interests-after-trumpxi-summit-4918480)
@@ -3316,13 +3308,13 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/titan-international-twi-signs-itm-012718577.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/may-mobilitys-spac-merger-road-015000118.html)
 - [Yahoo Finance US](https://finance.yahoo.com/technology/articles/sk-hynix-eyeing-intel-intc-043316388.html)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596611?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596625?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596613?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596617?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596610?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596606?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596620?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596618?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596621?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596628?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596615?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6596612?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
