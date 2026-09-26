@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.42 (2026-09-26) — Phase 6 final completion audit（THEME INTELLIGENCE PHASE-WIDE CLOSURE REVIEW）
+
+Phase 6 全体（Foundation ＋ B1〜B7）の完了監査。新しい能力なし・実 provider なし・実行なし・production runtime の変更なし
+（文書と完了の凍結 test だけ）。当初範囲の実装と凍結、authority / governance / 時間 / identity の model、層横断の不変条件、
+Production DNA と公開の境界を確認し、全 gate の deferred を 1 つの登録簿に統合した。
+
+### 追加 — `docs/databank/PHASE6_THEME_INTELLIGENCE_COMPLETION_AUDIT.md`【新規】
+
+完了監査（24 節）: 結論、当初範囲、architecture（目的・概念上の data flow）、authority model、時間 model（層ごとの PIT 対応）、
+identity / 履歴、governance（Option B）、Foundation・B1〜B7 の各監査、層横断の不変条件、Production DNA の境界、公開 / legacy の
+境界、検証の証拠（凍結の連鎖・test だけの変更・closure 時の全体結果・最終回帰）、実データの状態、統合 deferred 登録簿
+（P6-DEF-01〜32）、blocker の評価（なし）、Phase 7 への暫定 handoff、判定。
+
+### 追加 — `tests/intelligence/test_theme_phase6_completion.py`【新規】
+
+完了の凍結 test（21）: Phase 5 closeout → Foundation → B1〜B7 → HEAD の祖先鎖、各 gate の runtime 差分 ＝ その gate の新規
+file の追加だけ（計 62・変更 0）、後の gate が前の gate の test に加えた変更は guard / pin の登録だけ、Phase 6 の 3 名前空間の外
+（compass_dna・config・workflow・scripts・Pages・data・legacy entry を含む）は不変、Foundation の byte 一致、Phase 6 の package を
+import する外部 module なし、Phase 6 の package は Production DNA / P4 / P5 の module を import しない、完了文書の anchor 表との一致。
+
 ## v5.41 (2026-09-25) — Phase 6 P6-B7 closeout audit（LLM PROPOSAL LAYER FINAL CLOSEOUT）
 
 B7A〜B7G の LLM 提案層全体の最終監査。新しい能力なし・production runtime の変更なし（文書と凍結台帳の test だけ）。
