@@ -18,17 +18,25 @@ from typing import Mapping, Sequence, Tuple
 
 #: P8-A0 の凍結 anchor（Phase 7 の test への登録の差はここから測る）
 P8_A0 = "76ebf0ccf647517df6762f4cc04a319a8207eff0"
+#: P8-A1 の凍結 anchor（identity の runtime はここと byte 一致）
+P8_A1 = "4162e9c5b934456e528288b99a5908069a2f6624"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
-#: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store）
-PHASE8_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
+#: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
+#: P8-A2: observation_model / observation_resolver / observation_store）
+PHASE8_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "__init__", "identity_model", "identity_resolver", "identity_store"))
+PHASE8_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
+    "__init__", "identity_model", "identity_resolver", "identity_store", "observation_model", "observation_resolver",
+    "observation_store"))
 #: 登録済みの Phase 8 の test（追加だけ）
 PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py",
                                  "tests/intelligence/test_screener_identity.py",
-                                 "tests/intelligence/test_screener_intelligence_boundary.py")
+                                 "tests/intelligence/test_screener_intelligence_boundary.py",
+                                 "tests/intelligence/test_screener_observation.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
 PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md",
-                                "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md")
+                                "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
+                                "docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -92,5 +100,6 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P8_A0", "PHASE7_TEST_REGISTRATION", "PHASE8_DOCS", "PHASE8_PACKAGE", "PHASE8_RUNTIME",
-           "PHASE8_TESTS", "is_phase8_addition", "only_phase8_registration", "registration_diff"]
+__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "PHASE7_TEST_REGISTRATION", "PHASE8_A1_RUNTIME", "PHASE8_DOCS",
+           "PHASE8_PACKAGE", "PHASE8_RUNTIME", "PHASE8_TESTS", "is_phase8_addition", "only_phase8_registration",
+           "registration_diff"]

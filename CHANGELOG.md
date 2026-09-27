@@ -4,6 +4,44 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.52 (2026-09-27) — Phase 8 P8-A2 PIT market ／ fundamental observation foundation（観測の意味論だけ。合成 data）
+
+Phase 8 の PIT 観測の基盤。どの Security ／ Issuer の、どの日 ／ 期間の、どの出所の値が、いつ知り得たかを表す。**派生指標 ・
+screen ・順位 ・score ・Theme exposure ・実 J-Quants の取り込み ・corporate action の調整は無い**。A1 の runtime（`4162e9c`）・
+Phase 6 ／ 7 ・P4 ／ P5 ・公開出力 ・config.yaml は不変。
+
+### 追加 — runtime（`src/intelligence/screener_intelligence/`）
+
+- `observation_model.py`【新規】: 観測の class 3 つ（市場 ・実績 ・会社予想。型 ・slot が別で化けない）と coverage の宣言、
+  生値 ／ 業者の調整値（計算の参照を必須）、知識の時刻（TIMESTAMP ／ DATE。既定の公表時刻なし）、会計の期間（年度 ・累計 ・
+  単独四半期。TTM なし）、10 進の正準の値と量 ・通貨 ・桁、欠損の状態（MISSING ／ NOT_REPORTED ／ NOT_APPLICABLE。0 と別）、
+  出所と出所の互換、slot ごとの一本の revision の鎖、A1 に登録済みの主語だけ、coverage との矛盾の拒否。
+- `observation_store.py`【新規】: `<data_root>/screener_intelligence/observation_records.jsonl` の追記専用 store（A1 と同じ fail closed の
+  規律。A1 の authority は read-only で読むだけ。SQLite なし）。
+- `observation_resolver.py`【新規】: 明示の aware な cutoff での PIT の解決（主語の A1 での PIT ・coverage ・知識の精度 ・出所の
+  曖昧さ）。status: FOUND ・NOT_FOUND ・NOT_YET_KNOWN ・AMBIGUOUS ・INSUFFICIENT_TIME_PRECISION ・BEFORE_COVERAGE ・
+  OUTSIDE_COVERAGE ・AUTHORITY_MISSING ・STORE_CORRUPTION ・SUBJECT_NOT_RESOLVED。解決は派生 ・非 authority ・非永続。
+
+### 追加 ／ 改善 — test ・guard
+
+- `tests/intelligence/test_screener_observation.py`【新規】: matrix A〜BX ・CM〜CP（120 件）。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: A2 の module の import の許可一覧 ・A1 の API を使う module と名前の
+  完全一致 ・store の書き込み経路 ・派生指標 ／ screen ／ 順位 ／ Theme ／ latest の名前と語彙なし ・既定の公表時刻の文字列なし ・
+  A1 の runtime の byte 凍結（BY〜CL）。
+- `tests/intelligence/phase8_runtime_registry.py`: A2 の runtime 3 ・test 1 ・文書 1 の完全一致の path と A1 の anchor。Phase 6 ／ 7 の
+  test は無変更（registry を通して読む）。未登録の Phase 8 の file で Phase 6 ／ 7 の凍結 guard 8 件が落ちることを確かめた。
+- scratch の clone で mutation M1〜M15 をすべて検出（git の状態の guard を除く意味の test だけで）。
+
+### 追加 — `docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md`【新規】
+
+28 節の契約（目的 ・authority ・class ・主語 ・市場の欄 ・生値 ／ 調整値 ・市場の時間 ・実績 ・予想 ・期間 ・known_at ・知識の精度 ・
+訂正 ・値 ・欠損 ・出所 ・出所の互換 ・identity との統合 ・PIT の解決 ・coverage ・status ・store ・決定論 ・security ・除外する入力 ・
+A3 への引き継ぎ ・引き継ぐ所見 ・凍結の方針）。
+
+### 修正
+
+- なし
+
 ## v5.51 (2026-09-27) — Phase 8 P8-A1 Issuer ／ Security identity foundation（identity だけ。市場 data ・screen なし）
 
 Phase 8 の identity の基盤。Issuer（発行体）と Security（上場物）を別の identity にし、code ／ ticker を永続の identity に

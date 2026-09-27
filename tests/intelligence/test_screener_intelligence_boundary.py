@@ -4,12 +4,15 @@
   provider ／ network ・公開 ／ 通知 ／ 売買を import しない。時計 ・乱数 ・動的 code なし。filesystem は store だけ。
 - BH〜BJ: screen ・基準 ・候補 ・順位 ・score ・Theme exposure の型 ／ 名前が無い。
 - BK〜BO: Phase 7 ／ 6 の凍結、Phase 8 の registry の完全一致、未登録の Phase 8 runtime の検出、他の package からの import なし。
+- P8-A2（BY〜CL）: A1 の runtime は `4162e9c` と byte 一致、観測の module は許可一覧どおり（A1 の store ／ resolver の API は
+  指名した module が決まった名前だけを使う）、派生指標 ・screen ・順位 ・Theme の型 ／ 語彙が無い。
 
 registry: `tests/intelligence/phase8_runtime_registry.py`。契約: `docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md`。
 """
 from __future__ import annotations
 
 import ast
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -18,20 +21,23 @@ import pytest
 
 from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION, PHASE7_EXCLUDED_PATHSPECS,
                                                         PHASE7_RUNTIME, is_phase7_addition)
-from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, PHASE7_TEST_REGISTRATION,
-                                                        PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
-                                                        is_phase8_addition, only_phase8_registration)
+from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, PHASE7_TEST_REGISTRATION,
+                                                        PHASE8_A1_RUNTIME, PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME,
+                                                        PHASE8_TESTS, is_phase8_addition, only_phase8_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE8_PACKAGE
-MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store")
-PURE_MODULES = ("__init__", "identity_model", "identity_resolver")
-IO_MODULE = "identity_store"
+MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store", "observation_model",
+           "observation_resolver", "observation_store")
+A1_MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store")
+A2_MODULES = ("observation_model", "observation_resolver", "observation_store")
+IO_MODULES = ("identity_store", "observation_store")
 PHASE7_FINAL = "c1e95d35026652fb27c637318593fa8688219cf7"
 PHASE6_COMPLETION = "5ef313a6a9477f05b4e46756fb8b79c0f0c3d685"
 A1_DOC = "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md"
+A2_DOC = "docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -46,11 +52,31 @@ ALLOWED_IMPORTS = {
     "identity_store": {"__future__", "os", "dataclasses", "enum", "pathlib", "typing", ".identity_model"},
     "identity_resolver": {"__future__", "dataclasses", "datetime", "enum", "typing", ".identity_model",
                           ".identity_store", "..core.time"},
+    "observation_model": {"__future__", "json", "re", "dataclasses", "datetime", "decimal", "enum", "typing",
+                          ".identity_model"} | _CORE,
+    "observation_store": {"__future__", "os", "dataclasses", "enum", "pathlib", "typing", ".identity_store",
+                          ".observation_model"},
+    "observation_resolver": {"__future__", "dataclasses", "datetime", "enum", "typing", ".identity_model",
+                             ".identity_resolver", ".observation_model", ".observation_store", "..core.time"},
+}
+#: A2 が使ってよい A1 の名前（module → 名前。完全一致）。A1 の store ／ resolver の API は指名した module だけが使う
+SANCTIONED_A1_IMPORTS = {
+    "observation_model": {".identity_model": {"CREDENTIAL_MARKERS", "IdentityHistory", "SourceClass", "SubjectKind",
+                                              "canonical_json", "is_issuer_id", "is_security_id"}},
+    "observation_store": {".identity_store": {"IdentityAuthorityMissing", "IdentityStoreCorrupt",
+                                              "open_identity_history"}},
+    "observation_resolver": {".identity_resolver": {"IdentityQuery", "ResolutionStatus", "resolve"},
+                             ".identity_model": {"SourceClass", "SubjectKind", "canonical_json", "is_issuer_id",
+                                                 "is_security_id"}},
 }
 ALLOWED_CLOSURE = {"src", "src.intelligence", "src.intelligence.core", "src.intelligence.core.ids",
                    "src.intelligence.core.time", "src.intelligence.screener_intelligence"}
 EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store": {"identity_model"},
-                     "identity_resolver": {"identity_model", "identity_store"}}
+                     "identity_resolver": {"identity_model", "identity_store"},
+                     "observation_model": {"identity_model"},
+                     "observation_store": {"identity_model", "identity_store", "observation_model"},
+                     "observation_resolver": {"identity_model", "identity_store", "identity_resolver",
+                                              "observation_model", "observation_store"}}
 
 
 def _git(*args: str) -> str:
@@ -117,11 +143,11 @@ def test_ba_to_bg_no_clock_randomness_network_or_dynamic_code_and_io_only_in_the
     for node in ast.walk(tree):
         if isinstance(node, ast.Name):
             assert node.id not in FORBIDDEN_NAMES, (name, node.id)
-            if name != IO_MODULE:
+            if name not in IO_MODULES:
                 assert node.id not in IO_NAMES, (name, node.id)
         if isinstance(node, ast.Attribute):
             assert node.attr not in FORBIDDEN_ATTRIBUTES, (name, node.attr)
-            if name != IO_MODULE:
+            if name not in IO_MODULES:
                 assert node.attr not in IO_ATTRIBUTES, (name, node.attr)
         if isinstance(node, (ast.Global, ast.Nonlocal)):
             raise AssertionError((name, "module state"))
@@ -129,8 +155,11 @@ def test_ba_to_bg_no_clock_randomness_network_or_dynamic_code_and_io_only_in_the
             assert "://" not in node.value and "C:\\" not in node.value, (name, node.value)
 
 
-def test_ba_to_bg_the_store_writes_only_through_append_and_initialize() -> None:
-    tree = ast.parse((PACKAGE_DIR / "identity_store.py").read_text(encoding="utf-8"))
+@pytest.mark.parametrize("store,expected", [
+    ("identity_store", {"__init__": {"ab", "mkdir"}, "append": {"ab", "write", "fsync"}}),
+    ("observation_store", {"__init__": {"ab"}, "append": {"ab", "write", "fsync"}})])
+def test_ba_to_bg_the_store_writes_only_through_append_and_initialize(store: str, expected: dict) -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{store}.py").read_text(encoding="utf-8"))
     writers = {}
     for func in (n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)):
         for node in ast.walk(func):
@@ -138,8 +167,8 @@ def test_ba_to_bg_the_store_writes_only_through_append_and_initialize() -> None:
                 writers.setdefault(func.name, set()).add(node.value)
             if isinstance(node, ast.Attribute) and node.attr in ("write", "mkdir", "fsync", "write_bytes", "unlink"):
                 writers.setdefault(func.name, set()).add(node.attr)
-    assert writers == {"__init__": {"ab", "mkdir"}, "append": {"ab", "write", "fsync"}}
-    assert "sqlite" not in executable_source(PACKAGE_DIR / "identity_store.py").lower()
+    assert writers == expected
+    assert "sqlite" not in executable_source(PACKAGE_DIR / f"{store}.py").lower()
 
 
 # ================================================================ BH〜BJ screen ・score ・Theme なし
@@ -150,7 +179,7 @@ SCREENING_WORDS = ("screen", "criterion", "criteria", "candidate_result", "rank"
                    "portfolio", "thesis", "theme", "exposure", "beneficiar", "narrative", "forecast", "price", "fundamental")
 
 
-@pytest.mark.parametrize("name,path", _sources())
+@pytest.mark.parametrize("name,path", [(n, p) for n, p in _sources() if n in A1_MODULES])
 def test_bh_bi_bj_no_screening_score_rank_or_theme_types(name: str, path: Path) -> None:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     defined = {node.name.lower() for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
@@ -217,7 +246,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
                if not is_phase8_addition(line[:2].strip(), line[3:])]
     assert pending == []
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
-    assert docs <= {("A", A1_DOC)}
+    assert docs <= {("A", A1_DOC), ("A", A2_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -230,7 +259,8 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     assert ADDITION_STATUSES == ("A", "??")
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
-    assert A1_DOC in PHASE8_DOCS
+    assert A1_DOC in PHASE8_DOCS and A2_DOC in PHASE8_DOCS
+    assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
     assert set(PHASE7_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
                                              "tests/intelligence/test_narrative_intelligence_boundary.py"}
     assert not any(p.startswith(("src/intelligence/themes", "src/intelligence/theme_intelligence",
@@ -271,3 +301,79 @@ def test_bo_no_other_package_imports_phase8() -> None:
     assert offenders == []
     closure = runtime_closure()
     assert closure and not any("screener_intelligence" in module for module in closure)
+
+
+# ================================================================ P8-A2（BY〜CL）
+
+
+def test_a2_by_the_a1_runtime_is_byte_identical_to_the_a1_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A1, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    for path in PHASE8_A1_RUNTIME:
+        assert _git("show", f"{P8_A1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_A1, "--", *PHASE8_A1_RUNTIME, A1_DOC) == ""
+    assert _git("status", "--porcelain", "--", *PHASE8_A1_RUNTIME) == ""
+
+
+def _from_imports(path: Path) -> dict:
+    found: dict = {}
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.ImportFrom) and node.module and node.level:
+            found.setdefault("." * node.level + node.module, set()).update(alias.name for alias in node.names)
+    return found
+
+
+@pytest.mark.parametrize("name", A2_MODULES)
+def test_a2_cc_to_ch_only_the_designated_modules_use_exactly_the_sanctioned_a1_names(name: str) -> None:
+    imports = _from_imports(PACKAGE_DIR / f"{name}.py")
+    a1_imports = {module: names for module, names in imports.items() if module.startswith(".identity_")}
+    assert a1_imports == SANCTIONED_A1_IMPORTS[name]
+    for module in A1_MODULES:                                                         # A1 は A2 を知らない
+        if module != "__init__":
+            assert not any(m.startswith(".observation_") for m in _from_imports(PACKAGE_DIR / f"{module}.py"))
+
+
+DERIVED_TOKENS = {"roe", "roa", "pbr", "yield", "dividend", "volatility", "return", "returns", "growth", "margin",
+                  "ttm", "trailing", "annualized", "ratio", "average", "moving", "indicator", "split", "screen",
+                  "criterion", "criteria", "candidate", "rank", "score", "rating", "recommend", "recommendation",
+                  "buy", "sell", "theme", "exposure", "narrative", "watchlist", "portfolio", "latest", "current", "now",
+                  "llm", "prompt"}
+
+
+def _words(identifier: str) -> set:
+    """識別子を語に分ける（snake_case と CamelCase）。部分一致ではなく語で調べる。"""
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", identifier)
+    return {word for word in spaced.lower().split("_") if word}
+
+
+DERIVED_MEMBERS = {"PER", "PBR", "ROE", "ROA", "MARKET_CAP", "TTM", "ANNUALIZED", "GROWTH", "MARGIN", "RETURN",
+                   "VOLATILITY", "YIELD", "DIVIDEND", "SCORE", "RANK", "BUY", "SELL", "LATEST", "CURRENT"}
+
+
+@pytest.mark.parametrize("name", A2_MODULES)
+def test_a2_ci_to_cl_no_derived_metric_screening_ranking_theme_or_latest_names(name: str) -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"))
+    defined = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
+    targets = {t.id for node in ast.walk(tree) if isinstance(node, (ast.Assign, ast.AnnAssign))
+               for t in (node.targets if isinstance(node, ast.Assign) else [node.target]) if isinstance(t, ast.Name)}
+    words = set().union(*(_words(item) for item in defined | targets))
+    assert not words & DERIVED_TOKENS, (name, words & DERIVED_TOKENS)
+    constants = {node.value for node in ast.walk(tree) if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    assert not constants & DERIVED_MEMBERS, constants & DERIVED_MEMBERS
+    for clock in ("15:30", "06:30", "15:00", "09:00"):                              # 既定の公表時刻を持たない
+        assert clock not in (PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"), clock
+
+
+def test_a2_ci_to_cl_the_observation_vocabulary_has_no_derived_or_evaluative_member() -> None:
+    from src.intelligence.screener_intelligence import observation_model as om
+    from src.intelligence.screener_intelligence import observation_resolver as orr
+    members = {member.value for enum in (om.ObservationClass, om.RecordKind, om.MarketField, om.FundamentalField,
+                                         om.PriceBasis, om.StatementBasis, om.PeriodBasis, om.KnowledgePrecision,
+                                         om.ValueState, om.Measure, om.Currency, om.Scale, om.CoverageDataset,
+                                         orr.ObservationStatus) for member in enum}
+    assert not members & DERIVED_MEMBERS
+    for word in ("TTM", "TRAILING", "ANNUAL", "ADJUSTMENT_FACTOR", "RATIO", "SCORE", "RANK"):
+        assert not any(word in value for value in members), word
+    assert set(om.PeriodBasis) == {om.PeriodBasis.FISCAL_YEAR, om.PeriodBasis.SINGLE_QUARTER,
+                                   om.PeriodBasis.CUMULATIVE_YEAR_TO_DATE}
+    fields = set(orr.ObservationResolution.__dataclass_fields__)
+    assert not fields & {"score", "rank", "weight", "recommendation", "record_id", "metric"}
