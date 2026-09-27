@@ -4,6 +4,53 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.51 (2026-09-27) — Phase 8 P8-A1 Issuer ／ Security identity foundation（identity だけ。市場 data ・screen なし）
+
+Phase 8 の identity の基盤。Issuer（発行体）と Security（上場物）を別の identity にし、code ／ ticker を永続の identity に
+しない。**市場 ／ 財務の data ・screen ・基準 ・候補 ・順位 ・score ・Theme exposure ・J-Quants の接続 ・LLM は無い**。
+Phase 7（`c1e95d3`）・Phase 6（`5ef313a`）の runtime ・P4 ／ P5 ・公開出力 ・config.yaml は不変。
+
+### 追加 — runtime（`src/intelligence/screener_intelligence/`【新規】）
+
+- `identity_model.py`: 不変 ・内容 address の authority の record 8 種（Issuer ／ Security の登録、識別子の割り当て ／ 終わり、
+  表示名、上場の開始 ／ 終わり、coverage）、閉じた語彙（出所の class 4 つと record ごとの authority の規則）、`IssuerId` ／
+  `SecurityId` の導出（登録の anchor と実体の種類だけ。code ・名前 ・市場を入れない）、履歴の不変条件（参照先の存在、
+  割り当て ／ 上場の区間の重なりの拒否、二重の終わりの拒否、code の変更と再上場の継続は明示の出所だけ、`known_at` の非減少）。
+- `identity_store.py`: `<data_root>/screener_intelligence/identity_records.jsonl` の追記専用 store（正準の行 ・fsync ・同じ
+  record は収束 ・破損 ／ 履歴の違反は fail closed ・修復しない ・SQLite なし ・read-only は何も書かない）。
+- `identity_resolver.py`: 明示の aware な cutoff での PIT の解決（`known_at <= cutoff` の接頭辞、coverage の範囲、Security ／
+  Issuer ／ 識別子 ／ issue class での問い合わせ、status: FOUND ・NOT_FOUND ・NOT_YET_KNOWN ・NOT_ACTIVE_AT_CUTOFF ・
+  AMBIGUOUS ・BEFORE_COVERAGE ・OUTSIDE_COVERAGE ・AUTHORITY_MISSING ・STORE_CORRUPTION）。解決は派生 ・非 authority ・非永続。
+
+### 追加 — test
+
+- `tests/intelligence/test_screener_identity.py`【新規】: matrix A〜AZ ＋ 書き込み 0 ／ 再現（101 件。code の再利用 ・code の変更 ・
+  複数の Security ・上場廃止 ・再上場 ・coverage ・未来の record ・破損 ・分岐 ・自動修復なし ・決定論 ・出所 ・path ／ 認証情報の拒否）。
+- `tests/intelligence/test_screener_intelligence_boundary.py`【新規】: matrix BA〜BO（import の許可一覧 ・runtime closure ・
+  時計 ／ 乱数 ／ 動的 code なし ・filesystem は store だけ ・screen ／ score ／ Theme の型なし ・Phase 7 ／ 6 の凍結 ・registry の
+  完全一致 ・未登録の Phase 8 runtime の検出 ・他の package からの import なし）。
+- `tests/intelligence/phase8_runtime_registry.py`【新規】: Phase 8 の runtime ／ test ／ 文書の完全一致の登録と、Phase 7 の test への
+  登録の行の一覧（D-P8-A0-12）。
+- scratch の clone で mutation M1〜M15 をすべて検出（git の状態の guard を除いた意味の test だけで検出）。
+
+### 改善 — Phase 7 の test への登録（完全一致の path だけ）
+
+- `tests/intelligence/phase7_runtime_registry.py`: `PHASE7_EXCLUDED_PATHSPECS` ／ `is_phase7_addition` が登録済みの Phase 8 runtime も
+  除く（Phase 6 の凍結 guard を変えずに済ませるため。Phase 6 の test は無変更）。
+- `tests/intelligence/test_narrative_intelligence_boundary.py`: 凍結の判定が登録済みの Phase 8 の runtime ／ test ／ 文書の追加だけを
+  認める。両 file の変更は行単位で `PHASE7_TEST_REGISTRATION` に列挙し、Phase 8 の guard が完全一致を確かめる。未登録の
+  Phase 8 の file を置くと Phase 6 ／ 7 の凍結 guard 8 件が落ちることを確かめた。
+
+### 追加 — `docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md`【新規】
+
+26 節の契約（目的 ・区別 ・IssuerId ・SecurityId ・割り当て ・表示 ・record ・時間 ・PIT ・code の再利用 ・複数の Security ・廃止 ・
+再上場 ・出所 ・出所の class ・authority ・governance ・store ・coverage ・status ・不変条件 ・import ・security ・延期する corporate
+action ・A2 への引き継ぎ ・凍結の方針）。
+
+### 修正
+
+- なし
+
 ## v5.50 (2026-09-26) — Phase 8 P8-A0 Screener Intelligence architecture ＋ data-capability audit（READ-ONLY・文書だけ）
 
 Phase 8 Screener の前提を read-only で監査した。**runtime・schema・model・永続化・J-Quants の live 接続・Theme → 企業の推定・

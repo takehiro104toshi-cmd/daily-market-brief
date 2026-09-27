@@ -43,6 +43,7 @@ from tests.intelligence.phase7_runtime_registry import (ADDITION_STATUSES, PHASE
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 from tests.intelligence.test_theme_model import observation
+from tests.intelligence.phase8_runtime_registry import PHASE8_DOCS, PHASE8_RUNTIME, PHASE8_TESTS   # P8-A1 の登録
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE7_PACKAGE
@@ -265,7 +266,7 @@ def test_as_excluded_from_the_production_bundle_closure() -> None:
 def test_as_since_the_phase6_completion_only_the_registered_runtime_was_added() -> None:
     changes = {tuple(line.split("\t")) for line in _git("diff", "--cached", "--name-status", PHASE6_COMPLETION, "--",
                                                         *SURFACE).splitlines()}
-    assert changes == {("A", path) for path in PHASE7_RUNTIME}                            # commit ／ index の差
+    assert changes == {("A", path) for path in PHASE7_RUNTIME + PHASE8_RUNTIME}           # commit ／ index の差
     pending = [line for line in _git("status", "--porcelain", "--", *(p for p in SURFACE if p != "data")).splitlines()
                if not is_phase7_addition(line[:2].strip(), line[3:])]
     assert pending == []                                                                  # 作業木の未登録の変更なし
@@ -278,14 +279,15 @@ def test_as_phase6_documents_and_the_a0_audit_are_frozen() -> None:
     changes = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A0, "--",
                                                         "docs").splitlines()}
     assert changes <= {("A", A1_DOC), ("A", A2_DOC), ("A", A3_DOC), ("A", A4A_DOC), ("A", A4B_DOC), ("A", A5_DOC),
-                       ("A", P8_A0_DOC)}
+                       ("A", P8_A0_DOC)} | {("A", path) for path in PHASE8_DOCS}
     assert _git("show", f"{P7_A0}:{A0_DOC}") == (REPO_ROOT / A0_DOC).read_text(encoding="utf-8")
 
 
 def test_as_phase6_tests_changed_only_by_the_declared_registration() -> None:
     changed = {tuple(line.split("\t")) for line in _git("diff", "--name-status", PHASE6_COMPLETION, "--",
                                                         "tests").splitlines()}
-    assert changed <= {("M", path) for path in PHASE6_TEST_REGISTRATION} | {("A", path) for path in PHASE7_TESTS}
+    assert changed <= {("M", path) for path in PHASE6_TEST_REGISTRATION} | {("A", path) for path in PHASE7_TESTS} | {
+        ("A", path) for path in PHASE8_TESTS}
     for path, (removed, added) in PHASE6_TEST_REGISTRATION.items():
         anchored = _git("show", f"{PHASE6_COMPLETION}:{path}")
         got_removed, got_added = registration_diff(anchored, (REPO_ROOT / path).read_text(encoding="utf-8"))
@@ -316,7 +318,7 @@ def test_as_the_registry_exempts_only_additions_of_registered_files() -> None:
                  f"{PHASE7_PACKAGE}/", "src/intelligence/theme_intelligence/synthesis_model.py",
                  "src/intelligence/themes/__init__.py", "knowledge/theme_intelligence/x.yaml"):
         assert not is_phase7_addition("A", path), path
-    assert PHASE7_EXCLUDED_PATHSPECS == tuple(f":(exclude,literal){path}" for path in PHASE7_RUNTIME)
+    assert PHASE7_EXCLUDED_PATHSPECS == tuple(f":(exclude,literal){path}" for path in PHASE7_RUNTIME + PHASE8_RUNTIME)
     assert not any(p.startswith(("src/intelligence/themes", "src/intelligence/theme_intelligence", "knowledge"))
                    for p in PHASE7_RUNTIME)
 
@@ -576,7 +578,8 @@ def test_bl_phase6_runtime_stays_frozen_after_a4a() -> None:
     assert _git("diff", "--name-status", PHASE6_COMPLETION, "--", *namespaces) == ""
     changed = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A3, "--", "src",
                                                         "knowledge").splitlines()}
-    assert changed <= {("A", f"{PHASE7_PACKAGE}/{name}.py") for name in (*A4A_MODULES, *A4B_MODULES)}  # 追加だけ
+    assert changed <= {("A", f"{PHASE7_PACKAGE}/{name}.py") for name in (*A4A_MODULES, *A4B_MODULES)} | {
+        ("A", path) for path in PHASE8_RUNTIME}                                           # 追加だけ
 
 
 @pytest.mark.parametrize("module", A4A_MODULES)
@@ -642,7 +645,8 @@ def test_bx_phase6_runtime_stays_frozen_after_a4b() -> None:
     assert _git("diff", "--name-status", PHASE6_COMPLETION, "--", *namespaces) == ""
     changed = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A4A, "--", "src",
                                                         "knowledge").splitlines()}
-    assert changed <= {("A", f"{PHASE7_PACKAGE}/{name}.py") for name in A4B_MODULES}   # A4a の後は A4b の追加だけ
+    assert changed <= {("A", f"{PHASE7_PACKAGE}/{name}.py") for name in A4B_MODULES} | {
+        ("A", path) for path in PHASE8_RUNTIME}                                           # A4b と P8 の追加だけ
 
 
 @pytest.mark.parametrize("module", A4B_MODULES)
@@ -682,8 +686,8 @@ def test_a5_every_phase7_runtime_and_contract_is_byte_identical_to_the_a4b_ancho
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P7_A4B, "HEAD"], cwd=REPO_ROOT).returncode == 0
     for path in (*PHASE7_RUNTIME, A1_DOC, A2_DOC, A3_DOC, A4A_DOC, A4B_DOC):
         assert _git("show", f"{P7_A4B}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P7_A4B, "--", "src", "knowledge", "config.yaml", ".github", "docs/v2",
-                "docs/pages") == ""                                                         # runtime ／ 公開面の変更なし
+    assert {tuple(line.split("\t")) for line in _git("diff", "--name-status", P7_A4B, "--", "src", "knowledge",
+            "config.yaml", ".github", "docs/v2", "docs/pages").splitlines()} <= {("A", path) for path in PHASE8_RUNTIME}
     assert _git("status", "--porcelain", "--", *PHASE7_RUNTIME) == ""
     for anchor in (P7_A1, P7_A2, P7_A3, P7_A4A, P7_A4B, PHASE6_COMPLETION):
         assert subprocess.run(["git", "merge-base", "--is-ancestor", anchor, "HEAD"], cwd=REPO_ROOT).returncode == 0
