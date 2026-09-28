@@ -30,6 +30,8 @@ VALUE_PLACES = 6
 class MetricKind(str, Enum):
     REVENUE_GROWTH = "REVENUE_GROWTH"
     OPERATING_MARGIN = "OPERATING_MARGIN"
+    NET_MARGIN = "NET_MARGIN"
+    ROA_POINT_IN_TIME = "ROA_POINT_IN_TIME"
 
 
 class MetricStatus(str, Enum):
@@ -56,6 +58,8 @@ class MetricLeg(str, Enum):
     REVENUE = "REVENUE"
     OPERATING_INCOME = "OPERATING_INCOME"
     PAIR = "PAIR"
+    NET_INCOME = "NET_INCOME"
+    TOTAL_ASSETS = "TOTAL_ASSETS"
 
 
 class ReasonCode(str, Enum):

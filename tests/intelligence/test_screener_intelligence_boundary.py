@@ -27,33 +27,40 @@ import pytest
 from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION, PHASE7_EXCLUDED_PATHSPECS,
                                                         PHASE7_RUNTIME, is_phase7_addition)
 from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A1R, P8_A2, P8_A2_5, P8_V,
-                                                        P8_LV1, P8_PILOT1, P8_A2R, P8_A2RI, P8_A2RV, P8_VR,
+                                                        P8_LV1, P8_PILOT1, P8_A2R, P8_A2RI, P8_A2RV, P8_A3A, P8_VR,
                                                         PHASE7_TEST_REGISTRATION, PHASE8_A1R_RUNTIME, PHASE8_A1_RUNTIME,
                                                         PHASE8_A2R_RUNTIME, PHASE8_A2_RUNTIME, PHASE8_A3A_RUNTIME,
+                                                        PHASE8_A3B_METRIC_MODEL_REGISTRATION, PHASE8_A3B_RUNTIME,
                                                         PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
+                                                        registration_diff,
                                                         is_phase8_addition, only_phase8_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE8_PACKAGE
-MODULES = ("__init__", "fundamental_metrics", "identity_correction_model", "identity_correction_store",
-           "identity_model", "identity_remediation_resolver", "identity_resolver", "identity_store", "metric_model",
-           "observation_model", "observation_resolver", "observation_semantics_gate", "observation_semantics_mapping",
-           "observation_semantics_model", "observation_store")
+MODULES = ("__init__", "fundamental_metrics", "fundamental_metrics_extended", "identity_correction_model",
+           "identity_correction_store", "identity_model", "identity_remediation_resolver", "identity_resolver",
+           "identity_store", "metric_model", "observation_model", "observation_resolver", "observation_semantics_gate",
+           "observation_semantics_mapping", "observation_semantics_model", "observation_store")
 A1_MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store")
 A2_MODULES = ("observation_model", "observation_resolver", "observation_store")
 A1R_MODULES = ("identity_correction_model", "identity_correction_store", "identity_remediation_resolver")
 A2R_MODULES = ("observation_semantics_gate", "observation_semantics_mapping", "observation_semantics_model")
 A3A_MODULES = ("fundamental_metrics", "metric_model")
+A3B_MODULES = ("fundamental_metrics_extended",)
 #: P8-A2R-IMPL より前に凍結した runtime ・test（LV1 ・PILOT1 ・A2R ・A2RV の anchor はこれらだけを持つ）
 PRE_A2R_RUNTIME = tuple(sorted(set(PHASE8_A2_RUNTIME) | set(PHASE8_A1R_RUNTIME)))
 #: P8-A3A より前に凍結した runtime（A2RI の anchor はこれらを持つ。A2R の 3 module を含む）
 PRE_A3A_RUNTIME = tuple(sorted(set(PRE_A2R_RUNTIME) | set(PHASE8_A2R_RUNTIME)))
 A2R_TEST = "tests/intelligence/test_screener_observation_semantics.py"
 A3A_TEST = "tests/intelligence/test_screener_fundamental_metrics.py"
+A3B_TEST = "tests/intelligence/test_screener_fundamental_metrics_extended.py"
 #: 先行の anchor の guard が凍結の対象から外す、後の gate の test
-LATER_TESTS = (A2R_TEST, A3A_TEST)
+LATER_TESTS = (A2R_TEST, A3A_TEST, A3B_TEST)
+#: P8-A3B より前に凍結した runtime（A3A の anchor はこれらを持つ。A3A の 2 module を含む）
+PRE_A3B_RUNTIME = tuple(sorted(set(PRE_A3A_RUNTIME) | set(PHASE8_A3A_RUNTIME)))
+METRIC_MODEL = f"{PHASE8_PACKAGE}/metric_model.py"
 IO_MODULES = ("identity_store", "observation_store", "identity_correction_store")
 PHASE7_FINAL = "c1e95d35026652fb27c637318593fa8688219cf7"
 PHASE6_COMPLETION = "5ef313a6a9477f05b4e46756fb8b79c0f0c3d685"
@@ -69,6 +76,7 @@ A2R_DOC = "docs/databank/PHASE8_A2R_JQUANTS_SEMANTIC_REMEDIATION.md"
 A2RV_DOC = "docs/databank/PHASE8_A2R_OFFICIAL_SPEC_VERIFICATION.md"
 A2RI_DOC = "docs/databank/PHASE8_A2R_IMPLEMENTATION.md"
 A3A_DOC = "docs/databank/PHASE8_A3A_FUNDAMENTAL_METRICS.md"
+A3B_DOC = "docs/databank/PHASE8_A3B_NET_MARGIN_ROA.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -106,6 +114,8 @@ ALLOWED_IMPORTS = {
     "fundamental_metrics": {"__future__", "datetime", "decimal", "typing", ".identity_model", ".metric_model",
                             ".observation_model", ".observation_resolver", ".observation_semantics_gate",
                             ".observation_semantics_model"},
+    "fundamental_metrics_extended": {"__future__", "typing", ".fundamental_metrics", ".identity_model",
+                                     ".metric_model", ".observation_model", ".observation_resolver"},
 }
 #: A2 が使ってよい A1 の名前（module → 名前。完全一致）。A1 の store ／ resolver の API は指名した module だけが使う
 SANCTIONED_A1_IMPORTS = {
@@ -149,6 +159,17 @@ SANCTIONED_A3A_IMPORTS = {
                                                             "decide_compatibility"},
                             ".observation_semantics_model": {"ObservationSemantics"}},
 }
+#: A3B が使ってよい名前（module → 名前。完全一致）。脚の解決 ・互換 ・比 ・結果の組み立ては A3A の実装をそのまま使う
+SANCTIONED_A3B_IMPORTS = {
+    "fundamental_metrics_extended": {".fundamental_metrics": {"_Leg", "_compatibility", "_input_reasons", "_label_for",
+                                                              "_ratio_minus", "_regular_fiscal_year", "_resolve_leg",
+                                                              "_result"},
+                                     ".identity_model": {"SourceClass"},
+                                     ".metric_model": {"MetricKind", "MetricLeg", "MetricReason", "MetricResult",
+                                                       "ReasonCode"},
+                                     ".observation_model": {"FundamentalField", "PeriodBasis"},
+                                     ".observation_resolver": {"ObservationQuery"}},
+}
 ALLOWED_CLOSURE = {"src", "src.intelligence", "src.intelligence.core", "src.intelligence.core.ids",
                    "src.intelligence.core.time", "src.intelligence.screener_intelligence"}
 EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store": {"identity_model"},
@@ -170,7 +191,11 @@ EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store
                      "fundamental_metrics": {"identity_model", "identity_store", "identity_resolver",
                                              "observation_model", "observation_store", "observation_resolver",
                                              "observation_semantics_model", "observation_semantics_gate",
-                                             "metric_model"}}
+                                             "metric_model"},
+                     "fundamental_metrics_extended": {"identity_model", "identity_store", "identity_resolver",
+                                                      "observation_model", "observation_store", "observation_resolver",
+                                                      "observation_semantics_model", "observation_semantics_gate",
+                                                      "metric_model", "fundamental_metrics"}}
 
 
 def _git(*args: str) -> str:
@@ -343,7 +368,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
     assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC), ("A", A1R_DOC),
                     ("A", LV1_DOC), ("A", PILOT1_DOC),
-                    ("A", A2R_DOC), ("A", A2RV_DOC), ("A", A2RI_DOC), ("A", A3A_DOC)}
+                    ("A", A2R_DOC), ("A", A2RV_DOC), ("A", A2RI_DOC), ("A", A3A_DOC), ("A", A3B_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -357,13 +382,14 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
     assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC, A1R_DOC, LV1_DOC, PILOT1_DOC, A2R_DOC,
-            A2RV_DOC, A2RI_DOC, A3A_DOC} <= set(PHASE8_DOCS)
+            A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC} <= set(PHASE8_DOCS)
     assert PHASE8_A1R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1R_MODULES)
     assert PHASE8_A2R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A2R_MODULES)
     assert PHASE8_A3A_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A3A_MODULES)
+    assert PHASE8_A3B_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A3B_MODULES)
     assert set(PHASE8_RUNTIME) == set(PHASE8_A2_RUNTIME) | set(PHASE8_A1R_RUNTIME) | set(PHASE8_A2R_RUNTIME) | set(
-        PHASE8_A3A_RUNTIME)
-    assert A2R_TEST in PHASE8_TESTS and A3A_TEST in PHASE8_TESTS
+        PHASE8_A3A_RUNTIME) | set(PHASE8_A3B_RUNTIME)
+    assert A2R_TEST in PHASE8_TESTS and A3A_TEST in PHASE8_TESTS and A3B_TEST in PHASE8_TESTS
     assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
     assert PHASE8_A2_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in sorted((*A1_MODULES, *A2_MODULES)))
     assert set(PHASE7_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
@@ -576,7 +602,7 @@ def test_lv1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
     prior_docs = tuple(path for path in PHASE8_DOCS
-                       if path not in (LV1_DOC, PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC))
+                       if path not in (LV1_DOC, PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 7
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A1R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -592,7 +618,8 @@ def test_pilot1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS
+                       if path not in (PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 8 and LV1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_LV1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -608,7 +635,7 @@ def test_a2r_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 9 and PILOT1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_PILOT1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -624,7 +651,7 @@ def test_a2rv_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RV_DOC, A2RI_DOC, A3A_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 10 and {PILOT1_DOC, A2R_DOC} <= set(prior_docs)
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A2R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -640,7 +667,7 @@ def test_a2ri_the_pre_a2r_runtime_phase8_tests_and_prior_documents_are_byte_iden
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RI_DOC, A3A_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RI_DOC, A3A_DOC, A3B_DOC))
     assert len(PRE_A2R_RUNTIME) == 10 and len(frozen_tests) == 3 and len(prior_docs) == 11
     assert A2RV_DOC in prior_docs and A2R_DOC in prior_docs and PILOT1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
@@ -657,8 +684,8 @@ def test_a3a_the_pre_a3a_runtime_phase8_tests_and_prior_documents_are_byte_ident
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A2RI, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        A3A_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path != A3A_DOC)
+        A3A_TEST, A3B_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3A_DOC, A3B_DOC))
     assert len(PRE_A3A_RUNTIME) == 13 and len(frozen_tests) == 4 and len(prior_docs) == 12
     assert A2R_TEST in frozen_tests and A2RI_DOC in prior_docs
     for path in (*PRE_A3A_RUNTIME, *frozen_tests, *prior_docs):
@@ -685,14 +712,14 @@ def test_a3a_the_metric_modules_use_exactly_the_sanctioned_names_and_no_store_or
             assert not any(m in (".metric_model", ".fundamental_metrics") for m in used), module
 
 
-@pytest.mark.parametrize("name", A3A_MODULES)
+@pytest.mark.parametrize("name", A3A_MODULES + A3B_MODULES)
 def test_a3a_no_screening_ranking_scoring_recommendation_theme_or_latest_names(name: str) -> None:
     tree = ast.parse((PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"))
     defined = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
     targets = {t.id for node in ast.walk(tree) if isinstance(node, (ast.Assign, ast.AnnAssign))
                for t in (node.targets if isinstance(node, ast.Assign) else [node.target]) if isinstance(t, ast.Name)}
     words = set().union(*(_words(item) for item in defined | targets))
-    forbidden = DERIVED_TOKENS - {"growth", "margin", "ratio"}                          # 指標の名前そのものは許す
+    forbidden = DERIVED_TOKENS - {"growth", "margin", "ratio", "roa"}                   # 指標の名前そのものは許す
     assert not words & forbidden, (name, words & forbidden)
     constants = {node.value for node in ast.walk(tree)
                  if isinstance(node, ast.Constant) and isinstance(node.value, str)}
@@ -709,8 +736,47 @@ def test_a3a_the_metric_vocabulary_is_closed_and_has_no_evaluative_member() -> N
     for word in ("RANK", "SCORE", "BUY", "SELL", "TOP", "BEST", "CANDIDATE", "PASS", "THEME", "EXPOSURE", "LATEST",
                  "CURRENT", "TTM", "ANNUAL", "INFER", "DEFAULT", "RECOMMEND"):
         assert not any(word in value for value in members), word
-    assert set(mmod.MetricKind) == {mmod.MetricKind.REVENUE_GROWTH, mmod.MetricKind.OPERATING_MARGIN}
+    assert set(mmod.MetricKind) == {mmod.MetricKind.REVENUE_GROWTH, mmod.MetricKind.OPERATING_MARGIN,
+                                    mmod.MetricKind.NET_MARGIN, mmod.MetricKind.ROA_POINT_IN_TIME}
     assert not set(mmod.MetricResult.__dataclass_fields__) & {"score", "rank", "weight", "recommendation", "record_id"}
+
+
+# ================================================================ P8-A3B（A3A の凍結 ・拡張の指標の境界）
+
+
+def test_a3b_the_pre_a3b_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_the_a3a_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A3A, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
+        "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
+        A3B_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path != A3B_DOC)
+    byte_identical = tuple(path for path in PRE_A3B_RUNTIME if path != METRIC_MODEL)
+    assert len(PRE_A3B_RUNTIME) == 15 and len(byte_identical) == 14 and len(frozen_tests) == 5
+    assert len(prior_docs) == 13 and A3A_TEST in frozen_tests and A3A_DOC in prior_docs
+    for path in (*byte_identical, *frozen_tests, *prior_docs):
+        assert _git("show", f"{P8_A3A}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_A3A, "--", *byte_identical, *frozen_tests, *prior_docs) == ""
+    assert _git("status", "--porcelain", "--", *PRE_A3B_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert not any(_git("ls-tree", P8_A3A, "--", path).strip() for path in (*PHASE8_A3B_RUNTIME, A3B_TEST, A3B_DOC))
+
+
+def test_a3b_metric_model_differs_from_the_a3a_anchor_only_by_the_declared_enum_members() -> None:
+    anchored = _git("show", f"{P8_A3A}:{METRIC_MODEL}")
+    removed, added = registration_diff(anchored, (REPO_ROOT / METRIC_MODEL).read_text(encoding="utf-8"))
+    declared_removed, declared_added = PHASE8_A3B_METRIC_MODEL_REGISTRATION
+    assert (removed, added) == (list(declared_removed), list(declared_added))
+    assert len(added) == 4 and all(line.startswith("    ") and " = " in line for line in added)
+
+
+@pytest.mark.parametrize("name", A3B_MODULES)
+def test_a3b_the_extension_reuses_a3a_and_uses_exactly_the_sanctioned_names(name: str) -> None:
+    imports = _from_imports(PACKAGE_DIR / f"{name}.py")
+    assert imports == SANCTIONED_A3B_IMPORTS[name]
+    assert ".fundamental_metrics" in imports                                                # A3A の再利用（競合なし）
+    for module in (*A1_MODULES, *A2_MODULES, *A1R_MODULES, *A2R_MODULES, *A3A_MODULES):    # 先行の層は A3B を知らない
+        if module != "__init__":
+            used = _from_imports(PACKAGE_DIR / f"{module}.py")
+            assert ".fundamental_metrics_extended" not in used, module
 
 
 @pytest.mark.parametrize("name", A2R_MODULES)

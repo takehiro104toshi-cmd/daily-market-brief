@@ -4,6 +4,36 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.63 (2026-09-28) — Phase 8 P8-A3B net margin + ROA（時点の分母）（A3A の architecture の再利用）
+
+凍結した A3A の上に純利益率と ROA（時点の分母）だけを足した。脚の解決 ・A2R の互換 ・Decimal の比 ・結果の組み立ては A3A の
+`fundamental_metrics` の実装をそのまま使い、競合する枠組みを作らない。ROA は年度の当期純利益 ／ その年度の総資産（年度末）で、
+平均の総資産は作らない（名前 `ROA_POINT_IN_TIME`）。基準 ・区分の違い ・UNKNOWN は fail closed。A1 ・A2 ・A1R ・A2R ・
+`fundamental_metrics` は byte 一致。screen ・順位 ・推奨 ・他の指標 ・adapter ・実データ ・J-Quants への要求は無い。
+
+### 追加
+
+- `src/intelligence/screener_intelligence/fundamental_metrics_extended.py`【新規】: `net_margin`（`NET_INCOME ／ REVENUE`。年度 ・累計。
+  営業利益 ・経常利益で代用しない。売上 ≤ 0 は UNDEFINED）、`roa_point_in_time`（年度の `NET_INCOME ／ TOTAL_ASSETS`。年度だけ。
+  総資産 ≤ 0 は UNDEFINED）。
+- `tests/intelligence/test_screener_fundamental_metrics_extended.py`【新規】: matrix A〜D（訂正の cutoff の安定、日付だけの知識の
+  日の途中の cutoff、JP↔IFRS ・JP↔US の不連続、平均の総資産ではないことの証明、architecture の禁止事項）。
+- `docs/databank/PHASE8_A3B_NET_MARGIN_ROA.md`【新規】。
+
+### 改善
+
+- `src/intelligence/screener_intelligence/metric_model.py`: `MetricKind` に `NET_MARGIN` ・`ROA_POINT_IN_TIME`、`MetricLeg` に
+  `NET_INCOME` ・`TOTAL_ASSETS` を追加（enum の 4 行だけ。`MetricResult` が `MetricKind` の member 以外を拒み、Enum は継承で拡張できない
+  ため。status ・理由の code ・規則 ・既存の順は不変。差分は registry に宣言し guard が anchor と比べて固定）。
+- `tests/intelligence/phase8_runtime_registry.py`: module ・test ・文書の登録、`PHASE8_A3B_RUNTIME`、anchor `P8_A3A`（`84c2d52`）、
+  `PHASE8_A3B_METRIC_MODEL_REGISTRATION`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: A3B の import の境界 ・閉包 ・指名の import、A3A の凍結の guard
+  （14 module byte 一致 ＋ `metric_model` の差分の固定 ・5 test ・13 文書）、先行の anchor の guard の除外。
+
+### 修正
+
+- なし
+
 ## v5.62 (2026-09-28) — Phase 8 P8-A3A deterministic fundamental metrics foundation（売上成長率 ・営業利益率。追加だけ）
 
 Phase 8 の最初の指標の層。凍結した A2 の resolver（revision の PIT の選択）と A2R の互換の gate（会計基準 ・連結の区分）の上に、
