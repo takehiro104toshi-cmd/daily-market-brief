@@ -6,6 +6,7 @@
 - BK〜BO: Phase 7 ／ 6 の凍結、Phase 8 の registry の完全一致、未登録の Phase 8 runtime の検出、他の package からの import なし。
 - P8-A2（BY〜CL）: A1 の runtime は `4162e9c` と byte 一致、観測の module は許可一覧どおり（A1 の store ／ resolver の API は
   指名した module が決まった名前だけを使う）、派生指標 ・screen ・順位 ・Theme の型 ／ 語彙が無い。
+- P8-A2.5: A1 ／ A2 の runtime と A2 の契約は `b686b00` と byte 一致（監査の文書は registry に登録）。
 
 registry: `tests/intelligence/phase8_runtime_registry.py`。契約: `docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md`。
 """
@@ -21,9 +22,10 @@ import pytest
 
 from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION, PHASE7_EXCLUDED_PATHSPECS,
                                                         PHASE7_RUNTIME, is_phase7_addition)
-from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, PHASE7_TEST_REGISTRATION,
-                                                        PHASE8_A1_RUNTIME, PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME,
-                                                        PHASE8_TESTS, is_phase8_addition, only_phase8_registration)
+from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A2, PHASE7_TEST_REGISTRATION,
+                                                        PHASE8_A1_RUNTIME, PHASE8_A2_RUNTIME, PHASE8_DOCS, PHASE8_PACKAGE,
+                                                        PHASE8_RUNTIME, PHASE8_TESTS, is_phase8_addition,
+                                                        only_phase8_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 
@@ -38,6 +40,7 @@ PHASE7_FINAL = "c1e95d35026652fb27c637318593fa8688219cf7"
 PHASE6_COMPLETION = "5ef313a6a9477f05b4e46756fb8b79c0f0c3d685"
 A1_DOC = "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md"
 A2_DOC = "docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md"
+A2_5_DOC = "docs/databank/PHASE8_JQUANTS_REAL_DATA_MAPPING_AUDIT.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -246,7 +249,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
                if not is_phase8_addition(line[:2].strip(), line[3:])]
     assert pending == []
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
-    assert docs <= {("A", A1_DOC), ("A", A2_DOC)}
+    assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -259,8 +262,9 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     assert ADDITION_STATUSES == ("A", "??")
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
-    assert A1_DOC in PHASE8_DOCS and A2_DOC in PHASE8_DOCS
+    assert A1_DOC in PHASE8_DOCS and A2_DOC in PHASE8_DOCS and A2_5_DOC in PHASE8_DOCS
     assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
+    assert PHASE8_A2_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in sorted((*A1_MODULES, *A2_MODULES)))
     assert set(PHASE7_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
                                              "tests/intelligence/test_narrative_intelligence_boundary.py"}
     assert not any(p.startswith(("src/intelligence/themes", "src/intelligence/theme_intelligence",
@@ -377,3 +381,14 @@ def test_a2_ci_to_cl_the_observation_vocabulary_has_no_derived_or_evaluative_mem
                                    om.PeriodBasis.CUMULATIVE_YEAR_TO_DATE}
     fields = set(orr.ObservationResolution.__dataclass_fields__)
     assert not fields & {"score", "rank", "weight", "recommendation", "record_id", "metric"}
+
+
+# ================================================================ P8-A2.5（A2 の凍結）
+
+
+def test_a2_5_the_a1_a2_runtime_and_the_a2_contract_are_byte_identical_to_the_a2_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A2, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    for path in (*PHASE8_A2_RUNTIME, A2_DOC):
+        assert _git("show", f"{P8_A2}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_A2, "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC) == ""
+    assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC) == ""

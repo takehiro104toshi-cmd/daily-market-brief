@@ -4,6 +4,34 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.53 (2026-09-28) — Phase 8 P8-A2.5 J-Quants real-data mapping audit（read-only の data 契約の監査。取り込みなし）
+
+J-Quants Light の実データの意味を、凍結した A1 ／ A2 の契約へ写せるかを read-only で監査した。**取り込み ・live API ・network ・
+credential ・adapter ・A3 の指標 ・実の identity の登録は無い。** runtime ・config.yaml ・Phase 6 ／ 7 は不変。A1 ／ A2 の runtime は
+`b686b00` と byte 一致。
+
+### 追加 — `docs/databank/PHASE8_JQUANTS_REAL_DATA_MAPPING_AUDIT.md`【新規】
+
+- 証拠の分類（DOCUMENTED ／ OBSERVED_IN_PILOT ／ INFERRED ／ UNKNOWN）と、後の認可 gate で公式に確かめる事 V01〜V24。
+- dataset の棚卸し、Code → SecurityId → IssuerId の対応、Issuer の bootstrap の案の比較（推奨: 規則の候補 ＋ 人の一括の証明 ＋ 例外の
+  審査）、identity の訂正（実の登録の前に A1 の拡張の gate が要る）、identity の知識の時刻（厳密を既定、遡及の mode は A1 の拡張で）、
+  master の PIT の境界。
+- 四本値 ・調整後価格 ・財務サマリーの欄の対応、実績 ／ 予想、期間の意味、開示時刻（確認まで `DATE(DiscDate)`・一定の時刻を作らない）、
+  訂正、株数、時価総額の前提、EPS、純資産 ／ 総資産、CF、単位 ／ 桁、欠損の表現、重複、出所の record の identity、raw snapshot の層、
+  SQLite 索引の構成。
+- A3 の準備度（最小の安全な集合: 売上成長率 ・営業利益率）、adapter の時期（案 C）、過去の screen は NOT READY、所見 P8-OBS-1〜34、
+  監督判断 D-P8-A2.5-1〜10。
+
+### 改善 — test ・guard（凍結の登録だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: `PHASE8_DOCS` に本書、A2 の凍結の anchor `P8_A2` と `PHASE8_A2_RUNTIME`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、A1 ／ A2 の runtime と A2 の契約が `P8_A2` と byte 一致する
+  guard。
+
+### 修正
+
+- なし
+
 ## v5.52 (2026-09-27) — Phase 8 P8-A2 PIT market ／ fundamental observation foundation（観測の意味論だけ。合成 data）
 
 Phase 8 の PIT 観測の基盤。どの Security ／ Issuer の、どの日 ／ 期間の、どの出所の値が、いつ知り得たかを表す。**派生指標 ・
