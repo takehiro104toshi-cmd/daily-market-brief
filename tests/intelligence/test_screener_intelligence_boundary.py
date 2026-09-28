@@ -27,7 +27,8 @@ import pytest
 from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION, PHASE7_EXCLUDED_PATHSPECS,
                                                         PHASE7_RUNTIME, is_phase7_addition)
 from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A1R, P8_A2, P8_A2_5, P8_V,
-                                                        P8_LV1, P8_PILOT1, P8_A2R, P8_A2RI, P8_A2RV, P8_A3A, P8_VR,
+                                                        P8_LV1, P8_PILOT1, P8_A2R, P8_A2RI, P8_A2RV, P8_A3A, P8_A3B,
+                                                        P8_VR,
                                                         PHASE7_TEST_REGISTRATION, PHASE8_A1R_RUNTIME, PHASE8_A1_RUNTIME,
                                                         PHASE8_A2R_RUNTIME, PHASE8_A2_RUNTIME, PHASE8_A3A_RUNTIME,
                                                         PHASE8_A3B_METRIC_MODEL_REGISTRATION, PHASE8_A3B_RUNTIME,
@@ -77,6 +78,7 @@ A2RV_DOC = "docs/databank/PHASE8_A2R_OFFICIAL_SPEC_VERIFICATION.md"
 A2RI_DOC = "docs/databank/PHASE8_A2R_IMPLEMENTATION.md"
 A3A_DOC = "docs/databank/PHASE8_A3A_FUNDAMENTAL_METRICS.md"
 A3B_DOC = "docs/databank/PHASE8_A3B_NET_MARGIN_ROA.md"
+A3R_DOC = "docs/databank/PHASE8_A3R_REAL_DATA_BRIDGE_DESIGN.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -368,7 +370,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
     assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC), ("A", A1R_DOC),
                     ("A", LV1_DOC), ("A", PILOT1_DOC),
-                    ("A", A2R_DOC), ("A", A2RV_DOC), ("A", A2RI_DOC), ("A", A3A_DOC), ("A", A3B_DOC)}
+                    ("A", A2R_DOC), ("A", A2RV_DOC), ("A", A2RI_DOC), ("A", A3A_DOC), ("A", A3B_DOC), ("A", A3R_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -382,7 +384,7 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
     assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC, A1R_DOC, LV1_DOC, PILOT1_DOC, A2R_DOC,
-            A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC} <= set(PHASE8_DOCS)
+            A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC} <= set(PHASE8_DOCS)
     assert PHASE8_A1R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1R_MODULES)
     assert PHASE8_A2R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A2R_MODULES)
     assert PHASE8_A3A_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A3A_MODULES)
@@ -602,7 +604,7 @@ def test_lv1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
     prior_docs = tuple(path for path in PHASE8_DOCS
-                       if path not in (LV1_DOC, PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
+                       if path not in (LV1_DOC, PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 7
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A1R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -619,7 +621,7 @@ def test_pilot1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
     prior_docs = tuple(path for path in PHASE8_DOCS
-                       if path not in (PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
+                       if path not in (PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 8 and LV1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_LV1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -635,7 +637,8 @@ def test_a2r_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS
+                       if path not in (A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 9 and PILOT1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_PILOT1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -651,7 +654,7 @@ def test_a2rv_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 10 and {PILOT1_DOC, A2R_DOC} <= set(prior_docs)
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A2R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -667,7 +670,7 @@ def test_a2ri_the_pre_a2r_runtime_phase8_tests_and_prior_documents_are_byte_iden
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RI_DOC, A3A_DOC, A3B_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
     assert len(PRE_A2R_RUNTIME) == 10 and len(frozen_tests) == 3 and len(prior_docs) == 11
     assert A2RV_DOC in prior_docs and A2R_DOC in prior_docs and PILOT1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
@@ -685,7 +688,7 @@ def test_a3a_the_pre_a3a_runtime_phase8_tests_and_prior_documents_are_byte_ident
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         A3A_TEST, A3B_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3A_DOC, A3B_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3A_DOC, A3B_DOC, A3R_DOC))
     assert len(PRE_A3A_RUNTIME) == 13 and len(frozen_tests) == 4 and len(prior_docs) == 12
     assert A2R_TEST in frozen_tests and A2RI_DOC in prior_docs
     for path in (*PRE_A3A_RUNTIME, *frozen_tests, *prior_docs):
@@ -749,7 +752,7 @@ def test_a3b_the_pre_a3b_runtime_phase8_tests_and_prior_documents_are_byte_ident
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         A3B_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path != A3B_DOC)
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3B_DOC, A3R_DOC))
     byte_identical = tuple(path for path in PRE_A3B_RUNTIME if path != METRIC_MODEL)
     assert len(PRE_A3B_RUNTIME) == 15 and len(byte_identical) == 14 and len(frozen_tests) == 5
     assert len(prior_docs) == 13 and A3A_TEST in frozen_tests and A3A_DOC in prior_docs
@@ -827,3 +830,19 @@ def test_a2ri_the_semantics_vocabulary_is_closed_and_has_no_evaluative_member() 
     assert set(sg.AppendEligibility) == {sg.AppendEligibility.ELIGIBLE, sg.AppendEligibility.HOLD}
     assert not set(sg.AppendPlan.__dataclass_fields__) & {"score", "rank", "weight", "recommendation", "record_id",
                                                           "metric"}
+
+
+# ================================================================ P8-A3R（A3B の凍結。設計だけの gate）
+
+
+def test_a3r_all_phase8_runtime_tests_and_prior_documents_are_byte_identical_to_the_a3b_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A3B, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
+        "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py"))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path != A3R_DOC)
+    assert len(PHASE8_RUNTIME) == 16 and len(frozen_tests) == 6 and len(prior_docs) == 14
+    for path in (*PHASE8_RUNTIME, *frozen_tests, *prior_docs):
+        assert _git("show", f"{P8_A3B}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_A3B, "--", "src", *frozen_tests, *prior_docs) == ""
+    assert _git("status", "--porcelain", "--", "src", *frozen_tests, *prior_docs) == ""
+    assert not _git("ls-tree", P8_A3B, "--", A3R_DOC).strip()

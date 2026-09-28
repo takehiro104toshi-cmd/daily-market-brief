@@ -43,6 +43,8 @@ P8_A2RI = "4d3540cf209b5fb0a99fc6c5e32ba17c35f21ae8"
 #: P8-A3A の凍結 anchor（A1 ・A2 ・A1R ・A2R ・A3A の runtime ・Phase 8 の test ・先行の文書はここと byte 一致。P8-A3B で登録。
 #: `metric_model` だけは P8-A3B の enum の 4 行の追加を許す ＝ PHASE8_A3B_METRIC_MODEL_REGISTRATION）
 P8_A3A = "84c2d52f59d573d6f558f64fbbd1589fe97ecf24"
+#: P8-A3B の凍結 anchor（Phase 8 の runtime 16 module ・Phase 8 の test ・先行の文書はここと byte 一致。P8-A3R で登録）
+P8_A3B = "d8845f2b063f15dc8629245ec276019d6314cf7a"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -102,7 +104,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_A2R_OFFICIAL_SPEC_VERIFICATION.md",
                                 "docs/databank/PHASE8_A2R_IMPLEMENTATION.md",
                                 "docs/databank/PHASE8_A3A_FUNDAMENTAL_METRICS.md",
-                                "docs/databank/PHASE8_A3B_NET_MARGIN_ROA.md")
+                                "docs/databank/PHASE8_A3B_NET_MARGIN_ROA.md",
+                                "docs/databank/PHASE8_A3R_REAL_DATA_BRIDGE_DESIGN.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -167,7 +170,7 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
-           "P8_A2_5", "P8_A3A", "P8_V", "P8_VR",
+           "P8_A2_5", "P8_A3A", "P8_A3B", "P8_V", "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",
            "PHASE8_DOCS",

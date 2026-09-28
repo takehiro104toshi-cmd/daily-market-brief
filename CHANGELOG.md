@@ -4,6 +4,34 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.64 (2026-09-28) — Phase 8 P8-A3R real-data bridge foundation audit & design（設計 ・監査だけ。runtime の変更なし）
+
+実の J-Quants Light の data を凍結した Phase 8 の pipeline（A1 → A2 → A2R → A3A ／ A3B）に流すために要る橋を監査 ・設計した。
+runtime ・adapter ・store ・executor ・identity の登録 ・実データの pilot ・J-Quants の data API への要求は無い。
+
+### 追加 — `docs/databank/PHASE8_A3R_REAL_DATA_BRIDGE_DESIGN.md`【新規】
+
+- 既存 repo の再利用の監査（credential の解決 ・scrub ・raw store は REQUIRES_WRAPPER、legacy の normalizer ・canonical store ・
+  Fact builder は UNSAFE_FOR_P8、TOPIX ・P5 は OUT_OF_SCOPE）。
+- identity の bootstrap（機械の候補 ＋ 人の一括の審査。anchor `p8boot<n>:<kind>.<Code>`。D0 より前を作らない。code の変更 ・廃止 ・
+  再上場は人の審査 ／ fail closed）、provider の record の identity（自然 key ＋ digest。DiscNo 単独を鍵にしない）、知識の時刻の 2 軸
+  （TDnet の開示日時 ＝ A2 の知識 ／ 取得の時刻 ＝ event）、4 欄の写し、通貨の方針（JP_GAAP だけ → 公式の除外つきの円の既定）。
+- 注記 store ・HOLD store（`HeldObservation`）・append の executor（渡された plan を信用せず全部を再導出）の設計。
+- 利用規約の境界（公式 FAQ。私的利用 ・生 data の非配布 ・本人だけの保存 ・解約時の削除 ・**継続反復の第三者への提供は私的利用でない**）。
+  public な repository ・Pages の project への帰結は REQUIRES_HUMAN_CONFIRMATION（P8-OBS-58 ・59）。
+- 最初の実データの pilot の設計（1〜3 発行体 ・8 要求 ・raw は memory ・private の data root だけ。実行しない）、成功の基準、
+  所見の登録の更新、監督の決定 D1〜D8、実装の順。
+
+### 改善 — test ・guard（文書の登録と凍結の証明だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: 本書の登録、anchor `P8_A3B`（`d8845f2`）。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、Phase 8 の runtime 16 module ・6 test ・先行の 14 文書が
+  `P8_A3B` と byte 一致する guard（1 件）。
+
+### 修正
+
+- なし
+
 ## v5.63 (2026-09-28) — Phase 8 P8-A3B net margin + ROA（時点の分母）（A3A の architecture の再利用）
 
 凍結した A3A の上に純利益率と ROA（時点の分母）だけを足した。脚の解決 ・A2R の互換 ・Decimal の比 ・結果の組み立ては A3A の
