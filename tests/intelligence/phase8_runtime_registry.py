@@ -26,14 +26,21 @@ P8_A2 = "b686b008fe240eeb115b6c485ac4c5c642ebe2c9"
 P8_A2_5 = "5713a563e218d2b6065090343eeff7dee8f9b568"
 #: P8-V の凍結 anchor（runtime と A2.5 ・P8-V の文書はここと byte 一致。P8-VR で登録）
 P8_V = "fc91ee17d3ad32bf0ab04b4ea49e2b2c47fa9ba4"
+#: P8-VR の凍結 anchor（A1 ／ A2 の runtime と先行の Phase 8 の文書はここと byte 一致。P8-A1R で登録）
+P8_VR = "7b8d3757f3cfb0cc80749d36b05aa401ae237b1e"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
-#: P8-A2: observation_model / observation_resolver / observation_store）
+#: P8-A2: observation_model / observation_resolver / observation_store、
+#: P8-A1R: identity_correction_model / identity_correction_store / identity_remediation_resolver）
 PHASE8_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "__init__", "identity_model", "identity_resolver", "identity_store"))
 PHASE8_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
-    "__init__", "identity_model", "identity_resolver", "identity_store", "observation_model", "observation_resolver",
+    "__init__", "identity_correction_model", "identity_correction_store", "identity_model",
+    "identity_remediation_resolver", "identity_resolver", "identity_store", "observation_model", "observation_resolver",
     "observation_store"))
+#: P8-A1R で足した runtime（A1 ／ A2 の module は変えない拡張）
+PHASE8_A1R_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
+    "identity_correction_model", "identity_correction_store", "identity_remediation_resolver"))
 #: `P8_A2` で凍結した runtime（A1 ＋ A2 の 7 module）
 PHASE8_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "__init__", "identity_model", "identity_resolver", "identity_store", "observation_model", "observation_resolver",
@@ -41,6 +48,7 @@ PHASE8_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for nam
 #: 登録済みの Phase 8 の test（追加だけ）
 PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py",
                                  "tests/intelligence/test_screener_identity.py",
+                                 "tests/intelligence/test_screener_identity_remediation.py",
                                  "tests/intelligence/test_screener_intelligence_boundary.py",
                                  "tests/intelligence/test_screener_observation.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
@@ -49,7 +57,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md",
                                 "docs/databank/PHASE8_JQUANTS_REAL_DATA_MAPPING_AUDIT.md",
                                 "docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md",
-                                "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md")
+                                "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md",
+                                "docs/databank/PHASE8_IDENTITY_REMEDIATION_CONTRACT.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -113,6 +122,6 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A2", "P8_A2_5", "P8_V", "PHASE7_TEST_REGISTRATION",
-           "PHASE8_A1_RUNTIME", "PHASE8_A2_RUNTIME", "PHASE8_DOCS", "PHASE8_PACKAGE", "PHASE8_RUNTIME", "PHASE8_TESTS",
-           "is_phase8_addition", "only_phase8_registration", "registration_diff"]
+__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A2", "P8_A2_5", "P8_V", "P8_VR", "PHASE7_TEST_REGISTRATION",
+           "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2_RUNTIME", "PHASE8_DOCS", "PHASE8_PACKAGE",
+           "PHASE8_RUNTIME", "PHASE8_TESTS", "is_phase8_addition", "only_phase8_registration", "registration_diff"]

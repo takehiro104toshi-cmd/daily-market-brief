@@ -4,6 +4,44 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.56 (2026-09-28) — Phase 8 P8-A1R identity correction ＋ retrospective resolution（追記専用の是正。合成 data だけ）
+
+identity の authority に、追記専用の訂正（無効化 ／ 置き換え）と 2 つの時間軸の解決（STRICT_KNOWLEDGE ／ RETROSPECTIVE_AUTHORITY）を
+足した。**A1 ／ A2 の runtime は 1 byte も変えない拡張**（A1 の record ・検査 ・resolver を再利用）。実の identity の登録 ・bootstrap の
+実行 ・J-Quants ・screen ・指標 ・Theme ・LLM は無い。Phase 6 ／ 7 ・config.yaml は不変。
+
+### 追加 — runtime（`src/intelligence/screener_intelligence/`）
+
+- `identity_correction_model.py`【新規】: 原始の訂正 2 種（`INVALIDATE_RECORD` ・`SUPERSEDE_RECORD`。置き換えは A1 の record の型）、人の
+  審査の出所（審査者の種類 ・審査の時刻 ・有界の証拠。HUMAN だけ）、決定論の訂正の鎖（欠落 ・未来 ・自己 ・循環 ・競合 ・種類 ・id の
+  変更 ・A1 の不変条件の破れを拒否。append 順で最新が勝たない）、知識を固定した authority の像（A1 の不変条件で検査し直す）、内容
+  address の authority の版。
+- `identity_correction_store.py`【新規】: `<data_root>/screener_intelligence/identity_corrections.jsonl` の追記専用 store（A1 の journal と
+  別。A1 と同じ fail closed の規律。A1 の authority は read-only で読むだけ。SQLite なし）。
+- `identity_remediation_resolver.py`【新規】: 2 軸の解決。STRICT が既定、RETROSPECTIVE は明示の mode と `effective_at` ・`authority_as_of`
+  の両方が必須で、遡及の印 ・「後で選んだ審査済みの authority の像による（事実の主張ではない）」の読み方 ・版 ・使った record ・
+  訂正の鎖を返す。版の固定の再生、coverage は両 mode で必須。status に CORRECTION_CONFLICT ・AUTHORITY_VERSION_MISMATCH。
+
+### 追加 ／ 改善 — test ・guard
+
+- `tests/intelligence/test_screener_identity_remediation.py`【新規】: matrix A〜BS（訂正の無い STRICT は凍結の A1 と byte 一致を
+  15 の問い合わせ × 11 の cutoff で確かめる。A2 の観測 ・主語の authority は不変）。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: A1R の module の import の許可一覧 ・A1 の名前の完全一致 ・A2 を使わない ・
+  closure ・store の書き込み経路 ・screen ／ 派生指標の名前なし ・統合 ／ 分割の語彙なし、A1 ／ A2 の runtime と先行の Phase 8 の文書が
+  `7b8d375` と byte 一致。
+- `tests/intelligence/phase8_runtime_registry.py`: A1R の runtime 3 ・test 1 ・文書 1 の完全一致の path と P8-VR の anchor。Phase 6 ／ 7 の
+  test は無変更（registry を通して読む）。
+
+### 追加 — `docs/databank/PHASE8_IDENTITY_REMEDIATION_CONTRACT.md`【新規】
+
+28 節の契約（目的 ・2 つの時間軸 ・mode ・STRICT ・RETROSPECTIVE ・authority_as_of ・版 ・訂正の record ・無効化 ・置き換え ・対応の訂正 ・
+識別子の訂正 ・継続 ・統合 ・分割の境界 ・人の governance ・出所 ・訂正の鎖 ・coverage ・status ・A1 との互換 ・A2 の境界 ・bootstrap ・store ・
+security ・規約 ／ 削除の境界 ・延期 ・凍結の方針）。
+
+### 修正
+
+- なし
+
 ## v5.55 (2026-09-28) — Phase 8 P8-VR J-Quants verification remediation（証拠の整理だけ。実装なし）
 
 P8-V（部分の確認の記録。`fc91ee1` で凍結）を、監督が確かめた公式の JPX の証拠 SV-01〜SV-08 で突き合わせ直した。個人向けの

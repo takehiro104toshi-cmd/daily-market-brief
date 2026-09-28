@@ -9,6 +9,8 @@
 - P8-A2.5: A1 ／ A2 の runtime と A2 の契約は `b686b00` と byte 一致（監査の文書は registry に登録）。
 - P8-V: runtime と A2.5 の監査の文書は `5713a56` と byte 一致（公式の仕様の確認の文書は registry に登録）。
 - P8-VR: runtime と A2.5 ・P8-V の文書は `fc91ee1` と byte 一致（確認の是正の文書は registry に登録）。
+- P8-A1R: 訂正 ・2 軸の解決の module は許可一覧どおり（A1 の名前は決まったものだけ。A2 を使わない）、A1 ／ A2 の runtime と
+  先行の Phase 8 の文書は `7b8d375` と byte 一致。
 
 registry: `tests/intelligence/phase8_runtime_registry.py`。契約: `docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md`。
 """
@@ -24,8 +26,9 @@ import pytest
 
 from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION, PHASE7_EXCLUDED_PATHSPECS,
                                                         PHASE7_RUNTIME, is_phase7_addition)
-from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A2, P8_A2_5, P8_V,
-                                                        PHASE7_TEST_REGISTRATION, PHASE8_A1_RUNTIME, PHASE8_A2_RUNTIME,
+from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A2, P8_A2_5, P8_V, P8_VR,
+                                                        PHASE7_TEST_REGISTRATION, PHASE8_A1R_RUNTIME, PHASE8_A1_RUNTIME,
+                                                        PHASE8_A2_RUNTIME,
                                                         PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
                                                         is_phase8_addition, only_phase8_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
@@ -33,11 +36,13 @@ from tests.intelligence.test_prediction_record import executable_source, importe
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE8_PACKAGE
-MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store", "observation_model",
+MODULES = ("__init__", "identity_correction_model", "identity_correction_store", "identity_model",
+           "identity_remediation_resolver", "identity_resolver", "identity_store", "observation_model",
            "observation_resolver", "observation_store")
 A1_MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store")
 A2_MODULES = ("observation_model", "observation_resolver", "observation_store")
-IO_MODULES = ("identity_store", "observation_store")
+A1R_MODULES = ("identity_correction_model", "identity_correction_store", "identity_remediation_resolver")
+IO_MODULES = ("identity_store", "observation_store", "identity_correction_store")
 PHASE7_FINAL = "c1e95d35026652fb27c637318593fa8688219cf7"
 PHASE6_COMPLETION = "5ef313a6a9477f05b4e46756fb8b79c0f0c3d685"
 A1_DOC = "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md"
@@ -45,6 +50,7 @@ A2_DOC = "docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md"
 A2_5_DOC = "docs/databank/PHASE8_JQUANTS_REAL_DATA_MAPPING_AUDIT.md"
 V_DOC = "docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md"
 VR_DOC = "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md"
+A1R_DOC = "docs/databank/PHASE8_IDENTITY_REMEDIATION_CONTRACT.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -65,6 +71,13 @@ ALLOWED_IMPORTS = {
                           ".observation_model"},
     "observation_resolver": {"__future__", "dataclasses", "datetime", "enum", "typing", ".identity_model",
                              ".identity_resolver", ".observation_model", ".observation_store", "..core.time"},
+    "identity_correction_model": {"__future__", "json", "re", "dataclasses", "datetime", "enum", "typing",
+                                  ".identity_model"} | _CORE,
+    "identity_correction_store": {"__future__", "os", "dataclasses", "enum", "pathlib", "typing",
+                                  ".identity_correction_model", ".identity_store"},
+    "identity_remediation_resolver": {"__future__", "dataclasses", "datetime", "enum", "typing",
+                                      ".identity_correction_model", ".identity_correction_store", ".identity_model",
+                                      ".identity_resolver", "..core.time"},
 }
 #: A2 が使ってよい A1 の名前（module → 名前。完全一致）。A1 の store ／ resolver の API は指名した module だけが使う
 SANCTIONED_A1_IMPORTS = {
@@ -76,6 +89,18 @@ SANCTIONED_A1_IMPORTS = {
                              ".identity_model": {"SourceClass", "SubjectKind", "canonical_json", "is_issuer_id",
                                                  "is_security_id"}},
 }
+#: A1R が使ってよい A1 の名前（module → 名前。完全一致）。A1 の store は訂正の store だけ、A1 の resolver は 2 軸の resolver だけ
+SANCTIONED_A1R_IMPORTS = {
+    "identity_correction_model": {".identity_model": {"AUTHORITY_RULES_VERSION", "CREDENTIAL_MARKERS", "SCHEMA_VERSION",
+                                                      "IdentityHistory", "IdentityHistoryError", "IdentityModelError",
+                                                      "RecordKind", "SourceClass", "canonical_json",
+                                                      "is_identity_record", "parse_identity_record"}},
+    "identity_correction_store": {".identity_store": {"IDENTITY_DIRNAME", "IdentityAuthorityMissing",
+                                                      "IdentityStoreCorrupt", "open_identity_history"}},
+    "identity_remediation_resolver": {".identity_model": {"RecordKind", "canonical_json"},
+                                      ".identity_resolver": {"DERIVED_NON_AUTHORITY_NON_PERSISTENT", "IdentityQuery",
+                                                             "IdentityResolution", "QueryKind", "resolve"}},
+}
 ALLOWED_CLOSURE = {"src", "src.intelligence", "src.intelligence.core", "src.intelligence.core.ids",
                    "src.intelligence.core.time", "src.intelligence.screener_intelligence"}
 EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store": {"identity_model"},
@@ -83,7 +108,11 @@ EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store
                      "observation_model": {"identity_model"},
                      "observation_store": {"identity_model", "identity_store", "observation_model"},
                      "observation_resolver": {"identity_model", "identity_store", "identity_resolver",
-                                              "observation_model", "observation_store"}}
+                                              "observation_model", "observation_store"},
+                     "identity_correction_model": {"identity_model"},
+                     "identity_correction_store": {"identity_model", "identity_store", "identity_correction_model"},
+                     "identity_remediation_resolver": {"identity_model", "identity_store", "identity_resolver",
+                                                       "identity_correction_model", "identity_correction_store"}}
 
 
 def _git(*args: str) -> str:
@@ -164,7 +193,8 @@ def test_ba_to_bg_no_clock_randomness_network_or_dynamic_code_and_io_only_in_the
 
 @pytest.mark.parametrize("store,expected", [
     ("identity_store", {"__init__": {"ab", "mkdir"}, "append": {"ab", "write", "fsync"}}),
-    ("observation_store", {"__init__": {"ab"}, "append": {"ab", "write", "fsync"}})])
+    ("observation_store", {"__init__": {"ab"}, "append": {"ab", "write", "fsync"}}),
+    ("identity_correction_store", {"__init__": {"ab"}, "append": {"ab", "write", "fsync"}})])
 def test_ba_to_bg_the_store_writes_only_through_append_and_initialize(store: str, expected: dict) -> None:
     tree = ast.parse((PACKAGE_DIR / f"{store}.py").read_text(encoding="utf-8"))
     writers = {}
@@ -186,7 +216,7 @@ SCREENING_WORDS = ("screen", "criterion", "criteria", "candidate_result", "rank"
                    "portfolio", "thesis", "theme", "exposure", "beneficiar", "narrative", "forecast", "price", "fundamental")
 
 
-@pytest.mark.parametrize("name,path", [(n, p) for n, p in _sources() if n in A1_MODULES])
+@pytest.mark.parametrize("name,path", [(n, p) for n, p in _sources() if n in A1_MODULES + A1R_MODULES])
 def test_bh_bi_bj_no_screening_score_rank_or_theme_types(name: str, path: Path) -> None:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     defined = {node.name.lower() for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
@@ -253,7 +283,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
                if not is_phase8_addition(line[:2].strip(), line[3:])]
     assert pending == []
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
-    assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC)}
+    assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC), ("A", A1R_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -266,7 +296,9 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     assert ADDITION_STATUSES == ("A", "??")
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
-    assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC} <= set(PHASE8_DOCS)
+    assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC, A1R_DOC} <= set(PHASE8_DOCS)
+    assert PHASE8_A1R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1R_MODULES)
+    assert set(PHASE8_RUNTIME) == set(PHASE8_A2_RUNTIME) | set(PHASE8_A1R_RUNTIME)
     assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
     assert PHASE8_A2_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in sorted((*A1_MODULES, *A2_MODULES)))
     assert set(PHASE7_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
@@ -418,3 +450,53 @@ def test_vr_the_runtime_and_the_a2_5_and_v_records_are_byte_identical_to_the_v_a
         assert _git("show", f"{P8_V}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
     assert _git("diff", "--name-status", P8_V, "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC, A2_5_DOC, V_DOC) == ""
     assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, A2_5_DOC, V_DOC) == ""
+
+
+# ================================================================ P8-A1R（訂正 ・2 軸の解決の境界 ／ 凍結）
+
+
+def test_a1r_az_bs_a1_a2_runtime_and_prior_phase8_documents_are_byte_identical_to_the_vr_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_VR, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    prior_docs = (A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC)
+    for path in (*PHASE8_A2_RUNTIME, *prior_docs):
+        assert _git("show", f"{P8_VR}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_VR, "--", *PHASE8_A2_RUNTIME, *prior_docs) == ""
+    assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, *prior_docs) == ""
+
+
+@pytest.mark.parametrize("name", A1R_MODULES)
+def test_a1r_the_remediation_modules_use_exactly_the_sanctioned_a1_names_and_never_a2(name: str) -> None:
+    imports = _from_imports(PACKAGE_DIR / f"{name}.py")
+    a1_imports = {module: names for module, names in imports.items()
+                  if module in (".identity_model", ".identity_store", ".identity_resolver")}
+    assert a1_imports == SANCTIONED_A1R_IMPORTS[name]
+    assert not any(module.startswith(".observation_") for module in imports)             # A2 を使わない
+    for module in (*A1_MODULES, *A2_MODULES):                                             # A1 ／ A2 は A1R を知らない
+        if module != "__init__":
+            used = _from_imports(PACKAGE_DIR / f"{module}.py")
+            assert not any(m in (".identity_correction_model", ".identity_correction_store",
+                                 ".identity_remediation_resolver") for m in used), module
+
+
+@pytest.mark.parametrize("name", A1R_MODULES)
+def test_a1r_bk_bl_no_derived_metric_screening_ranking_theme_or_latest_names(name: str) -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"))
+    defined = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
+    targets = {t.id for node in ast.walk(tree) if isinstance(node, (ast.Assign, ast.AnnAssign))
+               for t in (node.targets if isinstance(node, ast.Assign) else [node.target]) if isinstance(t, ast.Name)}
+    words = set().union(*(_words(item) for item in defined | targets))
+    assert not words & DERIVED_TOKENS, (name, words & DERIVED_TOKENS)
+    constants = {node.value for node in ast.walk(tree) if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    assert not constants & DERIVED_MEMBERS, constants & DERIVED_MEMBERS
+
+
+def test_a1r_the_remediation_vocabulary_has_no_evaluative_merge_or_split_member() -> None:
+    from src.intelligence.screener_intelligence import identity_correction_model as cm
+    from src.intelligence.screener_intelligence import identity_remediation_resolver as rr
+    members = {member.value for enum in (cm.CorrectionAction, cm.CorrectionReason, cm.ReviewerClass,
+                                         rr.ResolutionMode, rr.RemediationStatus) for member in enum}
+    for word in ("RANK", "SCORE", "BUY", "SELL", "TOP", "BEST", "CANDIDATE", "THEME", "EXPOSURE", "LATEST", "MERGE",
+                 "SPLIT", "SPIN"):
+        assert not any(word in value for value in members), word
+    assert set(cm.CorrectionAction) == {cm.CorrectionAction.INVALIDATE_RECORD, cm.CorrectionAction.SUPERSEDE_RECORD}
+    assert set(rr.ResolutionMode) == {rr.ResolutionMode.STRICT_KNOWLEDGE, rr.ResolutionMode.RETROSPECTIVE_AUTHORITY}
