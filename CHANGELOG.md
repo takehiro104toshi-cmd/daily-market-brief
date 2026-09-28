@@ -4,6 +4,32 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.59 (2026-09-28) — Phase 8 P8-A2R J-Quants semantic remediation（公式の仕様の確認 ・設計の記録。実装なし）
+
+PILOT1 で見つかった A2 と J-Quants Light の意味の隔たり（会計基準 ・連結 ／ 単体 ・予想の修正）を扱う gate。公式の host は本 session の
+egress policy で拒否され（2026-09-28。各 1 回、迂回なし）、公式の本文は 0 ページ。監督指示に従い **A2 の remediation は実装せず**
+BLOCKER として停止した。A1 ／ A2 ／ A1R の runtime ・Phase 4〜7 ・PILOT1 の report ・先行の文書は不変。J-Quants への追加の要求は 0 回。
+
+### 追加 — `docs/databank/PHASE8_A2R_JQUANTS_SEMANTIC_REMEDIATION.md`【新規】
+
+- 公式の出所の台帳（すべて DOC_ACCESS_BLOCKED）、文書と観測の matrix（DOCUMENTED 0 件）。
+- 意味の隔たり G1〜G9（中心は、財務の観測の slot の identity に会計基準が無く、違う基準の値が同じ slot の revision としてしか
+  入れない事）、監督の policy lock D-P8-A2R-1〜8。
+- 選択肢 A〜D の比較と、選んだ設計 Option D（canonical の意味の metadata の record ＋ provider の写しの provenance の record。A2 は
+  変えない追加だけ）。実装は公式の確認の後。
+- P8-OBS-50: BLOCKED_ON_OFFICIAL_SPEC。A3 の準備度（財務の指標はすべて BLOCKED、売上成長率 ・営業利益率は開始できない）。
+- 判定: P8_A2R_OFFICIAL_SPEC_BLOCKER。
+
+### 改善 — test ・guard（文書の登録と凍結の証明だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: `PHASE8_DOCS` に本書、P8-PILOT1 の凍結の anchor `P8_PILOT1`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、runtime ・Phase 8 の test ・先行の文書（PILOT1 の report を
+  含む）が `P8_PILOT1` と byte 一致する guard。
+
+### 修正
+
+- なし
+
 ## v5.58 (2026-09-28) — Phase 8 P8-PILOT1 J-Quants Light `/fins/summary` minimal real-response observation（read-only。実装なし）
 
 監督の再発行した P8-PILOT1 の契約で、`/v2/fins/summary` の実の応答を 3 回（上限 5 回。すべて 200）だけ観測した。credential は

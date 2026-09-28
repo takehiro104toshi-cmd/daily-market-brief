@@ -32,6 +32,8 @@ P8_VR = "7b8d3757f3cfb0cc80749d36b05aa401ae237b1e"
 P8_A1R = "e6a750f54dc83e482e649dc65dd0d5131fb9991d"
 #: P8-LV1 の凍結 anchor（runtime ・Phase 8 の test ・先行の Phase 8 の文書はここと byte 一致。P8-PILOT1 で登録）
 P8_LV1 = "7281d532937f6f68e4b3ecb839506b2616794362"
+#: P8-PILOT1 の凍結 anchor（runtime ・Phase 8 の test ・先行の Phase 8 の文書はここと byte 一致。P8-A2R で登録）
+P8_PILOT1 = "cbf86cc10ec3d9ce9ff9cc3dd731e49ba0d43328"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -64,7 +66,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md",
                                 "docs/databank/PHASE8_IDENTITY_REMEDIATION_CONTRACT.md",
                                 "docs/databank/PHASE8_JQUANTS_LIGHT_MINIMUM_FIELD_CONTRACT.md",
-                                "docs/databank/PHASE8_JQUANTS_LIGHT_PILOT1_REPORT.md")
+                                "docs/databank/PHASE8_JQUANTS_LIGHT_PILOT1_REPORT.md",
+                                "docs/databank/PHASE8_A2R_JQUANTS_SEMANTIC_REMEDIATION.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -128,7 +131,7 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_A2_5", "P8_V", "P8_VR",
+__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2_5", "P8_V", "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2_RUNTIME", "PHASE8_DOCS",
            "PHASE8_PACKAGE", "PHASE8_RUNTIME", "PHASE8_TESTS", "is_phase8_addition", "only_phase8_registration",
            "registration_diff"]
