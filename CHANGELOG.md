@@ -4,6 +4,32 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.58 (2026-09-28) — Phase 8 P8-PILOT1 J-Quants Light `/fins/summary` minimal real-response observation（read-only。実装なし）
+
+監督の再発行した P8-PILOT1 の契約で、`/v2/fins/summary` の実の応答を 3 回（上限 5 回。すべて 200）だけ観測した。credential は
+Cloud Environment の proxy の注入（値は読まない）。raw の応答は memory の中だけで使い、保存していない。runtime ・adapter ・A2R ・A3 ・
+実データの永続化 ・実の identity の登録は無い。runtime ・A1 ／ A2 ／ A1R ・先行の Phase 8 の文書（LV1 を含む）は不変。
+
+### 追加 — `docs/databank/PHASE8_JQUANTS_LIGHT_PILOT1_REPORT.md`【新規】
+
+- 要求の台帳（標本は repo の既存の code と、機械的に選んだ 2 日の横断。technical schema observation only）、応答の形（111 欄 ・値は
+  文字列 ・欠損は `""` だけ）、欄の一覧、`DocType` ・`CurPerType` の観測した token。
+- 観測の matrix（開示の identity ／ 時刻 ・期間 ・実績 ・予想 ・単位 ／ 表現 ・会計基準 ／ 連結の区分）。`OP` あり ・`OperatingProfit`
+  なし（P8-OBS-48）、記録の欄は網羅でない（P8-OBS-49）、通貨 ・桁の欄は NOT_OBSERVED。
+- P8-OBS-50: PARTIALLY_RESOLVED（`DocType` の別の token として区別できるが、専用の欄なし ・文法は未確認 ・予想の修正の行に無い）。
+  LV1 の変更の候補（接頭辞の無い欄 ＝ 連結は `NonConsolidated` の行で成り立たない）、P8-A2R は SUPERVISOR_DECISION_REQUIRED（提案）。
+- 判定: P8_PILOT1_COMPLETE / READY_FOR_SUPERVISOR_REVIEW。
+
+### 改善 — test ・guard（文書の登録と凍結の証明だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: `PHASE8_DOCS` に本書、P8-LV1 の凍結の anchor `P8_LV1`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、runtime ・Phase 8 の test ・先行の文書が `P8_LV1` と byte 一致する
+  guard。
+
+### 修正
+
+- なし
+
 ## v5.57 (2026-09-28) — Phase 8 P8-LV1 J-Quants Light minimum field contract（売上 ・営業利益の経路だけ。実装なし）
 
 最初の実データの経路（売上成長率 ・営業利益率）に要る、個人向けの J-Quants API（Light）の欄の意味だけを確かめる狭い仕様の gate。

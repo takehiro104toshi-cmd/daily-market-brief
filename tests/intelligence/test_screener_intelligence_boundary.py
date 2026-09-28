@@ -27,7 +27,7 @@ import pytest
 from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION, PHASE7_EXCLUDED_PATHSPECS,
                                                         PHASE7_RUNTIME, is_phase7_addition)
 from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A1R, P8_A2, P8_A2_5, P8_V,
-                                                        P8_VR,
+                                                        P8_LV1, P8_VR,
                                                         PHASE7_TEST_REGISTRATION, PHASE8_A1R_RUNTIME, PHASE8_A1_RUNTIME,
                                                         PHASE8_A2_RUNTIME,
                                                         PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
@@ -53,6 +53,7 @@ V_DOC = "docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md"
 VR_DOC = "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md"
 A1R_DOC = "docs/databank/PHASE8_IDENTITY_REMEDIATION_CONTRACT.md"
 LV1_DOC = "docs/databank/PHASE8_JQUANTS_LIGHT_MINIMUM_FIELD_CONTRACT.md"
+PILOT1_DOC = "docs/databank/PHASE8_JQUANTS_LIGHT_PILOT1_REPORT.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -286,7 +287,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
     assert pending == []
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
     assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC), ("A", A1R_DOC),
-                    ("A", LV1_DOC)}
+                    ("A", LV1_DOC), ("A", PILOT1_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -299,7 +300,7 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     assert ADDITION_STATUSES == ("A", "??")
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
-    assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC, A1R_DOC, LV1_DOC} <= set(PHASE8_DOCS)
+    assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC, A1R_DOC, LV1_DOC, PILOT1_DOC} <= set(PHASE8_DOCS)
     assert PHASE8_A1R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1R_MODULES)
     assert set(PHASE8_RUNTIME) == set(PHASE8_A2_RUNTIME) | set(PHASE8_A1R_RUNTIME)
     assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
@@ -512,9 +513,24 @@ def test_lv1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A1R, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py"))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path != LV1_DOC)
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (LV1_DOC, PILOT1_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 7
     for path in (*PHASE8_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A1R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
     assert _git("diff", "--name-status", P8_A1R, "--", *PHASE8_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("status", "--porcelain", "--", *PHASE8_RUNTIME, *frozen_tests, *prior_docs) == ""
+
+
+# ================================================================ P8-PILOT1（LV1 の凍結）
+
+
+def test_pilot1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_the_lv1_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_LV1, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
+        "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py"))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path != PILOT1_DOC)
+    assert len(frozen_tests) == 3 and len(prior_docs) == 8 and LV1_DOC in prior_docs
+    for path in (*PHASE8_RUNTIME, *frozen_tests, *prior_docs):
+        assert _git("show", f"{P8_LV1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_LV1, "--", *PHASE8_RUNTIME, *frozen_tests, *prior_docs) == ""
     assert _git("status", "--porcelain", "--", *PHASE8_RUNTIME, *frozen_tests, *prior_docs) == ""
