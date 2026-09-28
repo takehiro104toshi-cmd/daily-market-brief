@@ -8,6 +8,7 @@
   指名した module が決まった名前だけを使う）、派生指標 ・screen ・順位 ・Theme の型 ／ 語彙が無い。
 - P8-A2.5: A1 ／ A2 の runtime と A2 の契約は `b686b00` と byte 一致（監査の文書は registry に登録）。
 - P8-V: runtime と A2.5 の監査の文書は `5713a56` と byte 一致（公式の仕様の確認の文書は registry に登録）。
+- P8-VR: runtime と A2.5 ・P8-V の文書は `fc91ee1` と byte 一致（確認の是正の文書は registry に登録）。
 
 registry: `tests/intelligence/phase8_runtime_registry.py`。契約: `docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md`。
 """
@@ -23,7 +24,7 @@ import pytest
 
 from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION, PHASE7_EXCLUDED_PATHSPECS,
                                                         PHASE7_RUNTIME, is_phase7_addition)
-from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A2, P8_A2_5,
+from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A2, P8_A2_5, P8_V,
                                                         PHASE7_TEST_REGISTRATION, PHASE8_A1_RUNTIME, PHASE8_A2_RUNTIME,
                                                         PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
                                                         is_phase8_addition, only_phase8_registration)
@@ -43,6 +44,7 @@ A1_DOC = "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md"
 A2_DOC = "docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md"
 A2_5_DOC = "docs/databank/PHASE8_JQUANTS_REAL_DATA_MAPPING_AUDIT.md"
 V_DOC = "docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md"
+VR_DOC = "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -251,7 +253,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
                if not is_phase8_addition(line[:2].strip(), line[3:])]
     assert pending == []
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
-    assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC)}
+    assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -264,7 +266,7 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     assert ADDITION_STATUSES == ("A", "??")
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
-    assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC} <= set(PHASE8_DOCS)
+    assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC} <= set(PHASE8_DOCS)
     assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
     assert PHASE8_A2_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in sorted((*A1_MODULES, *A2_MODULES)))
     assert set(PHASE7_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
@@ -405,3 +407,14 @@ def test_v_the_runtime_and_the_a2_5_audit_are_byte_identical_to_the_a2_5_anchor(
         assert _git("show", f"{P8_A2_5}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
     assert _git("diff", "--name-status", P8_A2_5, "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC, A2_5_DOC) == ""
     assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, A2_5_DOC) == ""
+
+
+# ================================================================ P8-VR（P8-V の凍結）
+
+
+def test_vr_the_runtime_and_the_a2_5_and_v_records_are_byte_identical_to_the_v_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_V, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    for path in (*PHASE8_A2_RUNTIME, A2_5_DOC, V_DOC):
+        assert _git("show", f"{P8_V}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_V, "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC, A2_5_DOC, V_DOC) == ""
+    assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, A2_5_DOC, V_DOC) == ""

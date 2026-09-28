@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.55 (2026-09-28) — Phase 8 P8-VR J-Quants verification remediation（証拠の整理だけ。実装なし）
+
+P8-V（部分の確認の記録。`fc91ee1` で凍結）を、監督が確かめた公式の JPX の証拠 SV-01〜SV-08 で突き合わせ直した。個人向けの
+J-Quants API（Light）・J-Quants Pro ・JPX の一般の意味を分け、Pro の仕様を Light の欄の契約にしない。runtime ・adapter ・取り込み ・
+identity の登録 ・live ／ 認証つきの J-Quants は無い。runtime と A2.5 ・P8-V の文書は不変。
+
+### 追加 — `docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md`【新規】
+
+- 監督の証拠の台帳 SV-01〜SV-08（製品の範囲 ・確かにした事 ・確かにしていない事）、Light ／ Pro ／ JPX 一般の matrix。
+- P8-V の行き過ぎの訂正（規約 ・公開の懸念は問いのままで、違反を確定した事実として扱わない。分類は
+  `INDIVIDUAL_JQUANTS_TERMS_REVIEW_REQUIRED`。Pro の license を Light に当てない）。
+- 調整後価格の方針を VERIFIED_POLICY_SUPPORT に（生値が PIT の一次の入力、後から取った調整値の履歴を過去の知識にしない）。財務の改訂は
+  版を保つ方針のまま。A1R は維持。
+- Light で確かめる事 LUV-01〜27、所見の処分の更新（P8-OBS-40 ・41 を追加）、A3 の準備度（実データは 0）、A1R の依存の分析（LUV に
+  依存しない）、次の gate の推奨（P8-A1R → Light の仕様 ／ pilot → A3 → 最小の adapter → 実データの検証）。
+
+### 改善 — test ・guard（文書の登録と凍結の証明だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: `PHASE8_DOCS` に本書、P8-V の凍結の anchor `P8_V`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、runtime と A2.5 ・P8-V の文書が `P8_V` と byte 一致する guard。
+
+### 修正
+
+- なし
+
 ## v5.54 (2026-09-28) — Phase 8 P8-V J-Quants official specification verification（公式の文書の確認。実装なし）
 
 P8-A2.5 の V01〜V24 を公式の J-Quants ／ JPX の文書で確かめる gate。**本 session の network の egress policy が公式の host

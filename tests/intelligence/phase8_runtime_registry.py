@@ -24,6 +24,8 @@ P8_A1 = "4162e9c5b934456e528288b99a5908069a2f6624"
 P8_A2 = "b686b008fe240eeb115b6c485ac4c5c642ebe2c9"
 #: P8-A2.5 の凍結 anchor（runtime と A2.5 の監査の文書はここと byte 一致。P8-V で登録）
 P8_A2_5 = "5713a563e218d2b6065090343eeff7dee8f9b568"
+#: P8-V の凍結 anchor（runtime と A2.5 ・P8-V の文書はここと byte 一致。P8-VR で登録）
+P8_V = "fc91ee17d3ad32bf0ab04b4ea49e2b2c47fa9ba4"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store）
@@ -46,7 +48,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
                                 "docs/databank/PHASE8_PIT_OBSERVATION_CONTRACT.md",
                                 "docs/databank/PHASE8_JQUANTS_REAL_DATA_MAPPING_AUDIT.md",
-                                "docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md")
+                                "docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md",
+                                "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -110,6 +113,6 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A2", "P8_A2_5", "PHASE7_TEST_REGISTRATION",
+__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A2", "P8_A2_5", "P8_V", "PHASE7_TEST_REGISTRATION",
            "PHASE8_A1_RUNTIME", "PHASE8_A2_RUNTIME", "PHASE8_DOCS", "PHASE8_PACKAGE", "PHASE8_RUNTIME", "PHASE8_TESTS",
            "is_phase8_addition", "only_phase8_registration", "registration_diff"]
