@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.54 (2026-09-28) — Phase 8 P8-V J-Quants official specification verification（公式の文書の確認。実装なし）
+
+P8-A2.5 の V01〜V24 を公式の J-Quants ／ JPX の文書で確かめる gate。**本 session の network の egress policy が公式の host
+（`jpx-jquants.com` ・`jpx.gitbook.io` ・`www.jpx.co.jp`）を拒否し、公式の page の本文を 1 つも開けなかった。** 第三者の出所では
+代えず、公式 domain に絞った検索の索引を「手掛かり（未検証）」として記録した。runtime ・adapter ・取り込み ・identity の登録 ・
+指標の計算は無い。認証つきの data 要求 ・live の data API は使っていない。A1 ／ A2 の runtime と A2.5 の文書は不変。
+
+### 追加 — `docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md`【新規】
+
+- 公式の出所の台帳 S01〜S19（題 ・URL ・取得日。本文は未取得）、索引の手掛かり L01〜L24、V01〜V24 の処分（OFFICIALLY_VERIFIED は 0。
+  すべて OFFICIALLY_UNRESOLVED / DOC_ACCESS_BLOCKED）と影響の表。
+- dataset ・identity ・財務の欄の matrix、開示の identity と時刻（DiscTime を TIMESTAMP に写さない）、調整値の履歴は
+  NOT_PIT_GUARANTEED、A2 の対応付けの表（値の欄はすべて BLOCKED）、A3 の準備度（合成 data で 2 指標、実データは 0）。
+- 利用規約と raw snapshot（法的な結論なし。raw の保存は認めない。規約の確認まで metadata ＋ digest だけを推奨）。所見 P8-OBS-35〜39、
+  監督判断（D-P8-V-1 公式の確認の完了の方法、D-P8-V-2 規約の確認）。
+
+### 改善 — test ・guard（文書の登録と凍結の証明だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: `PHASE8_DOCS` に本書、A2.5 の凍結の anchor `P8_A2_5`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、runtime と A2.5 の監査の文書が `P8_A2_5` と byte 一致する guard。
+
+### 修正
+
+- なし
+
 ## v5.53 (2026-09-28) — Phase 8 P8-A2.5 J-Quants real-data mapping audit（read-only の data 契約の監査。取り込みなし）
 
 J-Quants Light の実データの意味を、凍結した A1 ／ A2 の契約へ写せるかを read-only で監査した。**取り込み ・live API ・network ・
