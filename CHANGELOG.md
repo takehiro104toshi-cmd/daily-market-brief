@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.62 (2026-09-28) — Phase 8 P8-A3A deterministic fundamental metrics foundation（売上成長率 ・営業利益率。追加だけ）
+
+Phase 8 の最初の指標の層。凍結した A2 の resolver（revision の PIT の選択）と A2R の互換の gate（会計基準 ・連結の区分）の上に、
+売上成長率と営業利益率だけを決定論 ・派生 ・非 authority ・非永続で置いた。監督の決定 P8-OBS-57（会計基準の変更は revision ではなく
+意味の不連続。基準が違えば `NOT_COMPARABLE`。橋渡しの authority は無い）を実装。A1 ・A2 ・A1R ・A2R ・Phase 4〜7 は無変更。
+screen ・順位 ・推奨 ・他の指標 ・adapter ・実データ ・J-Quants への要求は無い。
+
+### 追加
+
+- `src/intelligence/screener_intelligence/metric_model.py`【新規】: `MetricResult`（VALUE ／ NOT_COMPARABLE ／ INSUFFICIENT_DATA ／
+  INVALID_INPUT ／ INSUFFICIENT_TIME_PRECISION ／ UNDEFINED）、理由 `脚:code` の閉じた語彙、status の強さの順。float なし。
+- `src/intelligence/screener_intelligence/fundamental_metrics.py`【新規】: `revenue_growth`（年度 ↔ 直前の年度、累計 ↔ 直前の年度の
+  同じ四半期の累計だけ。年率化 ・TTM ・補間 ・単独の四半期への変換なし）と `operating_margin`（同じ期間の営業利益 ／ 売上。OdP の
+  代用なし。売上 ≤ 0 は UNDEFINED）。Decimal ・6 桁 ・偶数丸め ・正準の文字列。
+- `tests/intelligence/test_screener_fundamental_metrics.py`【新規】: matrix A〜D（JP↔IFRS の不連続を両方向で実証、過去の cutoff の
+  安定、日付だけの知識の日の途中の cutoff、Decimal の決定論、architecture の禁止事項）。
+- `docs/databank/PHASE8_A3A_FUNDAMENTAL_METRICS.md`【新規】: 指標の authority ・式 ・適格 ・期間 ・PIT ・不連続の方針 ・結果の語彙 ・
+  支えない指標 ・実データまでの blocker。
+
+### 改善 — test ・guard（登録と凍結の証明）
+
+- `tests/intelligence/phase8_runtime_registry.py`: 2 module ・test ・文書の登録、`PHASE8_A3A_RUNTIME`、anchor `P8_A2RI`（`4d3540c`）。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 2 module の import の境界 ・閉包 ・指名の import ・語彙の guard、A2RI の
+  凍結の guard（13 module ・4 test ・12 文書）、先行の anchor の guard の対象から後の gate の test ・文書を外す。
+
+### 修正
+
+- なし
+
 ## v5.61 (2026-09-28) — Phase 8 P8-A2R-IMPL accounting semantics safety remediation（追加だけ。A2 の凍結の core は不変）
 
 P8-A2R で確定した欠陥 G1（A2 の財務の観測の slot の identity に会計基準の次元が無く、違う基準の観測が同じ revision の鎖に入り得る）を、
