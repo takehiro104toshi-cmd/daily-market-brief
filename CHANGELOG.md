@@ -4,6 +4,36 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.61 (2026-09-28) — Phase 8 P8-A2R-IMPL accounting semantics safety remediation（追加だけ。A2 の凍結の core は不変）
+
+P8-A2R で確定した欠陥 G1（A2 の財務の観測の slot の identity に会計基準の次元が無く、違う基準の観測が同じ revision の鎖に入り得る）を、
+凍結した A2 の 3 module を変えずに追加の safety layer で fail closed にした。監督の決定 d1（会計基準の enum）・d2（`NonConsolidated`
+の写しは OBSERVED_IN_PILOT ＋ SUPERVISOR_APPROVED_MAPPING_RULE の根拠つき）・d3（UNKNOWN ・不一致は HOLD。継承 ・LLM なし）に従う。
+A3 ・指標 ・screen ・adapter ・実データ ・J-Quants への要求は無い。
+
+### 追加
+
+- `src/intelligence/screener_intelligence/observation_semantics_model.py`【新規】: canonical の意味の注記 `ObservationSemantics`
+  （会計基準 `JP_GAAP/US_GAAP/IFRS/JMIS/UNKNOWN`、連結の区分は A2 の `StatementBasis` の再利用 ＋ `None`、`semantic_status`、規則の版）と
+  provider の写しの provenance `SemanticMappingProvenance`（provider ・schema ・元の `DocType` ・欄の family ・規則の版 ・次元ごとの根拠の
+  class の組）。内容 address の id ・不変 ・float なし。
+- `src/intelligence/screener_intelligence/observation_semantics_mapping.py`【新規】: 公式に列挙された 45 の `DocType` の版つき
+  完全一致の表（`p8_jquants_v2_fins_summary_doctype:0.1.0`）。文字列の解析はしない。表に無い値 ・`Foreign` ・REIT ・予想の修正は UNKNOWN。
+- `src/intelligence/screener_intelligence/observation_semantics_gate.py`【新規】: 互換の gate（COMPATIBLE ／ INCOMPATIBLE ／ INELIGIBLE
+  ＋ 理由の code）と追記の plan（ELIGIBLE ／ HOLD ＋ 理由の code。非 authority ・非永続。A2 の store は呼ばない）。
+- `tests/intelligence/test_screener_observation_semantics.py`【新規】: matrix A〜N（G1 の実証: A2 だけなら通る IFRS の revision を gate が HOLD）。
+- `docs/databank/PHASE8_A2R_IMPLEMENTATION.md`【新規】: 実装の記録（DOCUMENTED ／ OBSERVED_IN_PILOT ／ 監督の承認 ／ UNKNOWN の区別）。
+
+### 改善 — test ・guard（登録と凍結の証明）
+
+- `tests/intelligence/phase8_runtime_registry.py`: 3 module ・test ・文書の登録、`PHASE8_A2R_RUNTIME`、anchor `P8_A2RV`（`45a516f`）。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 3 module の import の境界 ・閉包 ・指名の import ・語彙の guard、A2RV の
+  凍結の guard、先行の anchor の guard の対象を `PRE_A2R_RUNTIME`（10 module）に。
+
+### 修正
+
+- なし
+
 ## v5.60 (2026-09-28) — Phase 8 P8-A2R 再実行 J-Quants official spec verification（公式の仕様の確認 ・設計の推奨。実装なし）
 
 監督が Network Access を CUSTOM にした後の session で P8-A2R をやり直した。`jpx-jquants.com` ・`www.jpx.co.jp` は 200、
