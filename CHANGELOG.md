@@ -4,6 +4,37 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.60 (2026-09-28) — Phase 8 P8-A2R 再実行 J-Quants official spec verification（公式の仕様の確認 ・設計の推奨。実装なし）
+
+監督が Network Access を CUSTOM にした後の session で P8-A2R をやり直した。`jpx-jquants.com` ・`www.jpx.co.jp` は 200、
+`jpx.gitbook.io` は `app.gitbook.com` への redirect が 403（迂回なし。V1 の旧文書で本 gate に不要）。公式の V2 の文書だけで
+`/v2/fins/summary` の意味を確かめた。J-Quants の data API への要求は 0 回。A1 ／ A2 ／ A1R の runtime ・Phase 4〜7 ・PILOT1 の report ・
+前回の A2R の report ・先行の文書は不変。
+
+### 追加 — `docs/databank/PHASE8_A2R_OFFICIAL_SPEC_VERIFICATION.md`【新規】
+
+- 公式の出所の台帳（O1〜O14）と、DOCUMENTED ／ OBSERVED_IN_PILOT ／ INFERRED ／ UNKNOWN の分類。
+- 公式の field の一覧 111 欄 ＝ PILOT1 の観測 111 欄（完全一致）。DocType は公式の列挙 45 値（`JP` ・`US` ・`IFRS` ・`JMIS` ・
+  `Foreign` ・`REIT`、予想の修正 4 値は区分 ・基準の token なし）。
+- DiscDate ／ DiscTime ＝ TDnet の開示日 ／ 時刻（JST）。A2 の TIMESTAMP ／ DATE の写しを公式に正当化（固定の時刻は作らない）。
+  Light の API の反映は日次で開示時刻とは別。
+- 金額は円単位 ・換算なし（scale ONE）。`/fins/details` の米ドル表示の発行体の記述との食い違い（通貨の欄なし）。`*DivUnit` は
+  REIT の分配金。`Sales` ・`OP` ・`OdP` ・`NP` は期首からの累計。空文字は「記載なし」だけ。
+- G1 を実の欠陥と判断。Option E（Option D ＋ 取り込みの入口の基準の一致の guard。追加だけで凍結の A2 の 3 module は不変）を推奨。
+- P8-OBS-50: REQUIRES_A2_REMEDIATION。P8-OBS の登録の更新（1 ・9 ・22 ・31 ・51 → STRUCTURALLY_ADDRESSED、48 ・49 → CLOSED、
+  新しい所見 52〜55）。A3 の準備度（売上成長率 ・営業利益率は READY_WITH_RESTRICTIONS だが Option E の実装の後）。
+- 判定: P8_A2_REMEDIATION_REQUIRED。
+
+### 改善 — test ・guard（文書の登録と凍結の証明だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: `PHASE8_DOCS` に本書、P8-A2R の凍結の anchor `P8_A2R`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、runtime ・Phase 8 の test ・先行の文書（PILOT1 ・前回の
+  A2R の report を含む）が `P8_A2R` と byte 一致する guard（1 件）。
+
+### 修正
+
+- なし
+
 ## v5.59 (2026-09-28) — Phase 8 P8-A2R J-Quants semantic remediation（公式の仕様の確認 ・設計の記録。実装なし）
 
 PILOT1 で見つかった A2 と J-Quants Light の意味の隔たり（会計基準 ・連結 ／ 単体 ・予想の修正）を扱う gate。公式の host は本 session の
