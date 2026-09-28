@@ -4,6 +4,32 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.57 (2026-09-28) — Phase 8 P8-LV1 J-Quants Light minimum field contract（売上 ・営業利益の経路だけ。実装なし）
+
+最初の実データの経路（売上成長率 ・営業利益率）に要る、個人向けの J-Quants API（Light）の欄の意味だけを確かめる狭い仕様の gate。
+公式の host は本 session の egress policy で今回も拒否され（2026-09-28。再試行 ・迂回なし）、公式の本文は 0 ページ。runtime ・adapter ・
+live ／ 認証つきの要求 ・A3 は無い。runtime ・A1 ／ A2 ／ A1R ・先行の Phase 8 の文書は不変。
+
+### 追加 — `docs/databank/PHASE8_JQUANTS_LIGHT_MINIMUM_FIELD_CONTRACT.md`【新規】
+
+- 公式の出所の台帳（S01 ・S02 ・S07〜S10 ・S14〜S17 はすべて DOC_ACCESS_BLOCKED）、証拠の印（Pro ／ JPX 一般は文脈だけ）。
+- 対象の LUV の処分（OFFICIALLY_RESOLVED 0 ・UNRESOLVED 15 ・TERMS_REVIEW_REQUIRED 2）、欄名の表（repo の実測の綴りのまま。
+  `OperatingProfit` は V2 の実測に無い）、期間 ・境界 ・連結 ／ 単体 ・会計基準 ・知識の時刻 ・出所の identity ・訂正 ・単位 ・通貨 ・欠損 ・
+  entitlement ・深さ。
+- 最小の A2 の写し（`Sales` → `REVENUE`、`OP` → `OPERATING_INCOME` は UNRESOLVED。TIMESTAMP を作らない）、売上成長率 ・営業利益率は
+  READY_FOR_A3_SEMANTICS（実データの写しではない）、pilot は NO_PILOT_REQUIRED（文書を読めないことを理由にしない）、規約は
+  INDIVIDUAL_JQUANTS_TERMS_REVIEW_REQUIRED のまま、新しい所見 P8-OBS-48〜51、公式の文書の checklist と次の gate の推奨。
+
+### 改善 — test ・guard（文書の登録と凍結の証明だけ）
+
+- `tests/intelligence/phase8_runtime_registry.py`: `PHASE8_DOCS` に本書、P8-A1R の凍結の anchor `P8_A1R`。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: 本書の登録と、runtime ・Phase 8 の test ・先行の文書が `P8_A1R` と byte 一致する
+  guard。
+
+### 修正
+
+- なし
+
 ## v5.56 (2026-09-28) — Phase 8 P8-A1R identity correction ＋ retrospective resolution（追記専用の是正。合成 data だけ）
 
 identity の authority に、追記専用の訂正（無効化 ／ 置き換え）と 2 つの時間軸の解決（STRICT_KNOWLEDGE ／ RETROSPECTIVE_AUTHORITY）を

@@ -28,6 +28,8 @@ P8_A2_5 = "5713a563e218d2b6065090343eeff7dee8f9b568"
 P8_V = "fc91ee17d3ad32bf0ab04b4ea49e2b2c47fa9ba4"
 #: P8-VR の凍結 anchor（A1 ／ A2 の runtime と先行の Phase 8 の文書はここと byte 一致。P8-A1R で登録）
 P8_VR = "7b8d3757f3cfb0cc80749d36b05aa401ae237b1e"
+#: P8-A1R の凍結 anchor（runtime ・Phase 8 の test ・先行の Phase 8 の文書はここと byte 一致。P8-LV1 で登録）
+P8_A1R = "e6a750f54dc83e482e649dc65dd0d5131fb9991d"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -58,7 +60,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_JQUANTS_REAL_DATA_MAPPING_AUDIT.md",
                                 "docs/databank/PHASE8_JQUANTS_OFFICIAL_SPEC_VERIFICATION.md",
                                 "docs/databank/PHASE8_JQUANTS_VERIFICATION_REMEDIATION.md",
-                                "docs/databank/PHASE8_IDENTITY_REMEDIATION_CONTRACT.md")
+                                "docs/databank/PHASE8_IDENTITY_REMEDIATION_CONTRACT.md",
+                                "docs/databank/PHASE8_JQUANTS_LIGHT_MINIMUM_FIELD_CONTRACT.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -122,6 +125,7 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A2", "P8_A2_5", "P8_V", "P8_VR", "PHASE7_TEST_REGISTRATION",
-           "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2_RUNTIME", "PHASE8_DOCS", "PHASE8_PACKAGE",
-           "PHASE8_RUNTIME", "PHASE8_TESTS", "is_phase8_addition", "only_phase8_registration", "registration_diff"]
+__all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_A2_5", "P8_V", "P8_VR",
+           "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2_RUNTIME", "PHASE8_DOCS",
+           "PHASE8_PACKAGE", "PHASE8_RUNTIME", "PHASE8_TESTS", "is_phase8_addition", "only_phase8_registration",
+           "registration_diff"]
