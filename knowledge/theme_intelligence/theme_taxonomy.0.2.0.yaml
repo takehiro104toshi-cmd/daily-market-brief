@@ -1,0 +1,87 @@
+# =============================================================================
+# Theme taxonomy — versioned knowledge snapshot（Phase 6 / P6-B4B）version 0.2.0
+# =============================================================================
+# 0.1.0 からの差分（rename via new slug の実例）:
+# - 新 slug `supply_chain` を追加（since_version 0.2.0）。
+# - 旧 slug `supply_chain_theme` を deprecated_in_version 0.2.0 ＋ superseded_by [supply_chain] とし、alias を新 slug へ移した。
+#   旧 node は削除せず、旧 version の metadata 値を歴史的に解決できるよう残す。
+# 他の規則は 0.1.0 の header と同じ。公開後は不変。
+schema_version: "theme_taxonomy:0.1.0"
+taxonomy_version: "0.2.0"
+published_at: "2026-09-20T01:00:00+00:00"
+content_digest: "75c0ae8c0c2d47c278737375a63db0aff8770d66c05dc4b37777ffc1627d757c"
+nodes:
+  - slug: ai
+    label: "AI"
+    description: "Artificial intelligence as a thematic category (models, compute demand, adoption)."
+    parent_slugs: []
+    aliases: ["artificial intelligence", "人工知能"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: semiconductors
+    label: "Semiconductors"
+    description: "Semiconductor devices, manufacturing and equipment as a thematic category."
+    parent_slugs: []
+    aliases: ["semiconductor", "半導体"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: data_center
+    label: "Data center"
+    description: "Data center construction and operation as a thematic category (child of ai)."
+    parent_slugs: [ai]
+    aliases: ["data centre", "datacenter", "データセンター"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: power
+    label: "Power"
+    description: "Electric power generation and supply as a thematic category."
+    parent_slugs: []
+    aliases: ["electric power", "電力"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: energy
+    label: "Energy"
+    description: "Energy supply, demand and security as a thematic category."
+    parent_slugs: []
+    aliases: ["エネルギー"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: grid
+    label: "Grid"
+    description: "Power transmission and distribution networks as a thematic category (child of power)."
+    parent_slugs: [power]
+    aliases: ["power grid", "送電網"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: nuclear
+    label: "Nuclear"
+    description: "Nuclear power generation as a thematic category (child of both power and energy)."
+    parent_slugs: [energy, power]
+    aliases: ["nuclear power", "原子力"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: supply_chain
+    label: "Supply chain"
+    description: "Supply chain restructuring and resilience as a thematic category (successor of supply_chain_theme)."
+    parent_slugs: []
+    aliases: ["supply chain", "サプライチェーン"]
+    since_version: "0.2.0"
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "rename of supply_chain_theme via new slug (D-B4-3); aliases moved from the deprecated node"}
+  - slug: supply_chain_theme
+    label: "Supply chain (deprecated slug)"
+    description: "Deprecated spelling of the supply chain category; superseded by supply_chain in 0.2.0."
+    parent_slugs: []
+    aliases: []
+    since_version: "0.1.0"
+    deprecated_in_version: "0.2.0"
+    superseded_by: [supply_chain]
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "kept loadable for historical metadata values; no deletion-based rename"}

@@ -1,0 +1,136 @@
+# =============================================================================
+# Entity catalog — versioned knowledge snapshot（Phase 6 / P6-B4B）
+# =============================================================================
+# - VERSIONED KNOWLEDGE であり authority ではない。公開後は不変。変更は次 version の別 file。
+# - entity_id は "<kind>:<immutable-slug>"。kind は Foundation ThemeEntityKind の値（9 種のみ）。slug は公開後 rename しない。
+# - ticker は identifier であって identity ではない。identifier は型付き（TICKER / INSTRUMENT_ID / ISO_COUNTRY / ISO_CURRENCY）。
+# - aliases_safe は catalog 全体で一意（単独で解決可）。aliases_context は context_terms の共起が無ければ解決しない。
+# - valid_from / valid_to は世界時間の存在期間（開始含む・終了含まない）。retired_in_version は catalog 上の retire。
+# - 内容方針: 公開標準（ISO code・公開指数）と検証専用の架空 record（MVP_FIXTURE）のみ。顧客 watchlist 由来の企業集合・
+#   人物・Compass 由来の文章は含めない。"Example ..." の company は実在しない。
+schema_version: "theme_entity_catalog:0.1.0"
+catalog_version: "0.1.0"
+published_at: "2026-09-20T00:00:00+00:00"
+content_digest: "6f2d43c92f8f4c790b781fae55d00f6b9af6b5e29a3fe2279d3a6e58f81e73ba"
+entities:
+  # ----- countries（ISO 3166-1） -----
+  - entity_id: "country:jp"
+    entity_type: COUNTRY
+    canonical_name: "Japan"
+    aliases_safe: ["japan", "日本"]
+    identifiers: [{identifier_type: ISO_COUNTRY, value: "JP"}]
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "ISO 3166-1 alpha-2 country"}
+    since_version: "0.1.0"
+  - entity_id: "country:us"
+    entity_type: COUNTRY
+    canonical_name: "United States"
+    aliases_safe: ["united states", "米国"]
+    identifiers: [{identifier_type: ISO_COUNTRY, value: "US"}]
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "ISO 3166-1 alpha-2 country"}
+    since_version: "0.1.0"
+  # ----- currencies（ISO 4217） -----
+  - entity_id: "currency:jpy"
+    entity_type: CURRENCY
+    canonical_name: "Japanese yen"
+    aliases_safe: ["japanese yen", "yen"]
+    identifiers: [{identifier_type: ISO_CURRENCY, value: "JPY"}]
+    attributes: {country: "country:jp"}
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "ISO 4217 currency"}
+    since_version: "0.1.0"
+  - entity_id: "currency:usd"
+    entity_type: CURRENCY
+    canonical_name: "US dollar"
+    aliases_safe: ["us dollar"]
+    aliases_context: ["dollar"]
+    context_terms: ["usd", "exchange rate", "fx"]
+    identifiers: [{identifier_type: ISO_CURRENCY, value: "USD"}]
+    attributes: {country: "country:us"}
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "ISO 4217 currency; 'dollar' is context-only"}
+    since_version: "0.1.0"
+  # ----- central banks / government -----
+  - entity_id: "central_bank:boj"
+    entity_type: CENTRAL_BANK
+    canonical_name: "Bank of Japan"
+    aliases_safe: ["bank of japan", "boj", "日本銀行", "日銀"]
+    attributes: {country: "country:jp"}
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "public institution"}
+    since_version: "0.1.0"
+  - entity_id: "central_bank:fed"
+    entity_type: CENTRAL_BANK
+    canonical_name: "Federal Reserve"
+    aliases_safe: ["federal reserve", "federal reserve board", "frb"]
+    aliases_context: ["fed"]
+    context_terms: ["fomc", "federal funds", "monetary policy", "rate decision"]
+    attributes: {country: "country:us"}
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "public institution; 'fed' is context-only"}
+    since_version: "0.1.0"
+  - entity_id: "government:japan_government"
+    entity_type: GOVERNMENT
+    canonical_name: "Government of Japan"
+    aliases_safe: ["japanese government", "日本政府"]
+    attributes: {country: "country:jp"}
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "public institution"}
+    since_version: "0.1.0"
+  # ----- indices（market catalog の instrument_id と結線） -----
+  - entity_id: "index:nikkei225"
+    entity_type: INDEX
+    canonical_name: "Nikkei 225"
+    aliases_safe: ["nikkei 225", "nikkei225", "日経平均"]
+    identifiers: [{identifier_type: INSTRUMENT_ID, value: "index:nikkei225"}]
+    attributes: {country: "country:jp"}
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "public equity index; id aligned with market catalog"}
+    since_version: "0.1.0"
+  - entity_id: "index:topix"
+    entity_type: INDEX
+    canonical_name: "TOPIX"
+    aliases_safe: ["topix", "東証株価指数"]
+    identifiers: [{identifier_type: INSTRUMENT_ID, value: "index:topix"}]
+    attributes: {country: "country:jp"}
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "public equity index; id aligned with market catalog"}
+    since_version: "0.1.0"
+  # ----- sector / industry（語彙の例。code 体系は後続 version） -----
+  - entity_id: "sector:financials"
+    entity_type: SECTOR
+    canonical_name: "Financials"
+    aliases_safe: ["financials"]
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor", reason: "generic sector vocabulary example"}
+    since_version: "0.1.0"
+  - entity_id: "industry:banks"
+    entity_type: INDUSTRY
+    canonical_name: "Banks"
+    aliases_safe: ["banks"]
+    attributes: {sector: "sector:financials"}
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor", reason: "generic industry vocabulary example"}
+    since_version: "0.1.0"
+  # ----- commodity -----
+  - entity_id: "commodity:crude_oil"
+    entity_type: COMMODITY
+    canonical_name: "Crude oil"
+    aliases_safe: ["crude oil", "原油"]
+    aliases_context: ["oil"]
+    context_terms: ["barrel", "opec", "brent", "wti"]
+    provenance: {origin: PUBLIC_STANDARD, approver_ref: "role:supervisor", reason: "generic commodity; 'oil' is context-only"}
+    since_version: "0.1.0"
+  # ----- MVP fixture companies（架空。実在企業・顧客 watchlist とは無関係） -----
+  - entity_id: "company:example_motors"
+    entity_type: COMPANY
+    canonical_name: "Example Motors"
+    aliases_safe: ["example motors"]
+    aliases_context: ["example"]
+    context_terms: ["motors", "vehicles"]
+    identifiers: [{identifier_type: TICKER, value: "EXM1", scheme: "XMVP"}]
+    attributes: {country: "country:jp"}
+    valid_from: "2000-01-01"
+    provenance: {origin: MVP_FIXTURE, approver_ref: "role:supervisor", reason: "fictitious company for lifecycle validation"}
+    since_version: "0.1.0"
+  - entity_id: "company:example_battery"
+    entity_type: COMPANY
+    canonical_name: "Example Battery"
+    aliases_safe: ["example battery"]
+    aliases_context: ["example"]
+    context_terms: ["battery", "cells"]
+    identifiers: [{identifier_type: TICKER, value: "EXB1", scheme: "XMVP"}]
+    attributes: {country: "country:jp"}
+    valid_from: "2005-01-01"
+    provenance: {origin: MVP_FIXTURE, approver_ref: "role:supervisor", reason: "fictitious company for lifecycle validation"}
+    since_version: "0.1.0"
