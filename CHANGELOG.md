@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.73 (2026-09-29) — Phase 8 P8-PILOT2A local two-stage PILOT2 runner（合成の検証だけ。実 request なし）
+
+将来の PILOT2 を本人の環境でだけ動かす 2 段の runner を package の外に追加した。段 1 `prepare` は master を 1 回取得し、凍結 LIVE1 の
+適格 ・要求 code の選択 ・凍結 ID1 の提案から人の審査 packet と判断 template を private の data root に書いて止まる（fins ・ID2 ・A1 ・
+A2 ・指標に触れない。自動の承認なし）。段 2 `execute` は人の判断（APPROVE ／ REJECT ／ DEFER ＋ aware な accepted_at）を packet の
+digest に結び、凍結 ID1 の再導出 → 凍結 ID2 → A1 の確認 → 承認済みだけ fins → 凍結 ADP0 ・EXE → 凍結 A3 の 4 指標の status を
+安全な要約（会社名 ・code ・値 ・raw ・journal の内容なし）に書く。予算は 2 段で 8（状態 file で持ち越し。reset なし）。data root は
+repo ・.git ・GitHub workspace の中を拒む。再実行は凍結の再利用で収束し、journal を削除 ・修復しない。発見 P8-OBS-60: 凍結 A2 の
+resolver が要る `FUNDAMENTAL_DISCLOSURE` の coverage 宣言を EXE ・runner は書かないため、現状の PILOT2 の A3 指標は typed の
+`INSUFFICIENT_DATA` になる（runner は正直に報告。監督の決定が要る）。
+
+追加
+・`src/intelligence/jquants_pilot2_local.py`（`prepare` ・`execute` ・CLI）
+・`tests/intelligence/test_screener_pilot2_local_runner.py`
+・`docs/databank/PHASE8_PILOT2A_LOCAL_RUNNER.md`（手順 ・placeholder の Windows command ・処分）
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（`PHASE8_PILOT2A_RUNTIME` ・LIVE2 の anchor `P8_LIVE2`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（PILOT2A の登録 ・外の importer の 2 つ目 ・LIVE2 anchor の byte 一致 ・
+  runner の配線の不在の guard `test_pilot2a_*`）
+修正
+・なし
+
 ## v5.72 (2026-09-29) — Phase 8 P8-LIVE2 local-only real HTTPS transport（実装と合成 test だけ。実 request なし）
 
 PILOT2 に要る最小の実 HTTPS transport（凍結 LIVE1 の `Transport` の実装）を、package `screener_intelligence` の**外**の 1 module として
