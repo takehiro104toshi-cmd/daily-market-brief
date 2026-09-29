@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.72 (2026-09-29) — Phase 8 P8-LIVE2 local-only real HTTPS transport（実装と合成 test だけ。実 request なし）
+
+PILOT2 に要る最小の実 HTTPS transport（凍結 LIVE1 の `Transport` の実装）を、package `screener_intelligence` の**外**の 1 module として
+追加した（package の network ・環境変数 ・filesystem の禁止の guard を無傷に保つため）。標準 library の `http.client` だけ。host は
+`api.jquants.com` に固定、path ・query は凍結 LIVE1 の一覧だけ、credential は caller が名を選ぶ環境変数（既定 `JQUANTS_API_KEY`）から
+`get()` のたびに読み `x-api-key` header に付けて捨てる（保持 ・表示 ・log ・例外への混入なし）。`get()` 1 回 ＝ HTTP GET 最大 1 回、
+retry ・cache ・redirect の追随なし、本文の上限 8 MiB、有限の timeout、200 以外 ・不正 JSON ・network の失敗は code だけの error。予算は
+凍結 LIVE1 の `RequestBudget` が持つ。実の実行は監督の承認の後の PILOT2 で本人の環境でだけ。本 gate で実の request ・cloud の credential の
+使用は無い。
+
+追加
+・`src/intelligence/jquants_local_transport.py`（`LocalHttpsTransport`）
+・`tests/intelligence/test_screener_jquants_local_transport.py`（15 test。fake の HTTP 境界だけ）
+・`docs/databank/PHASE8_LIVE2_LOCAL_HTTP_TRANSPORT.md`（gate の記録）
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（`PHASE8_LIVE2_RUNTIME` ・`PHASE8_PACKAGE_RUNTIME` ・
+  LIVE1 の anchor `P8_LIVE1`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（LIVE2 の登録 ・`test_bo` の 1 file の例外と import の完全一致 ・
+  LIVE1 anchor の byte 一致 ・transport の配線の不在の guard `test_live2_*`）
+修正
+・なし
+
 ## v5.71 (2026-09-29) — Phase 8 P8-LIVE1 memory-only J-Quants ingest client ＋ pre-ID1 eligibility（合成 transport だけ）
 
 PILOT2 の前の最後の software の境界を追加した。master の応答を厳密に parse し、凍結 ID1 の**前**で `ProdCat` ・`Mkt` ・`Code` の 5 桁目から
