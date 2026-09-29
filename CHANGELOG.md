@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.71 (2026-09-29) — Phase 8 P8-LIVE1 memory-only J-Quants ingest client ＋ pre-ID1 eligibility（合成 transport だけ）
+
+PILOT2 の前の最後の software の境界を追加した。master の応答を厳密に parse し、凍結 ID1 の**前**で `ProdCat` ・`Mkt` ・`Code` の 5 桁目から
+`ELIGIBLE_FOR_ID1` ／ `HOLD` ／ `EXCLUDED` を決め、ELIGIBLE の行だけを凍結 ID1 の 5 欄の行にして渡す（LIVE0 の ProdCat の発見の是正。ID1 ・
+ID2 は変えない）。transport は抽象（`Transport`）で、本 gate の実装は決定論の `SyntheticTransport` だけ（実 network の transport ・
+`api.jquants.com` は無い）。request の予算は caller が持ち（上限 8）、transport の前に消費して 9 回目を拒む。fins の取得は凍結 A1 で
+確かめた identity の handoff を要求し、応答は凍結 ADP0 の 14 欄の行にだけ写す（pagination は自動で追わない）。raw は memory だけで、
+error は code と field 名だけ。credential は model ・client ・query に現れない。live の request は無い。
+
+追加
+・`src/intelligence/screener_intelligence/jquants_live_model.py`（`RequestBudget` ・`Transport` ・`SyntheticTransport` ・
+  `TransportResponse` ・`LiveInputError` ・`MasterEligibility*`）
+・`src/intelligence/screener_intelligence/jquants_master_ingress.py`（`parse_master_payload` ・`assess_master_row` ・
+  `id1_rows`）
+・`src/intelligence/screener_intelligence/jquants_live_client.py`（`JQuantsLiveClient` ・`verify_identity_for_code` ・
+  `parse_fins_summary_payload`）
+・`tests/intelligence/test_screener_jquants_live.py`（46 test）
+・`docs/databank/PHASE8_LIVE1_MEMORY_ONLY_CLIENT.md`（gate の記録）
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（LIVE1 の登録、`PHASE8_LIVE1_RUNTIME`、LIVE0 の anchor `P8_LIVE0`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（LIVE1 の sanctioned import ・語彙 ・LIVE0 anchor の byte 一致 ・
+  provider host の不在の guard `test_live1_*`）
+修正
+・なし
+
 ## v5.70 (2026-09-29) — Phase 8 P8-LIVE0 live data pre-flight audit（規約 ・provider mapping の監査。文書だけ）
 
 実の J-Quants の取り込みの前に残っていた問いを公式の文書（利用規約 改定 2026-01-19 ・FAQ ・`/v2/equities/master` の仕様 ・市場区分 ・
