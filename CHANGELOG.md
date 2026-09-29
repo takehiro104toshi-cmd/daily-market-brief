@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.68 (2026-09-29) — Phase 8 P8-ID1 J-Quants identity bootstrap（機械の提案 → 人の審査 manifest → 登録 plan。A1 に書かない）
+
+実の J-Quants の観測の前に要る identity の bootstrap の手順を追加した。合成の master snapshot（5 欄だけ読む）から、普通株の code ごとに
+1 Issuer ＋ 1 Security の決定論の提案を作り（anchor `p8boot<n>:iss.<Code>` ／ `sec.<Code>` から凍結 A1 の id を導く。code は id に
+ならない）、曖昧 ・不整合 ・支えない物は保留 ／ 人の審査 ／ 再利用 ／ 衝突として manifest に載せる。人の審査（HUMAN だけ。APPROVE ／
+REJECT ／ DEFER）は manifest と提案の digest に結びつき、内容が変われば失効する。APPROVE の提案だけから凍結 A1 の record の登録 plan を
+導き、memory 内の A1 の不変条件で検査する。**A1 の store には append しない**（実行は別の gate）。D0 は明示、D0 より前を作らない。
+code の変更 ・廃止 ・再上場 ・複数の上場物は HUMAN_REVIEW_REQUIRED。live の J-Quants request なし。OBS-58 ・59 は変更なし。
+
+追加
+・`src/intelligence/screener_intelligence/identity_bootstrap_model.py`（`MasterRow` ・`BootstrapBatch` ・
+  `IdentityProposal` ・`ReviewItem` ・`BootstrapManifest` ・`ProposalReview` ・`ReviewedManifest` ・`RegistrationPlan`）
+・`src/intelligence/screener_intelligence/identity_bootstrap.py`（`propose_bootstrap` ・`review_manifest` ・
+  `plan_registration`）
+・`tests/intelligence/test_screener_identity_bootstrap.py`（27 test）
+・`docs/databank/PHASE8_ID1_IDENTITY_BOOTSTRAP.md`（gate の記録）
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（ID1 の登録、`PHASE8_ID1_RUNTIME`、EXE の anchor `P8_EXE`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（ID1 の sanctioned import ・語彙 ・EXE anchor の byte 一致 guard
+  `test_id1_*`）
+修正
+・なし
+
 ## v5.67 (2026-09-29) — Phase 8 P8-EXE safe append executor（実行時の再検証 ・3 store にだけ append ・合成 data だけ）
 
 合成の `/v2/fins/summary` の行から Phase 8 の authority への最初の安全な実行の境界を追加した。executor は凍結の ADP0 を毎回再実行し、
