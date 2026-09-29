@@ -148,7 +148,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_ADP0_JQUANTS_FINANCIAL_SUMMARY_ADAPTER.md",
                                 "docs/databank/PHASE8_EXE_SAFE_APPEND_EXECUTOR.md",
                                 "docs/databank/PHASE8_ID1_IDENTITY_BOOTSTRAP.md",
-                                "docs/databank/PHASE8_ID2_IDENTITY_REGISTRATION_EXECUTOR.md")
+                                "docs/databank/PHASE8_ID2_IDENTITY_REGISTRATION_EXECUTOR.md",
+                                "docs/databank/PHASE8_LIVE0_PRELIVE_AUDIT.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"

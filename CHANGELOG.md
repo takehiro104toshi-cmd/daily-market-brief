@@ -4,6 +4,20 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.70 (2026-09-29) — Phase 8 P8-LIVE0 live data pre-flight audit（規約 ・provider mapping の監査。文書だけ）
+
+実の J-Quants の取り込みの前に残っていた問いを公式の文書（利用規約 改定 2026-01-19 ・FAQ ・`/v2/equities/master` の仕様 ・市場区分 ・
+商品区分 ・plan 別の格納期間。確認日 2026-09-29）で解いた。OBS-58 は公開出力の禁止として CLOSED、OBS-59 は廃棄の手順つきで
+CLOSED。private PILOT2 は条件つきで規約上可（本人の環境 ・payload を LLM に入れない ・公開なし ・raw 非永続）。市場区分の V2 契約は
+`Mkt` ＋ `ProdCat` ＋ 5 桁目で、凍結 ID1 が `ProdCat` を読まない差を P8-ID1B として提案。runtime の変更 ・live の request は無い。
+
+追加
+・`docs/databank/PHASE8_LIVE0_PRELIVE_AUDIT.md`（監査の記録 ・決定の束）
+改善
+・`tests/intelligence/phase8_runtime_registry.py` ・`test_screener_intelligence_boundary.py`（記録の登録だけ。runtime の登録なし）
+修正
+・なし
+
 ## v5.69 (2026-09-29) — Phase 8 P8-ID2 human-approved identity registration executor（凍結 A1 への登録の明示の実行）
 
 ID1 の機械の提案 ・人の審査 manifest ・登録 plan を、正確な人の authorization（HUMAN の APPROVE）の下でだけ凍結 A1 の `IdentityStore`
