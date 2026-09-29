@@ -49,6 +49,8 @@ P8_A3B = "d8845f2b063f15dc8629245ec276019d6314cf7a"
 P8_A3R = "f1c4a4e86c51b1668b9be41d6ceff06440e29608"
 #: P8-ST1 の凍結 anchor（runtime 19 module ・Phase 8 の test ・先行の文書はここと byte 一致。ADP0 で登録）
 P8_ST1 = "e831996094ba035bbfa0574c639d40faff888096"
+#: P8-ADP0 の凍結 anchor（runtime 21 module ・Phase 8 の test ・先行の文書はここと byte 一致。EXE で登録）
+P8_ADP0 = "a2ccc1c30543daee5269ca39a7591a4767376f1d"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -56,16 +58,17 @@ PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: P8-A2R-IMPL: observation_semantics_model / observation_semantics_mapping / observation_semantics_gate、
 #: P8-A3A: metric_model / fundamental_metrics、P8-A3B: fundamental_metrics_extended、
 #: P8-ST1: semantic_metadata_store / held_observation_model / held_observation_store、
-#: P8-ADP0: jquants_adapter_model / jquants_financial_summary_adapter）
+#: P8-ADP0: jquants_adapter_model / jquants_financial_summary_adapter、
+#: P8-EXE: jquants_execution_model / jquants_financial_summary_executor）
 PHASE8_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "__init__", "identity_model", "identity_resolver", "identity_store"))
 PHASE8_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "__init__", "fundamental_metrics", "fundamental_metrics_extended", "held_observation_model",
     "held_observation_store", "identity_correction_model", "identity_correction_store", "identity_model",
     "identity_remediation_resolver", "identity_resolver", "identity_store", "jquants_adapter_model",
-    "jquants_financial_summary_adapter", "metric_model", "observation_model", "observation_resolver",
-    "observation_semantics_gate", "observation_semantics_mapping", "observation_semantics_model", "observation_store",
-    "semantic_metadata_store"))
+    "jquants_execution_model", "jquants_financial_summary_adapter", "jquants_financial_summary_executor",
+    "metric_model", "observation_model", "observation_resolver", "observation_semantics_gate",
+    "observation_semantics_mapping", "observation_semantics_model", "observation_store", "semantic_metadata_store"))
 #: P8-A1R で足した runtime（A1 ／ A2 の module は変えない拡張）
 PHASE8_A1R_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "identity_correction_model", "identity_correction_store", "identity_remediation_resolver"))
@@ -91,6 +94,9 @@ PHASE8_ST1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for na
 #: P8-ADP0 で足した runtime（純 adapter。store ・network ・filesystem に触れない）
 PHASE8_ADP0_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "jquants_adapter_model", "jquants_financial_summary_adapter"))
+#: P8-EXE で足した runtime（安全な append executor。A2 ・注記 ・保留の 3 store にだけ書く）
+PHASE8_EXE_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
+    "jquants_execution_model", "jquants_financial_summary_executor"))
 #: `P8_A2` で凍結した runtime（A1 ＋ A2 の 7 module）
 PHASE8_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "__init__", "identity_model", "identity_resolver", "identity_store", "observation_model", "observation_resolver",
@@ -105,7 +111,8 @@ PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py"
                                  "tests/intelligence/test_screener_fundamental_metrics.py",
                                  "tests/intelligence/test_screener_fundamental_metrics_extended.py",
                                  "tests/intelligence/test_screener_operational_stores.py",
-                                 "tests/intelligence/test_screener_jquants_adapter.py")
+                                 "tests/intelligence/test_screener_jquants_adapter.py",
+                                 "tests/intelligence/test_screener_jquants_execution.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
 PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md",
                                 "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
@@ -123,7 +130,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_A3B_NET_MARGIN_ROA.md",
                                 "docs/databank/PHASE8_A3R_REAL_DATA_BRIDGE_DESIGN.md",
                                 "docs/databank/PHASE8_ST1_OPERATIONAL_STORES.md",
-                                "docs/databank/PHASE8_ADP0_JQUANTS_FINANCIAL_SUMMARY_ADAPTER.md")
+                                "docs/databank/PHASE8_ADP0_JQUANTS_FINANCIAL_SUMMARY_ADAPTER.md",
+                                "docs/databank/PHASE8_EXE_SAFE_APPEND_EXECUTOR.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -188,9 +196,9 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
-           "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_V", "P8_VR",
+           "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_V", "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",
-           "PHASE8_ADP0_RUNTIME", "PHASE8_DOCS", "PHASE8_ST1_RUNTIME",
+           "PHASE8_ADP0_RUNTIME", "PHASE8_EXE_RUNTIME", "PHASE8_DOCS", "PHASE8_ST1_RUNTIME",
            "PHASE8_PACKAGE", "PHASE8_RUNTIME", "PHASE8_TESTS", "is_phase8_addition", "only_phase8_registration",
            "registration_diff"]

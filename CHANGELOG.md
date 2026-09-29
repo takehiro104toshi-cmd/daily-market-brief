@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.67 (2026-09-29) — Phase 8 P8-EXE safe append executor（実行時の再検証 ・3 store にだけ append ・合成 data だけ）
+
+合成の `/v2/fins/summary` の行から Phase 8 の authority への最初の安全な実行の境界を追加した。executor は凍結の ADP0 を毎回再実行し、
+append する record を自分で組み立て直す（caller の AdapterResult ・plan ・注記 ・観測 ・supersedes を信用しない。`prior_adapter_result`
+は cross-check だけで、不一致は REJECTED）。ELIGIBLE は全欄の前検査の後、欄ごとに provenance → 注記 → A2 の観測の順に append し、
+HOLD は保留の store にだけ書く。NOT_REPORTED は 0 にせず A2 に書かない。途中の失敗は PARTIAL_FAILURE（rollback ・削除なし。再実行で
+収束）。revision は凍結 A2 の鎖の末尾から supersedes を再導出し、会計基準の違いは鎖に入れない。identity は凍結 A1 に無ければ HELD。
+
+追加
+・`src/intelligence/screener_intelligence/jquants_execution_model.py`（`ExecutionResult` ・`ExecutionOutcome` ・
+  `ExecutionReason` ・`FieldExecution` ・`AuthorityWrites`）
+・`src/intelligence/screener_intelligence/jquants_financial_summary_executor.py`（`execute_financial_summary_row`）
+・`tests/intelligence/test_screener_jquants_execution.py`（42 test）
+・`docs/databank/PHASE8_EXE_SAFE_APPEND_EXECUTOR.md`（gate の記録）
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（EXE の登録、`PHASE8_EXE_RUNTIME`、ADP0 の anchor `P8_ADP0`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（EXE の sanctioned import ・語彙 ・ADP0 anchor の byte 一致 guard
+  `test_exe_*`）
+修正
+・なし
+
 ## v5.66 (2026-09-29) — Phase 8 P8-ADP0 pure J-Quants financial summary adapter（純 adapter。書かない ・呼ばない ・合成の行だけ）
 
 合成の `/v2/fins/summary` の行を凍結の A2 ／ A2R ／ ST1 の record の型へ写す純 adapter を追加した。入力は 14 欄の文字列だけを厳密に
