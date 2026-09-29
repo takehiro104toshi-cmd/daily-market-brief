@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.66 (2026-09-29) — Phase 8 P8-ADP0 pure J-Quants financial summary adapter（純 adapter。書かない ・呼ばない ・合成の行だけ）
+
+合成の `/v2/fins/summary` の行を凍結の A2 ／ A2R ／ ST1 の record の型へ写す純 adapter を追加した。入力は 14 欄の文字列だけを厳密に
+読み（欠落 ・型 ・公式の一覧に無い key は拒否）、provider の record の identity は自然 key ＋ 14 欄の正準 JSON の sha256（DiscNo だけでは
+identity にならない）。知識の時刻は公式の DiscDate ＋ DiscTime（JST）だけ、期間は FY と累計の 1Q〜3Q だけ、DocType は凍結の A2R の写しを
+再利用し、pilot の適格（監督の決定 D4）は JP_GAAP ＋ JPY だけ（他の基準は HOLD。無効の主張ではない）。空文字は NOT_REPORTED（0 にしない）。
+identity は caller の文脈だけ（Code から作らない）。理由が 1 つでもあれば行ごと HOLD（ST1 の `HeldObservation` を作るだけで append しない）。
+結果は `DERIVED_NON_AUTHORITY_NON_PERSISTENT`（record ではなく保存されない）。store ・filesystem ・network ・時計 ・乱数 ・LLM に触れない。
+live の J-Quants request は無い。P8-OBS-58 ・59 は BLOCKED_PENDING_TERMS_CONFIRMATION のまま。
+
+追加
+・`src/intelligence/screener_intelligence/jquants_adapter_model.py`（`FinancialSummaryRow` ・`ProviderRecordIdentity` ・
+  `AdapterContext` ・`AdapterResult` ・`EligibleMaterial` ・`AdapterInputError`）
+・`src/intelligence/screener_intelligence/jquants_financial_summary_adapter.py`（`adapt_financial_summary_row`）
+・`tests/intelligence/test_screener_jquants_adapter.py`（matrix A〜H。80 test）
+・`docs/databank/PHASE8_ADP0_JQUANTS_FINANCIAL_SUMMARY_ADAPTER.md`（gate の記録）
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（ADP0 の 2 module ・test ・記録の登録、`PHASE8_ADP0_RUNTIME`、ST1 の anchor `P8_ST1`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（ADP0 の sanctioned import ・語彙 ・ST1 anchor の byte 一致 guard
+  `test_adp0_*`。先行の 19 module ・test ・記録は byte 一致）
+修正
+・なし
+
 ## v5.65 (2026-09-28) — Phase 8 P8-ST1 semantic metadata + held observation stores（追記専用の運用 store。合成 data だけ）
 
 実データの adapter ・executor の前に要る 2 つの運用 store を追加した。注記の store は凍結した A2R の record（`ObservationSemantics` ・
