@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.69 (2026-09-29) — Phase 8 P8-ID2 human-approved identity registration executor（凍結 A1 への登録の明示の実行）
+
+ID1 の機械の提案 ・人の審査 manifest ・登録 plan を、正確な人の authorization（HUMAN の APPROVE）の下でだけ凍結 A1 の `IdentityStore`
+へ append する executor を追加した。実行のたびに凍結 ID1 を再実行して manifest ・plan を作り直し（審査の digest と一致しなければ拒否。
+caller の plan は cross-check だけ）、書く直前に A1 の現在の状態（anchor ・id ・code の結びつき ・Issuer↔Security ・名前 ・上場 ・
+coverage ・退役 ・上場の終わり）を照合する。前検査の衝突は 0 書き込み。書く順は A1 の不変条件の順（Issuer → Security → 識別子 →
+名前 → 上場、最後に一括の coverage）。途中の失敗は PARTIAL_FAILURE（rollback なし。再実行で byte 一致の再利用に収束）。正確な
+replay は REUSED。`accepted_at` は審査の受理の時刻で ID2 は作らない。D0 の coverage `[D0, D0＋1 日)` は snapshot の coverage で、
+identity の有効期間ではない（regression test）。live の J-Quants request なし。OBS-58 ・59 は変更なし。
+
+追加
+・`src/intelligence/screener_intelligence/identity_registration_model.py`（`RegistrationResult` ・`RegistrationOutcome` ・
+  `RegistrationReason` ・`BundleExecution` ・`RecordWrite` ・`RegistrationWrites`）
+・`src/intelligence/screener_intelligence/identity_registration_executor.py`（`execute_identity_registration`）
+・`tests/intelligence/test_screener_identity_registration.py`（21 test）
+・`docs/databank/PHASE8_ID2_IDENTITY_REGISTRATION_EXECUTOR.md`（gate の記録）
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（ID2 の登録、`PHASE8_ID2_RUNTIME`、ID1 の anchor `P8_ID1`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（ID2 の sanctioned import ・語彙 ・ID1 anchor の byte 一致 guard
+  `test_id2_*`）
+修正
+・なし
+
 ## v5.68 (2026-09-29) — Phase 8 P8-ID1 J-Quants identity bootstrap（機械の提案 → 人の審査 manifest → 登録 plan。A1 に書かない）
 
 実の J-Quants の観測の前に要る identity の bootstrap の手順を追加した。合成の master snapshot（5 欄だけ読む）から、普通株の code ごとに
