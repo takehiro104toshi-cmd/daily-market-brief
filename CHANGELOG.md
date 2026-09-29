@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.65 (2026-09-28) — Phase 8 P8-ST1 semantic metadata + held observation stores（追記専用の運用 store。合成 data だけ）
+
+実データの adapter ・executor の前に要る 2 つの運用 store を追加した。注記の store は凍結した A2R の record（`ObservationSemantics` ・
+`SemanticMappingProvenance`）をそのまま置き、同じ観測に内容の違う注記 ／ provenance は `SEMANTICS_CONFLICT` ／ `PROVENANCE_CONFLICT` で
+拒む（最新 ・先勝ち ・出所で選ばない）。保留の観測 `HeldObservation` は raw の応答 ・credential を持てない record（参照 ・digest ・閉じた
+17 の理由 ・規則の版 ・caller が渡す aware な時刻だけ）で、severity ・順位 ・自動の昇格 ・再試行 ・削除は無い。A1 ・A2 ・A1R ・A2R ・
+A3A ・A3B の 16 module は byte 一致。J-Quants の API ・adapter ・executor ・identity の登録 ・実データは無い。
+
+### 追加
+
+- `src/intelligence/screener_intelligence/semantic_metadata_store.py`【新規】: `SemanticMetadataStore`（`SEMANTIC_METADATA_RECORD`。
+  追記専用 JSONL ・fsync ・冪等 ・衝突の拒否 ・provenance の先行 ・破損 8 種で fail closed ・外部の変更の検知）。
+- `src/intelligence/screener_intelligence/held_observation_model.py`【新規】: `HeldObservation`（`OPERATIONAL_HOLD_RECORD`。内容 address
+  `p8hld_`、`HeldReason` 17 値、`audit_note` は identity に入らない）。
+- `src/intelligence/screener_intelligence/held_observation_store.py`【新規】: `HeldObservationStore`（追記専用 ・冪等 ・同じ id で違う
+  内容は `HELD_CONTENT_CONFLICT` ・破損 7 種で fail closed）。
+- `tests/intelligence/test_screener_operational_stores.py`【新規】: matrix A〜D。
+- `docs/databank/PHASE8_ST1_OPERATIONAL_STORES.md`【新規】（P8-OBS-58 ・59 は BLOCKED_PENDING_TERMS_CONFIRMATION のまま）。
+
+### 改善 — test ・guard
+
+- `tests/intelligence/phase8_runtime_registry.py`: 3 module ・test ・文書の登録、`PHASE8_ST1_RUNTIME`、anchor `P8_A3R`（`f1c4a4e`）。
+- `tests/intelligence/test_screener_intelligence_boundary.py`: ST1 の import の境界 ・閉包 ・指名の import ・語彙、store の書き込みの面
+  （`__init__` ・`append` だけ）、A3R の凍結の guard、先行の guard の除外。
+
+### 修正
+
+- なし
+
 ## v5.64 (2026-09-28) — Phase 8 P8-A3R real-data bridge foundation audit & design（設計 ・監査だけ。runtime の変更なし）
 
 実の J-Quants Light の data を凍結した Phase 8 の pipeline（A1 → A2 → A2R → A3A ／ A3B）に流すために要る橋を監査 ・設計した。

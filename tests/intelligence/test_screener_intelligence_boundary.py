@@ -28,11 +28,11 @@ from tests.intelligence.phase7_runtime_registry import (PHASE6_TEST_REGISTRATION
                                                         PHASE7_RUNTIME, is_phase7_addition)
 from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0, P8_A1, P8_A1R, P8_A2, P8_A2_5, P8_V,
                                                         P8_LV1, P8_PILOT1, P8_A2R, P8_A2RI, P8_A2RV, P8_A3A, P8_A3B,
-                                                        P8_VR,
+                                                        P8_A3R, P8_VR,
                                                         PHASE7_TEST_REGISTRATION, PHASE8_A1R_RUNTIME, PHASE8_A1_RUNTIME,
                                                         PHASE8_A2R_RUNTIME, PHASE8_A2_RUNTIME, PHASE8_A3A_RUNTIME,
                                                         PHASE8_A3B_METRIC_MODEL_REGISTRATION, PHASE8_A3B_RUNTIME,
-                                                        PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
+                                                        PHASE8_ST1_RUNTIME, PHASE8_DOCS, PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
                                                         registration_diff,
                                                         is_phase8_addition, only_phase8_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
@@ -40,16 +40,18 @@ from tests.intelligence.test_prediction_record import executable_source, importe
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE8_PACKAGE
-MODULES = ("__init__", "fundamental_metrics", "fundamental_metrics_extended", "identity_correction_model",
-           "identity_correction_store", "identity_model", "identity_remediation_resolver", "identity_resolver",
-           "identity_store", "metric_model", "observation_model", "observation_resolver", "observation_semantics_gate",
-           "observation_semantics_mapping", "observation_semantics_model", "observation_store")
+MODULES = ("__init__", "fundamental_metrics", "fundamental_metrics_extended", "held_observation_model",
+           "held_observation_store", "identity_correction_model", "identity_correction_store", "identity_model",
+           "identity_remediation_resolver", "identity_resolver", "identity_store", "metric_model", "observation_model",
+           "observation_resolver", "observation_semantics_gate", "observation_semantics_mapping",
+           "observation_semantics_model", "observation_store", "semantic_metadata_store")
 A1_MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store")
 A2_MODULES = ("observation_model", "observation_resolver", "observation_store")
 A1R_MODULES = ("identity_correction_model", "identity_correction_store", "identity_remediation_resolver")
 A2R_MODULES = ("observation_semantics_gate", "observation_semantics_mapping", "observation_semantics_model")
 A3A_MODULES = ("fundamental_metrics", "metric_model")
 A3B_MODULES = ("fundamental_metrics_extended",)
+ST1_MODULES = ("held_observation_model", "held_observation_store", "semantic_metadata_store")
 #: P8-A2R-IMPL より前に凍結した runtime ・test（LV1 ・PILOT1 ・A2R ・A2RV の anchor はこれらだけを持つ）
 PRE_A2R_RUNTIME = tuple(sorted(set(PHASE8_A2_RUNTIME) | set(PHASE8_A1R_RUNTIME)))
 #: P8-A3A より前に凍結した runtime（A2RI の anchor はこれらを持つ。A2R の 3 module を含む）
@@ -57,12 +59,16 @@ PRE_A3A_RUNTIME = tuple(sorted(set(PRE_A2R_RUNTIME) | set(PHASE8_A2R_RUNTIME)))
 A2R_TEST = "tests/intelligence/test_screener_observation_semantics.py"
 A3A_TEST = "tests/intelligence/test_screener_fundamental_metrics.py"
 A3B_TEST = "tests/intelligence/test_screener_fundamental_metrics_extended.py"
+ST1_TEST = "tests/intelligence/test_screener_operational_stores.py"
 #: 先行の anchor の guard が凍結の対象から外す、後の gate の test
-LATER_TESTS = (A2R_TEST, A3A_TEST, A3B_TEST)
+LATER_TESTS = (A2R_TEST, A3A_TEST, A3B_TEST, ST1_TEST)
 #: P8-A3B より前に凍結した runtime（A3A の anchor はこれらを持つ。A3A の 2 module を含む）
 PRE_A3B_RUNTIME = tuple(sorted(set(PRE_A3A_RUNTIME) | set(PHASE8_A3A_RUNTIME)))
 METRIC_MODEL = f"{PHASE8_PACKAGE}/metric_model.py"
-IO_MODULES = ("identity_store", "observation_store", "identity_correction_store")
+#: P8-ST1 より前に凍結した runtime（A3B ・A3R の anchor はこれらを持つ。16 module）
+PRE_ST1_RUNTIME = tuple(sorted(set(PRE_A3B_RUNTIME) | set(PHASE8_A3B_RUNTIME)))
+IO_MODULES = ("identity_store", "observation_store", "identity_correction_store", "semantic_metadata_store",
+              "held_observation_store")
 PHASE7_FINAL = "c1e95d35026652fb27c637318593fa8688219cf7"
 PHASE6_COMPLETION = "5ef313a6a9477f05b4e46756fb8b79c0f0c3d685"
 A1_DOC = "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md"
@@ -79,6 +85,7 @@ A2RI_DOC = "docs/databank/PHASE8_A2R_IMPLEMENTATION.md"
 A3A_DOC = "docs/databank/PHASE8_A3A_FUNDAMENTAL_METRICS.md"
 A3B_DOC = "docs/databank/PHASE8_A3B_NET_MARGIN_ROA.md"
 A3R_DOC = "docs/databank/PHASE8_A3R_REAL_DATA_BRIDGE_DESIGN.md"
+ST1_DOC = "docs/databank/PHASE8_ST1_OPERATIONAL_STORES.md"
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -118,6 +125,12 @@ ALLOWED_IMPORTS = {
                             ".observation_semantics_model"},
     "fundamental_metrics_extended": {"__future__", "typing", ".fundamental_metrics", ".identity_model",
                                      ".metric_model", ".observation_model", ".observation_resolver"},
+    "semantic_metadata_store": {"__future__", "json", "os", "dataclasses", "enum", "pathlib", "typing",
+                                ".observation_semantics_model"},
+    "held_observation_model": {"__future__", "re", "dataclasses", "datetime", "enum", "typing", ".identity_model",
+                               ".observation_model", ".observation_semantics_model"} | _CORE,
+    "held_observation_store": {"__future__", "json", "os", "dataclasses", "enum", "pathlib", "typing",
+                               ".held_observation_model"},
 }
 #: A2 が使ってよい A1 の名前（module → 名前。完全一致）。A1 の store ／ resolver の API は指名した module だけが使う
 SANCTIONED_A1_IMPORTS = {
@@ -172,6 +185,20 @@ SANCTIONED_A3B_IMPORTS = {
                                      ".observation_model": {"FundamentalField", "PeriodBasis"},
                                      ".observation_resolver": {"ObservationQuery"}},
 }
+#: ST1 が使ってよい A1 ／ A2 ／ A2R の名前（module → 名前。完全一致）。store ・resolver ・履歴 ・指標は使わない（authority の分離）
+SANCTIONED_ST1_IMPORTS = {
+    "semantic_metadata_store": {".observation_semantics_model": {"MAPPING_PROVENANCE_RECORD_KIND",
+                                                                 "SEMANTIC_METADATA_RECORD", "SEMANTICS_RECORD_KIND",
+                                                                 "ObservationSemantics", "SemanticMappingProvenance",
+                                                                 "SemanticsModelError"}},
+    "held_observation_model": {".identity_model": {"CREDENTIAL_MARKERS", "SourceClass", "canonical_json",
+                                                   "is_issuer_id", "is_security_id"},
+                               ".observation_model": {"FundamentalField", "StatementBasis"},
+                               ".observation_semantics_model": {"SchemaFamily"}},
+    "held_observation_store": {".held_observation_model": {"HELD_RECORD_KIND", "OPERATIONAL_HOLD_RECORD",
+                                                           "HeldObservation", "HeldObservationModelError",
+                                                           "is_held_observation"}},
+}
 ALLOWED_CLOSURE = {"src", "src.intelligence", "src.intelligence.core", "src.intelligence.core.ids",
                    "src.intelligence.core.time", "src.intelligence.screener_intelligence"}
 EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store": {"identity_model"},
@@ -197,7 +224,11 @@ EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store
                      "fundamental_metrics_extended": {"identity_model", "identity_store", "identity_resolver",
                                                       "observation_model", "observation_store", "observation_resolver",
                                                       "observation_semantics_model", "observation_semantics_gate",
-                                                      "metric_model", "fundamental_metrics"}}
+                                                      "metric_model", "fundamental_metrics"},
+                     "semantic_metadata_store": {"identity_model", "observation_model", "observation_semantics_model"},
+                     "held_observation_model": {"identity_model", "observation_model", "observation_semantics_model"},
+                     "held_observation_store": {"identity_model", "observation_model", "observation_semantics_model",
+                                                "held_observation_model"}}
 
 
 def _git(*args: str) -> str:
@@ -279,7 +310,9 @@ def test_ba_to_bg_no_clock_randomness_network_or_dynamic_code_and_io_only_in_the
 @pytest.mark.parametrize("store,expected", [
     ("identity_store", {"__init__": {"ab", "mkdir"}, "append": {"ab", "write", "fsync"}}),
     ("observation_store", {"__init__": {"ab"}, "append": {"ab", "write", "fsync"}}),
-    ("identity_correction_store", {"__init__": {"ab"}, "append": {"ab", "write", "fsync"}})])
+    ("identity_correction_store", {"__init__": {"ab"}, "append": {"ab", "write", "fsync"}}),
+    ("semantic_metadata_store", {"__init__": {"ab", "mkdir"}, "append": {"ab", "write", "fsync"}}),
+    ("held_observation_store", {"__init__": {"ab", "mkdir"}, "append": {"ab", "write", "fsync"}})])
 def test_ba_to_bg_the_store_writes_only_through_append_and_initialize(store: str, expected: dict) -> None:
     tree = ast.parse((PACKAGE_DIR / f"{store}.py").read_text(encoding="utf-8"))
     writers = {}
@@ -370,7 +403,8 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
     assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC), ("A", A1R_DOC),
                     ("A", LV1_DOC), ("A", PILOT1_DOC),
-                    ("A", A2R_DOC), ("A", A2RV_DOC), ("A", A2RI_DOC), ("A", A3A_DOC), ("A", A3B_DOC), ("A", A3R_DOC)}
+                    ("A", A2R_DOC), ("A", A2RV_DOC), ("A", A2RI_DOC), ("A", A3A_DOC), ("A", A3B_DOC), ("A", A3R_DOC),
+                    ("A", ST1_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -384,14 +418,15 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     for path in (*PHASE8_TESTS, *PHASE8_DOCS):
         assert (REPO_ROOT / path).is_file(), path
     assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC, A1R_DOC, LV1_DOC, PILOT1_DOC, A2R_DOC,
-            A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC} <= set(PHASE8_DOCS)
+            A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC} <= set(PHASE8_DOCS)
     assert PHASE8_A1R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1R_MODULES)
     assert PHASE8_A2R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A2R_MODULES)
     assert PHASE8_A3A_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A3A_MODULES)
     assert PHASE8_A3B_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A3B_MODULES)
+    assert PHASE8_ST1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in ST1_MODULES)
     assert set(PHASE8_RUNTIME) == set(PHASE8_A2_RUNTIME) | set(PHASE8_A1R_RUNTIME) | set(PHASE8_A2R_RUNTIME) | set(
-        PHASE8_A3A_RUNTIME) | set(PHASE8_A3B_RUNTIME)
-    assert A2R_TEST in PHASE8_TESTS and A3A_TEST in PHASE8_TESTS and A3B_TEST in PHASE8_TESTS
+        PHASE8_A3A_RUNTIME) | set(PHASE8_A3B_RUNTIME) | set(PHASE8_ST1_RUNTIME)
+    assert {A2R_TEST, A3A_TEST, A3B_TEST, ST1_TEST} <= set(PHASE8_TESTS)
     assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
     assert PHASE8_A2_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in sorted((*A1_MODULES, *A2_MODULES)))
     assert set(PHASE7_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
@@ -604,7 +639,8 @@ def test_lv1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
     prior_docs = tuple(path for path in PHASE8_DOCS
-                       if path not in (LV1_DOC, PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
+                       if path not in (LV1_DOC, PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC,
+                                       ST1_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 7
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A1R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -621,7 +657,7 @@ def test_pilot1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
     prior_docs = tuple(path for path in PHASE8_DOCS
-                       if path not in (PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
+                       if path not in (PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 8 and LV1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_LV1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -638,7 +674,7 @@ def test_a2r_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
     prior_docs = tuple(path for path in PHASE8_DOCS
-                       if path not in (A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
+                       if path not in (A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 9 and PILOT1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_PILOT1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -654,7 +690,8 @@ def test_a2rv_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS
+                       if path not in (A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 10 and {PILOT1_DOC, A2R_DOC} <= set(prior_docs)
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A2R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -670,7 +707,7 @@ def test_a2ri_the_pre_a2r_runtime_phase8_tests_and_prior_documents_are_byte_iden
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         *LATER_TESTS))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC))
     assert len(PRE_A2R_RUNTIME) == 10 and len(frozen_tests) == 3 and len(prior_docs) == 11
     assert A2RV_DOC in prior_docs and A2R_DOC in prior_docs and PILOT1_DOC in prior_docs
     for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
@@ -687,8 +724,8 @@ def test_a3a_the_pre_a3a_runtime_phase8_tests_and_prior_documents_are_byte_ident
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A2RI, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        A3A_TEST, A3B_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3A_DOC, A3B_DOC, A3R_DOC))
+        A3A_TEST, A3B_TEST, ST1_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC))
     assert len(PRE_A3A_RUNTIME) == 13 and len(frozen_tests) == 4 and len(prior_docs) == 12
     assert A2R_TEST in frozen_tests and A2RI_DOC in prior_docs
     for path in (*PRE_A3A_RUNTIME, *frozen_tests, *prior_docs):
@@ -751,8 +788,8 @@ def test_a3b_the_pre_a3b_runtime_phase8_tests_and_prior_documents_are_byte_ident
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A3A, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        A3B_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3B_DOC, A3R_DOC))
+        A3B_TEST, ST1_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3B_DOC, A3R_DOC, ST1_DOC))
     byte_identical = tuple(path for path in PRE_A3B_RUNTIME if path != METRIC_MODEL)
     assert len(PRE_A3B_RUNTIME) == 15 and len(byte_identical) == 14 and len(frozen_tests) == 5
     assert len(prior_docs) == 13 and A3A_TEST in frozen_tests and A3A_DOC in prior_docs
@@ -838,11 +875,74 @@ def test_a2ri_the_semantics_vocabulary_is_closed_and_has_no_evaluative_member() 
 def test_a3r_all_phase8_runtime_tests_and_prior_documents_are_byte_identical_to_the_a3b_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A3B, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
-        "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py"))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path != A3R_DOC)
-    assert len(PHASE8_RUNTIME) == 16 and len(frozen_tests) == 6 and len(prior_docs) == 14
-    for path in (*PHASE8_RUNTIME, *frozen_tests, *prior_docs):
+        "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
+        ST1_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3R_DOC, ST1_DOC))
+    assert len(PRE_ST1_RUNTIME) == 16 and len(frozen_tests) == 6 and len(prior_docs) == 14
+    for path in (*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A3B}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A3B, "--", "src", *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", "src", *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A3B, "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("status", "--porcelain", "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
     assert not _git("ls-tree", P8_A3B, "--", A3R_DOC).strip()
+
+
+# ================================================================ P8-ST1（A3R の凍結 ・運用 store の境界）
+
+
+def test_st1_the_pre_st1_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_the_a3r_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A3R, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
+        "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
+        ST1_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path != ST1_DOC)
+    assert len(PRE_ST1_RUNTIME) == 16 and len(frozen_tests) == 6 and len(prior_docs) == 15 and A3R_DOC in prior_docs
+    for path in (*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs):
+        assert _git("show", f"{P8_A3R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_A3R, "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("status", "--porcelain", "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert not any(_git("ls-tree", P8_A3R, "--", path).strip() for path in (*PHASE8_ST1_RUNTIME, ST1_TEST, ST1_DOC))
+
+
+@pytest.mark.parametrize("name", ST1_MODULES)
+def test_st1_the_operational_stores_use_exactly_the_sanctioned_names_and_never_a2_a1_stores_or_metrics(
+        name: str) -> None:
+    imports = _from_imports(PACKAGE_DIR / f"{name}.py")
+    sanctioned = {module: names for module, names in imports.items()
+                  if module in (".identity_model", ".observation_model", ".observation_semantics_model",
+                                ".held_observation_model")}
+    assert sanctioned == SANCTIONED_ST1_IMPORTS[name]
+    assert not any(module in (".identity_store", ".identity_resolver", ".observation_store", ".observation_resolver",
+                              ".identity_correction_model", ".identity_correction_store",
+                              ".identity_remediation_resolver", ".observation_semantics_mapping",
+                              ".observation_semantics_gate", ".metric_model", ".fundamental_metrics",
+                              ".fundamental_metrics_extended") for module in imports), name
+    for module in (*A1_MODULES, *A2_MODULES, *A1R_MODULES, *A2R_MODULES, *A3A_MODULES, *A3B_MODULES):
+        if module != "__init__":                                                         # 先行の層は ST1 を知らない
+            used = _from_imports(PACKAGE_DIR / f"{module}.py")
+            assert not any(m in (".semantic_metadata_store", ".held_observation_model", ".held_observation_store")
+                           for m in used), module
+
+
+@pytest.mark.parametrize("name", ST1_MODULES)
+def test_st1_no_derived_metric_screening_ranking_theme_or_latest_names(name: str) -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"))
+    defined = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
+    targets = {t.id for node in ast.walk(tree) if isinstance(node, (ast.Assign, ast.AnnAssign))
+               for t in (node.targets if isinstance(node, ast.Assign) else [node.target]) if isinstance(t, ast.Name)}
+    words = set().union(*(_words(item) for item in defined | targets))
+    assert not words & DERIVED_TOKENS, (name, words & DERIVED_TOKENS)
+    constants = {node.value for node in ast.walk(tree)
+                 if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    assert not constants & DERIVED_MEMBERS, constants & DERIVED_MEMBERS
+    for clock in ("15:30", "06:30", "15:00", "09:00"):
+        assert clock not in (PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"), clock
+
+
+def test_st1_the_held_vocabulary_is_closed_and_has_no_evaluative_member() -> None:
+    from src.intelligence.screener_intelligence import held_observation_model as hom
+    members = {member.value for member in hom.HeldReason}
+    for word in ("RANK", "SCORE", "BUY", "SELL", "TOP", "BEST", "CANDIDATE", "THEME", "EXPOSURE", "LATEST", "SEVERITY",
+                 "PRIORITY", "HIGH", "LOW", "RETRY", "PROMOTE"):
+        assert not any(word in value for value in members), word
+    assert not set(hom.HeldObservation.__dataclass_fields__) & {"raw", "payload", "response_body", "api_response",
+                                                                "severity", "priority", "score", "rank", "record_id"}
