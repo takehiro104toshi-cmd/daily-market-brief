@@ -107,8 +107,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. Trump is expected to appoint Jay Clayton as new AI czar: Reports　★★★☆☆
-- **ニュース:** 「Trump is expected to appoint Jay Clayton as new AI czar: Reports」（CoinTelegraph）
+### 4. As public fears of AI grow, Trump digs in on voluntary safeguards　★★★☆☆
+- **ニュース:** 「As public fears of AI grow, Trump digs in on voluntary safeguards」（Investing.com News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -117,8 +117,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 5. Wall Street Week | Your Brain on AI, Rare Earth Race, College Enrollment Cliff　★★★☆☆
-- **ニュース:** 「Wall Street Week | Your Brain on AI, Rare Earth Race, College Enrollment Cliff」（Bloomberg Markets(見出し)）
+### 5. Trump is expected to appoint Jay Clayton as new AI czar: Reports　★★★☆☆
+- **ニュース:** 「Trump is expected to appoint Jay Clayton as new AI czar: Reports」（CoinTelegraph）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -2180,7 +2180,7 @@ NYダウ上昇
 | ドル指数（DXY） | 101.93 | -0.17% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 91.11 | -1.90% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,162.30 | -0.95% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 84,591.61 | +0.11% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 84,655.81 | +0.19% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2216,22 +2216,22 @@ NYダウ上昇
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [Trump is expected to appoint Jay Clayton as new AI czar: Reports](https://cointelegraph.com/news/trump-is-expected-to-appoint-jay-clayton-as-new-ai-czar-reports?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
+### 4位 ★★★★★ [As public fears of AI grow, Trump digs in on voluntary safeguards](https://www.investing.com/news/stock-market-news/as-public-fears-of-ai-grow-trump-digs-in-on-voluntary-safeguards-4930823)
+- 出典（事実）: Investing.com News
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 5位 ★★★★★ [Trump is expected to appoint Jay Clayton as new AI czar: Reports](https://cointelegraph.com/news/trump-is-expected-to-appoint-jay-clayton-as-new-ai-czar-reports?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - 出典（事実）: CoinTelegraph
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 5位 ★★★★★ [Wall Street Week | Your Brain on AI, Rare Earth Race, College Enrollment Cliff](https://www.bloomberg.com/news/videos/2026-10-02/wall-street-week-rare-earth-race-enrollment-cliff-video)
+### 6位 ★★★★★ [Wall Street Week | Your Brain on AI, Rare Earth Race, College Enrollment Cliff](https://www.bloomberg.com/news/videos/2026-10-02/wall-street-week-rare-earth-race-enrollment-cliff-video)
 - 出典（事実）: Bloomberg Markets(見出し)
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 6位 ★★★★★ [Does AI have a soul? Pope Leo and Anthropic clash.](https://www.marketwatch.com/story/does-ai-have-a-soul-pope-leo-and-anthropic-clash-0c1669fb?mod=mw_rss_topstories)
-- 出典（事実）: MarketWatch Top Stories
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
@@ -2288,7 +2288,7 @@ NYダウ上昇
 - [Wall Street Week | Your Brain on AI, Rare Earth Race, College Enrollment Cliff](https://www.bloomberg.com/news/videos/2026-10-02/wall-street-week-rare-earth-race-enrollment-cliff-video) — Bloomberg Markets(見出し)
 - [Stocks Sink in Broad AI Rout Sparked by China's DeepSeek](https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main) — WSJ Markets
 - [DeepSeek Won't Sink U.S. AI Titans](https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main) — WSJ Markets
-- [Does AI have a soul? Pope Leo and Anthropic clash.](https://www.marketwatch.com/story/does-ai-have-a-soul-pope-leo-and-anthropic-clash-0c1669fb?mod=mw_rss_topstories) — MarketWatch Top Stories
+- [As public fears of AI grow, Trump digs in on voluntary safeguards](https://www.investing.com/news/stock-market-news/as-public-fears-of-ai-grow-trump-digs-in-on-voluntary-safeguards-4930823) — Investing.com News
 
 ### 第2位: 円高　★★★☆☆
 - **今強い理由（AI分析）:** 本日一部円高に関する報道が出ており、輸出関連企業の収益への懸念が意識されやすい状況です。
@@ -2463,7 +2463,7 @@ NYダウ上昇
 ### 第2位: Tesla（TSLA）　★★★★★
 直近値: 370.59 / 前日比: +16.48 (+4.65%)（事実）
 
-- **短期（AI分析）:** 前日比+16.48 (+4.65%)。 関連見出し: 「Tesla sold a lot more EVs than Wall Street expected, and the stock is surging」（MarketWatch Top Stories）
+- **短期（AI分析）:** 前日比+16.48 (+4.65%)。 関連見出し: 「Tesla’s Cybercab had a rocky first month in Austin. Now comes the hard part: expanding」（CNBC Top News）
 - **中期（AI分析）:** 業種「自動車」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「自動車」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
@@ -2575,7 +2575,7 @@ NYダウ上昇
 直近値: 370.59 / 前日比: +16.48 (+4.65%)（事実）
 
 - **理由（AI分析）:** 前日比+16.48 (+4.65%)と値動きが大きく、本日の注目銘柄として選定しました。
-- **注目材料（AI分析）:** 「Tesla sold a lot more EVs than Wall Street expected, and the stock is surging」（MarketWatch Top Stories）
+- **注目材料（AI分析）:** 「Tesla’s Cybercab had a rocky first month in Austin. Now comes the hard part: expanding」（CNBC Top News）
 - **短期見通し（AI分析）:** 業種「自動車」の材料が拮抗しており、短期的には方向感を欠く展開も考えられます。
 
 ### 第3位: KLA（KLAC）　★★★★★
@@ -2630,7 +2630,7 @@ NYダウ上昇
 | Apple（AAPL） | ★★★★☆ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
 | Microsoft（MSFT） | ★★★☆☆ | 「Microsoft has 3 secret weapons that could drive its stock 50% higher, analyst says」など関連ニュースあり。 |
 | NVIDIA（NVDA） | ★★★★☆ | 前日比上昇、個別の材料は確認されませんでした。 |
-| Tesla（TSLA） | ★★★★★ | 「Tesla sold a lot more EVs than Wall Street expected, and the stock is surging」など関連ニュースあり。 |
+| Tesla（TSLA） | ★★★★★ | 「Tesla’s Cybercab had a rocky first month in Austin. Now comes the hard part: expanding」など関連ニュースあり。 |
 | Amazon（AMZN） | ★★★★☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Alphabet（GOOGL） | ★★★★☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Meta Platforms（META） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
@@ -2830,7 +2830,7 @@ NYダウ上昇
 ### Tesla（TSLA）
 直近値: 370.59 / 前日比: +16.48 (+4.65%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+16.48 (+4.65%)。 関連見出し: 「Tesla sold a lot more EVs than Wall Street expected, and the stock is surging」（MarketWatch Top Stories）
+- **今日の材料（AI分析）:** 前日比+16.48 (+4.65%)。 関連見出し: 「Tesla’s Cybercab had a rocky first month in Austin. Now comes the hard part: expanding」（CNBC Top News）
 - **今後1週間（AI分析）:** 業種「自動車」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-10-21）
 - **今後1か月（AI分析）:** 今月中に決算発表（2026-10-21）が予定されており、業績見通しの変化が材料になりやすい状況です。「自動車」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。
 - **長期評価（AI分析）:** 「自動車」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2992,9 +2992,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「首相の予算委出席減を野党警戒」（Yahoo!ニュース トピックス）
-- 「「こどもNISA」注意点 専門家解説」（Yahoo!ニュース トピックス）
-- 「ダイビング客ら8人救助 意識あり」（Yahoo!ニュース トピックス）
+- 「4人死亡火災 隣家の住民ぼうぜん」（Yahoo!ニュース トピックス）
+- 「米中間選挙 長引く物価高が争点」（Yahoo!ニュース トピックス）
+- 「台風 千葉・神奈川で死者計15人に」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3223,7 +3223,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597393?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597376?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597375?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597399?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597429?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597349?source=rss)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199771000.html)
@@ -3233,21 +3233,21 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/london-gold-body-s-legal-fight-exposes-threat-to-bullion-market)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/india-mulls-commodity-derivatives-changes-to-boost-liquidity)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/israel-s-supreme-court-overturns-election-ban-on-arab-parties)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/uae-says-flydubai-co-pilot-planned-terrorist-operation)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/malaysia-eyes-245-million-naval-missile-system-star-reports)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/europe-s-stocks-are-straining-under-pressure-from-bond-yields)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/imf-approves-bolivia-loan-deal-to-support-paz-s-economic-reforms)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-02/wall-street-week-rare-earth-race-enrollment-cliff-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-02/the-close-10-2-2026-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-02/former-cea-chair-on-jobs-report-gdp-growth-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-02/morgan-stanley-s-nike-analyst-on-quarterly-earnings-video)
 - [CNBC Top News](https://www.cnbc.com/2026/10/03/data-center-backlash-europe-asia-africa.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/03/david-ellison-ynon-kreiz-skydance.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/03/tesla-cybercab-pressure-to-expand-after-rocky-first-month-in-austin.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/02/ford-q3-sales.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/02/diesel-oil-trump-europe-export-ban.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/03/mckinsey-asian-leaders-success-ambani-mahindra.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/02/oil-wti-brent-diesel-stock-release-europe.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/02/faa-says-boeing-737-max-10-software-glitch-not-a-flight-safety-issue.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/02/cerebras-stock-hits-post-ipo-low-on-nvidia-pressure-lockup-expiration.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/02/men-labor-market-jobs-report.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/02/treasury-irs-capital-gains-income-tax-section-351-warning.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/02/men-labor-market-jobs-report.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/02/jobs-report-september-2026.html)
@@ -3265,14 +3265,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [WSJ Markets](https://www.wsj.com/articles/safe-haven-currencies-strengthen-amid-fears-over-global-tariffs-9964e17a?mod=rss_markets_main)
 - [WSJ Markets](https://www.wsj.com/articles/u-s-natural-gas-futures-fall-on-shifting-weather-forecasts-1ef3e457?mod=rss_markets_main)
 - [WSJ Markets](https://www.wsj.com/articles/building-products-distributor-qxo-launching-hostile-bid-for-beacon-de024410?mod=rss_markets_main)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/as-treasury-yields-touch-generational-highs-investors-brace-for-the-market-fallout-0457e698?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/i-dont-want-to-die-on-the-sales-floor-im-67-and-earn-19-50-an-hour-at-a-big-box-store-when-can-i-finally-retire-369abcf9?mod=mw_rss_topstories)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/these-companies-look-set-to-face-high-profile-hearings-and-other-scrutiny-if-democrats-win-the-house-513fe8e7?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/why-western-digital-and-seagate-are-seeing-big-stock-drops-today-6b16d95e?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/tesla-ev-sales-beat-wall-streets-expectations-again-and-the-stock-jumps-294a4f53?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/im-71-and-still-working-i-earn-108-000-a-year-am-i-doing-the-right-thing-aaedcaa4?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/falling-wages-soaring-energy-prices-and-inflation-its-beginning-to-look-a-lot-like-the-1970s-d645cbca?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/why-mixing-politics-with-your-stock-portfolio-might-be-costing-you-money-5b4aabfb?mod=mw_rss_topstories)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/does-ai-have-a-soul-pope-leo-and-anthropic-clash-0c1669fb?mod=mw_rss_topstories)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/my-wife-never-went-back-to-work-after-raising-our-kids-do-i-have-to-share-my-retirement-savings-50-50-f0727f82?mod=mw_rss_topstories)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/elon-musk-in-a-post-on-x-says-some-of-his-trump-posts-went-too-far-and-that-he-regrets-them-90e73a6a?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/bank-of-england-decision-on-thursday-will-be-at-12-02-p-m-local-time-instead-of-12-p-m-due-to-ve-day-two-minutes-of-silence-1f6bed66?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/swiss-national-bank-cuts-interest-rates-by-a-half-point-to-0-5-ed1fce78?mod=mw_rss_realtimeheadlines)
@@ -3281,14 +3281,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/z-squared-cmo-christopher-schadel-buys-3920-in-stock-93CH-4930805)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/ehealth-director-francis-soistman-jr-sells-28174-in-common-stock-93CH-4930804)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/oregon-community-foundation-sells-325611-of-jewett-cameron-stock-93CH-4930803)
 - [Investing.com News](https://www.investing.com/news/commodities-news/flydubai-copilot-attacked-pilot-with-axe-attempted-terrorist-attack-uae-says-4930768)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/amplitude-ceo-spenser-skates-sells-70996-in-company-stock-93CH-4930792)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/auburn-national-bancorporation-svp-buys-743-in-aubn-stock-93CH-4930791)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/auburn-national-director-david-housel-buys-1401-in-company-stock-93CH-4930790)
-- [Investing.com News](https://www.investing.com/news/forex-news/bofa-sees-eurusd-at-115-by-yearend-amid-market-risks-93CH-4930789)
+- [Investing.com News](https://www.investing.com/news/investment-ideas/investingpros-fair-value-spotted-62-gain-in-dime-community-stock-93CH-4930836)
+- [Investing.com News](https://www.investing.com/news/investment-ideas/how-fair-value-spotted-sable-offshores-51-decline-11-months-early-93CH-4930834)
+- [Investing.com News](https://www.investing.com/news/commodities-news/beyond-the-gas-pump-how-much-oil-do-we-really-consume-4930832)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/as-public-fears-of-ai-grow-trump-digs-in-on-voluntary-safeguards-4930823)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/usrussia-talks-on-ukraine-involve-multibillion-dollar-oil-deal-nyt-reports-4930830)
+- [Investing.com News](https://www.investing.com/news/commodities-news/trump-to-speak-at-ohio-rally-as-republicans-defend-senate-seat-in-close-race-4930828)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/auburn-national-director-william-ham-jr-buys-1288-in-stock-93CH-4930827)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-100-sec-proposal-would-address-how-investment-advisers-funds-can-custody-crypto-assets-under-federal)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-99-secs-division-examinations-announces-new-exam-handbook)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-98-sec-charges-meyer-global-management-its-ceo-defrauding-retail-investors-private-funds-held-interests)
@@ -3322,6 +3322,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinDesk](https://www.coindesk.com/markets/2026/10/02/u-s-added-just-29-000-jobs-in-september-with-unemployment-rate-rising-to-4-2)
 - [CoinDesk](https://www.coindesk.com/daybook-us/2026/10/02/wall-street-s-fear-gauge-vix-could-get-a-crypto-style-makeover)
 - [CoinDesk](https://www.coindesk.com/tech/2026/10/02/live-updates-bitcoin-gold-and-tech-futures-edge-higher-as-markets-await-u-s-jobs-report)
+- [CoinTelegraph](https://cointelegraph.com/news/community-banks-sue-occ-over-trust-bank-charters-of-crypto-firms?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/trump-is-expected-to-appoint-jay-clayton-as-new-ai-czar-reports?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/mica-strengthened-retail-trust-regulated-crypto-exchanges-bitpanda-ceo-says?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
@@ -3329,7 +3330,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/blast-to-wind-down-ethereum-l2-after-costs-outpace-revenue?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/71-percent-uk-finance-leaders-expect-tokenization-reshape-financial-services-lloyds?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/crypto-biz-kalshi-blockchain-com-crypto-treasury-valuations?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-briefly-taps-87k-as-bond-yields-drop-on-low-us-nonfarm-payrolls-data?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/ennis-ebf-grows-sales-earns-015226342.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/strive-ceo-bitcoin-could-infinity-015100441.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/westinghouse-air-brake-wab-signs-014350177.html)
@@ -3338,14 +3338,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/titan-international-twi-signs-itm-012718577.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/may-mobilitys-spac-merger-road-015000118.html)
 - [Yahoo Finance US](https://finance.yahoo.com/technology/articles/sk-hynix-eyeing-intel-intc-043316388.html)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597404?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597376?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597418?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597402?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597400?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597421?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597420?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597413?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597432?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597406?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597425?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597435?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597423?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597414?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597419?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597437?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
