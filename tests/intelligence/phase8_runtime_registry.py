@@ -67,6 +67,8 @@ P8_PILOT2A = "6e042732acd52ed6c1c25c9e39688e78844b7589"
 P8_ADP0R = "ca3e2e4b64f99cfff3af066cdb8fcfa8d953df2b"
 #: P8-ACQ0 の凍結 anchor（package 32 ＋ transport ＋ runner ・Phase 8 の test ・先行の文書はここと byte 一致。OBS60-I1 で登録）
 P8_ACQ0 = "b210798cc99cbd503a52a0af190d171675eead3d"
+#: P8-OBS60-I1 の凍結 anchor（runtime 35 ・Phase 8 の test ・先行の文書はここと byte 一致。EXE-R で登録）
+P8_OBS60_I1 = "9d833b2fe4f359cad00f1bbdfb0943487c8ea10f"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -165,7 +167,8 @@ PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py"
                                  "tests/intelligence/test_screener_jquants_local_transport.py",
                                  "tests/intelligence/test_screener_pilot2_local_runner.py",
                                  "tests/intelligence/test_screener_acquisition_events.py",
-                                 "tests/intelligence/test_screener_identity_continuity.py")
+                                 "tests/intelligence/test_screener_identity_continuity.py",
+                                 "tests/intelligence/test_screener_jquants_execution_revision.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
 PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md",
                                 "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
@@ -193,7 +196,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_PILOT2A_LOCAL_RUNNER.md",
                                 "docs/databank/PHASE8_ADP0R_MULTI_STANDARD_REMEDIATION.md",
                                 "docs/databank/PHASE8_ACQ0_ACQUISITION_EVENT_AUTHORITY.md",
-                                "docs/databank/PHASE8_OBS60_I1_IDENTITY_CONTINUITY_COVERAGE.md")
+                                "docs/databank/PHASE8_OBS60_I1_IDENTITY_CONTINUITY_COVERAGE.md",
+                                "docs/databank/PHASE8_EXE_R_PROVIDER_REVISION_KNOWLEDGE.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -259,7 +263,7 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
            "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_EXE", "P8_ID1", "P8_LIVE0", "P8_LIVE1",
-           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_V",
+           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_V",
            "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",

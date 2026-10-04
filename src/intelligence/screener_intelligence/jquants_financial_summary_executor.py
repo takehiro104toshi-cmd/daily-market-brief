@@ -15,7 +15,9 @@ C. A2 の観測 → D. 結果。journal をまたぐ transaction は無いので
 参照する A2 の観測が存在するときだけ意味を持つ。
 
 revision（EXE §10）: 凍結の A2 の履歴から slot の鎖の末尾を再導出し、`supersedes` を自分で決める。同じ provider の revision（参照 ＝
-digest）は再利用、内容の違う訂正は新しい不変の revision。会計基準の違いは鎖に入れない（P8-OBS-57。A2R の `plan_append` が
+digest）は再利用、内容の違う訂正は新しい不変の revision。P8-EXE-R: 同じ自然 key で digest だけが違う provider 側の変更は、知識を
+取得の時刻（`AdapterContext.acquired_at`。無ければ `REJECTED / PROVIDER_REVISION_ACQUISITION_TIME_REQUIRED`）にして append し、
+過去の STRICT な PIT の答えを書き換えない。会計基準の違いは鎖に入れない（P8-OBS-57。A2R の `plan_append` が
 HOLD → 保留）。時計 ・乱数 ・UUID ・network ・LLM ・float は無い。
 
 記録: `docs/databank/PHASE8_EXE_SAFE_APPEND_EXECUTOR.md`。
@@ -34,7 +36,8 @@ from .jquants_execution_model import (EXECUTION_RULES_VERSION, AuthorityWrites, 
                                       ExecutionResult, FieldDisposition, FieldExecution, WriteState,
                                       ordered_execution_reasons)
 from .jquants_financial_summary_adapter import adapt_financial_summary_row
-from .observation_model import FundamentalActual, ObservationHistoryError, ObservationModelError, ValueState
+from .observation_model import (FundamentalActual, KnowledgeTime, ObservationHistoryError, ObservationModelError,
+                                ValueState)
 from .observation_semantics_gate import AppendEligibility, plan_append
 from .observation_semantics_mapping import DOCTYPE_MAPPING_VERSION, derive_observation_semantics
 from .observation_semantics_model import FieldFamily, ObservationSemantics, SchemaFamily, SemanticMappingProvenance
@@ -128,16 +131,28 @@ def _rejected(provider_record: Optional[ProviderRecordIdentity], reasons: Tuple[
                            mapping_rule_version=DOCTYPE_MAPPING_VERSION)
 
 
-def _plan_field(stores: _Stores, provider_field: str, root: FundamentalActual, doc_type: str) -> _FieldPlan:
-    """1 欄の計画。凍結の A2 の履歴から鎖の末尾を再導出し、provider の参照で replay を見つけ、前検査する。"""
+def _natural_key_ref(reference: str) -> str:
+    """provider の参照 `jq.fins_summary:<Code>.<DiscNo>.<DocType>:<digest24>` から digest を除いた自然 key の部分。"""
+    head, separator, _ = reference.rpartition(":")
+    return head if separator and not head.endswith("unreferenceable") else ""
+
+
+def _plan_field(stores: _Stores, provider_field: str, root: FundamentalActual, doc_type: str,
+                acquired_at: Any = None) -> _FieldPlan:
+    """1 欄の計画。凍結の A2 の履歴から鎖の末尾を再導出し、provider の参照で replay を見つけ、前検査する。
+
+    P8-EXE-R: 同じ provider の自然 key（Code ・DiscDate ・DiscTime ・DiscNo ・DocType）で内容（digest）だけが違う行は provider 側の
+    変更であり、その安全な知識の境界は **取得の時刻 `acquired_at`**（世界の開示時刻ではない。無ければ fail closed）。初見の行 ・
+    新しい DiscNo の訂正は従来どおり TDnet の開示日時を知識にする。
+    """
     if root.value.state is ValueState.NOT_REPORTED:
         return _FieldPlan(provider_field, root, None, None)
     chain = stores.observations.history.chains.get(root.slot_key, [])
     reference = root.provenance.source_record_ref
     same_revision = [record for record in chain if record.provenance.source_record_ref == reference]
     if same_revision:                                                            # 同じ provider の revision → 再利用
-        existing = same_revision[-1]
-        if (existing.value, existing.knowledge, existing.provenance) != (root.value, root.knowledge, root.provenance):
+        existing = same_revision[-1]                                             # 参照は digest を含む → 内容 ・開示日時は同じ
+        if (existing.value, existing.provenance) != (root.value, root.provenance):   # 知識は EXE-R で取得の時刻になり得る
             raise _Abort(ExecutionReason.OBSERVATION_CONFLICT, "PROVIDER_REVISION_CONTENT_DIFFERS")
         semantics, provenance = derive_observation_semantics(existing.record_id, doc_type,
                                                              FieldFamily.UNPREFIXED_ACTUAL)
@@ -149,9 +164,18 @@ def _plan_field(stores: _Stores, provider_field: str, root: FundamentalActual, d
             raise _Abort(ExecutionReason.SEMANTIC_CONFLICT, "PROVENANCE_CONFLICT")
         return _FieldPlan(provider_field, existing, semantics, provenance)      # append は byte 一致で収束する
     head = chain[-1] if chain else None
+    natural_key = _natural_key_ref(reference)
+    modified = [record for record in chain                                       # 同じ自然 key ・違う digest（provider 側の変更）
+                if natural_key and _natural_key_ref(record.provenance.source_record_ref) == natural_key
+                and record.knowledge == root.knowledge]
+    knowledge = root.knowledge
+    if modified:
+        if acquired_at is None:                                                  # 取得の時刻が無ければ開示時刻に落とさない
+            raise _Abort(ExecutionReason.PRECHECK_FAILED, "PROVIDER_REVISION_ACQUISITION_TIME_REQUIRED")
+        knowledge = KnowledgeTime.exact(acquired_at)                             # 保守的な system の知識の境界
     try:
         record = FundamentalActual(subject=root.subject, field=root.field, statement_basis=root.statement_basis,
-                                   period=root.period, value=root.value, knowledge=root.knowledge,
+                                   period=root.period, value=root.value, knowledge=knowledge,
                                    provenance=root.provenance, supersedes=head.record_id if head else "")
     except ObservationModelError as exc:
         raise _Abort(ExecutionReason.PRECHECK_FAILED, exc.code) from None
@@ -246,7 +270,8 @@ def _execute_eligible(stores: _Stores, fresh: AdapterResult, context: AdapterCon
         held = _held_record(fresh, context, (HeldReason.IDENTITY_UNRESOLVED,), material.observations[0].statement_basis)
         return _hold(stores, fresh, held, ExecutionReason.IDENTITY_UNRESOLVED)
     try:                                                                         # A. 全欄の前検査（0 書き込み）
-        plans = tuple(_plan_field(stores, observation.provenance.source_field, observation, doc_type)
+        plans = tuple(_plan_field(stores, observation.provenance.source_field, observation, doc_type,
+                                  context.acquired_at)
                       for observation in material.observations)
         for store in (stores.observations, stores.semantics, stores.held):
             store.verify_unchanged()

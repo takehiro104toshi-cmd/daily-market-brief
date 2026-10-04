@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.77 (2026-10-04) — Phase 8 P8-EXE-R provider revision acquisition-time knowledge（実 request なし）
+
+凍結 EXE の executor を定数ではなく 1 経路だけ再開した。provider 側が同じ自然 key（Code ・DiscDate ・DiscTime ・DiscNo ・DocType）の行の
+内容だけを修正すると、参照（digest を含む）が変わり、従来は元の開示日時の知識で新しい revision が append され、過去の STRICT な PIT の
+答えが書き換わっていた。EXE-R では、鎖に同じ自然 key ・違う digest の member があれば知識を `AdapterContext.acquired_at`（取得の時刻。
+保守的な system の知識の境界）にして append し、`acquired_at` が無ければ `REJECTED / PROVIDER_REVISION_ACQUISITION_TIME_REQUIRED` で
+fail closed。初見の行 ・新しい DiscNo の訂正は従来どおり TDnet の開示日時。同じ digest の再取得は `acquired_at` に依らず `REUSED`。
+元の観測 ・鎖は不変。coverage ・holdings_as_of ・retrospective resolver ・epoch は未実装。P8-A2C-R1 の凍結の依存は閉じた。
+
+追加
+・`tests/intelligence/test_screener_jquants_execution_revision.py`
+・`docs/databank/PHASE8_EXE_R_PROVIDER_REVISION_KNOWLEDGE.md`
+改善
+・`src/intelligence/screener_intelligence/jquants_financial_summary_executor.py`（`_plan_field` の provider 側の変更の知識 ・`_natural_key_ref`）
+・`tests/intelligence/phase8_runtime_registry.py`（OBS60-I1 の anchor `P8_OBS60_I1` ・EXE-R の test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（EXE-R の再開 path の除外 ・差を 1 経路に限る guard）
+修正
+・なし
+
 ## v5.76 (2026-10-04) — Phase 8 P8-OBS60-I1 identity continuity coverage authority（model I3。実 request なし）
 
 取得に成功した master snapshot の日 T について、凍結 A1 の `Coverage(JP_LISTED_EQUITY_IDENTITY, [T 00:00 JST, T＋1 日))` を 1 つだけ
