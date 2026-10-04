@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.76 (2026-10-04) — Phase 8 P8-OBS60-I1 identity continuity coverage authority（model I3。実 request なし）
+
+取得に成功した master snapshot の日 T について、凍結 A1 の `Coverage(JP_LISTED_EQUITY_IDENTITY, [T 00:00 JST, T＋1 日))` を 1 つだけ
+append する authority を package に追加した。条件は「凍結 ACQ0 の取得 event が store に在り COMPLETE ・master ・日 T ・bounded な行の
+digest と一致」かつ「凍結 A1 の有効な登録済み identity（退役していない code ・終わっていない上場）のすべてが凍結 ID1 の分類で REUSE」。
+退役 ／ 終了した identity は居なくてよいが現れれば人の審査、A1 に無い市場の他の code は範囲の外、有効な code の不在 ・市場 ／ 商品区分の
+変化 ・関係する新しい code は `REVIEW_REQUIRED`（凍結 LIVE1 ／ ID1 の型つき理由）。coverage の `known_at` は取得の `acquired_at`
+（遡らせない）。確かめた 1 日 ＝ 1 区間、失敗の日は gap のまま（橋を架けない ・埋めない）。書くのは Coverage だけ。EMPTY ／
+PARTIAL_PAGINATED ／ FAILED は coverage を作らない。遅れた人の審査は構造的に解けた。OBS60-F ・A2 の coverage ・日次の自動化は未実装。
+
+追加
+・`src/intelligence/screener_intelligence/identity_continuity_coverage.py`
+・`tests/intelligence/test_screener_identity_continuity.py`
+・`docs/databank/PHASE8_OBS60_I1_IDENTITY_CONTINUITY_COVERAGE.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（`PHASE8_OBS60_I1_RUNTIME` ・ACQ0 の anchor `P8_ACQ0`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（I1 の登録 ・ACQ0 anchor の byte 一致 ・Coverage だけを書く guard）
+修正
+・なし
+
 ## v5.75 (2026-10-04) — Phase 8 P8-ACQ0 acquisition event authority foundation（取得 event の証拠。coverage なし）
 
 P8-OBS60 の coverage authority の設計（監督承認）に先立つ共通の基盤として、取得 event（`AcquisitionEvent`）の不変の model と追記専用の

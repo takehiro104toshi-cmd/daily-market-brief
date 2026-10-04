@@ -387,8 +387,9 @@ def test_g_architecture_no_network_no_io_outside_the_store_and_frozen_layers_do_
     for token in ("urllib", "socket", "http", "environ", "getenv", "://", "sqlite", "unlink", "rename", "truncate",
                   '"wb"', '"w"', "write_text", "write_bytes"):
         assert token not in store_source, token
+    consumers = ("identity_continuity_coverage",)                                        # 後の gate の consumer（OBS60-I1）
     for path in sorted(PACKAGE_DIR.glob("*.py")):
-        if path.stem not in ("acquisition_event_model", "acquisition_event_store"):
+        if path.stem not in ("acquisition_event_model", "acquisition_event_store", *consumers):
             assert "acquisition_event" not in path.read_text(encoding="utf-8"), path.name   # 先行の層は ACQ0 を知らない
     for path in (REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py",
                  REPO_ROOT / "src" / "intelligence" / "jquants_pilot2_local.py", REPO_ROOT / "main.py"):
