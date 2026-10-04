@@ -46,6 +46,12 @@ class ObservationStatus(str, Enum):
     AUTHORITY_MISSING = "AUTHORITY_MISSING"
     STORE_CORRUPTION = "STORE_CORRUPTION"
     SUBJECT_NOT_RESOLVED = "SUBJECT_NOT_RESOLVED"
+    # P8-A2C: RETROSPECTIVE_PROVIDER_AUTHORITY だけが返す（STRICT_PIT の `resolve` は返さない）
+    SEMANTIC_HOLD = "SEMANTIC_HOLD"                      # provider の行は在ったが意味 ／ 構造の理由で保留（不在ではない）
+    VALUE_ABSENT = "VALUE_ABSENT"                        # canonical の行は在ったがその欄は記載なし（不在ではない）
+    MANIFEST_MISSING = "MANIFEST_MISSING"                # 選んだ epoch の取得に authoritative な manifest が無い
+    MANIFEST_CONFLICT = "MANIFEST_CONFLICT"              # manifest が epoch ・主語 ・取得に合わない
+    MEMBERSHIP_INVALID = "MEMBERSHIP_INVALID"            # manifest の member が A2 の像に無い ／ 合わない
 
 
 def _fail(code: str, detail: str = "") -> None:
@@ -142,14 +148,24 @@ class ObservationResolution:
     diagnostic: str = ""
     resolver_version: str = RESOLVER_VERSION
     authority_class: str = DERIVED_NON_AUTHORITY_NON_PERSISTENT
+    #: P8-A2C: 遡及の解決だけが埋める（STRICT_PIT では空のままで、直列化にも現れない）
+    resolution_mode: str = ""
+    authority_as_of: Optional[datetime] = None
+    coverage_epoch_id: str = ""
+    interpretation: str = ""
 
     def as_dict(self) -> Dict[str, Any]:
-        return {"authority_class": self.authority_class, "candidates": list(self.candidates),
+        data = {"authority_class": self.authority_class, "candidates": list(self.candidates),
                 "coverage_record_ids": list(self.coverage_record_ids), "cutoff": to_utc_iso(self.cutoff),
                 "diagnostic": self.diagnostic, "identity_status": self.identity_status,
                 "lineage": list(self.lineage), "query": self.query.as_dict(),
                 "record": self.record.as_dict() if self.record is not None else None,
                 "resolver_version": self.resolver_version, "status": self.status.value}
+        if self.resolution_mode != "":                                           # 遡及の印は mode があるときだけ
+            data.update({"authority_as_of": to_utc_iso(self.authority_as_of) if self.authority_as_of else "",
+                         "coverage_epoch_id": self.coverage_epoch_id, "interpretation": self.interpretation,
+                         "resolution_mode": self.resolution_mode})
+        return data
 
     def canonical_json(self) -> str:
         return canonical_json(self.as_dict())
@@ -190,8 +206,8 @@ def _subject_status(history: ObservationHistory, query: ObservationQuery, cutoff
 def _coverage(history: ObservationHistory, query: ObservationQuery,
               cutoff: datetime) -> Tuple[Optional[ObservationStatus], Tuple[str, ...]]:
     dataset = DATASET_FOR_CLASS[query.observation_class]
-    coverages = [c for c in history.coverages if c.dataset is dataset]
-    covering = [c for c in coverages if c.covers(query.data_date)]
+    coverages = [c for c in history.coverages if c.dataset is dataset and c.applies_to(query.subject_id)]
+    covering = [c for c in coverages if c.covers(query.data_date)]           # holdings_as_of は STRICT に関わらない
     if not covering:
         if coverages and query.data_date < min(c.data_from for c in coverages):
             return ObservationStatus.BEFORE_COVERAGE, ()

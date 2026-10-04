@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.79 (2026-10-04) — Phase 8 P8-A2C subject-scoped dual-time coverage + retrospective resolution（実 request なし）
+
+R1 の 2 軸を実装した。`ObservationCoverage` に主語（Issuer）`subject_id` と取得の瞬間 `holdings_as_of` を加算（無いときは従来の byte ・id
+のまま）。STRICT_PIT（凍結 A2 の `resolve`）は世界の知識の軸 `complete_through` のまま不変で、主語つきの coverage はその主語だけに当たる
+（COVERAGE_CONTRADICTION も同じ）。新 module `observation_retrospective_resolver.resolve_retrospective` は `authority_as_of` ・
+`identity_valid_at` ・manifest の像 ・A1R の authority をすべて明示に受け、`holdings_as_of` が最大の主語つき epoch を選び、その取得の
+EPOCH1 manifest だけを membership の authority として解く（journal の順 ・知識の時刻 ・現在の A2 の内容から推定しない）。保留の行は
+`SEMANTIC_HOLD`、記載なしは `VALUE_ABSENT`、`NOT_FOUND` は covered な slot で一致する membership が無いときだけ。結果は
+`resolution_mode` ・`authority_as_of` ・`coverage_epoch_id`（`jq.man:`）・`interpretation` を明示に持つ。F1 の coverage 生成 ・A3 の遡及 ・
+PILOT2B ・実 request は無い。
+
+追加
+・`src/intelligence/screener_intelligence/observation_retrospective_resolver.py`
+・`tests/intelligence/test_screener_observation_retrospective.py`
+・`docs/databank/PHASE8_A2C_DUAL_TIME_COVERAGE.md`
+改善
+・`src/intelligence/screener_intelligence/observation_model.py`（`ObservationCoverage` の任意の 2 欄 ・`applies_to` ・矛盾の主語 filter）
+・`src/intelligence/screener_intelligence/observation_resolver.py`（coverage の主語 filter ・status 5 member ・結果の任意の metadata）
+・`tests/intelligence/phase8_runtime_registry.py`（EPOCH1 の anchor `P8_EPOCH1` ・A2C の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（A2C の登録 ・再開 path の除外 ・差を限る guard ・byte 一致 guard）
+・`tests/intelligence/test_screener_identity_remediation.py`（A2 の byte guard から再開した 2 path を除く 1 箇所）
+・`tests/intelligence/test_screener_acquisition_manifest.py`（「凍結の層は manifest を知らない」の consumer の除外 1 箇所）
+修正
+・なし
+
 ## v5.78 (2026-10-04) — Phase 8 P8-EPOCH1 explicit acquisition manifest authority（実 request なし）
 
 P8-EPOCH0 で選んだ E3 を実装した。1 つの COMPLETE な bounded J-Quants fins 取得（凍結 ACQ0 の `AcquisitionEvent`。`code=C` だけの範囲）

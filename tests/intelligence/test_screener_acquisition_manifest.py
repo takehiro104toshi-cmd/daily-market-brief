@@ -683,6 +683,7 @@ def test_i_no_clock_network_raw_persistence_coverage_resolver_or_journal_positio
     for path in (REPO_ROOT / "src" / "intelligence" / "jquants_pilot2_local.py",
                  REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py", REPO_ROOT / "main.py"):
         assert "acquisition_manifest" not in path.read_text(encoding="utf-8"), path.name    # 配線は後の gate
+    consumers = ("observation_retrospective_resolver",)                                      # 後の gate の consumer（A2C）
     for path in sorted(PACKAGE_DIR.glob("*.py")):
-        if path.stem not in EPOCH1_MODULES:
+        if path.stem not in (*EPOCH1_MODULES, *consumers):
             assert "acquisition_manifest" not in path.read_text(encoding="utf-8"), path.name  # 凍結の層は知らない

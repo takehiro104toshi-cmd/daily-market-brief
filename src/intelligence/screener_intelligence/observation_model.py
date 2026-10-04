@@ -772,6 +772,11 @@ class ObservationCoverage(_Record):
     data_to: date
     complete_through: datetime
     provenance: ObservationProvenance
+    #: P8-A2C: 主語（Issuer）に限った coverage。空なら dataset 全体（従来どおり）
+    subject_id: str = ""
+    #: P8-A2C: この coverage を支えた COMPLETE な bounded provider 取得の system の瞬間（取得の軸。世界の知識の軸
+    #: `complete_through` とは別で、大小の関係を要求しない）。主語つきの coverage だけが持てる
+    holdings_as_of: Optional[datetime] = None
 
     def __post_init__(self) -> None:
         _enum(self.dataset, CoverageDataset, "dataset")
@@ -779,6 +784,11 @@ class ObservationCoverage(_Record):
         _plain_date(self.data_to, "data_to")
         _require(self.data_from < self.data_to, "INVALID_INTERVAL", "coverage")
         _aware(self.complete_through, "complete_through")
+        _require(isinstance(self.subject_id, str) and (self.subject_id == "" or is_issuer_id(self.subject_id)),
+                 "INVALID_SUBJECT", "subject_id")
+        if self.holdings_as_of is not None:
+            _aware(self.holdings_as_of, "holdings_as_of")
+            _require(self.subject_id != "", "HOLDINGS_REQUIRE_SUBJECT", "holdings_as_of")
         self._check_source()
         _require(self.provenance.source_field == "" and self.provenance.adjustment_ref == "", "INVALID_SOURCE_REF",
                  "coverage")
@@ -786,18 +796,31 @@ class ObservationCoverage(_Record):
     def covers(self, day: date) -> bool:
         return self.data_from <= day < self.data_to
 
+    def applies_to(self, subject_id: str) -> bool:
+        """dataset 全体の coverage は全主語に、主語つきの coverage はその主語だけに当たる。"""
+        return self.subject_id == "" or self.subject_id == subject_id
+
     def _payload(self) -> Dict[str, Any]:
-        return {"complete_through": to_utc_iso(self.complete_through), "data_from": self.data_from.isoformat(),
-                "data_to": self.data_to.isoformat(), "dataset": self.dataset.value}
+        payload = {"complete_through": to_utc_iso(self.complete_through), "data_from": self.data_from.isoformat(),
+                   "data_to": self.data_to.isoformat(), "dataset": self.dataset.value}
+        if self.subject_id != "":                                                # 無いときは欄も無い（従来の byte のまま）
+            payload["subject_id"] = self.subject_id
+        if self.holdings_as_of is not None:
+            payload["holdings_as_of"] = to_utc_iso(self.holdings_as_of)
+        return payload
 
     @classmethod
     def _from_payload(cls, payload: Mapping[str, Any], provenance: ObservationProvenance) -> "ObservationCoverage":
-        _reject_unknown(payload, ("complete_through", "data_from", "data_to", "dataset"), cls.KIND.value)
+        required = ("complete_through", "data_from", "data_to", "dataset")
+        optional = tuple(key for key in ("holdings_as_of", "subject_id") if key in payload)
+        _reject_unknown(payload, required + optional, cls.KIND.value)
+        holdings = payload.get("holdings_as_of")
         return cls(dataset=_parse_enum(payload["dataset"], CoverageDataset, "dataset"),
                    data_from=_parse_date(payload["data_from"], "data_from"),
                    data_to=_parse_date(payload["data_to"], "data_to"),
                    complete_through=_parse_datetime(payload["complete_through"], "complete_through"),
-                   provenance=provenance)
+                   provenance=provenance, subject_id=payload.get("subject_id", ""),
+                   holdings_as_of=_parse_datetime(holdings, "holdings_as_of") if holdings is not None else None)
 
 
 RECORD_TYPES: Mapping[RecordKind, type] = {cls.KIND: cls for cls in (
@@ -905,8 +928,9 @@ class ObservationHistory:
             if record.knowledge.earliest < predecessor.knowledge.earliest:
                 raise ObservationHistoryError("NON_MONOTONIC_KNOWLEDGE", "revision known before its predecessor")
         dataset = DATASET_FOR_CLASS[record.CLASS]
-        for coverage in self.coverages:
+        for coverage in self.coverages:                                          # holdings_as_of は世界の知識の矛盾に関わらない
             if coverage.dataset is dataset and coverage.covers(record.data_date) \
+                    and coverage.applies_to(record.subject_id) \
                     and record.knowledge.earliest <= coverage.complete_through:
                 raise ObservationHistoryError("COVERAGE_CONTRADICTION", dataset.value)
 

@@ -31,13 +31,13 @@ from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0
                                                         P8_LV1, P8_PILOT1, P8_A2R, P8_A2RI, P8_A2RV, P8_A3A, P8_A3B,
                                                         P8_A3R, P8_ST1, P8_ADP0, P8_EXE, P8_ID1, P8_LIVE0, P8_LIVE1,
                                                         P8_LIVE2, P8_PILOT2A, P8_ADP0R, P8_ACQ0, P8_OBS60_I1,
-                                                        P8_EXE_R, P8_VR,
+                                                        P8_EXE_R, P8_EPOCH1, P8_VR,
                                                         PHASE7_TEST_REGISTRATION, PHASE8_A1R_RUNTIME, PHASE8_A1_RUNTIME,
                                                         PHASE8_A2R_RUNTIME, PHASE8_A2_RUNTIME, PHASE8_A3A_RUNTIME,
                                                         PHASE8_A3B_METRIC_MODEL_REGISTRATION, PHASE8_A3B_RUNTIME,
                                                         PHASE8_ST1_RUNTIME, PHASE8_ADP0_RUNTIME, PHASE8_EXE_RUNTIME,
                                                         PHASE8_ACQ0_RUNTIME, PHASE8_OBS60_I1_RUNTIME,
-                                                        PHASE8_EPOCH1_RUNTIME,
+                                                        PHASE8_EPOCH1_RUNTIME, PHASE8_A2C_RUNTIME,
                                                         PHASE8_ID1_RUNTIME, PHASE8_ID2_RUNTIME, PHASE8_LIVE1_RUNTIME,
                                                         PHASE8_LIVE2_RUNTIME, PHASE8_PILOT2A_RUNTIME,
                                                         PHASE8_PACKAGE_RUNTIME, PHASE8_DOCS,
@@ -58,9 +58,9 @@ MODULES = ("__init__", "acquisition_event_model", "acquisition_event_store", "ac
            "identity_registration_model", "identity_remediation_resolver", "identity_resolver", "identity_store",
            "jquants_adapter_model", "jquants_execution_model", "jquants_financial_summary_adapter",
            "jquants_financial_summary_executor", "jquants_live_client", "jquants_live_model", "jquants_master_ingress",
-           "metric_model", "observation_model", "observation_resolver", "observation_semantics_gate",
-           "observation_semantics_mapping", "observation_semantics_model", "observation_store",
-           "semantic_metadata_store")
+           "metric_model", "observation_model", "observation_resolver", "observation_retrospective_resolver",
+           "observation_semantics_gate", "observation_semantics_mapping", "observation_semantics_model",
+           "observation_store", "semantic_metadata_store")
 A1_MODULES = ("__init__", "identity_model", "identity_resolver", "identity_store")
 A2_MODULES = ("observation_model", "observation_resolver", "observation_store")
 A1R_MODULES = ("identity_correction_model", "identity_correction_store", "identity_remediation_resolver")
@@ -76,8 +76,10 @@ LIVE1_MODULES = ("jquants_live_model", "jquants_master_ingress", "jquants_live_c
 ACQ0_MODULES = ("acquisition_event_model", "acquisition_event_store")
 OBS60_I1_MODULES = ("identity_continuity_coverage",)
 EPOCH1_MODULES = ("acquisition_manifest_model", "acquisition_manifest_store", "acquisition_manifest_builder")
+A2C_MODULES = ("observation_retrospective_resolver",)
 #: ACQ0 より前の package の module（LIVE2 ・PILOT2A ・ADP0R の anchor の package はこれ）
-PRE_ACQ0_MODULES = tuple(m for m in MODULES if m not in ACQ0_MODULES + OBS60_I1_MODULES + EPOCH1_MODULES)
+PRE_ACQ0_MODULES = tuple(m for m in MODULES
+                         if m not in ACQ0_MODULES + OBS60_I1_MODULES + EPOCH1_MODULES + A2C_MODULES)
 #: P8-LIVE2 の transport（package の外。本人の環境でだけ使う。package の純度の guard の対象外で、専用の guard を持つ）
 LIVE2_TRANSPORT = "src/intelligence/jquants_local_transport.py"
 #: P8-PILOT2A の runner（package の外。本人の環境でだけ。本番から import されない）
@@ -101,9 +103,10 @@ ACQ0_TEST = "tests/intelligence/test_screener_acquisition_events.py"
 OBS60_I1_TEST = "tests/intelligence/test_screener_identity_continuity.py"
 EXE_R_TEST = "tests/intelligence/test_screener_jquants_execution_revision.py"
 EPOCH1_TEST = "tests/intelligence/test_screener_acquisition_manifest.py"
+A2C_TEST = "tests/intelligence/test_screener_observation_retrospective.py"
 #: 先行の anchor の guard が凍結の対象から外す、後の gate の test
 LATER_TESTS = (A2R_TEST, A3A_TEST, A3B_TEST, ST1_TEST, ADP0_TEST, EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST,
-               PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST)
+               PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST)
 #: P8-A3B より前に凍結した runtime（A3A の anchor はこれらを持つ。A3A の 2 module を含む）
 PRE_A3B_RUNTIME = tuple(sorted(set(PRE_A3A_RUNTIME) | set(PHASE8_A3A_RUNTIME)))
 METRIC_MODEL = f"{PHASE8_PACKAGE}/metric_model.py"
@@ -155,6 +158,7 @@ ACQ0_DOC = "docs/databank/PHASE8_ACQ0_ACQUISITION_EVENT_AUTHORITY.md"
 OBS60_I1_DOC = "docs/databank/PHASE8_OBS60_I1_IDENTITY_CONTINUITY_COVERAGE.md"
 EXE_R_DOC = "docs/databank/PHASE8_EXE_R_PROVIDER_REVISION_KNOWLEDGE.md"
 EPOCH1_DOC = "docs/databank/PHASE8_EPOCH1_ACQUISITION_MANIFEST.md"
+A2C_DOC = "docs/databank/PHASE8_A2C_DUAL_TIME_COVERAGE.md"
 #: P8-ADP0R が監督の決定で狭く再開した runtime（ADP0 の adapter の pilot の方針の定数だけ）と、それに直接依存する test ・文書。
 #: 先行の anchor の byte 一致の guard はこれらを比較から外し、`test_adp0r_*` が PILOT2A の anchor との差を定数 1 つに限る
 ADP0_ADAPTER = f"{PHASE8_PACKAGE}/jquants_financial_summary_adapter.py"
@@ -162,11 +166,17 @@ ADP0R_REOPENED = (ADP0_ADAPTER, ADP0_TEST, EXE_TEST, PILOT2A_TEST, ADP0_DOC)
 #: P8-EXE-R が監督の決定で狭く再開した runtime（EXE の executor の provider 側の変更の知識だけ）
 EXE_EXECUTOR = f"{PHASE8_PACKAGE}/jquants_financial_summary_executor.py"
 EXE_R_REOPENED = (EXE_EXECUTOR,)
+#: P8-A2C が監督の決定で狭く再開した runtime（A2 の coverage model ・STRICT resolver の加算だけ）と、それに直接依存する凍結 test
+#: （A1R の test の A2 byte guard の 1 箇所 ・EPOCH1 の test の consumer の除外の 1 箇所）。`test_a2c_*` が差を pin する
+OBS_MODEL = f"{PHASE8_PACKAGE}/observation_model.py"
+OBS_RESOLVER = f"{PHASE8_PACKAGE}/observation_resolver.py"
+A1R_TEST = "tests/intelligence/test_screener_identity_remediation.py"
+A2C_REOPENED = (OBS_MODEL, OBS_RESOLVER, A1R_TEST, EPOCH1_TEST)
 
 
 def _frozen(*paths: str) -> tuple:
-    """先行の anchor と byte 一致を求める path（ADP0R ・EXE-R で再開した path を除く）。"""
-    return tuple(path for path in paths if path not in ADP0R_REOPENED + EXE_R_REOPENED)
+    """先行の anchor と byte 一致を求める path（ADP0R ・EXE-R ・A2C で再開した path を除く）。"""
+    return tuple(path for path in paths if path not in ADP0R_REOPENED + EXE_R_REOPENED + A2C_REOPENED)
 PHASE7_DOCS = tuple(f"docs/databank/PHASE7_{name}.md" for name in (
     "NARRATIVE_ARCHITECTURE_AUDIT", "NARRATIVE_SEMANTICS_MODEL_CONTRACT", "NARRATIVE_PIT_INPUT_CONTRACT",
     "NARRATIVE_DETERMINISTIC_SYNTHESIS_CONTRACT", "NARRATIVE_PRESENTATION_DIFF_CONTRACT",
@@ -255,6 +265,10 @@ ALLOWED_IMPORTS = {
                                      ".acquisition_manifest_model", ".acquisition_manifest_store",
                                      ".held_observation_model", ".identity_model", ".jquants_adapter_model",
                                      ".jquants_execution_model", ".jquants_live_model", ".observation_model"},
+    "observation_retrospective_resolver": {"__future__", "datetime", "typing",
+                                           ".acquisition_manifest_model", ".identity_model",
+                                           ".identity_remediation_resolver", ".identity_resolver",
+                                           ".observation_model", ".observation_resolver"},
 }
 #: A2 が使ってよい A1 の名前（module → 名前。完全一致）。A1 の store ／ resolver の API は指名した module だけが使う
 SANCTIONED_A1_IMPORTS = {
@@ -510,7 +524,12 @@ EXPECTED_INTERNAL = {"__init__": set(), "identity_model": set(), "identity_store
                                                       "identity_bootstrap_model", "identity_model",
                                                       "jquants_adapter_model", "jquants_execution_model",
                                                       "jquants_live_model", "jquants_master_ingress",
-                                                      "observation_model", "observation_semantics_model"}}
+                                                      "observation_model", "observation_semantics_model"},
+                     "observation_retrospective_resolver": {"acquisition_manifest_model", "identity_correction_model",
+                                                            "identity_correction_store", "identity_model",
+                                                            "identity_remediation_resolver", "identity_resolver",
+                                                            "identity_store", "observation_model",
+                                                            "observation_resolver", "observation_store"}}
 
 
 def _git(*args: str) -> str:
@@ -693,7 +712,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
                     ("A", ST1_DOC), ("A", ADP0_DOC), ("A", EXE_DOC), ("A", ID1_DOC),
                     ("A", ID2_DOC), ("A", LIVE0_DOC), ("A", LIVE1_DOC),
                     ("A", LIVE2_DOC), ("A", PILOT2A_DOC), ("A", ADP0R_DOC), ("A", ACQ0_DOC), ("A", OBS60_I1_DOC),
-                    ("A", EXE_R_DOC), ("A", EPOCH1_DOC)}
+                    ("A", EXE_R_DOC), ("A", EPOCH1_DOC), ("A", A2C_DOC)}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
@@ -710,7 +729,7 @@ def test_bm_the_phase8_registry_is_exact() -> None:
     assert {A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC, A1R_DOC, LV1_DOC, PILOT1_DOC, A2R_DOC,
             A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC, ADP0_DOC, EXE_DOC, ID1_DOC,
             ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC,
-            OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC} <= set(PHASE8_DOCS)
+            OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC} <= set(PHASE8_DOCS)
     assert PHASE8_A1R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1R_MODULES)
     assert PHASE8_A2R_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A2R_MODULES)
     assert PHASE8_A3A_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A3A_MODULES)
@@ -725,12 +744,13 @@ def test_bm_the_phase8_registry_is_exact() -> None:
         PHASE8_A3A_RUNTIME) | set(PHASE8_A3B_RUNTIME) | set(PHASE8_ST1_RUNTIME) | set(PHASE8_ADP0_RUNTIME) | set(
         PHASE8_EXE_RUNTIME) | set(PHASE8_ID1_RUNTIME) | set(PHASE8_ID2_RUNTIME) | set(PHASE8_LIVE1_RUNTIME) | set(
         PHASE8_LIVE2_RUNTIME) | set(PHASE8_PILOT2A_RUNTIME) | set(PHASE8_ACQ0_RUNTIME) | set(
-        PHASE8_OBS60_I1_RUNTIME) | set(PHASE8_EPOCH1_RUNTIME)
+        PHASE8_OBS60_I1_RUNTIME) | set(PHASE8_EPOCH1_RUNTIME) | set(PHASE8_A2C_RUNTIME)
     assert PHASE8_ACQ0_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in ACQ0_MODULES)
     assert PHASE8_OBS60_I1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in OBS60_I1_MODULES)
     assert PHASE8_EPOCH1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in EPOCH1_MODULES)
+    assert PHASE8_A2C_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A2C_MODULES)
     assert {A2R_TEST, A3A_TEST, A3B_TEST, ST1_TEST, ADP0_TEST, EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST,
-            LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST} <= set(PHASE8_TESTS)
+            LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST} <= set(PHASE8_TESTS)
     assert PHASE8_A1_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in A1_MODULES)
     assert PHASE8_A2_RUNTIME == tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in sorted((*A1_MODULES, *A2_MODULES)))
     assert set(PHASE7_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
@@ -872,10 +892,10 @@ def test_a2_ci_to_cl_the_observation_vocabulary_has_no_derived_or_evaluative_mem
 
 def test_a2_5_the_a1_a2_runtime_and_the_a2_contract_are_byte_identical_to_the_a2_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A2, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    for path in (*PHASE8_A2_RUNTIME, A2_DOC):
+    for path in _frozen(*PHASE8_A2_RUNTIME, A2_DOC):
         assert _git("show", f"{P8_A2}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A2, "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC) == ""
-    assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC) == ""
+    assert _git("diff", "--name-status", P8_A2, "--", *_frozen(*PHASE8_A2_RUNTIME, A1_DOC, A2_DOC)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PHASE8_A2_RUNTIME, A1_DOC, A2_DOC)) == ""
 
 
 # ================================================================ P8-V（A2.5 の凍結）
@@ -883,10 +903,10 @@ def test_a2_5_the_a1_a2_runtime_and_the_a2_contract_are_byte_identical_to_the_a2
 
 def test_v_the_runtime_and_the_a2_5_audit_are_byte_identical_to_the_a2_5_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A2_5, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    for path in (*PHASE8_A2_RUNTIME, A2_5_DOC):
+    for path in _frozen(*PHASE8_A2_RUNTIME, A2_5_DOC):
         assert _git("show", f"{P8_A2_5}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A2_5, "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC, A2_5_DOC) == ""
-    assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, A2_5_DOC) == ""
+    assert _git("diff", "--name-status", P8_A2_5, "--", *_frozen(*PHASE8_A2_RUNTIME, A1_DOC, A2_DOC, A2_5_DOC)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PHASE8_A2_RUNTIME, A2_5_DOC)) == ""
 
 
 # ================================================================ P8-VR（P8-V の凍結）
@@ -894,10 +914,11 @@ def test_v_the_runtime_and_the_a2_5_audit_are_byte_identical_to_the_a2_5_anchor(
 
 def test_vr_the_runtime_and_the_a2_5_and_v_records_are_byte_identical_to_the_v_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_V, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    for path in (*PHASE8_A2_RUNTIME, A2_5_DOC, V_DOC):
+    for path in _frozen(*PHASE8_A2_RUNTIME, A2_5_DOC, V_DOC):
         assert _git("show", f"{P8_V}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_V, "--", *PHASE8_A2_RUNTIME, A1_DOC, A2_DOC, A2_5_DOC, V_DOC) == ""
-    assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, A2_5_DOC, V_DOC) == ""
+    assert _git("diff", "--name-status", P8_V, "--",
+                *_frozen(*PHASE8_A2_RUNTIME, A1_DOC, A2_DOC, A2_5_DOC, V_DOC)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PHASE8_A2_RUNTIME, A2_5_DOC, V_DOC)) == ""
 
 
 # ================================================================ P8-A1R（訂正 ・2 軸の解決の境界 ／ 凍結）
@@ -906,10 +927,10 @@ def test_vr_the_runtime_and_the_a2_5_and_v_records_are_byte_identical_to_the_v_a
 def test_a1r_az_bs_a1_a2_runtime_and_prior_phase8_documents_are_byte_identical_to_the_vr_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_VR, "HEAD"], cwd=REPO_ROOT).returncode == 0
     prior_docs = (A1_DOC, A2_DOC, A2_5_DOC, V_DOC, VR_DOC)
-    for path in (*PHASE8_A2_RUNTIME, *prior_docs):
+    for path in _frozen(*PHASE8_A2_RUNTIME, *prior_docs):
         assert _git("show", f"{P8_VR}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_VR, "--", *PHASE8_A2_RUNTIME, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PHASE8_A2_RUNTIME, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_VR, "--", *_frozen(*PHASE8_A2_RUNTIME, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PHASE8_A2_RUNTIME, *prior_docs)) == ""
 
 
 @pytest.mark.parametrize("name", A1R_MODULES)
@@ -961,12 +982,12 @@ def test_lv1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
     prior_docs = tuple(path for path in PHASE8_DOCS
                        if path not in (LV1_DOC, PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC,
                                        ST1_DOC, ADP0_DOC, EXE_DOC, ID1_DOC, ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC,
-                                       PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                       PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 7
-    for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A1R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A1R, "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A1R, "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
 
 
 # ================================================================ P8-PILOT1（LV1 の凍結）
@@ -980,12 +1001,12 @@ def test_pilot1_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_
     prior_docs = tuple(path for path in PHASE8_DOCS
                        if path not in (PILOT1_DOC, A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC,
                                        ADP0_DOC, EXE_DOC, ID1_DOC, ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC,
-                                       PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                       PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 8 and LV1_DOC in prior_docs
-    for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_LV1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_LV1, "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_LV1, "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
 
 
 # ================================================================ P8-A2R（PILOT1 の凍結）
@@ -999,12 +1020,12 @@ def test_a2r_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to_
     prior_docs = tuple(path for path in PHASE8_DOCS
                        if path not in (A2R_DOC, A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC, ADP0_DOC,
                                        EXE_DOC, ID1_DOC, ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC,
-                                       ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                       ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 9 and PILOT1_DOC in prior_docs
-    for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_PILOT1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_PILOT1, "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_PILOT1, "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
 
 
 # ================================================================ P8-A2R の再実行（A2R の凍結）
@@ -1018,12 +1039,12 @@ def test_a2rv_the_runtime_phase8_tests_and_prior_documents_are_byte_identical_to
     prior_docs = tuple(path for path in PHASE8_DOCS
                        if path not in (A2RV_DOC, A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC, ADP0_DOC, EXE_DOC,
                                        ID1_DOC, ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC,
-                                       ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                       ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(frozen_tests) == 3 and len(prior_docs) == 10 and {PILOT1_DOC, A2R_DOC} <= set(prior_docs)
-    for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A2R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A2R, "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A2R, "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
 
 
 # ================================================================ P8-A2R-IMPL（A2RV の凍結 ・A2R の safety layer の境界）
@@ -1037,13 +1058,14 @@ def test_a2ri_the_pre_a2r_runtime_phase8_tests_and_prior_documents_are_byte_iden
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A2RI_DOC, A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC,
                                                                     ADP0_DOC, EXE_DOC, ID1_DOC, ID2_DOC, LIVE0_DOC,
                                                                     LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC,
-                                                                    ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                                                    ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC,
+                                                                    A2C_DOC))
     assert len(PRE_A2R_RUNTIME) == 10 and len(frozen_tests) == 3 and len(prior_docs) == 11
     assert A2RV_DOC in prior_docs and A2R_DOC in prior_docs and PILOT1_DOC in prior_docs
-    for path in (*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A2RV}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A2RV, "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_A2R_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A2RV, "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_A2R_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_A2RV, "--", path).strip() for path in (*PHASE8_A2R_RUNTIME, A2R_TEST, A2RI_DOC))
 
 
@@ -1055,17 +1077,18 @@ def test_a3a_the_pre_a3a_runtime_phase8_tests_and_prior_documents_are_byte_ident
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         A3A_TEST, A3B_TEST, ST1_TEST, ADP0_TEST, EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST,
-        ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3A_DOC, A3B_DOC, A3R_DOC, ST1_DOC, ADP0_DOC,
                                                                     EXE_DOC, ID1_DOC, ID2_DOC, LIVE0_DOC,
                                                                         LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC,
-                                                                        ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                                                        ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC,
+                                                                        A2C_DOC))
     assert len(PRE_A3A_RUNTIME) == 13 and len(frozen_tests) == 4 and len(prior_docs) == 12
     assert A2R_TEST in frozen_tests and A2RI_DOC in prior_docs
-    for path in (*PRE_A3A_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_A3A_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A2RI}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A2RI, "--", *PRE_A3A_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_A3A_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A2RI, "--", *_frozen(*PRE_A3A_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_A3A_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_A2RI, "--", path).strip() for path in (*PHASE8_A3A_RUNTIME, A3A_TEST, A3A_DOC))
 
 
@@ -1123,18 +1146,18 @@ def test_a3b_the_pre_a3b_runtime_phase8_tests_and_prior_documents_are_byte_ident
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         A3B_TEST, ST1_TEST, ADP0_TEST, EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST,
-        OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3B_DOC, A3R_DOC, ST1_DOC, ADP0_DOC, EXE_DOC,
                                                                     ID1_DOC, ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC,
                                                                     PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                                                    EXE_R_DOC, EPOCH1_DOC))
+                                                                    EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     byte_identical = tuple(path for path in PRE_A3B_RUNTIME if path != METRIC_MODEL)
     assert len(PRE_A3B_RUNTIME) == 15 and len(byte_identical) == 14 and len(frozen_tests) == 5
     assert len(prior_docs) == 13 and A3A_TEST in frozen_tests and A3A_DOC in prior_docs
-    for path in (*byte_identical, *frozen_tests, *prior_docs):
+    for path in _frozen(*byte_identical, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A3A}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A3A, "--", *byte_identical, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_A3B_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A3A, "--", *_frozen(*byte_identical, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_A3B_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_A3A, "--", path).strip() for path in (*PHASE8_A3B_RUNTIME, A3B_TEST, A3B_DOC))
 
 
@@ -1215,16 +1238,16 @@ def test_a3r_all_phase8_runtime_tests_and_prior_documents_are_byte_identical_to_
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         ST1_TEST, ADP0_TEST, EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST,
-        OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (A3R_DOC, ST1_DOC, ADP0_DOC, EXE_DOC, ID1_DOC,
                                                                     ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC,
                                                                     PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                                                    EXE_R_DOC, EPOCH1_DOC))
+                                                                    EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(PRE_ST1_RUNTIME) == 16 and len(frozen_tests) == 6 and len(prior_docs) == 14
-    for path in (*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A3B}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A3B, "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A3B, "--", *_frozen(*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not _git("ls-tree", P8_A3B, "--", A3R_DOC).strip()
 
 
@@ -1236,16 +1259,16 @@ def test_st1_the_pre_st1_runtime_phase8_tests_and_prior_documents_are_byte_ident
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         ST1_TEST, ADP0_TEST, EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST,
-        OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (ST1_DOC, ADP0_DOC, EXE_DOC, ID1_DOC, ID2_DOC,
                                                                     LIVE0_DOC, LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC,
                                                                     ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC,
-                                                                    EPOCH1_DOC))
+                                                                    EPOCH1_DOC, A2C_DOC))
     assert len(PRE_ST1_RUNTIME) == 16 and len(frozen_tests) == 6 and len(prior_docs) == 15 and A3R_DOC in prior_docs
-    for path in (*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_A3R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_A3R, "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_ST1_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_A3R, "--", *_frozen(*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_ST1_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_A3R, "--", path).strip() for path in (*PHASE8_ST1_RUNTIME, ST1_TEST, ST1_DOC))
 
 
@@ -1302,15 +1325,16 @@ def test_adp0_the_pre_adp0_runtime_phase8_tests_and_prior_documents_are_byte_ide
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         ADP0_TEST, EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST,
-        EXE_R_TEST, EPOCH1_TEST))
+        EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (ADP0_DOC, EXE_DOC, ID1_DOC, ID2_DOC, LIVE0_DOC,
                                                                     LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC,
-                                                                    ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                                                    ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC,
+                                                                    A2C_DOC))
     assert len(PRE_ADP0_RUNTIME) == 19 and len(frozen_tests) == 7 and len(prior_docs) == 16 and ST1_DOC in prior_docs
-    for path in (*PRE_ADP0_RUNTIME, *frozen_tests, *prior_docs):
+    for path in _frozen(*PRE_ADP0_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_ST1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_ST1, "--", *PRE_ADP0_RUNTIME, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *PRE_ADP0_RUNTIME, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_ST1, "--", *_frozen(*PRE_ADP0_RUNTIME, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*PRE_ADP0_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_ST1, "--", path).strip()
                    for path in (*PHASE8_ADP0_RUNTIME, ADP0_TEST, ADP0_DOC))
 
@@ -1360,9 +1384,10 @@ def test_exe_the_pre_exe_runtime_phase8_tests_and_prior_documents_are_byte_ident
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
         EXE_TEST, ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST,
-        EPOCH1_TEST))
+        EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (EXE_DOC, ID1_DOC, ID2_DOC, LIVE0_DOC,
-                       LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                       LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC,
+                       A2C_DOC))
     assert len(PRE_EXE_RUNTIME) == 21 and len(frozen_tests) == 8 and len(prior_docs) == 17 and ADP0_DOC in prior_docs
     for path in _frozen(*PRE_EXE_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_ADP0}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -1423,10 +1448,11 @@ def test_id1_the_pre_id1_runtime_phase8_tests_and_prior_documents_are_byte_ident
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_EXE, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        ID1_TEST, ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST,
+        A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (ID1_DOC, ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC,
                                                                     PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                                                    EXE_R_DOC, EPOCH1_DOC))
+                                                                    EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(PRE_ID1_RUNTIME) == 23 and len(frozen_tests) == 9 and len(prior_docs) == 18 and EXE_DOC in prior_docs
     for path in _frozen(*PRE_ID1_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_EXE}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -1489,10 +1515,10 @@ def test_id2_the_pre_id2_runtime_phase8_tests_and_prior_documents_are_byte_ident
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_ID1, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        ID2_TEST, LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (ID2_DOC, LIVE0_DOC, LIVE1_DOC, LIVE2_DOC,
                                                                     PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                                                    EXE_R_DOC, EPOCH1_DOC))
+                                                                    EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(PRE_ID2_RUNTIME) == 25 and len(frozen_tests) == 10 and len(prior_docs) == 19 and ID1_DOC in prior_docs
     for path in _frozen(*PRE_ID2_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_ID1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -1553,9 +1579,10 @@ def test_live1_the_pre_live1_runtime_phase8_tests_and_prior_documents_are_byte_i
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_LIVE0, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        LIVE1_TEST, LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC,
-                                                                    ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                                                    ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC,
+                                                                    A2C_DOC))
     assert len(PRE_LIVE1_RUNTIME) == 27 and len(frozen_tests) == 11 and len(prior_docs) == 21
     assert LIVE0_DOC in prior_docs and ID2_DOC in prior_docs
     for path in _frozen(*PRE_LIVE1_RUNTIME, *frozen_tests, *prior_docs):
@@ -1564,7 +1591,7 @@ def test_live1_the_pre_live1_runtime_phase8_tests_and_prior_documents_are_byte_i
     assert _git("status", "--porcelain", "--", *_frozen(*PRE_LIVE1_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_LIVE0, "--", path).strip()
                    for path in (*PHASE8_LIVE1_RUNTIME, LIVE1_TEST, LIVE1_DOC, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC,
-                                ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
 
 
 @pytest.mark.parametrize("name", LIVE1_MODULES)
@@ -1616,12 +1643,12 @@ def test_live2_the_pre_live2_runtime_phase8_tests_and_prior_documents_are_byte_i
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_LIVE1, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        LIVE2_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC,
-                                                                    OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                                                                    OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(PRE_LIVE2_RUNTIME) == 30 and len(frozen_tests) == 12 and len(prior_docs) == 22
     assert set(PRE_LIVE2_RUNTIME) == set(PHASE8_PACKAGE_RUNTIME) - set(PHASE8_ACQ0_RUNTIME) \
-        - set(PHASE8_OBS60_I1_RUNTIME) - set(PHASE8_EPOCH1_RUNTIME)
+        - set(PHASE8_OBS60_I1_RUNTIME) - set(PHASE8_EPOCH1_RUNTIME) - set(PHASE8_A2C_RUNTIME)
     assert LIVE1_DOC in prior_docs
     for path in _frozen(*PRE_LIVE2_RUNTIME, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_LIVE1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
@@ -1629,13 +1656,14 @@ def test_live2_the_pre_live2_runtime_phase8_tests_and_prior_documents_are_byte_i
     assert _git("status", "--porcelain", "--", *_frozen(*PRE_LIVE2_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_LIVE1, "--", path).strip()
                    for path in (LIVE2_TRANSPORT, LIVE2_TEST, LIVE2_DOC, PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                EXE_R_DOC, EPOCH1_DOC))
+                                EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
 
 
 def test_live2_the_transport_lives_outside_the_package_and_nothing_in_the_package_imports_it() -> None:
     assert (REPO_ROOT / LIVE2_TRANSPORT).is_file() and PACKAGE_DIR not in (REPO_ROOT / LIVE2_TRANSPORT).parents
     assert tuple(sorted(stem for stem, _ in _sources())) == MODULES
-    assert set(MODULES) - set(PRE_ACQ0_MODULES) == set(ACQ0_MODULES) | set(OBS60_I1_MODULES) | set(EPOCH1_MODULES)
+    assert set(MODULES) - set(PRE_ACQ0_MODULES) == set(ACQ0_MODULES) | set(OBS60_I1_MODULES) | set(EPOCH1_MODULES) \
+        | set(A2C_MODULES)
     for module in MODULES:
         if module == "__init__":
             continue
@@ -1669,9 +1697,9 @@ def test_pilot2a_the_pre_pilot2a_runtime_tests_and_prior_documents_are_byte_iden
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_LIVE2, "HEAD"], cwd=REPO_ROOT).returncode == 0
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                                                    EXE_R_DOC, EPOCH1_DOC))
+                                                                    EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
     assert len(PRE_PILOT2A_RUNTIME) == 31 and len(frozen_tests) == 13 and len(prior_docs) == 23
     assert LIVE2_TRANSPORT in PRE_PILOT2A_RUNTIME and LIVE2_DOC in prior_docs
     for path in _frozen(*PRE_PILOT2A_RUNTIME, *frozen_tests, *prior_docs):
@@ -1681,13 +1709,14 @@ def test_pilot2a_the_pre_pilot2a_runtime_tests_and_prior_documents_are_byte_iden
     assert _git("status", "--porcelain", "--", *_frozen(*PRE_PILOT2A_RUNTIME, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_LIVE2, "--", path).strip()
                    for path in (PILOT2A_RUNNER, PILOT2A_TEST, PILOT2A_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                EXE_R_DOC, EPOCH1_DOC))
+                                EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
 
 
 def test_pilot2a_the_runner_is_outside_the_package_local_only_and_never_imported_by_production() -> None:
     assert (REPO_ROOT / PILOT2A_RUNNER).is_file() and PACKAGE_DIR not in (REPO_ROOT / PILOT2A_RUNNER).parents
     assert tuple(sorted(stem for stem, _ in _sources())) == MODULES
-    assert set(MODULES) - set(PRE_ACQ0_MODULES) == set(ACQ0_MODULES) | set(OBS60_I1_MODULES) | set(EPOCH1_MODULES)
+    assert set(MODULES) - set(PRE_ACQ0_MODULES) == set(ACQ0_MODULES) | set(OBS60_I1_MODULES) | set(EPOCH1_MODULES) \
+        | set(A2C_MODULES)
     for module in MODULES:
         if module != "__init__":
             assert "jquants_pilot2_local" not in (PACKAGE_DIR / f"{module}.py").read_text(encoding="utf-8"), module
@@ -1712,18 +1741,19 @@ def test_pilot2a_the_runner_is_outside_the_package_local_only_and_never_imported
 def test_adp0r_everything_but_the_reopened_adapter_is_byte_identical_to_the_pilot2a_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_PILOT2A, "HEAD"], cwd=REPO_ROOT).returncode == 0
     runtime = tuple(path for path in PHASE8_RUNTIME if path not in (ADP0_ADAPTER, EXE_EXECUTOR)
-                    and path not in PHASE8_ACQ0_RUNTIME + PHASE8_OBS60_I1_RUNTIME + PHASE8_EPOCH1_RUNTIME)
+                    and path not in PHASE8_ACQ0_RUNTIME + PHASE8_OBS60_I1_RUNTIME + PHASE8_EPOCH1_RUNTIME
+                    + PHASE8_A2C_RUNTIME + A2C_REOPENED)
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        ADP0_TEST, EXE_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
+        ADP0_TEST, EXE_TEST, PILOT2A_TEST, ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
     prior_docs = tuple(path for path in PHASE8_DOCS if path not in (ADP0_DOC, ADP0R_DOC, ACQ0_DOC, OBS60_I1_DOC,
-                                                                    EXE_R_DOC, EPOCH1_DOC))
-    assert len(PHASE8_RUNTIME) == 38 and len(runtime) == 30 and len(frozen_tests) == 11 and len(prior_docs) == 23
+                                                                    EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
+    assert len(PHASE8_RUNTIME) == 39 and len(runtime) == 28 and len(frozen_tests) == 11 and len(prior_docs) == 23
     assert LIVE2_TRANSPORT in runtime and PILOT2A_RUNNER in runtime and PILOT2A_DOC in prior_docs
-    for path in (*runtime, *frozen_tests, *prior_docs):
+    for path in _frozen(*runtime, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_PILOT2A}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_PILOT2A, "--", *runtime, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *runtime, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_PILOT2A, "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
     assert not _git("ls-tree", P8_PILOT2A, "--", ADP0R_DOC).strip()
     for path in ADP0R_REOPENED:                                                  # 再開した path は anchor にも存在する
         assert _git("ls-tree", P8_PILOT2A, "--", path).strip(), path
@@ -1783,19 +1813,21 @@ def test_acq0_the_pre_acq0_runtime_tests_and_prior_documents_are_byte_identical_
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_ADP0R, "HEAD"], cwd=REPO_ROOT).returncode == 0
     runtime = tuple(path for path in PHASE8_RUNTIME
                     if path not in PHASE8_ACQ0_RUNTIME + PHASE8_OBS60_I1_RUNTIME + PHASE8_EPOCH1_RUNTIME
-                    + EXE_R_REOPENED)
+                    + PHASE8_A2C_RUNTIME + EXE_R_REOPENED + A2C_REOPENED)
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
-    assert len(runtime) == 31 and len(frozen_tests) == 14 and len(prior_docs) == 25
+        ACQ0_TEST, OBS60_I1_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC,
+    A2C_DOC))
+    assert len(runtime) == 29 and len(frozen_tests) == 14 and len(prior_docs) == 25
     assert ADP0_ADAPTER in runtime and ADP0R_DOC in prior_docs and ADP0_TEST in frozen_tests
-    for path in (*runtime, *frozen_tests, *prior_docs):
+    for path in _frozen(*runtime, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_ADP0R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_ADP0R, "--", *runtime, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *runtime, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_ADP0R, "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_ADP0R, "--", path).strip()
-                   for path in (*PHASE8_ACQ0_RUNTIME, ACQ0_TEST, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                   for path in (*PHASE8_ACQ0_RUNTIME, ACQ0_TEST, ACQ0_DOC, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC,
+                   A2C_DOC))
 
 
 @pytest.mark.parametrize("name", ACQ0_MODULES)
@@ -1853,12 +1885,13 @@ SANCTIONED_OBS60_I1_IMPORTS = {
 def test_obs60_i1_the_pre_i1_runtime_tests_and_prior_documents_are_byte_identical_to_the_acq0_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_ACQ0, "HEAD"], cwd=REPO_ROOT).returncode == 0
     runtime = tuple(path for path in PHASE8_RUNTIME
-                    if path not in PHASE8_OBS60_I1_RUNTIME + PHASE8_EPOCH1_RUNTIME + EXE_R_REOPENED)
+                    if path not in PHASE8_OBS60_I1_RUNTIME + PHASE8_EPOCH1_RUNTIME + PHASE8_A2C_RUNTIME
+                    + EXE_R_REOPENED + A2C_REOPENED)
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        OBS60_I1_TEST, ACQ0_TEST, EXE_R_TEST, EPOCH1_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
-    assert len(runtime) == 33 and len(frozen_tests) == 14 and len(prior_docs) == 26
+        OBS60_I1_TEST, ACQ0_TEST, EXE_R_TEST, EPOCH1_TEST, A2C_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
+    assert len(runtime) == 31 and len(frozen_tests) == 14 and len(prior_docs) == 26
     assert all(path in runtime for path in PHASE8_ACQ0_RUNTIME) and ACQ0_DOC in prior_docs
     anchored = _git("show", f"{P8_ACQ0}:{ACQ0_TEST}").splitlines()                 # ACQ0 の test: consumer の除外の 1 箇所だけ
     current = (REPO_ROOT / ACQ0_TEST).read_text(encoding="utf-8").splitlines()
@@ -1870,12 +1903,12 @@ def test_obs60_i1_the_pre_i1_runtime_tests_and_prior_documents_are_byte_identica
     assert any('consumers = ("identity_continuity_coverage", "acquisition_manifest_builder")' in line
                for line in added)
     assert any("*consumers" in line for line in added)
-    for path in (*runtime, *frozen_tests, *prior_docs):
+    for path in _frozen(*runtime, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_ACQ0}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_ACQ0, "--", *runtime, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *runtime, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_ACQ0, "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
     assert not any(_git("ls-tree", P8_ACQ0, "--", path).strip()
-                   for path in (*PHASE8_OBS60_I1_RUNTIME, OBS60_I1_TEST, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC))
+                   for path in (*PHASE8_OBS60_I1_RUNTIME, OBS60_I1_TEST, OBS60_I1_DOC, EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
 
 
 @pytest.mark.parametrize("name", OBS60_I1_MODULES)
@@ -1921,18 +1954,20 @@ def test_obs60_i1_no_derived_metric_screening_ranking_theme_or_latest_names(name
 
 def test_exe_r_everything_but_the_reopened_executor_is_byte_identical_to_the_obs60_i1_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_OBS60_I1, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    runtime = tuple(path for path in PHASE8_RUNTIME if path not in EXE_R_REOPENED + PHASE8_EPOCH1_RUNTIME)
+    runtime = tuple(path for path in PHASE8_RUNTIME
+                    if path not in EXE_R_REOPENED + PHASE8_EPOCH1_RUNTIME + PHASE8_A2C_RUNTIME + A2C_REOPENED)
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        EXE_R_TEST, EPOCH1_TEST, ACQ0_TEST))                  # ACQ0 の test の consumer の行は EPOCH1 の guard が pin する
-    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (EXE_R_DOC, EPOCH1_DOC))
-    assert len(PHASE8_RUNTIME) == 38 and len(runtime) == 34 and len(frozen_tests) == 15 and len(prior_docs) == 27
+        EXE_R_TEST, EPOCH1_TEST, A2C_TEST, ACQ0_TEST))        # ACQ0 の test の consumer の行は EPOCH1 の guard が pin する
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (EXE_R_DOC, EPOCH1_DOC, A2C_DOC))
+    assert len(PHASE8_RUNTIME) == 39 and len(runtime) == 32 and len(frozen_tests) == 15 and len(prior_docs) == 27
     assert EXE_TEST in frozen_tests and EXE_DOC in prior_docs and ADP0_ADAPTER in runtime
-    for path in (*runtime, *frozen_tests, *prior_docs):
+    for path in _frozen(*runtime, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_OBS60_I1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_OBS60_I1, "--", *runtime, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *runtime, *frozen_tests, *prior_docs) == ""
-    assert not any(_git("ls-tree", P8_OBS60_I1, "--", path).strip() for path in (EXE_R_TEST, EXE_R_DOC, EPOCH1_DOC))
+    assert _git("diff", "--name-status", P8_OBS60_I1, "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
+    assert not any(_git("ls-tree", P8_OBS60_I1, "--", path).strip() for path in (EXE_R_TEST, EXE_R_DOC, EPOCH1_DOC,
+    A2C_DOC))
     assert _git("ls-tree", P8_OBS60_I1, "--", EXE_EXECUTOR).strip()                 # 再開した path は anchor にも存在する
 
 
@@ -2000,18 +2035,19 @@ SANCTIONED_EPOCH1_IMPORTS = {
 
 def test_epoch1_the_whole_frozen_runtime_tests_and_prior_documents_are_byte_identical_to_the_exe_r_anchor() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_EXE_R, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    runtime = tuple(path for path in PHASE8_RUNTIME if path not in PHASE8_EPOCH1_RUNTIME)
+    runtime = tuple(path for path in PHASE8_RUNTIME
+                    if path not in PHASE8_EPOCH1_RUNTIME + PHASE8_A2C_RUNTIME + A2C_REOPENED)
     frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
         "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
-        EPOCH1_TEST, ACQ0_TEST))
-    prior_docs = tuple(path for path in PHASE8_DOCS if path != EPOCH1_DOC)
-    assert len(PHASE8_RUNTIME) == 38 and len(runtime) == 35 and len(frozen_tests) == 16 and len(prior_docs) == 28
+        EPOCH1_TEST, ACQ0_TEST, A2C_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path not in (EPOCH1_DOC, A2C_DOC))
+    assert len(PHASE8_RUNTIME) == 39 and len(runtime) == 33 and len(frozen_tests) == 16 and len(prior_docs) == 28
     assert EXE_EXECUTOR in runtime and ADP0_ADAPTER in runtime and EXE_R_TEST in frozen_tests
     assert EXE_R_DOC in prior_docs
-    for path in (*runtime, *frozen_tests, *prior_docs):
+    for path in _frozen(*runtime, *frozen_tests, *prior_docs):
         assert _git("show", f"{P8_EXE_R}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
-    assert _git("diff", "--name-status", P8_EXE_R, "--", *runtime, *frozen_tests, *prior_docs) == ""
-    assert _git("status", "--porcelain", "--", *runtime, *frozen_tests, *prior_docs) == ""
+    assert _git("diff", "--name-status", P8_EXE_R, "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
+    assert _git("status", "--porcelain", "--", *_frozen(*runtime, *frozen_tests, *prior_docs)) == ""
     anchored = _git("show", f"{P8_EXE_R}:{ACQ0_TEST}").splitlines()                  # ACQ0 の test: consumer の行 1 つだけ
     current = (REPO_ROOT / ACQ0_TEST).read_text(encoding="utf-8").splitlines()
     delta = [line for line in difflib.ndiff(anchored, current) if line[:1] in "+-"]
@@ -2019,7 +2055,7 @@ def test_epoch1_the_whole_frozen_runtime_tests_and_prior_documents_are_byte_iden
     assert 'consumers = ("identity_continuity_coverage",)' in delta[0] and delta[0][0] == "-"
     assert 'consumers = ("identity_continuity_coverage", "acquisition_manifest_builder")' in delta[1]
     assert not any(_git("ls-tree", P8_EXE_R, "--", path).strip()
-                   for path in (*PHASE8_EPOCH1_RUNTIME, EPOCH1_TEST, EPOCH1_DOC))
+                   for path in (*PHASE8_EPOCH1_RUNTIME, EPOCH1_TEST, EPOCH1_DOC, A2C_DOC))
 
 
 @pytest.mark.parametrize("name", EPOCH1_MODULES)
@@ -2035,7 +2071,7 @@ def test_epoch1_the_manifest_layer_uses_exactly_the_sanctioned_names_and_never_r
                          ".jquants_live_client", ".metric_model", ".fundamental_metrics",
                          ".fundamental_metrics_extended") for m in imports)
     for module in MODULES:
-        if module not in ("__init__", *EPOCH1_MODULES):                      # 凍結の層は manifest の層を知らない
+        if module not in ("__init__", *EPOCH1_MODULES, *A2C_MODULES):        # 凍結の層は manifest の層を知らない（A2C は consumer）
             used = _from_imports(PACKAGE_DIR / f"{module}.py")
             assert not any(m.startswith(".acquisition_manifest") for m in used), module
             assert "acquisition_manifest" not in (PACKAGE_DIR / f"{module}.py").read_text(encoding="utf-8"), module
@@ -2064,4 +2100,132 @@ def test_epoch1_no_derived_metric_screening_ranking_theme_or_latest_names(name: 
     lowered = executable_source(PACKAGE_DIR / f"{name}.py").lower()
     for token in ("fallback", "fuzzy", "similar", "difflib", "llm", "prompt", "journal_position", "line_index",
                   "position_of", "amount", "coname"):
+        assert token not in lowered, (name, token)
+
+
+# ================================================================ P8-A2C（EPOCH1 の凍結 ・A2 の狭い再開 ・遡及の解決の境界）
+
+#: A2C が使ってよい名前（module → 名前。完全一致）。store ・coverage の生成 ・EXE ・A3 ・ID1 ／ ID2 ・LIVE ・LLM は使わない
+SANCTIONED_A2C_IMPORTS = {
+    "observation_retrospective_resolver": {
+        ".acquisition_manifest_model": {"AcquisitionManifest", "ManifestDisposition", "is_manifest_reference"},
+        ".identity_model": {"SourceClass", "SubjectKind"},
+        ".identity_remediation_resolver": {"RemediationStatus", "ResolutionMode", "resolve_remediated"},
+        ".identity_resolver": {"IdentityQuery"},
+        ".observation_model": {"DATASET_FOR_CLASS", "FundamentalActual", "ObservationClass", "ObservationCoverage",
+                               "ObservationHistory", "ObservationModelError"},
+        ".observation_resolver": {"ObservationQuery", "ObservationResolution", "ObservationStatus"}},
+}
+
+
+def _pinned_delta(anchor: str, path: str, removed: int, added: int) -> list:
+    anchored = _git("show", f"{anchor}:{path}").splitlines()
+    current = (REPO_ROOT / path).read_text(encoding="utf-8").splitlines()
+    delta = [line for line in difflib.ndiff(anchored, current) if line[:1] in "+-"]
+    assert sorted(line[0] for line in delta) == ["+"] * added + ["-"] * removed, (path, delta)
+    return delta
+
+
+def test_a2c_everything_but_the_reopened_a2_model_and_resolver_is_byte_identical_to_the_epoch1_anchor() -> None:
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_EPOCH1, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    runtime = tuple(path for path in PHASE8_RUNTIME if path not in PHASE8_A2C_RUNTIME + A2C_REOPENED)
+    frozen_tests = tuple(path for path in PHASE8_TESTS if path not in (
+        "tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/test_screener_intelligence_boundary.py",
+        A2C_TEST, EPOCH1_TEST, A1R_TEST))
+    prior_docs = tuple(path for path in PHASE8_DOCS if path != A2C_DOC)
+    assert len(PHASE8_RUNTIME) == 39 and len(runtime) == 36 and len(frozen_tests) == 16 and len(prior_docs) == 29
+    assert all(path in runtime for path in (*PHASE8_A3A_RUNTIME, *PHASE8_A3B_RUNTIME, *PHASE8_EPOCH1_RUNTIME,
+                                            *PHASE8_ACQ0_RUNTIME, *PHASE8_A1R_RUNTIME, EXE_EXECUTOR, ADP0_ADAPTER,
+                                            f"{PHASE8_PACKAGE}/observation_store.py"))
+    for path in (*runtime, *frozen_tests, *prior_docs):
+        assert _git("show", f"{P8_EPOCH1}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P8_EPOCH1, "--", *runtime, *frozen_tests, *prior_docs) == ""
+    assert _git("status", "--porcelain", "--", *runtime, *frozen_tests, *prior_docs) == ""
+    a1r = _pinned_delta(P8_EPOCH1, A1R_TEST, removed=1, added=2)                    # A1R の test: A2 の byte guard の除外だけ
+    removed = [line for line in a1r if line[0] == "-"]
+    assert "for path in PHASE8_A2_RUNTIME:" in removed[0]
+    assert any("reopened = (" in line and "observation_model.py" in line for line in a1r)
+    assert any("if p not in reopened" in line for line in a1r)
+    epoch1 = _pinned_delta(P8_EPOCH1, EPOCH1_TEST, removed=1, added=2)             # EPOCH1 の test: consumer の除外だけ
+    removed = [line for line in epoch1 if line[0] == "-"]
+    assert "if path.stem not in EPOCH1_MODULES:" in removed[0]
+    assert any('consumers = ("observation_retrospective_resolver",)' in line for line in epoch1)
+    assert any("(*EPOCH1_MODULES, *consumers)" in line for line in epoch1)
+    assert not any(_git("ls-tree", P8_EPOCH1, "--", path).strip() for path in (*PHASE8_A2C_RUNTIME, A2C_TEST, A2C_DOC))
+    for path in (OBS_MODEL, OBS_RESOLVER):
+        assert _git("ls-tree", P8_EPOCH1, "--", path).strip()                      # 再開した path は anchor にも存在する
+
+
+def test_a2c_the_a2_model_and_resolver_differ_from_the_anchor_only_in_the_coverage_and_result_additions() -> None:
+    model_anchor = _executor_shape(_git("show", f"{P8_EPOCH1}:{OBS_MODEL}"))
+    model_now = _executor_shape((REPO_ROOT / OBS_MODEL).read_text(encoding="utf-8"))
+    changed = {key for key in set(model_anchor) | set(model_now) if model_anchor.get(key) != model_now.get(key)}
+    assert changed == {"class ObservationCoverage", "class ObservationHistory"}
+    resolver_anchor = _executor_shape(_git("show", f"{P8_EPOCH1}:{OBS_RESOLVER}"))
+    resolver_now = _executor_shape((REPO_ROOT / OBS_RESOLVER).read_text(encoding="utf-8"))
+    changed = {key for key in set(resolver_anchor) | set(resolver_now)
+               if resolver_anchor.get(key) != resolver_now.get(key)}
+    assert changed == {"class ObservationStatus", "class ObservationResolution", "def _coverage"}
+    assert resolver_anchor["def resolve"] == resolver_now["def resolve"]           # STRICT の手順そのものは不変
+    assert resolver_anchor["def _chain_head"] == resolver_now["def _chain_head"]
+    assert resolver_anchor["def _subject_status"] == resolver_now["def _subject_status"]
+    assert _from_imports(REPO_ROOT / OBS_RESOLVER) == _from_imports_text(_git("show", f"{P8_EPOCH1}:{OBS_RESOLVER}"))
+    assert _from_imports(REPO_ROOT / OBS_MODEL) == _from_imports_text(_git("show", f"{P8_EPOCH1}:{OBS_MODEL}"))
+    source = executable_source(REPO_ROOT / OBS_RESOLVER)
+    for token in ("holdings_as_of", "resolve_retrospective", "acquisition_manifest", "now(", "today("):
+        assert token not in source, token                                           # STRICT は取得の軸を読まない
+    model_source = executable_source(REPO_ROOT / OBS_MODEL)
+    assert "applies_to" in model_source and "HOLDINGS_REQUIRE_SUBJECT" in model_source
+    assert "holdings_as_of" not in model_source.split("class ObservationHistory:")[1]  # 矛盾の検査は取得の軸を読まない
+
+
+def _from_imports_text(source: str) -> dict:
+    found: dict = {}
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ImportFrom) and node.module and node.level:
+            found.setdefault("." * node.level + node.module, set()).update(alias.name for alias in node.names)
+    return found
+
+
+@pytest.mark.parametrize("name", A2C_MODULES)
+def test_a2c_the_retrospective_resolver_uses_exactly_the_sanctioned_names_and_is_not_imported_by_frozen_layers(
+        name: str) -> None:
+    imports = _from_imports(PACKAGE_DIR / f"{name}.py")
+    assert imports == SANCTIONED_A2C_IMPORTS[name]
+    assert not any(m in (".identity_store", ".identity_correction_store", ".observation_store",
+                         ".semantic_metadata_store", ".held_observation_store", ".acquisition_event_store",
+                         ".acquisition_manifest_store",
+                         ".acquisition_manifest_builder", ".jquants_financial_summary_executor",
+                         ".jquants_financial_summary_adapter", ".identity_continuity_coverage",
+                         ".identity_registration_executor", ".identity_bootstrap", ".jquants_live_client",
+                         ".metric_model", ".fundamental_metrics", ".fundamental_metrics_extended") for m in imports)
+    for module in MODULES:
+        if module not in ("__init__", *A2C_MODULES):                                 # 凍結の層は遡及の解決を知らない
+            used = _from_imports(PACKAGE_DIR / f"{module}.py")
+            assert not any(m == ".observation_retrospective_resolver" for m in used), module
+            assert "observation_retrospective" not in (PACKAGE_DIR / f"{module}.py").read_text(encoding="utf-8"), module
+    for outside in (LIVE2_TRANSPORT, PILOT2A_RUNNER, "main.py"):                   # 配線は後の gate（F1 ・A3-RA ・PILOT2B）
+        assert "observation_retrospective" not in (REPO_ROOT / outside).read_text(encoding="utf-8"), outside
+    source = executable_source(PACKAGE_DIR / f"{name}.py")
+    for token in ("Coverage(", "ObservationCoverage(", "history.add(", "store.append", "MetricResult", "ReasonCode",
+                  "execute_financial_summary_row", "now(", "today(", "utcnow"):
+        assert token not in source, (name, token)                                   # coverage ・A3 ・EXE ・時計は作らない
+    for node in ast.walk(ast.parse((PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"))):
+        assert not (isinstance(node, ast.Name) and node.id in IO_NAMES), (name, node.id)
+
+
+@pytest.mark.parametrize("name", A2C_MODULES)
+def test_a2c_no_derived_metric_screening_ranking_theme_or_latest_names(name: str) -> None:
+    tree = ast.parse((PACKAGE_DIR / f"{name}.py").read_text(encoding="utf-8"))
+    defined = {node.name for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.ClassDef))}
+    targets = {t.id for node in ast.walk(tree) if isinstance(node, (ast.Assign, ast.AnnAssign))
+               for t in (node.targets if isinstance(node, ast.Assign) else [node.target]) if isinstance(t, ast.Name)}
+    words = set().union(*(_words(item) for item in defined | targets))
+    assert not words & DERIVED_TOKENS, (name, words & DERIVED_TOKENS)
+    constants = {node.value for node in ast.walk(tree)
+                 if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    assert not constants & DERIVED_MEMBERS, constants & DERIVED_MEMBERS
+    lowered = executable_source(PACKAGE_DIR / f"{name}.py").lower()
+    for token in ("fallback", "fuzzy", "similar", "difflib", "llm", "prompt", "journal_position", "line_index",
+                  "position_of", "rowid", "latest", "current"):
         assert token not in lowered, (name, token)

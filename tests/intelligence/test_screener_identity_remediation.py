@@ -839,7 +839,8 @@ def test_ay_multiple_securities_semantics_are_preserved(w: World) -> None:
 
 
 def test_az_a2_and_a1_runtime_are_byte_frozen() -> None:
-    for path in PHASE8_A2_RUNTIME:
+    reopened = (f"{PHASE8_PACKAGE}/observation_model.py", f"{PHASE8_PACKAGE}/observation_resolver.py")  # P8-A2C
+    for path in (p for p in PHASE8_A2_RUNTIME if p not in reopened):
         shown = subprocess.run(["git", "show", f"{P8_VR}:{path}"], cwd=REPO_ROOT, capture_output=True, text=True,
                                check=True).stdout
         assert shown == (REPO_ROOT / path).read_text(encoding="utf-8"), path
