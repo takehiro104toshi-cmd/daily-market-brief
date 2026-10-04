@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.78 (2026-10-04) — Phase 8 P8-EPOCH1 explicit acquisition manifest authority（実 request なし）
+
+P8-EPOCH0 で選んだ E3 を実装した。1 つの COMPLETE な bounded J-Quants fins 取得（凍結 ACQ0 の `AcquisitionEvent`。`code=C` だけの範囲）
+につき 1 つの不変の `AcquisitionManifest` を、handoff の順の entry（provider の行の参照 ・digest ・disposition CANONICAL ／ HELD_SEMANTIC ／
+NOT_REPORTED_ONLY ／ UNSUPPORTED ・欄 → A2 観測 id ・保留 id ・期間 ・区分）として内容 address（`p8man_` ・`jq.man:`）で固定する。
+純な builder は凍結 EXE の結果を消費するだけ（再実行しない）で、取得 ・行 ・観測 ・保留への結び付きを確かめ、REJECTED ／ PARTIAL_FAILURE ／
+欠落 ／ 不一致は fail closed。別の追記専用 store `acquisition_manifests.jsonl`（同じ取得に違う manifest は MANIFEST_CONFLICT）。
+知識は entry に持たない（K2）。journal の位置は membership の authority として永久に不採用。配線 ・coverage ・retrospective resolver ・
+A3 ・PILOT2 ・実 request は無い。
+
+追加
+・`src/intelligence/screener_intelligence/acquisition_manifest_model.py`
+・`src/intelligence/screener_intelligence/acquisition_manifest_store.py`
+・`src/intelligence/screener_intelligence/acquisition_manifest_builder.py`
+・`tests/intelligence/test_screener_acquisition_manifest.py`
+・`docs/databank/PHASE8_EPOCH1_ACQUISITION_MANIFEST.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（EXE-R の anchor `P8_EXE_R` ・EPOCH1 の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（EPOCH1 の登録 ・sanctioned import ・凍結の層が manifest を知らない guard ・byte 一致 guard）
+・`tests/intelligence/test_screener_acquisition_events.py`（「先行の層は ACQ0 を知らない」の consumer の除外に manifest builder を 1 行追加）
+修正
+・なし
+
 ## v5.77 (2026-10-04) — Phase 8 P8-EXE-R provider revision acquisition-time knowledge（実 request なし）
 
 凍結 EXE の executor を定数ではなく 1 経路だけ再開した。provider 側が同じ自然 key（Code ・DiscDate ・DiscTime ・DiscNo ・DocType）の行の

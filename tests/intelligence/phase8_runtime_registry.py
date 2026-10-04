@@ -69,6 +69,8 @@ P8_ADP0R = "ca3e2e4b64f99cfff3af066cdb8fcfa8d953df2b"
 P8_ACQ0 = "b210798cc99cbd503a52a0af190d171675eead3d"
 #: P8-OBS60-I1 の凍結 anchor（runtime 35 ・Phase 8 の test ・先行の文書はここと byte 一致。EXE-R で登録）
 P8_OBS60_I1 = "9d833b2fe4f359cad00f1bbdfb0943487c8ea10f"
+#: P8-EXE-R の凍結 anchor（runtime 35 ・Phase 8 の test ・先行の文書はここと byte 一致。EPOCH1 で登録）
+P8_EXE_R = "cc8dcf5ae6235291595c87c34a6af330355a429b"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -86,7 +88,8 @@ PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 PHASE8_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "__init__", "identity_model", "identity_resolver", "identity_store"))
 PHASE8_PACKAGE_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
-    "__init__", "acquisition_event_model", "acquisition_event_store", "fundamental_metrics",
+    "__init__", "acquisition_event_model", "acquisition_event_store", "acquisition_manifest_builder",
+    "acquisition_manifest_model", "acquisition_manifest_store", "fundamental_metrics",
     "fundamental_metrics_extended", "held_observation_model",
     "held_observation_store", "identity_bootstrap", "identity_bootstrap_model", "identity_continuity_coverage",
     "identity_correction_model", "identity_correction_store", "identity_model", "identity_registration_executor",
@@ -142,6 +145,9 @@ PHASE8_ACQ0_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for n
 #: P8-OBS60-I1 で足した runtime（identity の継続 coverage の authority。A1 の Coverage だけを append）
 PHASE8_OBS60_I1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "identity_continuity_coverage",))
+#: P8-EPOCH1 で足した runtime（取得 manifest の membership authority: model ・追記専用 store ・純 builder。配線 ・coverage は無い）
+PHASE8_EPOCH1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
+    "acquisition_manifest_model", "acquisition_manifest_store", "acquisition_manifest_builder"))
 #: P8-LIVE1 で足した runtime（memory だけの取り込み client ・ID1 の前の適格。store ・network に触れない）
 PHASE8_LIVE1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "jquants_live_model", "jquants_master_ingress", "jquants_live_client"))
@@ -168,7 +174,8 @@ PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py"
                                  "tests/intelligence/test_screener_pilot2_local_runner.py",
                                  "tests/intelligence/test_screener_acquisition_events.py",
                                  "tests/intelligence/test_screener_identity_continuity.py",
-                                 "tests/intelligence/test_screener_jquants_execution_revision.py")
+                                 "tests/intelligence/test_screener_jquants_execution_revision.py",
+                                 "tests/intelligence/test_screener_acquisition_manifest.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
 PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md",
                                 "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
@@ -197,7 +204,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_ADP0R_MULTI_STANDARD_REMEDIATION.md",
                                 "docs/databank/PHASE8_ACQ0_ACQUISITION_EVENT_AUTHORITY.md",
                                 "docs/databank/PHASE8_OBS60_I1_IDENTITY_CONTINUITY_COVERAGE.md",
-                                "docs/databank/PHASE8_EXE_R_PROVIDER_REVISION_KNOWLEDGE.md")
+                                "docs/databank/PHASE8_EXE_R_PROVIDER_REVISION_KNOWLEDGE.md",
+                                "docs/databank/PHASE8_EPOCH1_ACQUISITION_MANIFEST.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -263,11 +271,12 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
            "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_EXE", "P8_ID1", "P8_LIVE0", "P8_LIVE1",
-           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_V",
+           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_V",
            "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",
-           "PHASE8_ACQ0_RUNTIME", "PHASE8_OBS60_I1_RUNTIME", "PHASE8_ADP0_RUNTIME", "PHASE8_EXE_RUNTIME",
+           "PHASE8_ACQ0_RUNTIME", "PHASE8_OBS60_I1_RUNTIME", "PHASE8_EPOCH1_RUNTIME", "PHASE8_ADP0_RUNTIME",
+           "PHASE8_EXE_RUNTIME",
            "PHASE8_ID1_RUNTIME",
            "PHASE8_ID2_RUNTIME",
            "PHASE8_LIVE1_RUNTIME", "PHASE8_LIVE2_RUNTIME", "PHASE8_PILOT2A_RUNTIME", "PHASE8_PACKAGE_RUNTIME",
