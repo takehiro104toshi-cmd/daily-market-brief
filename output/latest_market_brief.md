@@ -40,9 +40,8 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気55%・普通15%・弱気30%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer
-■注目テーマ3つ: AI／円高／利上げ
-■見…
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Trump taps Director of National Intelligence Jay Clayton as AI czar
+■注目テーマ3つ: AI／円高…
 
 ---
 ## 1. 今日の結論　★★★★★
@@ -68,7 +67,7 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer」（Bloomberg Markets(見出し)）　★★★★★
+### 3. 「Trump taps Director of National Intelligence Jay Clayton as AI czar」（CNBC Top News）　★★★★★
 - **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
@@ -98,8 +97,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer　★★★☆☆
-- **ニュース:** 「AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer」（Bloomberg Markets(見出し)）
+### 3. Trump taps Director of National Intelligence Jay Clayton as AI czar　★★★☆☆
+- **ニュース:** 「Trump taps Director of National Intelligence Jay Clayton as AI czar」（CNBC Top News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -108,8 +107,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. Trump taps Director of National Intelligence Jay Clayton as AI czar: WSJ reports　★★★☆☆
-- **ニュース:** 「Trump taps Director of National Intelligence Jay Clayton as AI czar: WSJ reports」（CNBC Top News）
+### 4. AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer　★★★☆☆
+- **ニュース:** 「AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer」（Bloomberg Markets(見出し)）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -2180,7 +2179,7 @@ NYダウ上昇
 | ドル指数（DXY） | 101.93 | -0.17% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 91.11 | -1.90% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,162.30 | -0.95% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 85,030.00 | +0.31% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 85,264.37 | +0.59% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2209,15 +2208,15 @@ NYダウ上昇
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer](https://www.bloomberg.com/news/articles/2026-10-04/ai-deal-frenzy-powers-hong-kong-fundraising-to-record-summer)
-- 出典（事実）: Bloomberg Markets(見出し)
+### 3位 ★★★★★ [Trump taps Director of National Intelligence Jay Clayton as AI czar](https://www.cnbc.com/2026/10/03/trump-jay-clayton-ai-czar.html)
+- 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [Trump taps Director of National Intelligence Jay Clayton as AI czar: WSJ reports](https://www.cnbc.com/2026/10/03/trump-jay-clayton-ai-czar.html)
-- 出典（事実）: CNBC Top News
+### 4位 ★★★★★ [AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer](https://www.bloomberg.com/news/articles/2026-10-04/ai-deal-frenzy-powers-hong-kong-fundraising-to-record-summer)
+- 出典（事実）: Bloomberg Markets(見出し)
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
@@ -2286,7 +2285,7 @@ NYダウ上昇
 **関連見出し（事実）:**
 - [オープンAI 開発一時中断 AIみずからサイバー攻撃実行のおそれ](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html) — NHKニュース 経済
 - [AI Deal Frenzy Powers Hong Kong Fundraising to Record Summer](https://www.bloomberg.com/news/articles/2026-10-04/ai-deal-frenzy-powers-hong-kong-fundraising-to-record-summer) — Bloomberg Markets(見出し)
-- [Trump taps Director of National Intelligence Jay Clayton as AI czar: WSJ reports](https://www.cnbc.com/2026/10/03/trump-jay-clayton-ai-czar.html) — CNBC Top News
+- [Trump taps Director of National Intelligence Jay Clayton as AI czar](https://www.cnbc.com/2026/10/03/trump-jay-clayton-ai-czar.html) — CNBC Top News
 - [Stocks Sink in Broad AI Rout Sparked by China's DeepSeek](https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main) — WSJ Markets
 - [DeepSeek Won't Sink U.S. AI Titans](https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main) — WSJ Markets
 
@@ -2963,8 +2962,8 @@ NYダウ上昇
 ### 今日の雑談（相場以外の公開ニュース）
 
 - 「岩屋氏を異例の厚遇 中国側思惑は」（Yahoo!ニュース トピックス）
-- 「那覇強殺 女性の死因は「窒息」」（Yahoo!ニュース トピックス）
-- 「大阪の2市合併検討へ 副首都視野」（Yahoo!ニュース トピックス）
+- 「副操縦士襲撃 緊迫の状況語る機長」（Yahoo!ニュース トピックス）
+- 「那覇強殺 米海兵隊側コメント発表」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3190,11 +3189,11 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597415?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597453?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597461?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597529?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597509?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597376?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597479?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597429?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6597349?source=rss)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199771000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199891000.html)
@@ -3203,22 +3202,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-04/opec-has-deal-outline-for-steady-november-quotas-delegates-say)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-04/ethiopia-recaptures-tigray-airport-as-northern-rebels-retreat)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-04/opec-has-deal-outline-for-steady-november-quotas-delegates-say)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-04/ai-deal-frenzy-powers-hong-kong-fundraising-to-record-summer)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/lula-bolsonaro-in-dead-heat-as-brazil-prepares-to-vote)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/mexico-says-its-troops-sent-to-border-in-conjunction-with-us)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/paramount-debt-drop-spells-trouble-for-borrowers-credit-weekly)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-03/bloomberg-this-weekend-10-3-2026-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-03/uae-says-flydubai-co-pilot-planned-terrorist-operation)
-- [CNBC Top News](https://www.cnbc.com/2026/10/03/tesla-cybercab-pressure-to-expand-after-rocky-first-month-in-austin.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/04/russia-ukraine-war-putin-zelenskyy-donbas-lyman.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/03/trump-jay-clayton-ai-czar.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/03/david-ellison-ynon-kreiz-skydance.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/03/flydubai-co-pilot-attacked-pilot-with-axe-uae-says.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/04/russia-ukraine-war-putin-zelenskyy-donbas-lyman.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/03/berkshire-buys-more-lennar-shares-but-pace-of-purchases-slows.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/03/novig-credits-sydney-sweeney-backed-campaign-for-platforms-surge-in-growth.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/03/data-center-backlash-europe-asia-africa.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/03/david-ellison-ynon-kreiz-skydance.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/03/tesla-cybercab-pressure-to-expand-after-rocky-first-month-in-austin.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/04/government-dating-app-fertility-singapore-asia.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/03/flydubai-co-pilot-attacked-pilot-with-axe-uae-says.html)
+- [CNBC Top News](https://www.cnbc.com/2026/10/03/lula-or-bolsonaro-wall-street-braces-for-two-wildly-different-results-in-brazil-election.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/02/men-labor-market-jobs-report.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/02/jobs-report-september-2026.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/01/the-september-jobs-report-will-be-released-friday-heres-what-to-expect.html)
@@ -3251,14 +3250,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/commodities-news/germanys-merz-arrives-in-kyiv-to-the-sound-of-sirens-and-explosions-4930915)
+- [Investing.com News](https://www.investing.com/news/press-releases/transcure-expands-athenahealth-billing-services-to-help-healthcare-practices-strengthen-revenue-performance-4930916)
+- [Investing.com News](https://www.investing.com/news/commodities-news/opec-set-to-hold-november-oil-quotas-steady-as-middle-east-conflict-hits-output-4930914)
 - [Investing.com News](https://www.investing.com/news/economy-news/japan-pm-protests-to-us-after-marine-arrested-over-okinawa-murder-4930912)
 - [Investing.com News](https://www.investing.com/news/economy-news/uk-lawmakers-warn-reliance-on-us-cloud-giants-poses-strategic-risk--bloomberg-4930910)
 - [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-slips-to-83119-bears-eye-81194-live-levels-93CH-4919475)
 - [Investing.com News](https://www.investing.com/news/economy-news/south-korea-orders-financial-sector-security-checks-after-data-breaches-4930908)
 - [Investing.com News](https://www.investing.com/news/commodities-news/bosnia-votes-sunday-in-election-that-could-affect-eu-bid-4930905)
-- [Investing.com News](https://www.investing.com/news/economy-news/germanys-merz-arrives-in-kyiv-with-135bn-aid-package-drone-deal-in-focus-4930907)
-- [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-holds-near-85000-as-sec-clears-first-3x-leveraged-crypto-etps-4930906)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/citi-explains-why-home-improvement-stocks-are-lagging-in-2026-4930904)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-100-sec-proposal-would-address-how-investment-advisers-funds-can-custody-crypto-assets-under-federal)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-99-secs-division-examinations-announces-new-exam-handbook)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-98-sec-charges-meyer-global-management-its-ceo-defrauding-retail-investors-private-funds-held-interests)
@@ -3292,6 +3291,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinDesk](https://www.coindesk.com/policy/2026/10/02/bank-group-sues-u-s-regulator-over-granting-crypto-trust-charters)
 - [CoinDesk](https://www.coindesk.com/business/2026/09/30/bny-in-talks-with-kraken-parent-payward-over-infrastructure-partnership)
 - [CoinDesk](https://www.coindesk.com/tech/2026/10/02/once-a-usd2-billion-ethereum-layer-2-blast-is-shutting-down-after-assets-plunge-98)
+- [CoinTelegraph](https://cointelegraph.com/news/el-salvador-receives-138-million-from-imf-after-bitcoin-waivers-granted?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/russias-finance-ministry-pays-wages-in-digital-rubles-for-first-time?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/near-intents-recovers-entire-stolen-38m-after-ultimatum-to-exploiter?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
@@ -3299,7 +3299,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/trump-is-expected-to-appoint-jay-clayton-as-new-ai-czar-reports?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/mica-strengthened-retail-trust-regulated-crypto-exchanges-bitpanda-ceo-says?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/anchorage-digital-cuts-workforce-report?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/blast-to-wind-down-ethereum-l2-after-costs-outpace-revenue?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/ennis-ebf-grows-sales-earns-015226342.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/crypto/articles/strive-ceo-bitcoin-could-infinity-015100441.html)
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/westinghouse-air-brake-wab-signs-014350177.html)
@@ -3309,13 +3308,13 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo Finance US](https://finance.yahoo.com/markets/stocks/articles/may-mobilitys-spac-merger-road-015000118.html)
 - [Yahoo Finance US](https://finance.yahoo.com/technology/articles/sk-hynix-eyeing-intel-intc-043316388.html)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597518?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597511?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597517?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597502?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597509?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597516?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597519?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597521?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597506?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597525?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597528?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597526?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597531?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597524?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6597535?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
