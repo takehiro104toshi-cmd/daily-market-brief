@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.75 (2026-10-04) — Phase 8 P8-ACQ0 acquisition event authority foundation（取得 event の証拠。coverage なし）
+
+P8-OBS60 の coverage authority の設計（監督承認）に先立つ共通の基盤として、取得 event（`AcquisitionEvent`）の不変の model と追記専用の
+store `acquisition_events.jsonl` を package に追加した。記録するのは「何を ・どの bounded な範囲（凍結 LIVE1 の endpoint と非秘密の query の
+次元だけ）で ・いつ（caller が渡す aware な `acquired_at`）取得を試み ・COMPLETE ／ PARTIAL_PAGINATED ／ FAILED ／ EMPTY のどれだったか」と、
+bounded な handoff の欄だけの digest（受け取った順のまま）。raw の本文 ・header ・credential ・値 ・名前は構造上入らない。取得 event は
+観測でも coverage でもなく、COMPLETE は provider の履歴の完全性を、EMPTY は権威ある不在を意味しない。参照の形 `jq.acq:<digest>` を定めるが
+A1 ・A2 への配線は後の gate（OBS60-I1 ・OBS60-F）。identity の継続 coverage ・財務の coverage ・`complete_through` の規則は未実装。
+
+追加
+・`src/intelligence/screener_intelligence/acquisition_event_model.py` ・`acquisition_event_store.py`
+・`tests/intelligence/test_screener_acquisition_events.py`
+・`docs/databank/PHASE8_ACQ0_ACQUISITION_EVENT_AUTHORITY.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（`PHASE8_ACQ0_RUNTIME` ・ADP0R の anchor `P8_ADP0R`）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（ACQ0 の登録 ・IO module ・ADP0R anchor の byte 一致 ・配線不在の guard）
+修正
+・なし
+
 ## v5.74 (2026-10-04) — Phase 8 P8-ADP0R multi-standard pilot eligibility remediation（実 request なし）
 
 実 PILOT2（本人の環境）で fins の 21 行すべてが `ADAPTER_HELD`（`ACCOUNTING_STANDARD_UNSUPPORTED` ＋ `CURRENCY_UNKNOWN`）になった原因は、
