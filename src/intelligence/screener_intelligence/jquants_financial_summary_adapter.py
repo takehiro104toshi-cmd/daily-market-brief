@@ -9,9 +9,10 @@
  4. 意味: 凍結の A2R `map_row_semantics(DocType, UNPREFIXED_ACTUAL)`（DocType を自分で解釈しない）。表に無い → `DOCTYPE_UNRECOGNIZED`、
     REIT ・予想の修正 → `DOCTYPE_OUT_OF_SCOPE`、基準 UNKNOWN → `ACCOUNTING_STANDARD_UNKNOWN`、
     区分 UNKNOWN → `STATEMENT_BASIS_UNKNOWN`
- 5. pilot の適格（監督の決定 D4。**一時的な pilot の方針で、J-Quants の一般の意味ではない**）: `JP_GAAP` だけ通貨 JPY として適格。
-    IFRS ・US_GAAP ・JMIS → `ACCOUNTING_STANDARD_UNSUPPORTED` ＋ `CURRENCY_UNKNOWN`（基準そのものが無効という主張ではない）。
-    FX 換算 ・名前 ／ 国 ／ code からの通貨の推定はしない
+ 5. pilot の適格（監督の決定 D4。P8-ADP0R で改定）: 公式に文書化された 4 つの会計基準（`JP_GAAP` ・`US_GAAP` ・`IFRS` ・`JMIS`）の
+    財務諸表の行が適格。金額は **provider の契約（公式: 円単位 ・換算なし）の正規化**として `JPY` ・`Scale.ONE` を付ける。これは
+    「発行体の報告通貨が円」という主張ではない（P8-OBS-53 は残る既知の risk）。表の 4 基準の外（UNKNOWN ・Foreign ・REIT ・
+    表に無い値）は従来どおり fail closed。FX 換算 ・名前 ／ 国 ／ code ／ 市場からの通貨の推定 ・発行体の除外一覧はしない
  6. identity: 文脈の `issuer_id`（解決済みの A1 の参照）が無い ・形が違う → `IDENTITY_UNRESOLVED`。Code から作らない
  7. 4 欄: `Sales` → `REVENUE`、`OP` → `OPERATING_INCOME`、`NP` → `NET_INCOME`、`TA` → `TOTAL_ASSETS`。
     空文字 → `NOT_REPORTED` の観測（0 にしない）。厳密な 10 進の構文だけ（空白 ・`+` ・桁区切り ・指数 ・NaN ・Infinity →
@@ -44,8 +45,9 @@ FIELD_MAPPING: Tuple[Tuple[str, FundamentalField], ...] = (("Sales", Fundamental
                                                            ("OP", FundamentalField.OPERATING_INCOME),
                                                            ("NP", FundamentalField.NET_INCOME),
                                                            ("TA", FundamentalField.TOTAL_ASSETS))
-#: pilot で通貨 JPY として適格な会計基準（監督の決定 D4。一時的な pilot の方針）
-PILOT_ELIGIBLE_STANDARDS: Tuple[AccountingStandard, ...] = (AccountingStandard.JP_GAAP,)
+#: pilot で適格な会計基準（監督の決定 D4 ・P8-ADP0R: 公式に文書化された 4 基準。金額の JPY ・ONE は provider の契約の正規化）
+PILOT_ELIGIBLE_STANDARDS: Tuple[AccountingStandard, ...] = (AccountingStandard.JP_GAAP, AccountingStandard.US_GAAP,
+                                                             AccountingStandard.IFRS, AccountingStandard.JMIS)
 #: 支える期間の種類（`4Q` ・`5Q` ・その他は HOLD）
 SUPPORTED_PERIOD_TYPES: Tuple[str, ...] = ("FY", "1Q", "2Q", "3Q")
 _CUMULATIVE_QUARTER = {"1Q": 1, "2Q": 2, "3Q": 3}

@@ -189,9 +189,9 @@ def test_c_disclosure_before_period_end_is_held_as_invalid_knowledge_time() -> N
 def test_c_acquisition_time_is_a_separate_axis_and_never_the_knowledge_time() -> None:
     eligible = adapt(row(), CTX_TIMED)
     assert eligible.eligible.knowledge.at == datetime(2025, 5, 12, 15, 0, tzinfo=TOKYO)   # 取得の時刻ではない
-    held = adapt(row(DocType="FYFinancialStatements_Consolidated_IFRS"), CTX_TIMED)
+    held = adapt(row(DocType="FYFinancialStatements_Consolidated_Foreign"), CTX_TIMED)
     assert held.held.observed_at == at(2026, 6, 30, 12)                                     # 保留の運用の時刻にだけ
-    assert adapt(row(DocType="FYFinancialStatements_Consolidated_IFRS")).held.observed_at is None
+    assert adapt(row(DocType="FYFinancialStatements_Consolidated_Foreign")).held.observed_at is None
     with pytest.raises(AdapterInputError):
         AdapterContext(issuer_id=I1, acquired_at=datetime(2026, 6, 30, 12))                  # naive は拒む
 
@@ -226,13 +226,41 @@ def test_d_no_annualisation_interpolation_or_ttm() -> None:
 # ================================================================ E 意味 ・pilot の方針
 
 
+@pytest.mark.parametrize("doc_type", ["FYFinancialStatements_Consolidated_JP", "FYFinancialStatements_Consolidated_US",
+                                      "FYFinancialStatements_Consolidated_IFRS",
+                                      "FYFinancialStatements_Consolidated_JMIS"])
+def test_e_adp0r_the_four_documented_standards_are_eligible_with_provider_contract_jpy_and_scale_one(doc_type) -> None:
+    result = adapt(row(DocType=doc_type))
+    assert result.status is AdapterStatus.ELIGIBLE and result.reasons == () and result.held is None
+    expected = {"JP": AccountingStandard.JP_GAAP, "US": AccountingStandard.US_GAAP, "IFRS": AccountingStandard.IFRS,
+                "JMIS": AccountingStandard.JMIS}[doc_type.rsplit("_", 1)[1]]
+    assert len(result.eligible.observations) == 4
+    for observation, (semantics, provenance) in zip(result.eligible.observations, result.eligible.annotations):
+        assert observation.value.state is ValueState.VALUE_PRESENT
+        assert observation.value.currency.value == "JPY" and observation.value.scale is Scale.ONE   # provider の契約の正規化
+        assert observation.statement_basis is StatementBasis.CONSOLIDATED
+        assert semantics.accounting_standard is expected and semantics.semantic_status is SemanticStatus.KNOWN
+        assert provenance.doc_type == doc_type
+    assert fa.PILOT_ELIGIBLE_STANDARDS == (AccountingStandard.JP_GAAP, AccountingStandard.US_GAAP,
+                                           AccountingStandard.IFRS, AccountingStandard.JMIS)
+    assert AccountingStandard.UNKNOWN not in fa.PILOT_ELIGIBLE_STANDARDS and len(fa.PILOT_ELIGIBLE_STANDARDS) == 4
+
+
+def test_e_adp0r_currency_unknown_is_no_longer_emitted_merely_for_a_documented_non_jp_standard() -> None:
+    for doc_type in ("FYFinancialStatements_Consolidated_US", "FYFinancialStatements_Consolidated_IFRS",
+                     "FYFinancialStatements_Consolidated_JMIS"):
+        held = adapt(row(DocType=doc_type, Sales="1,000"))                       # 他の理由で保留しても通貨 ・基準の理由は無い
+        assert reasons(held) == ["VALUE_UNPARSEABLE"]
+    non_consolidated = adapt(row(DocType="FYFinancialStatements_NonConsolidated_IFRS"))
+    assert reasons(non_consolidated) == ["STATEMENT_BASIS_UNKNOWN"]             # 区分の規則は凍結のまま（d2 の 4 値だけ）
+    for undocumented in ("FYFinancialStatements_NonConsolidated_US", "FYFinancialStatements_NonConsolidated_JMIS"):
+        assert "DOCTYPE_UNRECOGNIZED" in reasons(adapt(row(DocType=undocumented)))   # 公式の表に無い → fail closed
+
+
 @pytest.mark.parametrize("doc_type,expected", [
-    ("FYFinancialStatements_Consolidated_IFRS", ["ACCOUNTING_STANDARD_UNSUPPORTED", "CURRENCY_UNKNOWN"]),
-    ("FYFinancialStatements_Consolidated_US", ["ACCOUNTING_STANDARD_UNSUPPORTED", "CURRENCY_UNKNOWN"]),
-    ("FYFinancialStatements_Consolidated_JMIS", ["ACCOUNTING_STANDARD_UNSUPPORTED", "CURRENCY_UNKNOWN"]),
     ("FYFinancialStatements_Consolidated_Foreign", ["ACCOUNTING_STANDARD_UNKNOWN", "CURRENCY_UNKNOWN"]),
-    ("FYFinancialStatements_NonConsolidated_IFRS", ["ACCOUNTING_STANDARD_UNSUPPORTED", "STATEMENT_BASIS_UNKNOWN",
-                                                    "CURRENCY_UNKNOWN"]),
+    ("FYFinancialStatements_NonConsolidated_Foreign", ["ACCOUNTING_STANDARD_UNKNOWN", "STATEMENT_BASIS_UNKNOWN",
+                                                       "CURRENCY_UNKNOWN"]),
     ("OtherPeriodFinancialStatements_NonConsolidated_JP", ["STATEMENT_BASIS_UNKNOWN", "PERIOD_UNSUPPORTED"]),
     ("FYFinancialStatements_Consolidated_REIT", ["ACCOUNTING_STANDARD_UNKNOWN", "STATEMENT_BASIS_UNKNOWN",
                                                  "DOCTYPE_OUT_OF_SCOPE", "CURRENCY_UNKNOWN"]),
@@ -242,7 +270,7 @@ def test_d_no_annualisation_interpolation_or_ttm() -> None:
                                                   "DOCTYPE_UNRECOGNIZED", "CURRENCY_UNKNOWN"]),
     ("fyfinancialstatements_consolidated_jp", ["ACCOUNTING_STANDARD_UNKNOWN", "STATEMENT_BASIS_UNKNOWN",
                                                "DOCTYPE_UNRECOGNIZED", "CURRENCY_UNKNOWN"])])
-def test_e_non_pilot_standards_and_unrecognised_doctypes_are_held_with_typed_reasons(doc_type, expected) -> None:
+def test_e_unknown_standards_and_unrecognised_doctypes_are_held_with_typed_reasons(doc_type, expected) -> None:
     overrides = {"DocType": doc_type}
     if doc_type.startswith("OtherPeriod"):
         overrides["CurPerType"] = "OtherPeriod"
@@ -259,8 +287,13 @@ def test_e_the_adapter_reuses_the_frozen_a2r_mapping_and_never_parses_doctype_it
         if isinstance(node, ast.Attribute):
             assert node.attr not in {"split", "rsplit", "partition", "endswith", "startswith", "find", "lower",
                                      "upper", "strip"}, node.attr
-    assert "IFRS" not in executable_source(PACKAGE_DIR / "jquants_financial_summary_adapter.py")
-    assert fa.PILOT_ELIGIBLE_STANDARDS == (AccountingStandard.JP_GAAP,)
+    executable = ast.parse(executable_source(PACKAGE_DIR / "jquants_financial_summary_adapter.py"))
+    for node in ast.walk(executable):                                            # DocType の token を文字列で持たない
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            assert not any(token in node.value for token in ("IFRS", "JMIS", "_JP", "_US", "Foreign", "REIT")), \
+                node.value
+    assert fa.PILOT_ELIGIBLE_STANDARDS == (AccountingStandard.JP_GAAP, AccountingStandard.US_GAAP,
+                                           AccountingStandard.IFRS, AccountingStandard.JMIS)
 
 
 def test_e_unsupported_nonconsolidated_combinations_are_not_broadened() -> None:
@@ -292,7 +325,7 @@ def test_f_unresolved_identity_is_held_and_code_never_becomes_an_identity() -> N
 
 
 def test_f_resolved_identity_is_carried_into_held_material_when_available() -> None:
-    held = adapt(row(DocType="FYFinancialStatements_Consolidated_IFRS"))
+    held = adapt(row(DocType="FYFinancialStatements_Consolidated_Foreign"))
     assert held.held.issuer_id == I1 and held.held.attempted_statement_basis is StatementBasis.CONSOLIDATED
     assert held.held.provider_record_digest == held.provider_record.digest
     assert held.held.provider_record_ref == held.provider_record.reference()

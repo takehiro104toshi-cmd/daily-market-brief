@@ -44,14 +44,15 @@ def fins_key(code: str, pagination: str = ""):
     return (FINS, (("code", code),) if not pagination else (("code", code), ("pagination_key", pagination)))
 
 
-def fins_rows(code: str, *, ifrs: bool = False, years=(2024, 2025)) -> list:
+def fins_rows(code: str, *, ifrs: bool = False, foreign: bool = False, years=(2024, 2025)) -> list:
     rows = []
     for year in years:
         rows.append(fins_row(Code=code, DiscNo=f"{year}0512000001", DiscDate=f"{year}-05-12",
                              CurPerSt=f"{year - 1}-04-01", CurPerEn=f"{year}-03-31", CurFYSt=f"{year - 1}-04-01",
                              CurFYEn=f"{year}-03-31",
                              Sales=str(500000000000 + year), OP="40000000000", NP="30000000000", TA="900000000000",
-                             DocType="FYFinancialStatements_Consolidated_IFRS" if ifrs else
+                             DocType="FYFinancialStatements_Consolidated_Foreign" if foreign else
+                             "FYFinancialStatements_Consolidated_IFRS" if ifrs else
                              "FYFinancialStatements_Consolidated_JP"))
     return rows
 
@@ -61,11 +62,11 @@ def transport(mapping: dict) -> SyntheticTransport:
                                for key, body in mapping.items()})
 
 
-def standard_transport(codes=("13010",), ifrs=False) -> SyntheticTransport:
+def standard_transport(codes=("13010",), ifrs=False, foreign=False) -> SyntheticTransport:
     mapping = {master_key(): payload(master("13010"), master("13020", "0112"), master("13030", "0113"),
                                      master("13040", prodcat="021"), master("13050", mkt="0109"))}
     for code in codes:
-        mapping[fins_key(code)] = payload(*fins_rows(code, ifrs=ifrs))
+        mapping[fins_key(code)] = payload(*fins_rows(code, ifrs=ifrs, foreign=foreign))
     return transport(mapping)
 
 
@@ -351,13 +352,30 @@ def test_execute_fins_malformed_and_accounting_standard_hold(root: Path) -> None
     assert summary["fins"] == {"success": 0, "failed": 1, "skipped_budget": 0, "reasons": ["PAYLOAD_NOT_JSON"],
                                "rows": 0, "pagination_seen": 0}
     assert summary["state"] == "PILOT_PARTIAL" and summary["request"]["used"] == 2 and summary["metrics"] == []
-    ifrs = execute(data_root=root, transport=standard_transport(ifrs=True))
-    assert ifrs["exe_outcomes"] == {"HELD": 2} and ifrs["held_reasons"] == {"ACCOUNTING_STANDARD_UNSUPPORTED": 2,
-                                                                          "CURRENCY_UNKNOWN": 2}
-    assert ifrs["exe_reasons"] == {"ADAPTER_HELD": 2} and ifrs["state"] == "PILOT_PARTIAL"
-    assert ifrs["metrics"][0]["OPERATING_MARGIN"] == {"status": "UNAVAILABLE",
-                                                      "reasons": ["NO_FISCAL_YEAR_OBSERVATION"]}
+    foreign = execute(data_root=root, transport=standard_transport(foreign=True))    # Foreign は fail closed のまま
+    assert foreign["exe_outcomes"] == {"HELD": 2} and foreign["held_reasons"] == {"ACCOUNTING_STANDARD_UNKNOWN": 2,
+                                                                                "CURRENCY_UNKNOWN": 2}
+    assert foreign["exe_reasons"] == {"ADAPTER_HELD": 2} and foreign["state"] == "PILOT_PARTIAL"
+    assert foreign["metrics"][0]["OPERATING_MARGIN"] == {"status": "UNAVAILABLE",
+                                                         "reasons": ["NO_FISCAL_YEAR_OBSERVATION"]}
     assert journal_lines(root, "held_observations.jsonl") == 2 and journal_lines(root, "observation_records.jsonl") == 0
+
+
+def test_execute_adp0r_a_documented_non_jp_standard_reaches_a2_and_the_next_limit_is_coverage(root: Path) -> None:
+    """ADP0R: IFRS の行は保留されず A2 に届く（実 PILOT2 の 21 行 HELD の再現の反転）。次の限界は OBS-60 の coverage。"""
+    prepare(d0=D0, codes=["13010"], data_root=root, transport=standard_transport(ifrs=True))
+    decide(root)
+    summary = execute(data_root=root, transport=standard_transport(ifrs=True))
+    assert summary["exe_outcomes"] == {"APPENDED": 2} and summary["held_reasons"] == {}
+    assert summary["state"] == "PILOT_PASS"
+    assert journal_lines(root, "held_observations.jsonl") == 0 and journal_lines(root, "observation_records.jsonl") == 8
+    for metric in ("REVENUE_GROWTH", "OPERATING_MARGIN", "NET_MARGIN", "ROA_POINT_IN_TIME"):
+        status = summary["metrics"][0][metric]
+        assert status["status"] == "INSUFFICIENT_DATA"
+        assert all(r.endswith(":OUTSIDE_COVERAGE") for r in status["reasons"])
+    text = json.dumps(summary, ensure_ascii=False)
+    for forbidden in FORBIDDEN_IN_SUMMARY:
+        assert forbidden not in text, forbidden
 
 
 def test_execute_metric_unavailable_without_prior_year_is_typed(root: Path) -> None:

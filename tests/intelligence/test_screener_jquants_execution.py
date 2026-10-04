@@ -39,6 +39,7 @@ IDS = Identity()
 I1 = IDS.I1.issuer_id
 CTX = AdapterContext(issuer_id=I1)
 IFRS = "FYFinancialStatements_Consolidated_IFRS"
+FOREIGN = "FYFinancialStatements_Consolidated_Foreign"
 O = ExecutionOutcome
 R = ExecutionReason
 D = FieldDisposition
@@ -145,7 +146,7 @@ def test_happy_replay_after_store_reopen_and_from_a_reordered_mapping(root: Path
 
 
 @pytest.mark.parametrize("overrides,expected", [
-    ({"DocType": IFRS}, ["ACCOUNTING_STANDARD_UNSUPPORTED", "CURRENCY_UNKNOWN"]),
+    ({"DocType": FOREIGN}, ["ACCOUNTING_STANDARD_UNKNOWN", "CURRENCY_UNKNOWN"]),
     ({"DocType": "FYFinancialStatements_Consolidated_KOREA"}, ["ACCOUNTING_STANDARD_UNKNOWN", "STATEMENT_BASIS_UNKNOWN",
                                                                "DOCTYPE_UNRECOGNIZED", "CURRENCY_UNKNOWN"]),
     ({"CurPerType": "4Q"}, ["PERIOD_UNSUPPORTED"]),
@@ -178,8 +179,8 @@ def test_held_unresolved_identity_form_and_unknown_issuer(root: Path) -> None:
 
 
 def test_held_exact_replay_reuses_the_held_record(root: Path) -> None:
-    first = run(root, row(DocType=IFRS))
-    again = run(root, row(DocType=IFRS))
+    first = run(root, row(DocType=FOREIGN))
+    again = run(root, row(DocType=FOREIGN))
     assert again.outcome is O.HELD and again.writes.held_reused == first.held_record_id
     assert again.writes.held_appended == "" and counts(root) == (0, 0, 1)
     unknown = AdapterContext(issuer_id="p8iss_" + "0" * 24)
@@ -189,7 +190,7 @@ def test_held_exact_replay_reuses_the_held_record(root: Path) -> None:
 
 def test_held_acquired_at_is_carried_to_the_held_record_only(root: Path) -> None:
     timed = AdapterContext(issuer_id=I1, acquired_at=at(2026, 6, 30, 12))
-    held = run(root, row(DocType=IFRS), timed)
+    held = run(root, row(DocType=FOREIGN), timed)
     assert HeldObservationStore.open(root).get(held.held_record_id).observed_at == at(2026, 6, 30, 12)
     appended = run(root, row(), timed)
     record = ost.ObservationStore.open(root).history.get(appended.fields[0].observation_id)
@@ -213,7 +214,7 @@ def test_revalidation_forged_and_stale_prior_results_are_rejected_without_writes
     assert result.provider_record == adapt_financial_summary_row(row(), CTX).provider_record
     stale = adapt_financial_summary_row(row(), AdapterContext(issuer_id=IDS.I2.issuer_id))   # 別の文脈の prior（古い）
     assert run(root, row(), prior=stale).reasons == (R.PRIOR_RESULT_MISMATCH,) and counts(root) == (0, 0, 0)
-    held_prior = adapt_financial_summary_row(row(DocType=IFRS), CTX)
+    held_prior = adapt_financial_summary_row(row(DocType=FOREIGN), CTX)
     assert run(root, row(), prior=held_prior).outcome is O.REJECTED and counts(root) == (0, 0, 0)
     assert run(root, row(), prior={"status": "ELIGIBLE"}).reasons == (R.INVALID_INPUT,)
 
@@ -274,9 +275,12 @@ def test_revision_accounting_standard_discontinuity_never_joins_the_chain(root: 
     run(root, row())
     non_consolidated = run(root, row(DocType="FYFinancialStatements_NonConsolidated_JP"))   # 別の slot（区分）
     assert non_consolidated.outcome is O.APPENDED and counts(root) == (8, 16, 0)
-    ifrs = run(root, row(DiscNo="20250512000003", DocType=IFRS))                             # pilot の方針で保留
+    ifrs = run(root, row(DiscNo="20250512000003", DocType=IFRS))                             # 基準の違いは鎖に入れない
     assert ifrs.outcome is O.HELD and counts(root) == (8, 16, 1)
-    assert "ACCOUNTING_STANDARD_UNSUPPORTED" in [r.value for r in ifrs.held_reasons]
+    assert [r.value for r in ifrs.held_reasons] == ["SEMANTIC_CHAIN_CONFLICT"]              # ADP0R: 方針ではなく OBS-57
+    foreign = run(root, row(DiscNo="20250512000004", DocType=FOREIGN))                       # Foreign は fail closed
+    assert foreign.outcome is O.HELD and counts(root) == (8, 16, 2)
+    assert "ACCOUNTING_STANDARD_UNKNOWN" in [r.value for r in foreign.held_reasons]
     store = ost.ObservationStore.open(root)
     for chain in store.history.chains.values():
         assert len(chain) == 1 and chain[0].supersedes == ""
@@ -413,7 +417,7 @@ def test_write_failure_before_any_authority_write_is_rejected_not_partial(root: 
     assert result.outcome is O.REJECTED and result.reasons == (R.STORE_WRITE_FAILED,) and counts(root) == (0, 0, 0)
     assert dispositions(result) == ["FAILED", "NOT_ATTEMPTED", "NOT_ATTEMPTED", "NOT_ATTEMPTED"]
     monkeypatch.setattr(HeldObservationStore, "append", failing)
-    held = run(root, row(DocType=IFRS))
+    held = run(root, row(DocType=FOREIGN))
     assert held.outcome is O.REJECTED and held.reasons == (R.STORE_WRITE_FAILED,) and counts(root) == (0, 0, 0)
 
 
@@ -430,7 +434,7 @@ def test_corrupt_store_fails_closed_with_zero_writes(root: Path, name: str) -> N
     result = run(root, row())
     assert result.outcome is O.REJECTED and result.reasons == (R.CORRUPT_STORE,)
     assert path.read_bytes() == before and result.failure_code != ""
-    held = run(root, row(DocType=IFRS))
+    held = run(root, row(DocType=FOREIGN))
     assert held.outcome is O.REJECTED and held.reasons == (R.CORRUPT_STORE,)
 
 
@@ -522,7 +526,7 @@ def test_architecture_no_network_clock_random_uuid_llm_metrics_identity_registra
 def test_architecture_only_the_three_sanctioned_stores_are_written(root: Path) -> None:
     before = {p.name for p in (root / "screener_intelligence").iterdir()}
     run(root, row())
-    run(root, row(DocType=IFRS))
+    run(root, row(DocType=FOREIGN))
     after = {p.name for p in (root / "screener_intelligence").iterdir()}
     assert after == before == {"identity_records.jsonl", "observation_records.jsonl", "semantic_metadata.jsonl",
                                "held_observations.jsonl"}

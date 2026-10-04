@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.74 (2026-10-04) — Phase 8 P8-ADP0R multi-standard pilot eligibility remediation（実 request なし）
+
+実 PILOT2（本人の環境）で fins の 21 行すべてが `ADAPTER_HELD`（`ACCOUNTING_STANDARD_UNSUPPORTED` ＋ `CURRENCY_UNKNOWN`）になった原因は、
+凍結 ADP0 の pilot の方針 D4（`PILOT_ELIGIBLE_STANDARDS = (JP_GAAP,)`）だけだった（P8-PILOT2R0 の監査。LIVE1 ・LIVE2 ・A2R ・ID1 ・ID2 ・
+EXE は無関係）。監督の決定で ADP0 をこの定数 1 つだけ再開し、公式に文書化された 4 基準（JP_GAAP ・US_GAAP ・IFRS ・JMIS）を適格にした。
+金額の `JPY` ・`Scale.ONE` は provider の契約（円単位 ・換算なし）の正規化で、発行体の報告通貨の主張ではない（P8-OBS-53 は既知の残る
+risk ・保留。除外一覧 ・推定 ・別 endpoint ・LLM は使わない）。UNKNOWN ・Foreign ・REIT ・表に無い DocType ・予想の修正 ・NonConsolidated
+の規則 ・基準の違う鎖の拒否（OBS-57）は凍結のまま。OBS-60 は別 ・保留。実 PILOT2 は未再実行。先行の保留 record は触らない。
+
+追加
+・`docs/databank/PHASE8_ADP0R_MULTI_STANDARD_REMEDIATION.md`
+・test: 4 基準の適格 ・通貨 ・Foreign/UNKNOWN の fail closed ・PILOT2A の IFRS 経路 ・ADP0R の凍結 guard（`test_adp0r_*`）
+改善
+・`src/intelligence/screener_intelligence/jquants_financial_summary_adapter.py`（`PILOT_ELIGIBLE_STANDARDS` を 4 基準に。他は AST 一致）
+・`tests/intelligence/phase8_runtime_registry.py`（PILOT2A の anchor `P8_PILOT2A` ・ADP0R の文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（再開した 5 path を先行 anchor の byte 一致から外し、差を定数 1 つに限る guard）
+・`docs/databank/PHASE8_ADP0_JQUANTS_FINANCIAL_SUMMARY_ADAPTER.md` §0 ・§8（D4 の前後）
+修正
+・なし
+
 ## v5.73 (2026-09-29) — Phase 8 P8-PILOT2A local two-stage PILOT2 runner（合成の検証だけ。実 request なし）
 
 将来の PILOT2 を本人の環境でだけ動かす 2 段の runner を package の外に追加した。段 1 `prepare` は master を 1 回取得し、凍結 LIVE1 の

@@ -25,8 +25,9 @@ J-Quants への live の request ・API client ・executor ・store への appen
 6. 期間は `FY` ・累計の `1Q` ／ `2Q` ／ `3Q` だけ（§6）。`4Q` ・`5Q` ・`OtherPeriod` ・日付の不整合 → HOLD。年率化 ・補間 ・TTM ・
    単独四半期の導出は無い。
 7. DocType は凍結の A2R `map_row_semantics` の写しだけを使う（adapter は DocType を自分で解釈しない。§7）。
-8. **pilot の適格（D4）は JP_GAAP だけ**（通貨 JPY を立てられる唯一の場合）。IFRS ・US_GAAP ・JMIS は `ACCOUNTING_STANDARD_UNSUPPORTED`
-   ＋ `CURRENCY_UNKNOWN` で HOLD。これは**一時的な pilot の方針**で、基準が無効という主張でも J-Quants の一般の意味でもない（§8）。
+8. **pilot の適格（D4）**: 当初は JP_GAAP だけ（IFRS ・US_GAAP ・JMIS は `ACCOUNTING_STANDARD_UNSUPPORTED` ＋ `CURRENCY_UNKNOWN`）。
+   **P8-ADP0R（監督の決定）で公式に文書化された 4 基準 JP_GAAP ・US_GAAP ・IFRS ・JMIS に改定**。金額の JPY ・ONE は provider の
+   契約の正規化で、発行体の報告通貨の主張ではない（§8。記録 `PHASE8_ADP0R_MULTI_STANDARD_REMEDIATION.md`）。
 9. 4 欄 `Sales` → `REVENUE`、`OP` → `OPERATING_INCOME`、`NP` → `NET_INCOME`、`TA` → `TOTAL_ASSETS`。空文字 → `NOT_REPORTED` の観測
    （0 にしない）。厳密な 10 進の構文だけ（§9）。
 10. identity は caller の文脈（解決済みの A1 の `issuer_id`）だけ。無い ・形が違う → `IDENTITY_UNRESOLVED`。Code から作らない（§10）。
@@ -135,16 +136,19 @@ d2（NonConsolidated）は凍結のまま: 承認済みの `{1Q,2Q,3Q,FY}Financi
 
 ---
 
-## 8. 通貨 ・pilot の適格（監督の決定 D4）
+## 8. 通貨 ・pilot の適格（監督の決定 D4。P8-ADP0R で改定）
 
-| 基準 | 結果 |
-|---|---|
-| `JP_GAAP` | 通貨 `JPY` ・`Scale.ONE`（公式: 円 ・scaling なし）→ 適格 |
-| `IFRS` ／ `US_GAAP` ／ `JMIS` | HOLD `ACCOUNTING_STANDARD_UNSUPPORTED` ＋ `CURRENCY_UNKNOWN` |
-| `UNKNOWN` | HOLD `ACCOUNTING_STANDARD_UNKNOWN` ＋ `CURRENCY_UNKNOWN` |
+| 基準 | 結果（ADP0 当初） | 結果（P8-ADP0R 以降） |
+|---|---|---|
+| `JP_GAAP` | 通貨 `JPY` ・`Scale.ONE` → 適格 | 同じ |
+| `IFRS` ／ `US_GAAP` ／ `JMIS` | HOLD `ACCOUNTING_STANDARD_UNSUPPORTED` ＋ `CURRENCY_UNKNOWN` | **適格**。`JPY` ・`Scale.ONE`（provider の契約の正規化） |
+| `UNKNOWN`（`Foreign` ・REIT ・表に無い値 ・予想の修正） | HOLD `ACCOUNTING_STANDARD_UNKNOWN` ＋ `CURRENCY_UNKNOWN` | 同じ（fail closed） |
 
-`PILOT_ELIGIBLE_STANDARDS = (JP_GAAP,)` は**一時的な pilot の方針**。IFRS 等が無効 ・劣るという主張ではなく、通貨を安全に立てられる
-範囲を pilot で狭めたもの。FX 換算 ・名前 ／ 国 ／ code からの通貨の推定はしない。基準の間の橋渡しはしない（P8-OBS-57）。
+`PILOT_ELIGIBLE_STANDARDS` は当初 `(JP_GAAP,)` の一時的な pilot の方針だった。実 PILOT2 で 21 行すべてがこの門だけで保留された
+（P8-PILOT2R0）ため、監督の決定（P8-ADP0R）で公式に文書化された 4 基準に改定した。`JPY` ・`ONE` は「公式: 円単位 ・換算なし」という
+**provider の契約の正規化**であり、「発行体の報告通貨が円」という主張ではない（非円の表示の発行体は P8-OBS-53 の既知の残る risk。
+除外一覧 ・推定はしない）。FX 換算 ・名前 ／ 国 ／ code ／ 市場からの通貨の推定はしない。基準の間の橋渡しはしない（P8-OBS-57）。
+`ACCOUNTING_STANDARD_UNSUPPORTED` の語彙は残る（現在の 4 基準の表では到達しない）。
 
 ---
 

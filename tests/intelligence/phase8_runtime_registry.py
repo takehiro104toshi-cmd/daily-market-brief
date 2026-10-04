@@ -61,6 +61,8 @@ P8_LIVE0 = "17c962385be5641665f4d7904cfc710cbb575569"
 P8_LIVE1 = "7cbc85b66879b2e686ccf16cfafda8b7412a062a"
 #: P8-LIVE2 の凍結 anchor（package 30 module ＋ LIVE2 transport ・Phase 8 の test ・先行の文書はここと byte 一致。PILOT2A で登録）
 P8_LIVE2 = "476182af12bb583102e1f616316889bcfb8c58b9"
+#: P8-PILOT2A の凍結 anchor（package 30 ＋ transport ＋ runner ・Phase 8 の test ・先行の文書はここと byte 一致。ADP0R で登録）
+P8_PILOT2A = "6e042732acd52ed6c1c25c9e39688e78844b7589"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -174,7 +176,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_LIVE0_PRELIVE_AUDIT.md",
                                 "docs/databank/PHASE8_LIVE1_MEMORY_ONLY_CLIENT.md",
                                 "docs/databank/PHASE8_LIVE2_LOCAL_HTTP_TRANSPORT.md",
-                                "docs/databank/PHASE8_PILOT2A_LOCAL_RUNNER.md")
+                                "docs/databank/PHASE8_PILOT2A_LOCAL_RUNNER.md",
+                                "docs/databank/PHASE8_ADP0R_MULTI_STANDARD_REMEDIATION.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -240,7 +243,7 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
            "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_EXE", "P8_ID1", "P8_LIVE0", "P8_LIVE1",
-           "P8_LIVE2", "P8_V",
+           "P8_LIVE2", "P8_PILOT2A", "P8_V",
            "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",
