@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-06",
+  "timezone": "Asia/Tokyo",
+  "slots": {
+    "market_close": {
+      "status": "success",
+      "scheduled_time": "15:40",
+      "started_at": "2026-10-06T00:14:00.356469+09:00",
+      "data_fetch_started_at": "2026-10-06T00:14:00.356469+09:00",
+      "trigger_type": "schedule",
+      "is_recovery_run": false,
+      "workflow_run_id": "37331080916",
+      "generated_at": "2026-10-06T00:14:00.356469+09:00",
+      "report_build_completed_at": "2026-10-06T00:14:00.356469+09:00",
+      "retry_count": 0,
+      "slot_label": "大引けレポート",
+      "generated_at_jst": "2026-10-06T00:14:00.356469+09:00",
+      "generated_at_utc": "2026-10-05T15:14:00.356469+00:00",
+      "report_date_jst": "2026-10-06",
+      "git_commit_sha": "90517c19ebc37a1cd7e9f45df6b7a4980fb89838",
+      "generation_status": "success",
+      "html_valid": true
+    }
+  }
+}
