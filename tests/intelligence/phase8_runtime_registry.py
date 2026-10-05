@@ -83,6 +83,8 @@ P8_A2C_R = "9833ddbecc5039a206f31d6e2e1f08fa590a384a"
 P8_F1 = "2a784a59429121070e32c367533cb30c3d0e02ec"
 #: P8-A3-RA の凍結 anchor（runtime 43 ・Phase 8 の test ・先行の文書はここと byte 一致。PILOT2B で登録）
 P8_A3_RA = "d424a720cfc20a6259a95c7a74ab9533628547a2"
+#: P8-PILOT2B の凍結 anchor（runtime 43 ・Phase 8 の test ・先行の文書はここと byte 一致。B1 で登録）
+P8_PILOT2B = "6347588001a8531d60414e10dc2f94e306bdb877"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -111,7 +113,8 @@ PHASE8_PACKAGE_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" fo
     "jquants_live_client", "jquants_live_model", "jquants_master_ingress", "metric_model", "observation_model",
     "observation_resolver", "observation_retrospective_resolver", "observation_semantics_gate",
     "observation_semantics_mapping", "observation_semantics_model", "observation_store", "provider_holdings_executor",
-    "provider_holdings_model", "provider_holdings_store", "retrospective_metric_resolver", "semantic_metadata_store"))
+    "provider_holdings_model", "provider_holdings_store", "retrospective_metric_resolver", "screener_criteria_model",
+    "semantic_metadata_store"))
 #: P8-LIVE2 で足した runtime（package の外。凍結 LIVE1 の `Transport` の実 HTTPS 実装。本人の環境でだけ実行する）
 PHASE8_LIVE2_RUNTIME: Tuple[str, ...] = ("src/intelligence/jquants_local_transport.py",)
 #: P8-PILOT2A で足した runtime（package の外。2 段の PILOT2 runner。本番から import されない）
@@ -173,6 +176,9 @@ PHASE8_F1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for nam
 #: P8-A3-RA で足した runtime（遡及の provider authority の上の 4 指標。凍結 A3 の純 helper を再利用。STRICT A3 は不変）
 PHASE8_A3_RA_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "retrospective_metric_resolver",))
+#: P8-B1 で足した runtime（Screener v1 の閉じた意味の model。評価 ・保存 ・Theme ・security の投影は無い）
+PHASE8_B1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
+    "screener_criteria_model",))
 #: P8-LIVE1 で足した runtime（memory だけの取り込み client ・ID1 の前の適格。store ・network に触れない）
 PHASE8_LIVE1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "jquants_live_model", "jquants_master_ingress", "jquants_live_client"))
@@ -206,7 +212,8 @@ PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py"
                                  "tests/intelligence/test_screener_provider_holdings.py",
                                  "tests/intelligence/test_screener_provider_holdings_executor.py",
                                  "tests/intelligence/test_screener_retrospective_metrics.py",
-                                 "tests/intelligence/test_screener_pilot2b_retrospective_runner.py")
+                                 "tests/intelligence/test_screener_pilot2b_retrospective_runner.py",
+                                 "tests/intelligence/test_screener_criteria_model.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
 PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md",
                                 "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
@@ -242,7 +249,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_A2C_R_PROVIDER_HOLDINGS_AUTHORITY.md",
                                 "docs/databank/PHASE8_OBS60_F1_PROVIDER_HOLDINGS_EXECUTOR.md",
                                 "docs/databank/PHASE8_A3_RA_RETROSPECTIVE_METRICS.md",
-                                "docs/databank/PHASE8_PILOT2B_PRIVATE_RETROSPECTIVE_E2E.md")
+                                "docs/databank/PHASE8_PILOT2B_PRIVATE_RETROSPECTIVE_E2E.md",
+                                "docs/databank/PHASE8_B1_SCREENER_SEMANTIC_MODELS.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -308,12 +316,12 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
            "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_EXE", "P8_ID1", "P8_LIVE0", "P8_LIVE1",
-           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_V",
+           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_PILOT2B", "P8_V",
            "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",
            "PHASE8_ACQ0_RUNTIME", "PHASE8_OBS60_I1_RUNTIME", "PHASE8_EPOCH1_RUNTIME", "PHASE8_A2C_RUNTIME",
-           "PHASE8_A2C_R_RUNTIME", "PHASE8_F1_RUNTIME", "PHASE8_A3_RA_RUNTIME",
+           "PHASE8_A2C_R_RUNTIME", "PHASE8_F1_RUNTIME", "PHASE8_A3_RA_RUNTIME", "PHASE8_B1_RUNTIME",
            "PHASE8_ADP0_RUNTIME",
            "PHASE8_EXE_RUNTIME",
            "PHASE8_ID1_RUNTIME",

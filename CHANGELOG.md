@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.85 (2026-10-06) — Phase 8 P8-B1 screener semantic models（評価 ・保存 ・実 request なし）
+
+Screener v1 の閉じた意味の model を足した（監督の決定 P8-B0 ・P8-OBS-61〜66）。`Criterion`（FINANCIAL ・ISSUER ・凍結 A3 の 4 指標の 1 つ ・
+LT ／ LE ／ GT ／ GE ／ BETWEEN ・正準の Decimal の閾値 ・型つきの期間の規則 ・authority mode ・固定の欠損の扱い。内容 address `p8crt_`）、
+`CriteriaPolicy`（人が書く ・版つき ・`ALL_OF` だけ ・順序つき ・1 つの authority mode ・aware な reviewed_at ・bounded な意図。`p8pol_`）、
+`EvaluationContext`、`CriterionResult` ・`ScreenerResult`（説明できるが順位にならない。`threshold_distance` ・score ・weight ・rank は無い。
+完全性は data の語彙 COMPLETE ／ PARTIAL ／ NONE）。STRICT_PIT と RETROSPECTIVE_PROVIDER_AUTHORITY は別で fallback しない。Theme の次元は
+予約だけで v1 では構築できない。評価 ・store ・security の投影 ・Theme ・実 request は無い。
+
+追加
+・`src/intelligence/screener_intelligence/screener_criteria_model.py`
+・`tests/intelligence/test_screener_criteria_model.py`
+・`docs/databank/PHASE8_B1_SCREENER_SEMANTIC_MODELS.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（PILOT2B の anchor `P8_PILOT2B` ・B1 の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B1 の登録 ・`SANCTIONED_B1_IMPORTS` ・順位なしの guard）
+修正
+・なし
+
 ## v5.84 (2026-10-05) — Phase 8 P8-PILOT2B private retrospective E2E runner（実 request なし）
 
 PILOT2 runner の狭い再開（監督の決定 D-P2B-1〜5）。`execute --acquired-at <aware ISO8601>` を渡した時だけ、fins の handoff から凍結 ACQ0 の
