@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.87 (2026-10-06) — Phase 8 P8-B3 private criteria policy authority store（評価 ・配線 ・実 request なし）
+
+監督の決定 P8-OBS-63（PRIVATE AUTHORITY STORE）に基づき、凍結 B1 の `CriteriaPolicy` を包む最小の追記専用 authority record
+（`PolicyAuthorityRecord`。identity は凍結の policy_id。分類は `HUMAN_REVIEWED_SCREENING_POLICY` だけで、投資の推奨 ・alpha ・Theme ・
+watchlist ・thesis の authority ではない）と、caller が渡す private の data_root の下の JSONL store を足した。復元は凍結 B1 の constructor ・
+validator を通し policy_id ・criterion_id を再計算（不一致は fail closed）。append は APPENDED ／ REUSED、同じ (鍵, 版) で違う方針 ・同じ id で
+違う内容は拒否。版は人の明示の label（高い版 ・歴史の backfill ・欠番を許し、順序 ・「現在」は主張しない）。解決は正確な policy_id か正確な
+(policy_key, version) だけ（latest ・current ・default ・閾値の検索は無い）。integrity の検査は報告だけで修復しない。閾値の値は private の
+journal にだけ在り、repo ・config ・文書 ・CHANGELOG には置かない。
+
+追加
+・`src/intelligence/screener_intelligence/screener_policy_authority_model.py`
+・`src/intelligence/screener_intelligence/screener_policy_authority_store.py`
+・`tests/intelligence/test_screener_policy_authority.py`
+・`docs/databank/PHASE8_B3_PRIVATE_POLICY_AUTHORITY_STORE.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（B2 の anchor `P8_B2` ・B3 の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B3 の登録 ・`SANCTIONED_B3_IMPORTS` ・store の IO ・解決の guard）
+・`tests/intelligence/test_screener_criteria_model.py`（消費の 1 行に B3 の 2 module を足す。B3 guard が pin）
+修正
+・なし
+
 ## v5.86 (2026-10-06) — Phase 8 P8-B2 financial criteria evaluator（保存 ・配線 ・実 request なし）
 
 凍結 B1 の意味の model ・凍結 A3 STRICT ・凍結 A3-RA の上に、財務の基準の決定論の評価器を足した。authority mode は 2 つで fallback なし
