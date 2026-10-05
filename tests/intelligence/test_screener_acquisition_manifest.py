@@ -538,7 +538,7 @@ def test_f_held_semantic_unsupported_and_not_reported_rows_stay_in_the_manifest_
     _, held = views(root)
     for entry, result in zip(manifest.entries[1:5], results[1:5]):
         assert entry.held_record_id == result.held_record_id and held.get(entry.held_record_id) is not None
-        assert entry.fields == () and entry.period is None and entry.statement_basis is None
+        assert entry.fields == ()                                                           # EPOCH1R: 期間 ・区分は別 test
         assert entry.execution_outcome is X.HELD
     assert manifest.entries[5].held_record_id == "" and manifest.entries[5].fields == ()
     assert manifest.entry_count == 6 and manifest.canonical_observation_count == 4

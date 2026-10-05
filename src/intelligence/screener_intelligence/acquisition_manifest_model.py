@@ -9,7 +9,12 @@
 - entry: handed off された provider の行 1 つ ＝ entry 1 つ。順は凍結 ACQ0 の handoff の順（取得の内容の digest に結ばれる）。
   disposition は `CANONICAL` ／ `HELD_SEMANTIC` ／ `NOT_REPORTED_ONLY` ／ `UNSUPPORTED`（監督の決定 E2）。
 - 知識の metadata（監督の決定 K2）: entry は知識を持たない。知識は参照する A2 の観測が持つ（EXE-R の後は同じ行の canonical 観測でも
-  知識が違い得るので、entry 1 つの「知識」は誤解を招く）。期間 ・区分は CANONICAL の行だけ、参照する観測から決定論で確かめて持つ。
+  知識が違い得るので、entry 1 つの「知識」は誤解を招く）。期間 ・区分は CANONICAL の行は参照する観測から決定論で確かめて必ず持つ。
+- 期間 ・区分の metadata（P8-EPOCH1R。監督の決定 D-E1R-1）: HELD_SEMANTIC ／ UNSUPPORTED ／ NOT_REPORTED_ONLY の entry も、凍結 ADP0 が
+  決定論で確定した期間（`derive_reporting_period`）・区分（保留 record の `attempted_statement_basis` ／ 適格の材料）を持てる。確定
+  できなければ `None`（番兵の日付 ・取得日 ・開示日 ・推定の年度末で埋めない）。将来の F1 は HELD_SEMANTIC ／ UNSUPPORTED の期間を
+  「その period_end の不在の authority を withhold する」印に、`None` を「取得全体の不在の authority を withhold する」印に使う。
+  NOT_REPORTED_ONLY は不在の authority を汚さない（行は在り ・値は記載なし ＝ 将来の VALUE_ABSENT）。
 - identity は内容 address（`p8man_`）。参照は `jq.man:<24 hex>`。同じ内容 → 同じ id ・参照。
 
 記録: `docs/databank/PHASE8_EPOCH1_ACQUISITION_MANIFEST.md`。
@@ -25,8 +30,8 @@ from .identity_model import CREDENTIAL_MARKERS, canonical_json, is_issuer_id
 from .observation_model import FundamentalField, ReportingPeriod, StatementBasis
 from ..core.ids import content_id
 
-MANIFEST_SCHEMA_VERSION = "p8_acquisition_manifest:0.1.0"
-MANIFEST_RULES_VERSION = "p8_acquisition_manifest_authority:0.1.0"
+MANIFEST_SCHEMA_VERSION = "p8_acquisition_manifest:0.2.0"                   # EPOCH1R: 非 canonical の entry も期間 ・区分を持てる
+MANIFEST_RULES_VERSION = "p8_acquisition_manifest_authority:0.2.0"
 MANIFEST_RECORD_KIND = "ACQUISITION_MANIFEST"
 MANIFEST_ID_PREFIX = "p8man"
 REFERENCE_PREFIX = "jq.man:"
@@ -152,6 +157,16 @@ class ManifestEntry:
     @property
     def observation_ids(self) -> Tuple[str, ...]:
         return tuple(observation_id for _, observation_id in self.fields)
+
+    @property
+    def period_known(self) -> bool:
+        """期間が凍結 ADP0 の規則で決定論に確定しているか（CANONICAL は常に True）。"""
+        return self.period is not None
+
+    @property
+    def contaminates_absence(self) -> bool:
+        """将来の F1 の不在の authority を汚す entry か（保留 ・構造の保留だけ。記載なしは汚さない）。"""
+        return self.disposition in (ManifestDisposition.HELD_SEMANTIC, ManifestDisposition.UNSUPPORTED)
 
     def as_dict(self) -> Dict[str, Any]:
         return {"disposition": self.disposition.value, "execution_outcome": self.execution_outcome.value,

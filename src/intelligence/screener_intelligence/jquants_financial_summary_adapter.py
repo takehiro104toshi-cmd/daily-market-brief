@@ -108,6 +108,13 @@ def _period(row: FinancialSummaryRow) -> Optional[ReportingPeriod]:
         return None
 
 
+def derive_reporting_period(row: Any) -> Optional[ReportingPeriod]:
+    """P8-EPOCH1R: 凍結の期間の導出（`_period`）を公開するだけの純な helper。adapter の判定 ・写像 ・知識 ・区分 ・基準 ・通貨 ・値には
+    触れない。導出できなければ None（捏造しない）。manifest の builder が保留 ／ 記載なしの行の期間を同じ規則で記録するために使う。"""
+    parsed = row if isinstance(row, FinancialSummaryRow) else FinancialSummaryRow.from_provider_mapping(row)
+    return _period(parsed)
+
+
 def _value(text: str) -> Tuple[Optional[ObservationValue], bool]:
     """provider の文字列 → 値。空 → NOT_REPORTED（0 にしない）。構文が厳密でなければ (None, True) ＝ 解釈できない。"""
     if text == "":
@@ -199,4 +206,5 @@ def adapt_financial_summary_row(row: Any, context: Any) -> AdapterResult:
                          mapping_rule_version=DOCTYPE_MAPPING_VERSION)
 
 
-__all__ = ["FIELD_MAPPING", "PILOT_ELIGIBLE_STANDARDS", "SUPPORTED_PERIOD_TYPES", "adapt_financial_summary_row"]
+__all__ = ["FIELD_MAPPING", "PILOT_ELIGIBLE_STANDARDS", "SUPPORTED_PERIOD_TYPES", "adapt_financial_summary_row",
+           "derive_reporting_period"]

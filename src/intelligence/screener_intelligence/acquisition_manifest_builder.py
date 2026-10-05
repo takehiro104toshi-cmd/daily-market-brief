@@ -20,12 +20,13 @@ from .acquisition_manifest_model import (AcquisitionManifest, ManifestDispositio
 from .acquisition_manifest_store import AppendStatus, ManifestStore, ManifestStoreError
 from .held_observation_model import HeldReason, is_held_observation
 from .identity_model import SourceClass
-from .jquants_adapter_model import AdapterInputError, FinancialSummaryRow, ProviderRecordIdentity
+from .jquants_adapter_model import AdapterContext, AdapterInputError, AdapterStatus, FinancialSummaryRow, ProviderRecordIdentity
+from .jquants_financial_summary_adapter import adapt_financial_summary_row, derive_reporting_period
 from .jquants_execution_model import ExecutionOutcome, ExecutionResult, FieldDisposition
 from .jquants_live_model import FINS_SUMMARY_PATH
 from .observation_model import FundamentalActual, ObservationHistory
 
-BUILDER_RULES_VERSION = "p8_acquisition_manifest_builder:0.1.0"
+BUILDER_RULES_VERSION = "p8_acquisition_manifest_builder:0.2.0"                # EPOCH1R: 保留 ／ 記載なしの期間 ・区分
 #: 構造の理由で保留された行（書類種別 ・期間 ・値 ・時刻の形 ・写像 ・規約の境界）→ `UNSUPPORTED`。他の保留 → `HELD_SEMANTIC`
 UNSUPPORTED_REASONS: Tuple[HeldReason, ...] = (HeldReason.DOCTYPE_UNRECOGNIZED, HeldReason.DOCTYPE_OUT_OF_SCOPE,
                                                HeldReason.PERIOD_UNSUPPORTED, HeldReason.VALUE_UNPARSEABLE,
@@ -142,8 +143,36 @@ def _canonical_fields(result: ExecutionResult, reference: str, subject_id: str, 
     return tuple(sorted(fields, key=lambda f: f[0].value)), period, basis
 
 
+def _held_period_and_basis(row: Any, held: Any, index: int) -> Tuple[Any, Any]:
+    """保留の行の期間 ・区分（P8-EPOCH1R）。期間は凍結 ADP0 の公開 helper、区分は保留 record の `attempted_statement_basis`。
+    凍結の保留の理由と矛盾すれば fail closed（黙って正規化しない）。確定できなければ None。"""
+    try:
+        period = derive_reporting_period(row)
+    except AdapterInputError as exc:
+        raise _Fail(ManifestOutcome.ENTRY_INVALID, exc.code, index) from None
+    period_unsupported = HeldReason.PERIOD_UNSUPPORTED in held.reasons
+    _check((period is None) == period_unsupported, ManifestOutcome.ENTRY_INVALID, "HELD_PERIOD_INCONSISTENT", index)
+    basis = held.attempted_statement_basis
+    basis_unknown = HeldReason.STATEMENT_BASIS_UNKNOWN in held.reasons
+    _check((basis is None) == basis_unknown, ManifestOutcome.ENTRY_INVALID, "HELD_BASIS_INCONSISTENT", index)
+    return period, basis
+
+
+def _not_reported_period_and_basis(row: Any, subject_id: str, index: int) -> Tuple[Any, Any]:
+    """記載なしだけの行の期間 ・区分: 凍結 ADP0 の適格の材料そのもの（純 ・書かない）。適格でなければ fail closed。"""
+    try:
+        adapted = adapt_financial_summary_row(row, AdapterContext(issuer_id=subject_id))
+    except AdapterInputError as exc:
+        raise _Fail(ManifestOutcome.ENTRY_INVALID, exc.code, index) from None
+    _check(adapted.status is AdapterStatus.ELIGIBLE and adapted.eligible is not None, ManifestOutcome.ENTRY_INVALID,
+           "NOT_REPORTED_ROW_NOT_ELIGIBLE", index)
+    material = adapted.eligible
+    _check(len(material.observations) >= 1, ManifestOutcome.ENTRY_INVALID, "NOT_REPORTED_ROW_NO_MATERIAL", index)
+    return material.period, material.observations[0].statement_basis
+
+
 def _held_entry(result: ExecutionResult, identity: ProviderRecordIdentity, reference: str, held_view: Any,
-                index: int) -> ManifestEntry:
+                row: Any, index: int) -> ManifestEntry:
     _check(HeldReason.IDENTITY_UNRESOLVED not in result.held_reasons, ManifestOutcome.EXECUTION_INCOMPLETE,
            "IDENTITY_UNRESOLVED", index)
     _check(result.held_record_id != "", ManifestOutcome.HELD_RECORD_MISSING, "HELD_ID_EMPTY", index)
@@ -154,24 +183,27 @@ def _held_entry(result: ExecutionResult, identity: ProviderRecordIdentity, refer
     _check(held.reasons == result.held_reasons, ManifestOutcome.ENTRY_INVALID, "HELD_REASONS_MISMATCH", index)
     structural = any(reason in UNSUPPORTED_REASONS for reason in result.held_reasons)
     disposition = ManifestDisposition.UNSUPPORTED if structural else ManifestDisposition.HELD_SEMANTIC
+    period, basis = _held_period_and_basis(row, held, index)
     return ManifestEntry(provider_record_ref=reference, provider_record_digest=identity.digest,
                          disposition=disposition, execution_outcome=ManifestExecution.HELD,
-                         held_record_id=result.held_record_id)
+                         held_record_id=result.held_record_id, period=period, statement_basis=basis)
 
 
 def _entry(result: Any, identity: ProviderRecordIdentity, reference: str, subject_id: str,
-           history: ObservationHistory, held_view: Any, index: int) -> ManifestEntry:
+           history: ObservationHistory, held_view: Any, row: Any, index: int) -> ManifestEntry:
     _check(isinstance(result, ExecutionResult), ManifestOutcome.EXECUTION_INCOMPLETE, "RESULT_MISSING", index)
     _check(result.provider_record == identity, ManifestOutcome.ENTRY_INVALID, "PROVIDER_RECORD_MISMATCH", index)
     _check(result.outcome not in (ExecutionOutcome.REJECTED, ExecutionOutcome.PARTIAL_FAILURE),
            ManifestOutcome.EXECUTION_INCOMPLETE, result.outcome.value, index)
     _check(result.issuer_id == subject_id, ManifestOutcome.ENTRY_INVALID, "SUBJECT_MISMATCH", index)
     if result.outcome is ExecutionOutcome.HELD:
-        return _held_entry(result, identity, reference, held_view, index)
+        return _held_entry(result, identity, reference, held_view, row, index)
     if result.outcome is ExecutionOutcome.NO_REPORTED_FIELDS:
+        period, basis = _not_reported_period_and_basis(row, subject_id, index)
         return ManifestEntry(provider_record_ref=reference, provider_record_digest=identity.digest,
                              disposition=ManifestDisposition.NOT_REPORTED_ONLY,
-                             execution_outcome=ManifestExecution.NO_REPORTED_FIELDS)
+                             execution_outcome=ManifestExecution.NO_REPORTED_FIELDS, period=period,
+                             statement_basis=basis)
     fields, period, basis = _canonical_fields(result, reference, subject_id, history, index)
     return ManifestEntry(provider_record_ref=reference, provider_record_digest=identity.digest,
                          disposition=ManifestDisposition.CANONICAL, execution_outcome=ManifestExecution.MATERIALIZED,
@@ -201,7 +233,7 @@ def build_manifest(*, event: Any, rows: Any, results: Any, history: Any, held_vi
             head = reference.rpartition(":")[0]
             _check(natural.setdefault(head, identity.digest) == identity.digest,
                    ManifestOutcome.PROVIDER_ROWS_INCONSISTENT, "NATURAL_KEY_DIGEST_CONFLICT", index)
-            entries.append(_entry(result, identity, reference, subject_id, history, held_view, index))
+            entries.append(_entry(result, identity, reference, subject_id, history, held_view, row, index))
         versions = {(r.rules_version, r.mapping_rule_version) for r in results}
         _check(len(versions) == 1, ManifestOutcome.ENTRY_INVALID, "RULES_VERSION_INCONSISTENT")
         (executor_version, mapping_version), = versions

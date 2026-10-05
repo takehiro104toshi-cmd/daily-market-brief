@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.80 (2026-10-05) — Phase 8 P8-EPOCH1R held period metadata remediation（実 request なし）
+
+F1 の監査で確認した STRICT の意味の隙間（保留の行と同じ period_end に coverage を作ると偽の NOT_FOUND ・後の修正の永久拒否）を閉じる
+前段として、manifest の HELD_SEMANTIC ／ UNSUPPORTED ／ NOT_REPORTED_ONLY の entry に、凍結 ADP0 が決定論で確定した期間 ・区分を持たせた
+（R-B）。期間は凍結 `_period` に委譲するだけの公開 helper `derive_reporting_period` で導き、区分は保留 record の `attempted_statement_basis`
+／ 適格の材料から取る。確定できなければ `None`（番兵なし）。保留の理由と metadata の矛盾は `ENTRY_INVALID`。disposition の語彙 ・store ・
+A2 ・A2C ・遡及の resolver は不変。schema ／ rules ／ builder の版を 0.2.0 に。ProviderHoldingsCoverage ・F1 は未実装。
+
+追加
+・`tests/intelligence/test_screener_acquisition_manifest_remediation.py`
+・`docs/databank/PHASE8_EPOCH1R_HELD_PERIOD_METADATA.md`
+改善
+・`src/intelligence/screener_intelligence/jquants_financial_summary_adapter.py`（公開 helper `derive_reporting_period`。委譲のみ）
+・`src/intelligence/screener_intelligence/acquisition_manifest_model.py`（版 0.2.0 ・`period_known` ・`contaminates_absence`）
+・`src/intelligence/screener_intelligence/acquisition_manifest_builder.py`（保留 ／ 記載なしの期間 ・区分の導出と整合の検査）
+・`tests/intelligence/phase8_runtime_registry.py`（A2C の anchor `P8_A2C` ・EPOCH1R の test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（EPOCH1R の再開 path ・差を限る guard ・byte 一致 guard）
+・`tests/intelligence/test_screener_acquisition_manifest.py`（保留 entry の期間が None という前提の 1 行）
+修正
+・なし
+
 ## v5.79 (2026-10-04) — Phase 8 P8-A2C subject-scoped dual-time coverage + retrospective resolution（実 request なし）
 
 R1 の 2 軸を実装した。`ObservationCoverage` に主語（Issuer）`subject_id` と取得の瞬間 `holdings_as_of` を加算（無いときは従来の byte ・id
