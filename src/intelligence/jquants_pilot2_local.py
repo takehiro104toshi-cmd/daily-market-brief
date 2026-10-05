@@ -66,6 +66,12 @@ from .screener_intelligence.provider_holdings_executor import HoldingsExecutionS
 from .screener_intelligence.provider_holdings_store import HoldingsStoreError, ProviderHoldingsStore
 from .screener_intelligence.retrospective_metric_resolver import (RESOLUTION_MODE, RetrospectiveMetricStatus,
                                                                   resolve_retrospective_metric)
+from .screener_intelligence.screener_criteria_model import EvaluationContext, ScreenerModelError
+from .screener_intelligence.screener_evaluator import EvaluationInputs
+from .screener_intelligence.screener_policy_evaluation import (PolicyEvaluationError, PolicySelector,
+                                                               evaluate_selected_policy, open_verified_store,
+                                                               resolve_policy)
+from .screener_intelligence.screener_result_summary import project_safe_summary
 from .screener_intelligence.semantic_metadata_store import SemanticMetadataStore, SemanticMetadataStoreError
 from .screener_intelligence.held_observation_store import HeldStoreError
 
@@ -84,6 +90,9 @@ SUMMARY_FILENAME = "safe_summary.json"
 AUTHORITY_SCHEMA = "p8_pilot2b_acquisition_authority:0.1.0"
 ACQUISITION_STATE_SCHEMA = "p8_pilot2b_acquisition_state:0.1.0"
 ACQUISITION_STATE_FILENAME = "acquisition_state.json"
+#: B4B: 安全な要約の Screener の節（明示の選択子が無ければ NOT_REQUESTED のまま。結果は derived で保存しない）
+SCREENER_SECTION_SCHEMA = "p8_pilot2b_screener_section:0.1.0"
+SCREENER_SECTION_STATES: Tuple[str, ...] = ("NOT_REQUESTED", "REQUESTED", "FAILED")
 RETROSPECTIVE_METRICS: Tuple[MetricKind, ...] = (MetricKind.REVENUE_GROWTH, MetricKind.OPERATING_MARGIN,
                                                  MetricKind.NET_MARGIN, MetricKind.ROA_POINT_IN_TIME)
 #: A3 が支える target の期間の種類（単独の四半期 ・4Q ・OtherPeriod は無い）
@@ -419,12 +428,20 @@ def _overall(summary: Mapping[str, Any]) -> str:
     return "PILOT_PARTIAL"
 
 
-def execute(*, data_root: Any, transport: Any, decision_path: Any = None, acquired_at: Any = None) -> Dict[str, Any]:
+def execute(*, data_root: Any, transport: Any, decision_path: Any = None, acquired_at: Any = None,
+            screener_policy_id: Any = None, screener_policy_key: Any = None,
+            screener_policy_version: Any = None) -> Dict[str, Any]:
     """人の判断の後: ID1 の再導出 → ID2 → A1 の確認 → fins → ADP0 ・EXE → A3 の status → 安全な要約。
-    `acquired_at`（PILOT2B）を渡すと、fins の後に凍結 ACQ0 → EXE(acquired_at) → manifest → F1 → A3-RA の chain を加える。"""
+    `acquired_at`（PILOT2B）を渡すと、fins の後に凍結 ACQ0 → EXE(acquired_at) → manifest → F1 → A3-RA の chain を加える。
+    `screener_policy_id` か `screener_policy_key` ＋ `screener_policy_version`（B4B。明示だけ ・PILOT2B の時だけ）を渡すと、
+    chain の後に凍結 B4A（B3 の正確な方針 → 凍結 B2）を呼び、安全な投影だけを要約の `screener` の節に足す。"""
     root = validate_data_root(data_root)
     _require(isinstance(transport, Transport), "TRANSPORT_INVALID", "transport")
     acquisition_instant = _parse_acquired_at(acquired_at) if acquired_at is not None else None
+    selector = _screener_selector(screener_policy_id, screener_policy_key, screener_policy_version)
+    if selector is not None:                                                     # network の前に fail closed（方針が源）
+        _require(acquisition_instant is not None, "SCREENER_REQUIRES_ACQUIRED_AT", "acquired_at")
+        _screener_policy_or_fail(root, selector)
     packet = _read_json(_pilot_dir(root) / PACKET_FILENAME, "PACKET_MISSING")
     _require(packet.get("schema") == PACKET_SCHEMA, "PACKET_SCHEMA_INVALID", "schema")
     pilot_id = packet["pilot_id"]
@@ -459,6 +476,7 @@ def execute(*, data_root: Any, transport: Any, decision_path: Any = None, acquir
         "exe_outcomes": {}, "exe_reasons": {}, "held_reasons": {}, "metrics": [],
         "acquisition_authority": {"schema": AUTHORITY_SCHEMA, "state": "NOT_REQUESTED", "acquired_at": None,
                                   "issuers": []},
+        "screener": _screener_section(selector),
         "rules_version": PILOT_RULES_VERSION}
     if authority:
         summary["acquisition_authority"].update({"state": "REQUESTED", "acquired_at": _iso(acquisition_instant)})
@@ -509,6 +527,9 @@ def execute(*, data_root: Any, transport: Any, decision_path: Any = None, acquir
             summary["acquisition_authority"]["issuers"].append(
                 _authority_chain(root, handoff, rows, fins.pagination_key, acquisition_instant, acquisition_state,
                                  exe_outcomes, exe_reasons, held_reasons))
+            if selector is not None:                                             # B4B: chain の後 ・凍結 B4A だけ ・保存しない
+                summary["screener"]["issuers"].append(
+                    _screener_evaluation(root, handoff.issuer_id, acquisition_instant, selector, summary["screener"]))
         else:
             for row in fins.rows:                                                # 凍結 ADP0 ＋ EXE（A2 ・注記 ・保留）
                 result = execute_financial_summary_row(row, AdapterContext(issuer_id=handoff.issuer_id), root)
@@ -522,8 +543,63 @@ def execute(*, data_root: Any, transport: Any, decision_path: Any = None, acquir
     summary["request"] = budget.as_dict()
     summary["store_integrity"] = _store_integrity(root, authority=authority)
     summary["state"] = _overall_pilot2b(summary) if authority else _overall(summary)
+    if summary["screener"]["state"] == "FAILED":                                 # orchestration の失敗は fail closed
+        summary["state"] = "PILOT_FAILED"
     _write_json(_pilot_dir(root) / SUMMARY_FILENAME, summary)
     return summary
+
+
+# ---------------------------------------------------------------- B4B: 明示の方針 → 凍結 B4A（B3 → B2）→ 安全な投影
+
+
+def _screener_selector(policy_id: Any, policy_key: Any, policy_version: Any) -> Optional[PolicySelector]:
+    """明示の選択子だけ（既定 ・latest ・current ・自動の発見は無い）。3 つとも無ければ Screener は要求されない。"""
+    if policy_id is None and policy_key is None and policy_version is None:
+        return None
+    try:
+        if policy_id is not None:
+            _require(policy_key is None and policy_version is None, "SCREENER_SELECTOR_INVALID", "one selector")
+            return PolicySelector(policy_id=policy_id)
+        return PolicySelector(policy_key=policy_key, version=policy_version)
+    except PolicyEvaluationError as exc:
+        raise PilotError("SCREENER_SELECTOR_INVALID", exc.code) from None
+
+
+def _screener_policy_or_fail(root: Path, selector: PolicySelector) -> None:
+    """network の前の fail closed: B3 store の integrity → 正確な方針。無い ・破損は PilotError（要約は書かない ・request は出さない）。"""
+    try:
+        resolve_policy(open_verified_store(root), selector)
+    except PolicyEvaluationError as exc:
+        raise PilotError("SCREENER_POLICY_UNAVAILABLE", f"{exc.failure.value}:{exc.code}") from None
+
+
+def _screener_section(selector: Optional[PolicySelector]) -> Dict[str, Any]:
+    kind = None if selector is None else ("POLICY_ID" if selector.policy_id is not None else "KEY_VERSION")
+    return {"schema": SCREENER_SECTION_SCHEMA, "state": "NOT_REQUESTED" if selector is None else "REQUESTED",
+            "selector_kind": kind, "issuers": [], "failure_code": ""}
+
+
+def _screener_evaluation(root: Path, issuer_id: str, acquired_at: datetime, selector: PolicySelector,
+                         section: Dict[str, Any]) -> Dict[str, Any]:
+    """1 発行体: 文脈の軸は PILOT2B と同じ（`evaluation_as_of` ＝ `identity_valid_at` ＝ acquired_at。mode は方針から）。
+    凍結 B4A が B3（read-only）→ 凍結 B2 を orchestration し、安全な投影だけを残す。失敗は節を FAILED にする（結果の状態とは別）。"""
+    try:
+        record = resolve_policy(open_verified_store(root), selector)
+        context = EvaluationContext(subject_id=issuer_id, evaluation_as_of=acquired_at, identity_valid_at=acquired_at,
+                                    authority_mode=record.policy.authority_mode, policy_id=record.policy.policy_id)
+        inputs = EvaluationInputs(history=ObservationStore.open(root, read_only=True).history,
+                                  semantics=_semantics_lookup(root),
+                                  holdings=ProviderHoldingsStore.open(root, read_only=True),
+                                  manifests=ManifestStore.open(root, read_only=True),
+                                  corrections=CorrectionHistory(IdentityStore.open(root, read_only=True).history))
+        outcome = evaluate_selected_policy(root, selector, context, inputs)
+    except PolicyEvaluationError as exc:
+        section["state"], section["failure_code"] = "FAILED", exc.failure.value
+        return {"summary": None, "failure_code": exc.code}
+    except ScreenerModelError as exc:
+        section["state"], section["failure_code"] = "FAILED", "CONTEXT_INVALID"
+        return {"summary": None, "failure_code": exc.code}
+    return {"summary": project_safe_summary(outcome.result).as_dict(), "failure_code": ""}
 
 
 # ---------------------------------------------------------------- PILOT2B: 取得の authority の chain（ACQ0 → … → A3-RA）
@@ -792,6 +868,9 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--data-root", required=True)
     run.add_argument("--decision", default=None)
     run.add_argument("--acquired-at", default=None, help="PILOT2B: explicit timezone-aware acquisition instant")
+    run.add_argument("--screener-policy-id", default=None, help="B4B: exact policy_id of a human-reviewed policy")
+    run.add_argument("--screener-policy-key", default=None, help="B4B: exact policy_key (needs the version)")
+    run.add_argument("--screener-policy-version", default=None, type=int, help="B4B: exact explicit policy version")
     run.add_argument("--credential-env", default=DEFAULT_CREDENTIAL_ENV)
     return parser
 
@@ -809,7 +888,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                              batch_id=args.batch_id)
         else:
             result = execute(data_root=args.data_root, transport=transport, decision_path=args.decision,
-                             acquired_at=args.acquired_at)
+                             acquired_at=args.acquired_at, screener_policy_id=args.screener_policy_id,
+                             screener_policy_key=args.screener_policy_key,
+                             screener_policy_version=args.screener_policy_version)
     except (PilotError, LiveInputError) as exc:
         sys.stdout.write(json.dumps({"state": "FAILED", "code": exc.code, "detail": exc.detail}) + "\n")
         return 2

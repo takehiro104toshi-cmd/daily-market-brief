@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.89 (2026-10-06) — Phase 8 P8-B4B private screener runner integration（合成の検証だけ ・実 request なし）
+
+PILOT2B の private local runner を狭く再開し、明示の opt-in（`--screener-policy-id` か `--screener-policy-key` ＋ `--screener-policy-version`）
+でだけ、凍結 B4A（B3 の正確な方針 → 凍結 B2）を既存の実 data の authority の chain の後に呼び、凍結 B4A の安全な投影だけを
+`safe_summary.json` の `screener` の節に足す。選択子なしは legacy のまま（節は NOT_REQUESTED）。方針なし ・store の破損 ・選択子の誤りは
+network の前に fail closed（要約を書かず request を出さない）。chain の後の orchestration の失敗は `FAILED` ＋ `PILOT_FAILED`。
+MATCH ／ NO_MATCH ／ NOT_EVALUABLE は結果の状態で、runner の操作の状態を変えない。文脈の軸は PILOT2B と同じ（acquired_at）。結果は保存
+しない ・B3 は read-only ・予算 ・network の呼び出しは不変 ・既定 ・latest ・順位 ・推奨は無い。
+
+追加
+・`tests/intelligence/test_screener_pilot2b_screener_runner.py`
+・`docs/databank/PHASE8_B4B_PRIVATE_SCREENER_RUNNER.md`
+改善
+・`src/intelligence/jquants_pilot2_local.py`（B4B の狭い再開: 選択子 ・`screener` の節 ・B4A の呼び出しだけ。既存の chain ・要約の欄は不変）
+・`tests/intelligence/phase8_runtime_registry.py`（B4A の anchor `P8_B4A` ・B4B の test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B4B の登録 ・runner の shape ・import の guard）
+修正
+・なし
+
 ## v5.88 (2026-10-06) — Phase 8 P8-B4A policy-to-evaluator integration + safe result projection（合成 ・保存なし）
 
 凍結の 3 層をつなぐ決定論の orchestration（`screener_policy_evaluation`）と、private の `ScreenerResult` の安全な投影

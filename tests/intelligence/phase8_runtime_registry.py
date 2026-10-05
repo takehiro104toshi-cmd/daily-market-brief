@@ -91,6 +91,8 @@ P8_B1 = "a5df74ccce2153a088dab0b4f193931a12d84f9d"
 P8_B2 = "8129e953cc1c8886c782857ff9e8010b639893f9"
 #: P8-B3 の凍結 anchor（runtime 47 ・Phase 8 の test ・先行の文書はここと byte 一致。B4A で登録）
 P8_B3 = "6dbea7e0aad3fe7db20689e173c08829ef198155"
+#: P8-B4A の凍結 anchor（runtime 49 ・Phase 8 の test ・先行の文書はここと byte 一致。B4B で登録）
+P8_B4A = "e7abbe1e67e5a3bdeca3edcd1a81bdce26bdf718"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -232,7 +234,8 @@ PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py"
                                  "tests/intelligence/test_screener_criteria_model.py",
                                  "tests/intelligence/test_screener_evaluator.py",
                                  "tests/intelligence/test_screener_policy_authority.py",
-                                 "tests/intelligence/test_screener_policy_evaluation.py")
+                                 "tests/intelligence/test_screener_policy_evaluation.py",
+                                 "tests/intelligence/test_screener_pilot2b_screener_runner.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
 PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md",
                                 "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
@@ -272,7 +275,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_B1_SCREENER_SEMANTIC_MODELS.md",
                                 "docs/databank/PHASE8_B2_FINANCIAL_CRITERIA_EVALUATOR.md",
                                 "docs/databank/PHASE8_B3_PRIVATE_POLICY_AUTHORITY_STORE.md",
-                                "docs/databank/PHASE8_B4A_POLICY_EVALUATION_SAFE_PROJECTION.md")
+                                "docs/databank/PHASE8_B4A_POLICY_EVALUATION_SAFE_PROJECTION.md",
+                                "docs/databank/PHASE8_B4B_PRIVATE_SCREENER_RUNNER.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -338,7 +342,7 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
            "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_EXE", "P8_ID1", "P8_LIVE0", "P8_LIVE1",
-           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_PILOT2B", "P8_B1", "P8_B2", "P8_B3", "P8_V",
+           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_PILOT2B", "P8_B1", "P8_B2", "P8_B3", "P8_B4A", "P8_V",
            "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",
