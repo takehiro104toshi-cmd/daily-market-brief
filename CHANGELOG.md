@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.83 (2026-10-05) — Phase 8 P8-A3-RA retrospective provider-authority metrics（実 request なし）
+
+凍結 A3 の 4 指標（売上成長率 ・営業利益率 ・純利益率 ・ROA（時点の分母））を、遡及の provider authority の mode で算出する追加の層。
+脚は凍結 `resolve_retrospective`（保持 epoch ・manifest の membership ・A1R の遡及の identity）で解き、式 ・互換 ・期間の関係 ・Decimal は
+凍結 `fundamental_metrics` の純 helper をそのまま使う（監督の決定 R1。複製なし。`_resolve_leg` は STRICT を呼ぶため使わず、解決後の
+注記だけを再述して parity を pin）。外側の `RetrospectiveMetricResult` が authority の意味（resolution_mode ・authority_as_of ・
+identity_valid_at ・脚ごとの観測 id ・保持 epoch ・manifest の参照）を持ち、内側の凍結 `MetricResult` は真に表せる時だけ入れる
+（SEMANTIC_HOLD ・manifest ／ membership の失敗 ・同じ期間の epoch の不一致は外側だけ）。STRICT A3 ・A2 ・A2C-R ・F1 は byte 不変。
+
+追加
+・`src/intelligence/screener_intelligence/retrospective_metric_resolver.py`
+・`tests/intelligence/test_screener_retrospective_metrics.py`
+・`docs/databank/PHASE8_A3_RA_RETROSPECTIVE_METRICS.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（F1 の anchor `P8_F1` ・A3-RA の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（A3-RA の登録 ・`SANCTIONED_A3_RA_IMPORTS` ・byte 一致 guard）
+・`tests/intelligence/test_screener_observation_retrospective.py`（consumer の除外 1 行に A3-RA を足す）
+修正
+・なし
+
 ## v5.82 (2026-10-05) — Phase 8 P8-OBS60-F1 provider holdings coverage executor（実 request なし）
 
 `ProviderHoldingsCoverage`（A2C-R）を作る決定論の producer を足した。COMPLETE な取得 event（ACQ0）＋ その取得の authoritative な

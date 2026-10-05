@@ -730,7 +730,7 @@ def test_k_provider_holdings_never_touch_strict_resolution_or_contradiction(root
 
 def test_k_frozen_layers_do_not_import_the_retrospective_module_and_a3_is_untouched() -> None:
     for path in sorted(PACKAGE_DIR.glob("*.py")):
-        if path.stem not in A2C_MODULES:
+        if path.stem not in (*A2C_MODULES, "retrospective_metric_resolver"):                  # A3-RA は consumer
             assert "observation_retrospective" not in path.read_text(encoding="utf-8"), path.name
     for path in (REPO_ROOT / "src" / "intelligence" / "jquants_pilot2_local.py",
                  REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py", REPO_ROOT / "main.py"):
