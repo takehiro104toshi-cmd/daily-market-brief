@@ -510,7 +510,7 @@ def test_g_module_isolation_no_formula_copy_no_strict_no_clock_no_io_no_float() 
     assert {c.value for c in ReasonCode} == {c.value for c in ReasonCode} and "SEMANTIC_HOLD" not in {
         c.value for c in ReasonCode}                                                                   # 凍結の語彙は不変
     for path in sorted(PACKAGE_DIR.glob("*.py")):
-        if path.stem != "retrospective_metric_resolver":
+        if path.stem not in ("retrospective_metric_resolver", "screener_evaluator"):              # 消費は B2 の評価器だけ
             assert "retrospective_metric" not in path.read_text(encoding="utf-8"), path.name
     for path in (REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py", REPO_ROOT / "main.py"):
         assert "retrospective" not in path.read_text(encoding="utf-8"), path.name                     # 配線は後の gate

@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.86 (2026-10-06) — Phase 8 P8-B2 financial criteria evaluator（保存 ・配線 ・実 request なし）
+
+凍結 B1 の意味の model ・凍結 A3 STRICT ・凍結 A3-RA の上に、財務の基準の決定論の評価器を足した。authority mode は 2 つで fallback なし
+（方針と文脈の mode が違えば `AUTHORITY_FAILURE / POLICY_AUTHORITY_MODE_MISMATCH` の結果）。target の期間は authority に見える期間だけから
+型つきの規則で選ぶ（RETROSPECTIVE: `holdings_as_of <= evaluation_as_of` の保持 record × manifest の CANONICAL、STRICT: cutoff までに確かに
+知られた観測。無ければ `TARGET_UNAVAILABLE`、曖昧なら `TARGET_AMBIGUOUS`、成長率は凍結 A3 の関係が comparable な最初の対。PILOT2B の runner と
+同じ意味で、test が一致を pin する）。A3-RA の外側 ・STRICT の status を閉じた表で真に写し、Decimal だけで比較（BETWEEN は両端を含む。丸め ・
+epsilon ・距離なし）。ALL_OF の集約は AUTHORITY_FAILURE ＞ HOLD ＞ NO_MATCH ＞ NOT_EVALUABLE ＞ 全 MATCH で、全基準を評価する。provenance は
+凍結の authority の値を写すだけ。順位 ・score ・重み ・保存 ・Theme ・runner の import ・LLM は無い。
+
+追加
+・`src/intelligence/screener_intelligence/screener_evaluator.py`
+・`tests/intelligence/test_screener_evaluator.py`
+・`docs/databank/PHASE8_B2_FINANCIAL_CRITERIA_EVALUATOR.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（B1 の anchor `P8_B1` ・B2 の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B2 の登録 ・`SANCTIONED_B2_IMPORTS` ・純 ・凍結の入口だけの guard）
+修正
+・なし
+
 ## v5.85 (2026-10-06) — Phase 8 P8-B1 screener semantic models（評価 ・保存 ・実 request なし）
 
 Screener v1 の閉じた意味の model を足した（監督の決定 P8-B0 ・P8-OBS-61〜66）。`Criterion`（FINANCIAL ・ISSUER ・凍結 A3 の 4 指標の 1 つ ・
