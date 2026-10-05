@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.84 (2026-10-05) — Phase 8 P8-PILOT2B private retrospective E2E runner（実 request なし）
+
+PILOT2 runner の狭い再開（監督の決定 D-P2B-1〜5）。`execute --acquired-at <aware ISO8601>` を渡した時だけ、fins の handoff から凍結 ACQ0 の
+取得 event（COMPLETE ／ PARTIAL_PAGINATED）→ 凍結 EXE（`acquired_at` 付き。知識の規則は EXE-R）→ 凍結 EPOCH1R の manifest → 凍結 F1 の保持
+record → 凍結 A3-RA の 4 指標（`authority_as_of` ＝ `identity_valid_at` ＝ `acquired_at`）を composition し、安全な要約に metadata
+（status ・has_value ・診断 code ・件数）だけを足す。target は保持 record ＋ manifest の期間の意味で選ぶ（journal の順は使わない）。
+pagination は PARTIAL（page を追わない）。resume の結び付き（`acquisition_state.json`）・PILOT_PASS ／ HOLD ／ PARTIAL ／ FAILED。
+runner は時計を読まない ・式を持たない ・値を書かない。`--acquired-at` なしは PILOT2A の経路のまま。実 request ・配線の活性化は無い。
+
+追加
+・`tests/intelligence/test_screener_pilot2b_retrospective_runner.py`
+・`docs/databank/PHASE8_PILOT2B_PRIVATE_RETROSPECTIVE_E2E.md`
+改善
+・`src/intelligence/jquants_pilot2_local.py`（取得の authority の chain ・`--acquired-at` ・target の選択 ・PILOT2B の状態）
+・`tests/intelligence/phase8_runtime_registry.py`（A3-RA の anchor `P8_A3_RA` ・PILOT2B の test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（runner の再開 ・shape の pin ・配線 guard の更新）
+・`tests/intelligence/test_screener_pilot2_local_runner.py`（Pages の token を ACQ0 の欄名 `pages_followed` から外す 1 箇所）
+・`tests/intelligence/test_screener_acquisition_events.py` ・`test_screener_acquisition_manifest.py` ・
+  `test_screener_provider_holdings_executor.py` ・`test_screener_retrospective_metrics.py`（「配線は後の gate」の guard から runner を外す
+  1 行ずつ）
+修正
+・なし
+
 ## v5.83 (2026-10-05) — Phase 8 P8-A3-RA retrospective provider-authority metrics（実 request なし）
 
 凍結 A3 の 4 指標（売上成長率 ・営業利益率 ・純利益率 ・ROA（時点の分母））を、遡及の provider authority の mode で算出する追加の層。

@@ -438,6 +438,5 @@ def test_i_the_module_has_no_clock_network_io_knowledge_boundary_or_a2_coverage_
     for path in sorted(PACKAGE_DIR.glob("*.py")):
         if path.stem != "provider_holdings_executor":
             assert "provider_holdings_executor" not in path.read_text(encoding="utf-8"), path.name
-    for path in (REPO_ROOT / "src" / "intelligence" / "jquants_pilot2_local.py",
-                 REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py", REPO_ROOT / "main.py"):
+    for path in (REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py", REPO_ROOT / "main.py"):
         assert "provider_holdings" not in path.read_text(encoding="utf-8"), path.name            # 配線は後の gate

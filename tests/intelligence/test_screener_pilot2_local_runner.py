@@ -548,8 +548,8 @@ def test_architecture_runner_is_local_only_and_not_wired_anywhere() -> None:
             assert node.attr not in {"now", "utcnow", "today", "urlopen", "uuid4", "random", "unlink", "rmtree",
                                      "remove", "sleep"}, node.attr
     lowered = executable_source(MODULE).lower()
-    for token in ("screening", "rank", "score", "recommend", "theme", "llm", "prompt", "anthropic", "openai", "pages",
-                  "morning", "cron", "schedule", "logging", "api.jquants.com", "://"):
+    for token in ("screening", "rank", "score", "recommend", "theme", "llm", "prompt", "anthropic", "openai",
+                  "docs/pages", "morning", "cron", "schedule", "logging", "api.jquants.com", "://"):   # PILOT2B: ACQ0 の欄名
         assert token not in lowered, token
     for root_name in ("main.py", ".github", "scripts", "src/intelligence/reports",
                       "src/intelligence/narrative_intelligence", "src/intelligence/theme_intelligence",

@@ -392,5 +392,5 @@ def test_g_architecture_no_network_no_io_outside_the_store_and_frozen_layers_do_
         if path.stem not in ("acquisition_event_model", "acquisition_event_store", *consumers):
             assert "acquisition_event" not in path.read_text(encoding="utf-8"), path.name   # 先行の層は ACQ0 を知らない
     for path in (REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py",
-                 REPO_ROOT / "src" / "intelligence" / "jquants_pilot2_local.py", REPO_ROOT / "main.py"):
+                 REPO_ROOT / "main.py"):                                                 # 配線は PILOT2B の runner だけ
         assert "acquisition_event" not in path.read_text(encoding="utf-8"), path.name     # 配線は後の gate

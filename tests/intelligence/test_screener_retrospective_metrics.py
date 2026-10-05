@@ -512,7 +512,6 @@ def test_g_module_isolation_no_formula_copy_no_strict_no_clock_no_io_no_float() 
     for path in sorted(PACKAGE_DIR.glob("*.py")):
         if path.stem != "retrospective_metric_resolver":
             assert "retrospective_metric" not in path.read_text(encoding="utf-8"), path.name
-    for path in (REPO_ROOT / "src" / "intelligence" / "jquants_pilot2_local.py",
-                 REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py", REPO_ROOT / "main.py"):
+    for path in (REPO_ROOT / "src" / "intelligence" / "jquants_local_transport.py", REPO_ROOT / "main.py"):
         assert "retrospective" not in path.read_text(encoding="utf-8"), path.name                     # 配線は後の gate
 
