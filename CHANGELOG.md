@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.88 (2026-10-06) — Phase 8 P8-B4A policy-to-evaluator integration + safe result projection（合成 ・保存なし）
+
+凍結の 3 層をつなぐ決定論の orchestration（`screener_policy_evaluation`）と、private の `ScreenerResult` の安全な投影
+（`screener_result_summary`）を足した。方針の選択は正確な policy_id か正確な (policy_key, version) だけ（latest ・current ・default ・自動の
+発見 ・fallback なし）。B3 store の integrity を検査してから read-only で開き、凍結 B3 ・B1 で復元した方針（authority の分類の完全一致 ・文脈の
+policy_id ・mode の一致）を凍結 B2 `evaluate_policy` に渡す。失敗は型つき（store の破損を NOT_EVALUABLE に潰さない）。安全な投影は
+metadata ・状態 ・件数だけで、観測値 ・閾値 ・operator ・期間 ・主語 ・著者 ・意図 ・観測 id ・epoch ・manifest の参照を構造的に持たない。
+MATCH は「明示に選んだ方針の全基準を満たした」だけ。結果の保存 ・順位 ・score ・runner ・JQ の結合は無い。
+
+追加
+・`src/intelligence/screener_intelligence/screener_policy_evaluation.py`
+・`src/intelligence/screener_intelligence/screener_result_summary.py`
+・`tests/intelligence/test_screener_policy_evaluation.py`
+・`docs/databank/PHASE8_B4A_POLICY_EVALUATION_SAFE_PROJECTION.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（B3 の anchor `P8_B3` ・B4A の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B4A の登録 ・`SANCTIONED_B4A_IMPORTS` ・投影の欄 ・選択の guard）
+・`tests/intelligence/test_screener_criteria_model.py`（消費の行に B4A の 2 module を足す。B4A guard が pin）
+修正
+・なし
+
 ## v5.87 (2026-10-06) — Phase 8 P8-B3 private criteria policy authority store（評価 ・配線 ・実 request なし）
 
 監督の決定 P8-OBS-63（PRIVATE AUTHORITY STORE）に基づき、凍結 B1 の `CriteriaPolicy` を包む最小の追記専用 authority record

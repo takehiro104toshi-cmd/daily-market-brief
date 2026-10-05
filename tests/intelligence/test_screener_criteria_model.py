@@ -376,5 +376,6 @@ def test_g_models_have_no_ranking_recommendation_or_distance_surface_and_no_floa
                                "CriterionState", "ScreenerState", "DataCompleteness", "canonical_threshold"}
     for path in sorted((REPO_ROOT / PHASE8_PACKAGE).glob("*.py")):
         if path.stem not in ("screener_criteria_model", "screener_evaluator", "screener_policy_authority_model",
-                             "screener_policy_authority_store"):                                 # 消費は B2 ・B3 だけ
+                             "screener_policy_authority_store", "screener_policy_evaluation",
+                             "screener_result_summary"):                                         # 消費は B2 ・B3 ・B4A だけ
             assert "screener_criteria" not in path.read_text(encoding="utf-8"), path.name       # 凍結の層は知らない
