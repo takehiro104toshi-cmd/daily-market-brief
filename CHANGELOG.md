@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.81 (2026-10-05) — Phase 8 P8-A2C-R provider holdings coverage authority（実 request なし）
+
+世界 ／ 公開の知識の完全性（A2 `ObservationCoverage` ・`complete_through`）と provider の bounded な保持 epoch を別の authority に分けた
+（C1）。新 `ProviderHoldingsCoverage`（dataset ・主語 ・period_end ・holdings_as_of ・取得と manifest の参照 ・CANONICAL の数。
+`complete_through` を持たない。`p8pvh_` ・`jq.pvh:`）と別 journal `provider_holdings_coverage.jsonl` の追記専用 store を足し、遡及の
+resolver の epoch の源を A2 の coverage から保持 record に移した（保持の像は明示 ・既定 ・fallback なし）。不在の authority は
+EPOCH1R の期間 metadata から導く: 期間 None の保留 → 取得全体で `SEMANTIC_HOLD`、P の保留 → P の非 member は `SEMANTIC_HOLD`、
+記載なし → `VALUE_ABSENT`、`NOT_FOUND` は清浄な slot だけ。canonical の member は汚染があっても `FOUND`。A2 ・A3 ・STRICT は不変。
+F1（record の生成）は未実装。
+
+追加
+・`src/intelligence/screener_intelligence/provider_holdings_model.py`
+・`src/intelligence/screener_intelligence/provider_holdings_store.py`
+・`tests/intelligence/test_screener_provider_holdings.py`
+・`docs/databank/PHASE8_A2C_R_PROVIDER_HOLDINGS_AUTHORITY.md`
+改善
+・`src/intelligence/screener_intelligence/observation_retrospective_resolver.py`（epoch の源 ・manifest の結び付き ・不在の汚染）
+・`tests/intelligence/test_screener_observation_retrospective.py`（D 以降を保持 epoch に移植。A〜C は不変）
+・`tests/intelligence/phase8_runtime_registry.py`（EPOCH1R の anchor `P8_EPOCH1R` ・A2C-R の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（A2C-R の登録 ・再開 path ・byte 一致 guard ・境界 guard）
+修正
+・なし
+
 ## v5.80 (2026-10-05) — Phase 8 P8-EPOCH1R held period metadata remediation（実 request なし）
 
 F1 の監査で確認した STRICT の意味の隙間（保留の行と同じ period_end に coverage を作ると偽の NOT_FOUND ・後の修正の永久拒否）を閉じる
