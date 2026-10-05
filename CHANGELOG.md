@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.82 (2026-10-05) — Phase 8 P8-OBS60-F1 provider holdings coverage executor（実 request なし）
+
+`ProviderHoldingsCoverage`（A2C-R）を作る決定論の producer を足した。COMPLETE な取得 event（ACQ0）＋ その取得の authoritative な
+manifest（EPOCH1R）＋ A2 の canonical の像 → CANONICAL の entry が 1 つ以上ある period_end ごとに 1 record を凍結 `ProviderHoldingsStore`
+に append する（period_end の昇順 ・`holdings_as_of` ＝ `acquired_at` そのもの ・`canonical_entry_count` ＝ entry の数）。期間 None の保留が
+1 つでもあれば取得全体で 0 record。event ・manifest ・全 canonical の観測 ・全出力 record ・store の衝突を最初の append の前に確かめ、
+1 つでも失敗すれば 0 write。replay は全 `REUSED`。A2 の `ObservationCoverage` ・STRICT ・`COVERAGE_CONTRADICTION` ・A3 には触れない。
+配線 ・実 request ・screening は無い。
+
+追加
+・`src/intelligence/screener_intelligence/provider_holdings_executor.py`
+・`tests/intelligence/test_screener_provider_holdings_executor.py`
+・`docs/databank/PHASE8_OBS60_F1_PROVIDER_HOLDINGS_EXECUTOR.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（A2C-R の anchor `P8_A2C_R` ・F1 の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（F1 の登録 ・byte 一致 guard ・import ／ token guard ・pin の更新）
+・`tests/intelligence/test_screener_acquisition_events.py`（consumer の除外 1 行に F1 を足す）
+・`tests/intelligence/test_screener_acquisition_manifest.py`（consumer の除外 1 行に F1 を足す）
+修正
+・なし
+
 ## v5.81 (2026-10-05) — Phase 8 P8-A2C-R provider holdings coverage authority（実 request なし）
 
 世界 ／ 公開の知識の完全性（A2 `ObservationCoverage` ・`complete_through`）と provider の bounded な保持 epoch を別の authority に分けた

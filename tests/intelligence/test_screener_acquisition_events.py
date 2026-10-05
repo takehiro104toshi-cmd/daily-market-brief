@@ -387,7 +387,7 @@ def test_g_architecture_no_network_no_io_outside_the_store_and_frozen_layers_do_
     for token in ("urllib", "socket", "http", "environ", "getenv", "://", "sqlite", "unlink", "rename", "truncate",
                   '"wb"', '"w"', "write_text", "write_bytes"):
         assert token not in store_source, token
-    consumers = ("identity_continuity_coverage", "acquisition_manifest_builder")         # 後の gate の consumer（I1 ・EPOCH1）
+    consumers = ("identity_continuity_coverage", "acquisition_manifest_builder", "provider_holdings_executor")  # 後の層
     for path in sorted(PACKAGE_DIR.glob("*.py")):
         if path.stem not in ("acquisition_event_model", "acquisition_event_store", *consumers):
             assert "acquisition_event" not in path.read_text(encoding="utf-8"), path.name   # 先行の層は ACQ0 を知らない
