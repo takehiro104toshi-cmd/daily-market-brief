@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.91 (2026-10-06) — Phase 8 P8-B5B multi-issuer result set + completeness + safe projection（純 ・保存なし）
+
+将来の複数発行体の実行器が Universe 全体の screen の結果を表す型を足した。member の結果（provider の code ごと。閉じた 6 状態）と発行体の結果
+（審査済みの IssuerId ごと。凍結 B4A の投影を合成し、凍結の 5 つの Screener の状態だけ）を分け、複数の code → 1 発行体の評価を 1 つに保つ。
+全結果の集合はすべての宣言の member をちょうど 1 回持ち、参照 ・方針 ・mode ・評価の瞬間 ・単一の authority の日の整合を fail closed で検査する。
+順は宣言の順 ／ 最初の参照の順（非意味）。実行の完全性（COMPLETE ／ PARTIAL）と財務 data の完全性（件数）を分け、MATCH の部分集合は全結果
+から派生するだけ。安全な投影は件数 ・状態 ・規則の版だけで、発行体 ・code ・Universe の id ・criterion_id ・値 ・閾値 ・正確な瞬間を持たず、coverage の
+偏りを件数で示す。決定論の `screen_result_id`。保存 ・network ・順位 ・点数 ・比率は無い。
+
+追加
+・`src/intelligence/screener_intelligence/screener_result_set.py`
+・`src/intelligence/screener_intelligence/screener_result_set_projection.py`
+・`tests/intelligence/test_screener_result_set.py`
+・`docs/databank/PHASE8_B5B_RESULT_SET.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（B5A の anchor `P8_B5A` ・B5B の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B5B の登録 ・`SANCTIONED_B5B_IMPORTS` ・純 ・順位なしの guard）
+・`tests/intelligence/test_screener_criteria_model.py`（凍結 B1 の消費の行に B5B を 1 つ足す。guard が pin）
+修正
+・なし
+
 ## v5.90 (2026-10-06) — Phase 8 P8-B5A explicit universe semantics + private universe authority（実行 ・評価なし）
 
 Phase 8 v1 の完了に要る最初の入力 authority として、明示の有限な Universe の model（`UniverseSpec`）と人が審査した Universe の private
