@@ -97,6 +97,8 @@ P8_B4A = "e7abbe1e67e5a3bdeca3edcd1a81bdce26bdf718"
 P8_B4B = "ff89a75c0f6c73d4372b89e7a4acd5fc46b0c5e8"
 #: P8-B5A の凍結 anchor（runtime 51 ・Phase 8 の test ・先行の文書はここと byte 一致。B5B で登録）
 P8_B5A = "479de19d42a76610085bb56a18d7cd77d8b78742"
+#: P8-B5B の凍結 anchor（runtime 53 ・Phase 8 の test ・先行の文書はここと byte 一致。B5C で登録）
+P8_B5B = "474b1d9fc83b414edb4557a9d87ad25c6ffa37c4"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -134,8 +136,11 @@ PHASE8_PACKAGE_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" fo
 PHASE8_LIVE2_RUNTIME: Tuple[str, ...] = ("src/intelligence/jquants_local_transport.py",)
 #: P8-PILOT2A で足した runtime（package の外。2 段の PILOT2 runner。本番から import されない）
 PHASE8_PILOT2A_RUNTIME: Tuple[str, ...] = ("src/intelligence/jquants_pilot2_local.py",)
+#: P8-B5C で足した runtime（package の外。複数発行体の private な screen の実行器 ・継続の台帳。本番から import されない）
+PHASE8_B5C_RUNTIME: Tuple[str, ...] = ("src/intelligence/jquants_screen_local.py",)
 #: 登録済みの Phase 8 runtime 全体（package の module ＋ package の外の local 実行の module）
-PHASE8_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE8_PACKAGE_RUNTIME + PHASE8_LIVE2_RUNTIME + PHASE8_PILOT2A_RUNTIME))
+PHASE8_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE8_PACKAGE_RUNTIME + PHASE8_LIVE2_RUNTIME + PHASE8_PILOT2A_RUNTIME
+                                               + PHASE8_B5C_RUNTIME))
 #: P8-A1R で足した runtime（A1 ／ A2 の module は変えない拡張）
 PHASE8_A1R_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE8_PACKAGE}/{name}.py" for name in (
     "identity_correction_model", "identity_correction_store", "identity_remediation_resolver"))
@@ -249,7 +254,8 @@ PHASE8_TESTS: Tuple[str, ...] = ("tests/intelligence/phase8_runtime_registry.py"
                                  "tests/intelligence/test_screener_policy_evaluation.py",
                                  "tests/intelligence/test_screener_pilot2b_screener_runner.py",
                                  "tests/intelligence/test_screener_universe_authority.py",
-                                 "tests/intelligence/test_screener_result_set.py")
+                                 "tests/intelligence/test_screener_result_set.py",
+                                 "tests/intelligence/test_screener_multi_issuer_executor.py")
 #: 登録済みの Phase 8 の文書（追加だけ）
 PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCHITECTURE_AUDIT.md",
                                 "docs/databank/PHASE8_ISSUER_SECURITY_IDENTITY_CONTRACT.md",
@@ -292,7 +298,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_B4A_POLICY_EVALUATION_SAFE_PROJECTION.md",
                                 "docs/databank/PHASE8_B4B_PRIVATE_SCREENER_RUNNER.md",
                                 "docs/databank/PHASE8_B5A_UNIVERSE_AUTHORITY.md",
-                                "docs/databank/PHASE8_B5B_RESULT_SET.md")
+                                "docs/databank/PHASE8_B5B_RESULT_SET.md",
+                                "docs/databank/PHASE8_B5C_MULTI_ISSUER_EXECUTOR.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -358,12 +365,12 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
            "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_EXE", "P8_ID1", "P8_LIVE0", "P8_LIVE1",
-           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_PILOT2B", "P8_B1", "P8_B2", "P8_B3", "P8_B4A", "P8_B4B", "P8_B5A", "P8_V",
+           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_PILOT2B", "P8_B1", "P8_B2", "P8_B3", "P8_B4A", "P8_B4B", "P8_B5A", "P8_B5B", "P8_V",
            "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",
            "PHASE8_ACQ0_RUNTIME", "PHASE8_OBS60_I1_RUNTIME", "PHASE8_EPOCH1_RUNTIME", "PHASE8_A2C_RUNTIME",
-           "PHASE8_A2C_R_RUNTIME", "PHASE8_F1_RUNTIME", "PHASE8_A3_RA_RUNTIME", "PHASE8_B1_RUNTIME", "PHASE8_B2_RUNTIME", "PHASE8_B3_RUNTIME", "PHASE8_B4A_RUNTIME", "PHASE8_B5A_RUNTIME", "PHASE8_B5B_RUNTIME",
+           "PHASE8_A2C_R_RUNTIME", "PHASE8_F1_RUNTIME", "PHASE8_A3_RA_RUNTIME", "PHASE8_B1_RUNTIME", "PHASE8_B2_RUNTIME", "PHASE8_B3_RUNTIME", "PHASE8_B4A_RUNTIME", "PHASE8_B5A_RUNTIME", "PHASE8_B5B_RUNTIME", "PHASE8_B5C_RUNTIME",
            "PHASE8_ADP0_RUNTIME",
            "PHASE8_EXE_RUNTIME",
            "PHASE8_ID1_RUNTIME",

@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.92 (2026-10-06) — Phase 8 P8-B5C multi-issuer private executor / bounded batch + continuation（合成の検証だけ）
+
+凍結の部品をつなぐ別の private な実行器（`jquants_screen_local.py`。package の外 ・本番から import されない）を足した。明示の Universe ・方針の
+正確な選択子 ・D0 ・宣言の評価の瞬間 ・authority mode（v1 は RETROSPECTIVE だけ）・呼び出しごとの取得の瞬間を要求し、内容 address の `run_id` と
+hash の鎖の追記専用の台帳（運用の状態だけ）で、凍結の予算 ≤ 8 の呼び出しをまたいで決定論に継続する。master は 1 run に 1 回（判定だけを台帳に
+残す）、identity は凍結 A1 の resolver で消費するだけ、同じ発行体の code は 1 回の取得（宣言の順の最初の code を経路にする）、取得は凍結の
+ACQ0 → EXE-R → manifest → F1、評価は凍結 B4A、結果は凍結 B5B の全結果 ・安全な投影。不一致 ・破損 ・日の境界は network の前に fail closed。
+結果の store ・retry ・page の追随 ・順位 ・推奨は無い。凍結 B4B の runner ・B5A ・B5B は byte 一致。
+
+追加
+・`src/intelligence/jquants_screen_local.py`
+・`tests/intelligence/test_screener_multi_issuer_executor.py`
+・`docs/databank/PHASE8_B5C_MULTI_ISSUER_EXECUTOR.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（B5B の anchor `P8_B5B` ・B5C の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B5C の登録 ・外の importer ・runner の import ・純の guard）
+修正
+・なし
+
 ## v5.91 (2026-10-06) — Phase 8 P8-B5B multi-issuer result set + completeness + safe projection（純 ・保存なし）
 
 将来の複数発行体の実行器が Universe 全体の screen の結果を表す型を足した。member の結果（provider の code ごと。閉じた 6 状態）と発行体の結果
