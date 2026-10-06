@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.90 (2026-10-06) — Phase 8 P8-B5A explicit universe semantics + private universe authority（実行 ・評価なし）
+
+Phase 8 v1 の完了に要る最初の入力 authority として、明示の有限な Universe の model（`UniverseSpec`）と人が審査した Universe の private
+authority store を足した。member は明示の provider の上場物 code（構文だけを検査。正規化 ・identity の解決 ・適格の実行なし）で、宣言の順は
+保つが意味を持たない。screen の主語は後の実行で審査済みの identity から解く発行体。凍結 LIVE1 の適格の規則の版と単一の authority の日の
+規則を束ね、identity は内容 address。authority は `human:` の著者と aware な reviewed_at を要求し、追記専用（APPENDED ／ REUSED ・衝突 ・
+破損は fail closed）で、解決は正確な universe_id か (鍵, 版) だけ（latest ・既定 ・全市場なし）。実の code ・Universe は repo に置かない。
+
+追加
+・`src/intelligence/screener_intelligence/screener_universe_model.py`
+・`src/intelligence/screener_intelligence/screener_universe_store.py`
+・`tests/intelligence/test_screener_universe_authority.py`
+・`docs/databank/PHASE8_B5A_UNIVERSE_AUTHORITY.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（B4B の anchor `P8_B4B` ・B5A の runtime ・test ・文書）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（B5A の登録 ・`SANCTIONED_B5A_IMPORTS` ・store の IO ・解決の guard）
+修正
+・なし
+
 ## v5.89 (2026-10-06) — Phase 8 P8-B4B private screener runner integration（合成の検証だけ ・実 request なし）
 
 PILOT2B の private local runner を狭く再開し、明示の opt-in（`--screener-policy-id` か `--screener-policy-key` ＋ `--screener-policy-version`）
