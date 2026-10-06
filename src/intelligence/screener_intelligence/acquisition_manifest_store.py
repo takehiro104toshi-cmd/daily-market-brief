@@ -1,0 +1,232 @@
+"""P8-EPOCH1 — 取得 manifest の追記専用 store（`<data_root>/screener_intelligence/acquisition_manifests.jsonl` の 1 file）。
+
+`AcquisitionManifest` だけを受け付ける。A2 ・ACQ0 ・保留 ・注記 ・A1 の store には何も書かない（監督の決定 E6: 別の journal）。
+
+規律（P8 の authority store と同じ）: 明示の data_root、正準の行だけを append、write → flush → fsync、同じ record（byte 一致）は `REUSED`、
+同じ `acquisition_ref` に内容の違う manifest は `MANIFEST_CONFLICT`（1 取得 ＝ 1 manifest）、同じ id で内容が違う行は拒否、破損 ／ 非正準 ／
+切断 ／ 物理的な重複は fail closed（読み飛ばさない ・修復しない ・消さない ・圧縮しない）、外部の変更は byte 長で検知（single writer）。
+検索は record id ・参照 ・acquisition_ref による（journal の位置は意味を持たない。監督の決定 E7）。SQLite ・索引 ・時計 ・network は無い。
+"""
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from .acquisition_manifest_model import (MANIFEST_RECORD_KIND, MEMBERSHIP_AUTHORITY_RECORD, AcquisitionManifest,
+                                         ManifestModelError, is_acquisition_manifest)
+
+MANIFEST_DIRNAME = "screener_intelligence"
+MANIFEST_FILENAME = "acquisition_manifests.jsonl"
+STORE_RULES_VERSION = "p8_acquisition_manifest_store:0.1.0"
+AUTHORITY_CLASS = MEMBERSHIP_AUTHORITY_RECORD
+ENCODING = "utf-8"
+LINE_TERMINATOR = "\n"
+WRITER_GUARANTEE = "SINGLE_WRITER"
+CORRUPTION_REASONS: Tuple[str, ...] = ("STORE_MISSING", "INVALID_ENCODING", "TRUNCATED_FINAL_LINE", "BLANK_LINE",
+                                       "INVALID_RECORD", "NON_CANONICAL_LINE", "PHYSICAL_DUPLICATE",
+                                       "ACQUISITION_DUPLICATE")
+
+
+class ManifestFailureCategory(str, Enum):
+    STORE_MISSING = "STORE_MISSING"
+    STORE_CORRUPTION = "STORE_CORRUPTION"
+    APPEND_REJECTED = "APPEND_REJECTED"
+    CONCURRENT_MODIFICATION = "CONCURRENT_MODIFICATION"
+
+
+class ManifestStoreError(RuntimeError):
+    category = ManifestFailureCategory.APPEND_REJECTED
+
+    def __init__(self, code: str, detail: str = "", *, line_number: int = 0) -> None:
+        super().__init__(f"{code}: {detail}" if detail else code)
+        self.code = code
+        self.detail = detail
+        self.line_number = line_number
+
+
+class ManifestStoreMissing(ManifestStoreError):
+    category = ManifestFailureCategory.STORE_MISSING
+
+
+class ManifestStoreCorrupt(ManifestStoreError):
+    category = ManifestFailureCategory.STORE_CORRUPTION
+
+
+class ManifestAppendRejected(ManifestStoreError):
+    category = ManifestFailureCategory.APPEND_REJECTED
+
+
+class ManifestConcurrentModification(ManifestStoreError):
+    category = ManifestFailureCategory.CONCURRENT_MODIFICATION
+
+
+class AppendStatus(str, Enum):
+    APPENDED = "APPENDED"
+    REUSED = "REUSED"
+
+
+@dataclass(frozen=True)
+class AppendResult:
+    record_id: str
+    status: AppendStatus
+
+
+def parse_manifest_line(line: str) -> AcquisitionManifest:
+    """正準の 1 行 → record（往復で byte 一致しなければ拒む）。"""
+    if not isinstance(line, str) or not line.endswith(LINE_TERMINATOR):
+        raise ManifestModelError("INVALID_RECORD", "line")
+    try:
+        data = json.loads(line)
+    except ValueError:
+        raise ManifestModelError("INVALID_RECORD", "json") from None
+    if not isinstance(data, dict) or data.get("record_kind") != MANIFEST_RECORD_KIND:
+        raise ManifestModelError("INVALID_RECORD", "record_kind")
+    record = AcquisitionManifest.from_dict(data)
+    if record.canonical_line() != line:
+        raise ManifestModelError("NON_CANONICAL_LINE", "line")
+    return record
+
+
+def manifest_path(data_root: Any) -> Path:
+    if data_root is None or str(data_root).strip() == "":
+        raise ManifestAppendRejected("DATA_ROOT_REQUIRED", "an explicit data_root is required")
+    return Path(data_root) / MANIFEST_DIRNAME / MANIFEST_FILENAME
+
+
+class ManifestStore:
+    """取得 manifest の追記専用 store。読むたびに全行を検査する。他の store には触れない。"""
+
+    def __init__(self, data_root: Any, *, read_only: bool = False, _create: bool = False) -> None:
+        self.path = manifest_path(data_root)
+        self.data_root = data_root
+        self.read_only = read_only
+        if _create and not self.path.exists():
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("ab"):
+                pass
+        self._records: List[AcquisitionManifest] = []
+        self._lines: Dict[str, str] = {}
+        self._by_acquisition: Dict[str, str] = {}
+        self._ordered_lines: Tuple[str, ...] = ()
+        self._expected_size = 0
+        self.reload()
+
+    @classmethod
+    def initialize(cls, data_root: Any) -> "ManifestStore":
+        return cls(data_root, _create=True)
+
+    @classmethod
+    def open(cls, data_root: Any, *, read_only: bool = False) -> "ManifestStore":
+        return cls(data_root, read_only=read_only)
+
+    # ------------------------------------------------------------ load（fail closed。修復しない）
+
+    def reload(self) -> int:
+        if not self.path.is_file():
+            raise ManifestStoreMissing("STORE_MISSING", f"{MANIFEST_FILENAME} is missing")
+        journal_bytes = self.path.read_bytes()
+        try:
+            text = journal_bytes.decode(ENCODING)
+        except UnicodeDecodeError as exc:
+            raise ManifestStoreCorrupt("INVALID_ENCODING", f"byte {exc.start}") from None
+        if text and not text.endswith(LINE_TERMINATOR):
+            raise ManifestStoreCorrupt("TRUNCATED_FINAL_LINE", "final line lacks its terminator",
+                                       line_number=text.count(LINE_TERMINATOR) + 1)
+        records: List[AcquisitionManifest] = []
+        by_id: Dict[str, str] = {}
+        by_acquisition: Dict[str, str] = {}
+        for line_number, line_body in enumerate(text.split(LINE_TERMINATOR)[:-1] if text else (), 1):
+            line = line_body + LINE_TERMINATOR
+            if line_body.strip() == "":
+                raise ManifestStoreCorrupt("BLANK_LINE", "blank line", line_number=line_number)
+            try:
+                record = parse_manifest_line(line)
+            except ManifestModelError as exc:
+                raise ManifestStoreCorrupt("INVALID_RECORD" if exc.code != "NON_CANONICAL_LINE" else exc.code,
+                                           exc.code, line_number=line_number) from None
+            if record.record_id in by_id:
+                raise ManifestStoreCorrupt("PHYSICAL_DUPLICATE", "record already present", line_number=line_number)
+            if record.acquisition_ref in by_acquisition:                         # 1 取得 ＝ 1 manifest
+                raise ManifestStoreCorrupt("ACQUISITION_DUPLICATE", "second manifest for one acquisition",
+                                           line_number=line_number)
+            records.append(record)
+            by_id[record.record_id] = line
+            by_acquisition[record.acquisition_ref] = record.record_id
+        self._records, self._lines, self._by_acquisition = records, by_id, by_acquisition
+        self._ordered_lines, self._expected_size = tuple(by_id[r.record_id] for r in records), len(journal_bytes)
+        return len(records)
+
+    # ------------------------------------------------------------ append
+
+    def verify_unchanged(self) -> None:
+        actual = self.path.stat().st_size if self.path.is_file() else -1
+        if actual != self._expected_size:
+            raise ManifestConcurrentModification("CONCURRENT_MODIFICATION", "store changed outside this writer")
+
+    def append(self, record: Any) -> AppendResult:
+        if self.read_only:
+            raise ManifestAppendRejected("READ_ONLY", "store was opened read-only")
+        if not is_acquisition_manifest(record):
+            raise ManifestAppendRejected("INVALID_TYPE", "only AcquisitionManifest records can be appended")
+        self.verify_unchanged()
+        line = record.canonical_line()
+        existing = self._lines.get(record.record_id)
+        if existing is not None:
+            if existing != line:
+                raise ManifestAppendRejected("MANIFEST_CONTENT_CONFLICT", "same id with different content")
+            return AppendResult(record.record_id, AppendStatus.REUSED)
+        other = self._by_acquisition.get(record.acquisition_ref)
+        if other is not None:                                                    # 同じ取得に違う manifest
+            raise ManifestAppendRejected("MANIFEST_CONFLICT", "a different manifest exists for this acquisition")
+        data = line.encode(ENCODING)
+        with self.path.open("ab") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        self._expected_size += len(data)
+        self._records.append(record)
+        self._lines[record.record_id] = line
+        self._by_acquisition[record.acquisition_ref] = record.record_id
+        self._ordered_lines = self._ordered_lines + (line,)
+        return AppendResult(record.record_id, AppendStatus.APPENDED)
+
+    # ------------------------------------------------------------ read（id ・参照 ・取得で探す。位置は使わない）
+
+    def records(self) -> Tuple[AcquisitionManifest, ...]:
+        return tuple(self._records)
+
+    def get(self, record_id: str) -> Optional[AcquisitionManifest]:
+        for record in self._records:
+            if record.record_id == record_id:
+                return record
+        return None
+
+    def by_reference(self, reference: str) -> Optional[AcquisitionManifest]:
+        for record in self._records:
+            if record.reference == reference:
+                return record
+        return None
+
+    def by_acquisition(self, acquisition_ref: str) -> Optional[AcquisitionManifest]:
+        record_id = self._by_acquisition.get(acquisition_ref)
+        return self.get(record_id) if record_id is not None else None
+
+    def canonical_lines(self) -> Tuple[str, ...]:
+        return self._ordered_lines
+
+    def counts(self) -> Dict[str, int]:
+        counts: Dict[str, int] = {}
+        for record in self._records:
+            for entry in record.entries:
+                counts[entry.disposition.value] = counts.get(entry.disposition.value, 0) + 1
+        return counts
+
+
+__all__ = ["AUTHORITY_CLASS", "AppendResult", "AppendStatus", "CORRUPTION_REASONS", "ENCODING", "MANIFEST_DIRNAME",
+           "MANIFEST_FILENAME", "STORE_RULES_VERSION", "WRITER_GUARANTEE", "ManifestAppendRejected",
+           "ManifestConcurrentModification", "ManifestFailureCategory", "ManifestStore", "ManifestStoreCorrupt",
+           "ManifestStoreError", "ManifestStoreMissing", "manifest_path", "parse_manifest_line"]

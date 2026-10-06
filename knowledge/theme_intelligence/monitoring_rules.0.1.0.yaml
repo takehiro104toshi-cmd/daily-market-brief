@@ -1,0 +1,144 @@
+# P6-B6C — monitoring ruleset（VERSIONED KNOWLEDGE）
+#
+# これは evaluator を programming する DSL ではない。condition ごとの評価器は
+# src/intelligence/theme_intelligence/monitoring_engine.py に bounded に実装されており、
+# 本 file が持てるのは「どの condition を有効にするか」「B6 が所有する閾値定数」「表示 key」だけである。
+#
+# 禁止（loader が schema で拒否する）: expression / python / eval / regex / prompt / model /
+# weight / score / priority / probability / severity / rank / confidence / stance / target_price。
+#
+# 閾値の所有: stale 判定の日数は B2 LifecyclePolicy が所有するため、ここには置かない。
+# B6 が初めて所有する提案の滞留日数だけを置く。
+schema_version: "theme_monitoring_rules:0.1.0"
+ruleset_version: "0.1.0"
+published_at: "2026-09-23T00:00:00+00:00"
+content_digest: "da81784fb6cc99e743133683f253208cc47988c03022caadd262564215ff6ac7"
+conditions:
+  - condition_id: "ACCEPTED_CANDIDATE_WITHOUT_OBSERVED_EFFECT"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "DISCOVERY"
+    subject_kind: "THEME_PROPOSAL"
+    salient_state_kind: "DISCOVERY_OUTCOME"
+    message_key: "proposal.accepted_without_observed_effect"
+  - condition_id: "ACCEPTED_THEME_SEMANTIC_REVISION"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "SEMANTIC"
+    subject_kind: "THEME_ROOT"
+    salient_state_kind: "SEMANTIC_REVISION"
+    message_key: "theme.semantic_revision"
+  - condition_id: "AUTHORITY_STATE_UNUSABLE"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "INTEGRITY"
+    subject_kind: "AUTHORITY_STORE"
+    salient_state_kind: "AUTHORITY_INTEGRITY"
+    message_key: "integrity.authority_state_unusable"
+  - condition_id: "DISCOVERY_HIT_WITHOUT_ACCEPTED_PROPOSAL"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "DISCOVERY"
+    subject_kind: "THEME_PROPOSAL"
+    salient_state_kind: "DISCOVERY_OUTCOME"
+    message_key: "discovery.hit_without_accepted_proposal"
+  - condition_id: "GOVERNANCE_EVIDENCE_DIVERGENCE"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "LIFECYCLE"
+    subject_kind: "THEME_ROOT"
+    salient_state_kind: "LIFECYCLE_DIVERGENCE"
+    message_key: "theme.governance_evidence_divergence"
+  - condition_id: "KNOWLEDGE_VERSION_DRIFT"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "DISCOVERY"
+    subject_kind: "KNOWLEDGE_VERSION"
+    salient_state_kind: "VERSION_DRIFT"
+    message_key: "discovery.knowledge_version_drift"
+  - condition_id: "PROPOSAL_DECISION_CHAIN_UNRESOLVED"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "INTEGRITY"
+    subject_kind: "GOVERNANCE_CHAIN"
+    salient_state_kind: "CHAIN_UNRESOLVED"
+    message_key: "integrity.proposal_decision_chain_unresolved"
+  - condition_id: "RELATION_ENDPOINT_NOT_ACTIVE"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "RELATION"
+    subject_kind: "RELATION_EDGE"
+    salient_state_kind: "RELATION_ENDPOINT_STATE"
+    message_key: "relation.endpoint_not_active"
+  - condition_id: "RELATION_GOVERNANCE_CHAIN_UNRESOLVED"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "INTEGRITY"
+    subject_kind: "GOVERNANCE_CHAIN"
+    salient_state_kind: "CHAIN_UNRESOLVED"
+    message_key: "integrity.relation_governance_chain_unresolved"
+  - condition_id: "RETIRED_ROOT_RECEIVED_EVIDENCE"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "LIFECYCLE"
+    subject_kind: "THEME_ROOT"
+    salient_state_kind: "RETIRED_ROOT_EVIDENCE"
+    message_key: "theme.retired_root_received_evidence"
+  - condition_id: "RETRACTED_RELATION_HAS_NEW_PROPOSAL"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "RELATION"
+    subject_kind: "RELATION_PROPOSAL"
+    salient_state_kind: "RELATION_PROPOSAL_CONFLICT"
+    message_key: "relation.retracted_relation_has_new_proposal"
+  - condition_id: "SOURCE_ASSERTED_RELATION_CONTESTED"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "RELATION"
+    subject_kind: "RELATION_EDGE"
+    salient_state_kind: "RELATION_SOURCE_CONTESTED"
+    message_key: "relation.source_asserted_contested"
+  - condition_id: "THEME_CONTRADICTION_EVIDENCE_PRESENT"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "EVIDENCE"
+    subject_kind: "THEME_ROOT"
+    salient_state_kind: "EVIDENCE_ROLE_PRESENCE"
+    message_key: "theme.contradiction_evidence_present"
+  - condition_id: "THEME_EVIDENCE_STALE"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "EVIDENCE"
+    subject_kind: "THEME_ROOT"
+    salient_state_kind: "FRESHNESS_THRESHOLD"
+    message_key: "theme.evidence_stale"
+  - condition_id: "THEME_INVALIDATION_EVIDENCE_PRESENT"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "EVIDENCE"
+    subject_kind: "THEME_ROOT"
+    salient_state_kind: "EVIDENCE_ROLE_PRESENCE"
+    message_key: "theme.invalidation_evidence_present"
+  - condition_id: "THEME_PROPOSAL_DEFERRED_BEYOND_THRESHOLD"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "PROPOSAL"
+    subject_kind: "THEME_PROPOSAL"
+    salient_state_kind: "DECISION_BACKLOG"
+    message_key: "proposal.deferred_beyond_threshold"
+    threshold_days: 30
+  - condition_id: "THEME_PROPOSAL_OPEN_BEYOND_THRESHOLD"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "PROPOSAL"
+    subject_kind: "THEME_PROPOSAL"
+    salient_state_kind: "DECISION_BACKLOG"
+    message_key: "proposal.open_beyond_threshold"
+    threshold_days: 60
+  - condition_id: "THEME_WITHOUT_COUNTED_EVIDENCE"
+    condition_version: "0.1.0"
+    enabled: true
+    category: "EVIDENCE"
+    subject_kind: "THEME_ROOT"
+    salient_state_kind: "EVIDENCE_ABSENCE"
+    message_key: "theme.without_counted_evidence"
