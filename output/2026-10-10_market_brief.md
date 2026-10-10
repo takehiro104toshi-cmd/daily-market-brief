@@ -40,8 +40,9 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気66%・普通4%・弱気30%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch
-■注目テ…
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Tech chief says EU can fend off rogue AI risk: Report
+■注目テーマ3つ: AI／円高／利上げ
+■見るべき指数: 米…
 
 ---
 ## 1. 今日の結論　★★★★★
@@ -67,7 +68,7 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch」（Investing.com News）　★★★★★
+### 3. 「Tech chief says EU can fend off rogue AI risk: Report」（CoinTelegraph）　★★★★★
 - **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
@@ -97,8 +98,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. 5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch　★★★☆☆
-- **ニュース:** 「5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch」（Investing.com News）
+### 3. Tech chief says EU can fend off rogue AI risk: Report　★★★☆☆
+- **ニュース:** 「Tech chief says EU can fend off rogue AI risk: Report」（CoinTelegraph）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -107,8 +108,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. China creates 10.52 million jobs, plans new AI and services employment measures　★★★☆☆
-- **ニュース:** 「China creates 10.52 million jobs, plans new AI and services employment measures」（Investing.com News）
+### 4. 5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch　★★★☆☆
+- **ニュース:** 「5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch」（Investing.com News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -2179,7 +2180,7 @@ NYダウ上昇
 | ドル指数（DXY） | 102.21 | +0.07% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 91.85 | +0.39% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,216.30 | +1.43% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 82,725.67 | +0.22% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 82,777.98 | +0.28% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2208,14 +2209,14 @@ NYダウ上昇
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch](https://www.investing.com/news/stock-market-news/5-big-analyst-ai-moves-google-reaffirmed-as-top-pick-after-gemini-agent-launch-4941746)
-- 出典（事実）: Investing.com News
+### 3位 ★★★★★ [Tech chief says EU can fend off rogue AI risk: Report](https://cointelegraph.com/news/tech-chief-says-eu-can-fend-off-rogue-ai-risk-report?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
+- 出典（事実）: CoinTelegraph
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [China creates 10.52 million jobs, plans new AI and services employment measures](https://www.investing.com/news/economy-news/china-creates-1052-million-jobs-plans-new-ai-and-services-employment-measures-4942031)
+### 4位 ★★★★★ [5 big analyst AI moves: Google reaffirmed as top pick after Gemini agent launch](https://www.investing.com/news/stock-market-news/5-big-analyst-ai-moves-google-reaffirmed-as-top-pick-after-gemini-agent-launch-4941746)
 - 出典（事実）: Investing.com News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
@@ -2961,9 +2962,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「日本版DOGE強化 減税財源確保へ」（Yahoo!ニュース トピックス）
-- 「ウ大統領 米露の軽油巡る合意非難」（Yahoo!ニュース トピックス）
-- 「だんじりの横転相次ぐ 計2人死亡」（Yahoo!ニュース トピックス）
+- 「消費減税後 8%に戻せるか識者疑問」（Yahoo!ニュース トピックス）
+- 「プルデンシャル 30年超続いた不正」（Yahoo!ニュース トピックス）
+- 「首相のG7欠席 野党から苦言続出」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3188,8 +3189,8 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598235?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598260?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598219?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598213?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598244?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598286?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598188?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598187?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598210?source=rss)
@@ -3201,9 +3202,9 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/rbi-announces-special-oil-window-regulatory-steps-for-rupee)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/europe-s-indebted-nations-are-starting-to-blink-at-market-wrath)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/isaias-leaves-thousands-without-power-after-striking-gulf-coast)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/india-masses-police-in-new-delhi-as-cockroach-protest-looms)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/rbi-announces-special-oil-window-regulatory-steps-for-rupee)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/banking-stock-swoon-in-europe-is-a-sign-of-caution-not-panic)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/china-targets-ai-linked-jobs-with-new-employment-initiative)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/taiwan-s-lai-urges-democracies-to-unite-after-trump-xi-summit)
@@ -3249,14 +3250,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/economy-news/european-automakers-gain-breathing-room-from-euchina-hybrid-car-deal-4942066)
+- [Investing.com News](https://www.investing.com/news/economy-news/russian-attack-on-ukraines-zaporizhzhia-kills-seven-as-war-intensifies-4942056)
+- [Investing.com News](https://www.investing.com/news/economy-news/thailand-prepares-to-host-imfworld-bank-meetings-4942052)
+- [Investing.com News](https://www.investing.com/news/company-news/venezuela-authorises-elon-musks-starlink-to-operate-nationwide-4942048)
 - [Investing.com News](https://www.investing.com/news/earnings/anaptysbio-earnings-beat-by-558-revenue-topped-estimates-4942047)
 - [Investing.com News](https://www.investing.com/news/stock-market-news/5-big-analyst-ai-moves-google-reaffirmed-as-top-pick-after-gemini-agent-launch-4941746)
 - [Investing.com News](https://www.investing.com/news/economy-news/why-are-eu-gas-prices-not-higher-already-4942043)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/nuveen-portfolio-manager-michael-hamilton-buys-26106-in-stock-93CH-4942041)
-- [Investing.com News](https://www.investing.com/news/economy-news/china-creates-1052-million-jobs-plans-new-ai-and-services-employment-measures-4942031)
-- [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-tests-87363-resistance-with-fading-momentum-live-levels-93CH-4931135)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/european-bank-stocks-slide-8-as-bond-yields-spark-investor-caution--bloomberg-4942017)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/duolingo-president--ceo-luis-von-ahn-sells-167-million-in-stock-93CH-4942016)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-104-sec-proposes-expanding-securities-eligible-cross-trading-registered-funds)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-103-sec-seeks-final-judgment-against-former-western-asset-co-cio-ken-leech-cherry-picking-case)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-102-sec-host-virtual-national-compliance-outreach-seminar-investment-companies-investment-advisers)
@@ -3290,6 +3291,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinDesk](https://www.coindesk.com/business/2026/10/09/robinhood-chain-considers-technology-that-gives-paying-traders-priority)
 - [CoinDesk](https://www.coindesk.com/policy/2026/10/09/new-york-ag-secures-up-to-usd35-million-and-lifetime-crypto-ban-from-celsius-alex-mashinsky)
 - [CoinDesk](https://www.coindesk.com/business/2026/10/09/ledger-investigates-potential-wallet-tampering-after-reports-of-usd86-million-in-crypto-stolen)
+- [CoinTelegraph](https://cointelegraph.com/news/tech-chief-says-eu-can-fend-off-rogue-ai-risk-report?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/sam-altman-backed-bitcoin-life-insurer-meanwhile-raises-more-funds?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/scott-bessent-us-seize-crypto-iran-sanctions?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/celsius-founder-alex-mashinsky-permanently-banned-from-crypto-industry-in-ny-settlement?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
@@ -3297,15 +3299,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/hsbc-ant-digital-test-ai-agent-payments-using-tokenized-deposits?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/ledger-investigates-fund-losses-linked-to-southeast-asian-reseller-warns-users?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/blockchain-cftc-approval-derivatives-prediction-markets?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598256?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598262?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598271?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598260?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598285?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598275?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598273?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598266?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598270?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598268?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598250?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598286?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598278?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598284?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598281?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
