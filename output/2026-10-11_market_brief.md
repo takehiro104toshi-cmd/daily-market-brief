@@ -2179,7 +2179,7 @@ NYダウ上昇
 | ドル指数（DXY） | 102.21 | +0.07% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 91.85 | +0.39% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,216.30 | +1.43% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 82,890.35 | +0.42% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 82,988.40 | +0.54% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2460,7 +2460,7 @@ NYダウ上昇
 ### 第6位: Apple（AAPL）　★★★★☆
 直近値: 336.64 / 前日比: -3.78 (-1.11%)（事実）
 
-- **短期（AI分析）:** 前日比-3.78 (-1.11%)。 関連見出し: 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
+- **短期（AI分析）:** 前日比-3.78 (-1.11%)。 関連見出し: 「Apple’s Chinese supplier Luxshare downplays impact of U.S. patent probe」（Investing.com News）
 - **中期（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。
 - **長期（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 
@@ -2596,7 +2596,7 @@ NYダウ上昇
 
 | 銘柄 | 評価 | 理由 |
 |---|---|---|
-| Apple（AAPL） | ★★★★☆ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
+| Apple（AAPL） | ★★★★☆ | 「Apple’s Chinese supplier Luxshare downplays impact of U.S. patent probe」など関連ニュースあり。 |
 | Microsoft（MSFT） | ★★★★★ | 「Vance says Microsoft replaced laid-off workers with foreign hires. Here’s what the visa data shows」など関連ニュースあり。 |
 | NVIDIA（NVDA） | ★★★☆☆ | 前日比下落、個別の材料は確認されませんでした。 |
 | Tesla（TSLA） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
@@ -2772,7 +2772,7 @@ NYダウ上昇
 ### Apple（AAPL）
 直近値: 336.64 / 前日比: -3.78 (-1.11%)（事実）
 
-- **今日の材料（AI分析）:** 前日比-3.78 (-1.11%)。 関連見出し: 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」（Data Tank: CNBC — Markets）
+- **今日の材料（AI分析）:** 前日比-3.78 (-1.11%)。 関連見出し: 「Apple’s Chinese supplier Luxshare downplays impact of U.S. patent probe」（Investing.com News）
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-11-02）
 - **今後1か月（AI分析）:** 今月中に決算発表（2026-11-02）が予定されており、業績見通しの変化が材料になりやすい状況です。「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
@@ -2961,9 +2961,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「米で銃撃 子どもや妊婦ら8人死亡」（Yahoo!ニュース トピックス）
-- 「サウジ首都の空港に攻撃 12人死亡」（Yahoo!ニュース トピックス）
-- 「農相 当選重ねるごと「態度変化」」（Yahoo!ニュース トピックス）
+- 「東京都心37日連続で雨 なぜ続いた」（Yahoo!ニュース トピックス）
+- 「インド 抗議集会で6000人拘束か」（Yahoo!ニュース トピックス）
+- 「女性刺傷 知人男性発見し事情聴取」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3188,8 +3188,8 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598316?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598291?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598293?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598260?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598318?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598344?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598286?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598337?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6598328?source=rss)
@@ -3201,14 +3201,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/taiwan-s-lai-urges-democracies-to-unite-after-trump-xi-summit)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-11/china-issues-draft-standards-for-remanufactured-automotive-parts)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-11/india-s-rupee-defense-raises-question-of-how-far-rbi-will-go)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-11/once-hot-ai-trade-leaves-korean-stocks-struggling-for-buyers)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-10/ai-issuers-are-upending-longstanding-safety-valve-credit-weekly)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-10/strong-earnings-keep-us-stocks-in-favor-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-09/phenomenal-time-to-be-investor-not-consumer-amoroso-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-10/pointed-bloomberg-s-weekly-news-quiz-for-risk-takers-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-10/viral-handbags-turn-small-designer-into-fashion-star-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-10/by-the-way-headlines-you-may-have-missed-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-10/hurricane-isaias-may-cost-insurers-billions-video)
 - [CNBC Top News](https://www.cnbc.com/2026/10/10/vance-microsoft-h1b-layoffs-visa-data.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/10/microsoft-satya-nadella-ai-emergency-brake-safety.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/10/nvidia-gpus-are-everywhere-heres-how-companies-access-them.html)
@@ -3249,14 +3249,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/sunrun-cao-maria-barak-sells-13753-in-stock-93CH-4942369)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/workday-director-david-duffield-sells-185m-in-shares-93CH-4942359)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/sunrun-cfo-danny-abajian-sells-129931-in-shares-93CH-4942358)
-- [Investing.com News](https://www.investing.com/news/economy-news/global-trust-in-science-falls-below-prepandemic-levels-survey-finds-4942351)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/twilio-ceo-khozema-shipchandler-sells-42-million-in-stock-93CH-4942348)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/onemednet-ceo-aaron-green-sells-47762-in-company-stock-93CH-4942347)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/justice-department-probes-tv-networks-over-trump-pool-coverage-new-york-times-reports-4942303)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/gap-chief-legal-officer-julie-gruber-sells-648679-in-stock-93CH-4942338)
+- [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-struggles-near-83000-a-year-after-19-billion-crypto-crash-4942465)
+- [Investing.com News](https://www.investing.com/news/company-news/apples-chinese-supplier-luxshare-downplays-impact-of-us-patent-probe-4942462)
+- [Investing.com News](https://www.investing.com/news/economy-news/middle-east-war-high-debt-levels-to-dominate-imfworld-bank-meetings-in-bangkok-4942461)
+- [Investing.com News](https://www.investing.com/news/company-news/musk-says-terrafab-chip-factory-could-outperform-rivals-despite-challenges-4942457)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/waystar-ceo-matthew-hawkins-sells-216m-in-shares-93CH-4942450)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/neptune-insurance-holdings-president-matthew-duffy-sells-112m-stock-93CH-4942449)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/castle-biosciences-president-and-ceo-derek-maetzold-sells-515k-stock-93CH-4942442)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/blend-labs-head-nima-ghamsari-sells-24660-in-shares-93CH-4942441)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-104-sec-proposes-expanding-securities-eligible-cross-trading-registered-funds)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-103-sec-seeks-final-judgment-against-former-western-asset-co-cio-ken-leech-cherry-picking-case)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-102-sec-host-virtual-national-compliance-outreach-seminar-investment-companies-investment-advisers)
@@ -3298,14 +3298,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/celsius-founder-alex-mashinsky-permanently-banned-from-crypto-industry-in-ny-settlement?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/thorchain-tether-freezing-usdt-addresses?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/hsbc-ant-digital-test-ai-agent-payments-using-tokenized-deposits?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598319?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598321?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598332?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598331?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598337?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598323?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598333?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598335?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598350?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598354?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598366?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598363?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598356?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598340?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598371?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6598364?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
