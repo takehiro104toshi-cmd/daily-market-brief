@@ -1,4 +1,4 @@
-# Morning Market Brief Mobile — 2026年10月11日
+# Morning Market Brief Mobile — 2026年10月12日
 
 > スマホでの閲覧に最適化した短縮版です。詳細は `latest_market_brief.md` をご覧ください。投資助言ではありません。
 

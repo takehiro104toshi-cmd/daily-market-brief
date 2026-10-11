@@ -1,4 +1,4 @@
-# Market Intelligence System v4 — 朝レポート 2026年10月11日
+# Market Intelligence System v4 — 朝レポート 2026年10月12日
 
 > **本レポートについて:** 「事実」は公開情報の実データ、「AI分析」はルールベースの機械的な考察（ANTHROPIC_API_KEY設定時はClaudeによる文章の磨き上げを含む）です。生成AIによる断定的な将来予測ではなく、投資助言ではありません。社外秘資料・有料記事の本文・ログインが必要な情報は使用していません。データを取得できなかった項目は空欄にせず「取得不可」と明記します。
 
@@ -2181,7 +2181,7 @@ NYダウ上昇
 | ドル指数（DXY） | 102.21 | +0.07% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 91.85 | +0.39% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 4,216.30 | +1.43% | ★★☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 83,050.01 | +0.17% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 83,043.01 | +0.16% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2696,7 +2696,7 @@ NYダウ上昇
 
 - **今日の材料（AI分析）:** 前日比+555.00 (+3.23%)。 本日、個別の関連見出しは確認されませんでした。
 - **今後1週間（AI分析）:** 業種「情報通信・生成AI」の見出しは強弱まちまちで、方向感がはっきりしません。（参考: 決算発表予定 2026-11-11）
-- **今後1か月（AI分析）:** 「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。（参考: 決算発表予定 2026-11-11）
+- **今後1か月（AI分析）:** 今月中に決算発表（2026-11-11）が予定されており、業績見通しの変化が材料になりやすい状況です。「情報通信・生成AI」の方向感がはっきりするまでは、1か月程度の見通しも中立的に捉えるのが妥当と考えられます。
 - **長期評価（AI分析）:** 「情報通信・生成AI」の方向感が定まるまでは、長期見解も中立的に捉えるのが妥当と考えられます。
 - **リスク（AI分析）:** 直近の値動きが大きく、短期的な過熱・反動のリスクに注意が必要な局面です。
 
@@ -3120,7 +3120,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [決算発表予定] 三菱UFJフィナンシャル・グループ（8306.T）: 2026-11-13（時期未確定を含む）
 - [決算発表予定] 日立製作所（6501.T）: 2026-10-28
 - [決算発表予定] 東京エレクトロン（8035.T）: 2026-10-30
-- [決算発表予定] リクルートホールディングス（6098.T）: 2026-11-11（時期未確定を含む）
+- [決算発表予定] リクルートホールディングス（6098.T）: 2026-11-11
 - [決算発表予定] 川崎重工業（7012.T）: 2026-11-10
 - [決算発表予定] デンソー（6902.T）: 2026-10-29
 - [決算発表予定] 古河電工（5801.T）: 2026-11-09
@@ -3225,7 +3225,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-11/trump-s-russia-diesel-deal-deepens-ukraine-rift-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-11/trump-says-russia-and-ukraine-agreed-to-energy-ceasefire-mv3wxxro)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-11/saudi-arabia-s-main-riyadh-airport-comes-under-further-attack)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-11/tech-earnings-loom-large-for-hedge-funds-packed-into-dispersion-trade)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-11/saudi-airport-attack-kills-12-as-conflict-escalates-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-11/by-the-way-headlines-you-may-have-missed-video)
