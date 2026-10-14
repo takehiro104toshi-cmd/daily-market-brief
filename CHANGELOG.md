@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.00 (2026-10-14) — Phase 10 P10-A1 registration + read-only P9 adapter
+
+Phase 10（Personal Intelligence）の登録と、凍結の Phase 9 を read-only で読む専用の adapter（`personal_intelligence/p9_view.py`）を
+足した。P9 の read-only の store の型を `open` だけで開き、凍結の `check_world` で世界を検査し、件数だけの安全な view と最小の
+private な snapshot（時点 T ・不変の型）を返す。`AuthorityStores` ・追記 ・作成 ・network ・credential ・時計は無い。凍結の P7 ／ P8 ／ P9 の
+test の guard 4 file に test だけの狭い再開で Phase 10 を登録し、`PHASE10_TEST_REGISTRATION` で行を pin した。P9 ／ P8 ／ P7 runtime は
+不変。Phase 10 の凍結ではない。
+
+追加
+・`src/intelligence/personal_intelligence/__init__.py`
+・`src/intelligence/personal_intelligence/p9_view.py`
+・`tests/intelligence/phase10_runtime_registry.py`
+・`tests/intelligence/test_personal_intelligence_p9_view.py`
+・`tests/intelligence/test_personal_intelligence_boundary.py`
+・`docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md`
+改善
+・`tests/intelligence/phase7_runtime_registry.py` ・`tests/intelligence/test_narrative_intelligence_boundary.py` ・
+  `tests/intelligence/test_screener_intelligence_boundary.py` ・`tests/intelligence/test_watchlist_thesis_boundary.py`（Phase 10 の登録）
+修正
+・なし
+
 ## v5.99 (2026-10-14) — Phase 9 final freeze record（文書 ・registry ・guard だけ）
 
 PHASE 9 — WATCHLIST / THESIS INTELLIGENCE v1 を COMPLETE / CLOSED / FROZEN として記録した。意味 ／ runtime の凍結 anchor は

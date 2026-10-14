@@ -29,6 +29,8 @@ from tests.intelligence.phase9_runtime_registry import (P9_A5, P9_BASE, P9_HANDO
                                                         PHASE9_PACKAGE, PHASE9_RUNTIME, PHASE9_TEST_REGISTRATION,
                                                         PHASE9_TESTS, SANCTIONED_P9_A1_IMPORTS,
                                                         only_phase9_registration)
+from tests.intelligence.phase10_runtime_registry import (P10_BASE, PHASE10_DOCS, PHASE10_RUNTIME, PHASE10_TESTS,
+                                                         SANCTIONED_P10_P9_IMPORTERS)   # P10 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source
 
@@ -138,14 +140,16 @@ def test_p9_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
 
 
 def test_p9_a1_since_the_base_only_the_registered_phase9_files_and_declared_registration_changed() -> None:
-    assert _changes("--cached", "--name-status", P9_BASE, "--", "src") == {("A", path) for path in PHASE9_RUNTIME}
+    assert _changes("--cached", "--name-status", P9_BASE, "--", "src") == {("A", path) for path in PHASE9_RUNTIME
+                                                                           + PHASE10_RUNTIME}
     assert _git("diff", "--cached", "--name-status", P9_BASE, "--", *FROZEN_SURFACE) == ""
-    assert _changes("--cached", "--name-status", P9_BASE, "--", "docs") <= {("A", path) for path in PHASE9_DOCS}
+    assert _changes("--cached", "--name-status", P9_BASE, "--", "docs") <= {("A", path) for path in PHASE9_DOCS
+                                                                            + PHASE10_DOCS}
     assert _changes("--cached", "--name-status", P9_BASE, "--", "tests") <= {
-        ("A", path) for path in PHASE9_TESTS} | {("M", path) for path in PHASE9_TEST_REGISTRATION}
+        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS} | {("M", path) for path in PHASE9_TEST_REGISTRATION}
     for path in PHASE9_TEST_REGISTRATION:                                             # 凍結の P7 ／ P8 の test の狭い再開
         anchored = _git("show", f"{P9_BASE}:{path}")
-        current = (REPO_ROOT / path).read_text(encoding="utf-8")
+        current = _git("show", f"{P10_BASE}:{path}")             # P9 の登録は P9 の終わりまで（以後の差は P10 の guard が pin）
         assert only_phase9_registration(path, anchored, current), path
         assert not only_phase9_registration(path, anchored, current + "assert True\n")  # 未登録の追加
         assert not only_phase9_registration(path, anchored, anchored)                  # 登録の欠落
@@ -248,6 +252,9 @@ def test_p9_a1_is_outside_production_and_no_other_code_imports_it() -> None:
     for path in [REPO_ROOT / "main.py", *sorted((REPO_ROOT / "src").rglob("*.py")),
                  *sorted((REPO_ROOT / "scripts").rglob("*.py"))]:
         if not path.exists() or PACKAGE_DIR in path.parents:
+            continue
+        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P10_P9_IMPORTERS:  # P10: read-only の importer だけ（面は完全一致）
+            assert _imports(path)[0] == SANCTIONED_P10_P9_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]
             continue
         assert "watchlist_thesis_intelligence" not in path.read_text(encoding="utf-8", errors="replace"), path
     for legacy in ("src/analysis/models.py", "src/report/sections.py"):                 # 既存の公開の watchlist は不変

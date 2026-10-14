@@ -52,6 +52,8 @@ from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0
                                                         is_phase8_addition, only_phase8_registration)
 from tests.intelligence.phase9_runtime_registry import (P9_BASE, PHASE9_DOCS, PHASE9_RUNTIME, PHASE9_TESTS,
                                                         SANCTIONED_P9_P8_IMPORTERS, is_phase9_addition)   # P9 の登録
+from tests.intelligence.phase10_runtime_registry import (PHASE10_DOCS, PHASE10_RUNTIME, PHASE10_TESTS,
+                                                         is_phase10_addition)   # P10 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 
@@ -844,7 +846,7 @@ def test_bk_phase7_tests_changed_only_by_the_declared_phase8_registration() -> N
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P8_A0, "HEAD"], cwd=REPO_ROOT).returncode == 0
     changed = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "tests").splitlines()}
     assert changed <= {("M", path) for path in PHASE7_TEST_REGISTRATION} | {("A", path) for path in PHASE8_TESTS} | {
-        ("A", path) for path in PHASE9_TESTS}
+        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS}
     for path in PHASE7_TEST_REGISTRATION:
         anchored = _git("show", f"{P8_A0}:{path}")
         current = _git("show", f"{P9_BASE}:{path}")             # P8 の登録は P8 の終わりまで（以後の差は P9 の guard が pin）
@@ -867,12 +869,13 @@ def test_bl_phase6_runtime_knowledge_and_tests_are_frozen() -> None:
 def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtime() -> None:
     changes = {tuple(line.split("\t")) for line in _git("diff", "--cached", "--name-status", P8_A0, "--",
                                                         *SURFACE).splitlines()}
-    assert changes == {("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME}
+    assert changes == {("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME}
     assert LIVE2_TRANSPORT in PHASE8_RUNTIME and PHASE8_LIVE2_RUNTIME == (LIVE2_TRANSPORT,)
     assert PILOT2A_RUNNER in PHASE8_RUNTIME and PHASE8_PILOT2A_RUNTIME == (PILOT2A_RUNNER,)
     assert SCREEN_RUNNER in PHASE8_RUNTIME and PHASE8_B5C_RUNTIME == (SCREEN_RUNNER,)
     pending = [line for line in _git("status", "--porcelain", "--", *(p for p in SURFACE if p != "data")).splitlines()
-               if not (is_phase8_addition(line[:2].strip(), line[3:]) or is_phase9_addition(line[:2].strip(), line[3:]))]
+               if not (is_phase8_addition(line[:2].strip(), line[3:]) or is_phase9_addition(line[:2].strip(), line[3:])
+                       or is_phase10_addition(line[:2].strip(), line[3:]))]
     assert pending == []
     docs = {tuple(line.split("\t")) for line in _git("diff", "--name-status", P8_A0, "--", "docs").splitlines()}
     assert docs <= {("A", A1_DOC), ("A", A2_DOC), ("A", A2_5_DOC), ("A", V_DOC), ("A", VR_DOC), ("A", A1R_DOC),
@@ -883,7 +886,7 @@ def test_bl_the_runtime_surface_since_a0_is_exactly_the_registered_phase8_runtim
                     ("A", LIVE2_DOC), ("A", PILOT2A_DOC), ("A", ADP0R_DOC), ("A", ACQ0_DOC), ("A", OBS60_I1_DOC),
                     ("A", EXE_R_DOC), ("A", EPOCH1_DOC), ("A", A2C_DOC), ("A", EPOCH1R_DOC), ("A", A2C_R_DOC),
                     ("A", F1_DOC), ("A", A3_RA_DOC), ("A", PILOT2B_DOC), ("A", B1_DOC), ("A", B2_DOC), ("A", B3_DOC), ("A", B4A_DOC), ("A", B4B_DOC), ("A", B5A_DOC), ("A", B5B_DOC), ("A", B5C_DOC), ("A", FREEZE_DOC)} | {
-                        ("A", path) for path in PHASE9_DOCS}
+                        ("A", path) for path in PHASE9_DOCS + PHASE10_DOCS}
 
 
 # ================================================================ BM〜BO registry ・未登録 ・外からの import
