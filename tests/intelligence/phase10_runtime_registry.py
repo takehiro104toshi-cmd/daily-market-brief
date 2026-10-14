@@ -1,4 +1,4 @@
-"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1 ・A2）。
+"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1 ・A2 ・A3）。
 
 - 凍結の Phase 7 ／ 8 ／ 9 の test に入れた登録の行は `PHASE10_TEST_REGISTRATION` に完全に列挙し、Phase 10 の guard
   （`test_personal_intelligence_boundary.py`）が `P10_BASE` との差分の完全一致を pin する（test だけの狭い再開。runtime は不変）。
@@ -17,13 +17,18 @@ PHASE10_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for n
 #: P10-A2 で足した runtime（Personal Profile ／ Attention の純な意味の model だけ。入出力 ・store ・実行器なし）
 PHASE10_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
     "attention_model", "cross_rules", "profile_model", "revision_model"))
-PHASE10_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME))
+#: P10-A3 で足した runtime（Personal Profile ／ Attention の private な追記専用の authority の store だけ）
+PHASE10_A3_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
+    "attention_store", "authority_stores", "profile_store", "serialization", "store_io"))
+PHASE10_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME + PHASE10_A3_RUNTIME))
 PHASE10_TESTS: Tuple[str, ...] = ("tests/intelligence/phase10_runtime_registry.py",
                                   "tests/intelligence/test_personal_intelligence_boundary.py",
                                   "tests/intelligence/test_personal_intelligence_p9_view.py",
-                                  "tests/intelligence/test_personal_intelligence_semantics.py")
+                                  "tests/intelligence/test_personal_intelligence_semantics.py",
+                                  "tests/intelligence/test_personal_intelligence_stores.py")
 PHASE10_DOCS: Tuple[str, ...] = ("docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md",
-                                 "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md")
+                                 "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md",
+                                 "docs/databank/PHASE10_A3_PROFILE_ATTENTION_STORES.md")
 ADDITION_STATUSES = ("A", "??")
 #: 凍結の Phase 9 を import してよい Phase 10 の file（完全な path）と、その import の面（module → 名前。完全一致）
 P10_P9_VIEW = f"{PHASE10_PACKAGE}/p9_view.py"
@@ -45,6 +50,20 @@ SANCTIONED_P10_A2_MODULES: Mapping[str, Set[str]] = {
     f"{PHASE10_PACKAGE}/cross_rules.py": {".attention_model", ".profile_model", ".revision_model"},
 }
 SANCTIONED_P10_CORE_IMPORTS: Mapping[str, Set[str]] = {"..core.ids": {"content_id"}, "..core.time": {"to_utc_iso"}}
+#: P10-A3 の store の import の面（path → 相対 import の module の集合。完全一致 ・package の中だけ）
+P10_STORE_IO = f"{PHASE10_PACKAGE}/store_io.py"
+P10_AUTHORITY_STORES = f"{PHASE10_PACKAGE}/authority_stores.py"
+SANCTIONED_P10_A3_MODULES: Mapping[str, Set[str]] = {
+    f"{PHASE10_PACKAGE}/serialization.py": {".attention_model", ".profile_model", ".revision_model"},
+    P10_STORE_IO: {".revision_model"},
+    f"{PHASE10_PACKAGE}/profile_store.py": {".cross_rules", ".profile_model", ".serialization", ".store_io"},
+    f"{PHASE10_PACKAGE}/attention_store.py": {".attention_model", ".cross_rules", ".serialization", ".store_io"},
+    P10_AUTHORITY_STORES: {".attention_model", ".attention_store", ".cross_rules", ".profile_model", ".profile_store",
+                           ".revision_model", ".store_io"},
+}
+#: 物理的な書き込み ・初期化の私的な関数（store_io）を import してよい file（完全一致 ・coordinator だけ）
+SANCTIONED_P10_PRIVATE_WRITER_IMPORTS: Mapping[str, Set[str]] = {P10_AUTHORITY_STORES: {"_append_line",
+                                                                                       "_initialize_files"}}
 #: 凍結の Phase 7 ／ 8 ／ 9 の test に入れた登録（path → (取り除いた行, 加えた行)）。行は改行を含まない。P10-A1 で確定する
 PHASE10_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {
     'tests/intelligence/phase7_runtime_registry.py': ((
@@ -133,6 +152,7 @@ def only_phase10_registration(path: str, anchored: str, current: str) -> bool:
 
 
 __all__ = ["ADDITION_STATUSES", "P10_BASE", "P10_P9_VIEW", "PHASE10_A1_RUNTIME", "PHASE10_A2_RUNTIME", "PHASE10_DOCS",
-           "PHASE10_PACKAGE", "PHASE10_RUNTIME", "PHASE10_TESTS", "PHASE10_TEST_REGISTRATION",
-           "SANCTIONED_P10_A2_MODULES", "SANCTIONED_P10_CORE_IMPORTS", "SANCTIONED_P10_P9_IMPORTERS",
+           "PHASE10_A3_RUNTIME", "PHASE10_PACKAGE", "PHASE10_RUNTIME", "PHASE10_TESTS", "PHASE10_TEST_REGISTRATION",
+           "P10_AUTHORITY_STORES", "P10_STORE_IO", "SANCTIONED_P10_A2_MODULES", "SANCTIONED_P10_A3_MODULES",
+           "SANCTIONED_P10_CORE_IMPORTS", "SANCTIONED_P10_P9_IMPORTERS", "SANCTIONED_P10_PRIVATE_WRITER_IMPORTS",
            "SANCTIONED_P10_P9_IMPORTS", "is_phase10_addition", "only_phase10_registration", "registration_diff"]

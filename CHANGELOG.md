@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.02 (2026-10-14) — Phase 10 P10-A3 private profile / attention authority stores
+
+Personal Profile と Attention の private ・local ・追記専用の authority の store を足した（`<P10 の root>/personal_intelligence/` の
+`profile_authority.jsonl` ・`attention_authority.jsonl`）。正準の直列化（欄の完全一致 ・id の再計算）・明示の初期化と作らない開く ・
+破損は fail closed（修復なし）・byte 長 ／ sha256 の楽観的な並行性 ・唯一の追記の経路 `PersonalAuthorityStores`（全世界の
+`check_personal_world` の後に 1 行 ・`REUSED` ／ `CHAIN_HEAD_MISMATCH` ／ `REVISION_CONFLICT`）。物理的な書き込みは `store_io` の私的な
+関数だけ。既存の P10 runtime ・凍結の P7 ／ P8 ／ P9 は不変。Phase 10 の凍結ではない。
+
+追加
+・`src/intelligence/personal_intelligence/serialization.py`
+・`src/intelligence/personal_intelligence/store_io.py`
+・`src/intelligence/personal_intelligence/profile_store.py`
+・`src/intelligence/personal_intelligence/attention_store.py`
+・`src/intelligence/personal_intelligence/authority_stores.py`
+・`tests/intelligence/test_personal_intelligence_stores.py`
+・`docs/databank/PHASE10_A3_PROFILE_ATTENTION_STORES.md`
+改善
+・`tests/intelligence/phase10_runtime_registry.py` ・`tests/intelligence/test_personal_intelligence_boundary.py`（A3 の登録 ・
+  書き込みの面 ・追記の経路の guard）
+修正
+・なし
+
 ## v6.01 (2026-10-14) — Phase 10 P10-A2 personal profile + attention semantics
 
 人が持つ質的な Personal Profile と Attention（FOCUS ／ MUTE ＝ 表示の意図だけ）の純な意味の model を足した。不変の revision
