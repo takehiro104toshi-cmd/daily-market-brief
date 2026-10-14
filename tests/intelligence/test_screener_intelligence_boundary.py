@@ -50,8 +50,8 @@ from tests.intelligence.phase8_runtime_registry import (ADDITION_STATUSES, P8_A0
                                                         PHASE8_PACKAGE, PHASE8_RUNTIME, PHASE8_TESTS,
                                                         registration_diff,
                                                         is_phase8_addition, only_phase8_registration)
-from tests.intelligence.phase9_runtime_registry import (P9_BASE, P9_HANDOFF, PHASE9_DOCS, PHASE9_RUNTIME, PHASE9_TESTS,
-                                                        SANCTIONED_P9_A1_IMPORTS, is_phase9_addition)   # P9-A1 の登録
+from tests.intelligence.phase9_runtime_registry import (P9_BASE, PHASE9_DOCS, PHASE9_RUNTIME, PHASE9_TESTS,
+                                                        SANCTIONED_P9_P8_IMPORTERS, is_phase9_addition)   # P9 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source, imported_modules
 
@@ -976,8 +976,8 @@ def test_bo_no_other_package_imports_phase8() -> None:
             continue
         if path.relative_to(REPO_ROOT).as_posix() in (LIVE2_TRANSPORT, PILOT2A_RUNNER, SCREEN_RUNNER):  # 外は 3 つ
             continue
-        if path.relative_to(REPO_ROOT).as_posix() == P9_HANDOFF:      # P9-A1: read-only の再構成の 1 file だけ（面は完全一致）
-            assert _from_imports(path) == SANCTIONED_P9_A1_IMPORTS
+        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P9_P8_IMPORTERS:   # P9: read-only の importer だけ（面は完全一致）
+            assert _from_imports(path) == SANCTIONED_P9_P8_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]
             continue
         if "screener_intelligence" in path.read_text(encoding="utf-8", errors="replace"):
             offenders.append(str(path.relative_to(REPO_ROOT)))

@@ -21,15 +21,21 @@ PHASE9_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE9_PACKAGE}/{name}.py" for nam
 #: P9-A3 で足した runtime（正準の直列化 ・追記専用の private な authority の store ・記録をまたぐ不変条件の検査つきの追記）
 PHASE9_A3_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE9_PACKAGE}/{name}.py" for name in (
     "authority_stores", "serialization", "store_io", "thesis_store", "watch_store"))
-PHASE9_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE9_A1_RUNTIME + PHASE9_A2_RUNTIME + PHASE9_A3_RUNTIME))
+#: P9-A4 で足した runtime（人の判断の入力 ・実行器 ・凍結 A1 の発行体の record の read-only の確認 ・安全な投影 ・local の入口）
+PHASE9_A4_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE9_PACKAGE}/{name}.py" for name in (
+    "decision_model", "executor", "local_cli", "p8_identity", "projection"))
+PHASE9_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE9_A1_RUNTIME + PHASE9_A2_RUNTIME + PHASE9_A3_RUNTIME
+                                               + PHASE9_A4_RUNTIME))
 PHASE9_TESTS: Tuple[str, ...] = ("tests/intelligence/phase9_runtime_registry.py",
                                  "tests/intelligence/test_watchlist_thesis_boundary.py",
                                  "tests/intelligence/test_watchlist_thesis_handoff.py",
+                                 "tests/intelligence/test_watchlist_thesis_executor.py",
                                  "tests/intelligence/test_watchlist_thesis_semantics.py",
                                  "tests/intelligence/test_watchlist_thesis_stores.py")
 PHASE9_DOCS: Tuple[str, ...] = ("docs/databank/PHASE9_A1_P8_HANDOFF_CONTRACT.md",
                                 "docs/databank/PHASE9_A2_WATCHLIST_THESIS_SEMANTICS.md",
-                                "docs/databank/PHASE9_A3_AUTHORITY_STORES.md")
+                                "docs/databank/PHASE9_A3_AUTHORITY_STORES.md",
+                                "docs/databank/PHASE9_A4_HUMAN_DECISION_EXECUTOR.md")
 ADDITION_STATUSES = ("A", "??")
 #: 凍結の P8 を import してよい Phase 9 の file（P9-A1 の監督判断。完全な path だけ）と、その import の面（module → 名前。完全一致）
 P9_HANDOFF = f"{PHASE9_PACKAGE}/p8_handoff.py"
@@ -46,6 +52,17 @@ SANCTIONED_P9_A1_IMPORTS: Mapping[str, Set[str]] = {
     "..screener_intelligence.screener_result_set": {"ExecutionCompleteness", "ResultSetError", "ScreenResultSet"},
     "..screener_intelligence.screener_universe_store": {"UniverseAuthorityStore", "UniverseStoreError"},
     "..screener_intelligence.semantic_metadata_store": {"SemanticMetadataStore", "SemanticMetadataStoreError"},
+}
+#: P9-A4: MANUAL の出所の発行体の record を read-only で確かめる file と、その import の面（完全一致）
+P9_IDENTITY = f"{PHASE9_PACKAGE}/p8_identity.py"
+SANCTIONED_P9_A4_IDENTITY_IMPORTS: Mapping[str, Set[str]] = {
+    "..screener_intelligence.identity_model": {"SourceClass"},
+    "..screener_intelligence.identity_store": {"IdentityStore", "IdentityStoreError"},
+}
+#: 凍結の P8 を import してよい Phase 9 の file（完全な path → import の面）。P8 の `test_bo` が使う
+SANCTIONED_P9_P8_IMPORTERS: Mapping[str, Mapping[str, Set[str]]] = {
+    P9_HANDOFF: SANCTIONED_P9_A1_IMPORTS,
+    P9_IDENTITY: SANCTIONED_P9_A4_IDENTITY_IMPORTS,
 }
 #: 凍結の Phase 7 ／ 8 の test に入れた登録（path → (取り除いた行, 加えた行)）。行は改行を含まない。P9-A1 で確定する
 PHASE9_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {
@@ -85,8 +102,8 @@ PHASE9_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] 
         '               if not is_phase8_addition(line[:2].strip(), line[3:])]',
         '                    ("A", F1_DOC), ("A", A3_RA_DOC), ("A", PILOT2B_DOC), ("A", B1_DOC), ("A", B2_DOC), ("A", B3_DOC), ("A", B4A_DOC), ("A", B4B_DOC), ("A", B5A_DOC), ("A", B5B_DOC), ("A", B5C_DOC), ("A", FREEZE_DOC)}',
     ), (
-        'from tests.intelligence.phase9_runtime_registry import (P9_BASE, P9_HANDOFF, PHASE9_DOCS, PHASE9_RUNTIME, PHASE9_TESTS,',
-        '                                                        SANCTIONED_P9_A1_IMPORTS, is_phase9_addition)   # P9-A1 の登録',
+        'from tests.intelligence.phase9_runtime_registry import (P9_BASE, PHASE9_DOCS, PHASE9_RUNTIME, PHASE9_TESTS,',
+        '                                                        SANCTIONED_P9_P8_IMPORTERS, is_phase9_addition)   # P9 の登録',
         '    assert changed <= {("M", path) for path in PHASE7_TEST_REGISTRATION} | {("A", path) for path in PHASE8_TESTS} | {',
         '        ("A", path) for path in PHASE9_TESTS}',
         '        current = _git("show", f"{P9_BASE}:{path}")             # P8 の登録は P8 の終わりまで（以後の差は P9 の guard が pin）',
@@ -95,8 +112,8 @@ PHASE9_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] 
         '                    ("A", F1_DOC), ("A", A3_RA_DOC), ("A", PILOT2B_DOC), ("A", B1_DOC), ("A", B2_DOC), ("A", B3_DOC), ("A", B4A_DOC), ("A", B4B_DOC), ("A", B5A_DOC), ("A", B5B_DOC), ("A", B5C_DOC), ("A", FREEZE_DOC)} | {',
         '                        ("A", path) for path in PHASE9_DOCS}',
         '            continue',
-        '        if path.relative_to(REPO_ROOT).as_posix() == P9_HANDOFF:      # P9-A1: read-only の再構成の 1 file だけ（面は完全一致）',
-        '            assert _from_imports(path) == SANCTIONED_P9_A1_IMPORTS',
+        '        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P9_P8_IMPORTERS:   # P9: read-only の importer だけ（面は完全一致）',
+        '            assert _from_imports(path) == SANCTIONED_P9_P8_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]',
     )),
 }
 
@@ -125,6 +142,7 @@ def only_phase9_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P9_HANDOFF", "PHASE9_A2_RUNTIME", "PHASE9_A3_RUNTIME", "SANCTIONED_P9_A1_IMPORTS", "is_phase9_addition", "only_phase9_registration",
+__all__ = ["ADDITION_STATUSES", "P9_HANDOFF", "PHASE9_A2_RUNTIME", "PHASE9_A3_RUNTIME", "PHASE9_A4_RUNTIME", "P9_IDENTITY",
+           "SANCTIONED_P9_A4_IDENTITY_IMPORTS", "SANCTIONED_P9_P8_IMPORTERS", "SANCTIONED_P9_A1_IMPORTS", "is_phase9_addition", "only_phase9_registration",
            "registration_diff", "P9_BASE", "PHASE9_A1_RUNTIME", "PHASE9_DOCS", "PHASE9_PACKAGE", "PHASE9_RUNTIME", "PHASE9_TESTS",
            "PHASE9_TEST_REGISTRATION"]

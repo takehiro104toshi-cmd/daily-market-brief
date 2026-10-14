@@ -4,6 +4,32 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.97 (2026-10-14) — Phase 9 P9-A4 human decision executor / private projection
+
+人の判断 ／ 著述の入力（Watchlist: P8 の提案からの作成 ・MANUAL の作成 ・内容 ・遷移 ・訂正。Thesis: 作成 ・内容 ・遷移 ・訂正）を
+決定論で検査し、A2 の revision を作り、A3 `AuthorityStores` にだけ追記する実行器を足した。P8 の提案は A1 `reconstruct_bound` の
+再構成から再生成した digest と完全一致を要求する（MATCH は特別ではない ・指標の値は取り込まない ・network ／ credential ／ P8 への
+書き込みなし）。MANUAL の発行体は凍結 A1 の人が審査した発行体の登録の record（`known_at <= reviewed_at`）だけを read-only で確かめる
+（上場 ・coverage の主張ではない）。更新は人が審査した先頭に結び付き、同じ入力の再試行は REUSED ・古い先頭は `STALE_AUTHORITY_HEAD`。
+件数だけの安全な投影 ・見直しの日の報告（明示の日 ・追記なし）・local の入口（apply ／ dry-run ／ summary ／ review-due）。凍結 P8 の
+`test_bo` の P9 の importer の一覧を完全な path → import の面に（test だけの狭い再開 ・`PHASE9_TEST_REGISTRATION` で pin）。P8 runtime は
+不変。Phase 9 の凍結ではない。
+
+追加
+・`src/intelligence/watchlist_thesis_intelligence/decision_model.py`
+・`src/intelligence/watchlist_thesis_intelligence/p8_identity.py`
+・`src/intelligence/watchlist_thesis_intelligence/executor.py`
+・`src/intelligence/watchlist_thesis_intelligence/projection.py`
+・`src/intelligence/watchlist_thesis_intelligence/local_cli.py`
+・`tests/intelligence/test_watchlist_thesis_executor.py`
+・`docs/databank/PHASE9_A4_HUMAN_DECISION_EXECUTOR.md`
+改善
+・`tests/intelligence/phase9_runtime_registry.py`（A4 の登録 ・P9 の P8 importer の一覧 ・登録の差分の pin）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（`test_bo` の P9 の importer を完全な path → import の面に）
+・`tests/intelligence/test_watchlist_thesis_boundary.py`（作成 ・追記は実行器だけ ・P8 の入口は 2 file ・標準出力だけ）
+修正
+・なし
+
 ## v5.96 (2026-10-14) — Phase 9 P9-A3 private authority stores
 
 Watchlist ／ Thesis の追記専用の private な authority の store（`<P9 の root>/watchlist_thesis_intelligence/` の
