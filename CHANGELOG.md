@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.95 (2026-10-14) — Phase 9 P9-A2 Watchlist / Thesis semantic model
+
+Watchlist の項目 ・Thesis の意味の model（発行体だけ ・人の authority ・不変の revision ・状態機械）、L0 の提案（P8 の EVALUATED の発行体
+ごと ・MATCH は特別ではない ・内容 address の digest ・保存しない）、見直しの日の派生、記録をまたぐ不変条件（時点ごとの像）を純の model
+として足した。Watchlist: ACTIVE ⇄ PAUSED → REMOVED（終端 ・再追加は別の root）。Thesis: ACTIVE ⇄ CHALLENGED → INVALIDATED ・RETIRED
+（終端。無効は既知の条件の id か OTHER ＋ 人の理由）。時点 T の状態は `reviewed_at <= T` の最大の seq。時計 ・自動の遷移 ・code ／ LLM の
+authority ・順位 ・点数 ・推奨 ・売買の欄は無い。store ・追記の実行器は A3 以降。凍結の P7 ／ P8 の test ・P8 runtime は不変。Phase 9 の
+凍結ではない。
+
+追加
+・`src/intelligence/watchlist_thesis_intelligence/revision_model.py`
+・`src/intelligence/watchlist_thesis_intelligence/watch_model.py`
+・`src/intelligence/watchlist_thesis_intelligence/thesis_model.py`
+・`src/intelligence/watchlist_thesis_intelligence/proposal_model.py`
+・`src/intelligence/watchlist_thesis_intelligence/cross_rules.py`
+・`tests/intelligence/test_watchlist_thesis_semantics.py`
+・`docs/databank/PHASE9_A2_WATCHLIST_THESIS_SEMANTICS.md`
+改善
+・`tests/intelligence/phase9_runtime_registry.py`（A2 の runtime ・test ・文書の登録）
+・`tests/intelligence/test_watchlist_thesis_boundary.py`（A2 の import の面 ・識別子の語の構造の guard ・authority を作る code なし）
+修正
+・なし
+
 ## v5.94 (2026-10-14) — Phase 9 P9-A1 P8 → P9 handoff contract / registration / read-only reconstruction adapter
 
 Phase 9（Watchlist / Thesis Intelligence）の最初の gate。凍結の Phase 8 の完了した screen の run を、network ・transport ・credential ・
