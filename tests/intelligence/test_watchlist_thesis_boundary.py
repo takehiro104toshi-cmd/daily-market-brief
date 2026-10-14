@@ -1,4 +1,4 @@
-"""P9-A1 ／ A2 — Phase 9（Watchlist / Thesis Intelligence）の境界の guard。
+"""P9-A1 ／ A2 ／ A3 — Phase 9（Watchlist / Thesis Intelligence）の境界の guard。
 
 - registry の完全一致 ・P9_BASE 以後の面は登録した P9 の追加だけ ・凍結の P7 ／ P8 の test の差分は宣言した登録の行だけ。
 - P8 runtime は凍結 anchor `P8_B5C` と byte 一致 ・P7 runtime は P9_BASE と不変。
@@ -7,6 +7,8 @@
 - 順位 ・点数 ・推奨の語なし ・production runtime closure の外 ・他の package から import されない ・既存の公開の watchlist に触れない。
 - A2: 意味の model は package の中 ・core の id ／ 時刻だけを import する ・authority の revision を作る code（自動の遷移）は無い ・
   識別子に順位 ／ 推奨 ／ 売買の語なし（自由文の普通の語は検閲しない）。
+- A3: 書き込みは `store_io` だけ（`open("ab")` ・write ・flush ・fsync ・mkdir）。削除 ・上書き ・切り詰め ・改名なし。P8 の store は
+  `read_only=True` でだけ開き、P9 の store は P9 の store の型でだけ開く。store は P8 ・`p8_handoff` を import しない。
 """
 from __future__ import annotations
 
@@ -20,7 +22,7 @@ import pytest
 from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import (P9_BASE, P9_HANDOFF, PHASE9_A1_RUNTIME, PHASE9_A2_RUNTIME,
-                                                        PHASE9_DOCS,
+                                                        PHASE9_A3_RUNTIME, PHASE9_DOCS,
                                                         PHASE9_PACKAGE, PHASE9_RUNTIME, PHASE9_TEST_REGISTRATION,
                                                         PHASE9_TESTS, SANCTIONED_P9_A1_IMPORTS,
                                                         only_phase9_registration)
@@ -31,6 +33,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE9_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE9_A1_P8_HANDOFF_CONTRACT.md"
 A2_DOC = "docs/databank/PHASE9_A2_WATCHLIST_THESIS_SEMANTICS.md"
+A3_DOC = "docs/databank/PHASE9_A3_AUTHORITY_STORES.md"
+#: 唯一の書き込みの module と、そこで許す書き込みの操作
+IO_MODULE = "store_io"
+IO_ALLOWED = {"mkdir", "write", "flush", "fsync"}
+#: P9 の store の型（`.open(` の受け手として許す）
+P9_STORE_OPENERS = {"WatchlistStore", "ThesisStore", "cls"}
 #: P9 の module ごとの package 内 ／ core の import の module（完全一致）。P8 は `p8_handoff` だけが import する
 SANCTIONED_INTERNAL_MODULES = {
     "__init__": set(), "private_root": set(),
@@ -39,6 +47,12 @@ SANCTIONED_INTERNAL_MODULES = {
     "thesis_model": {".revision_model"},
     "proposal_model": {".p8_handoff", ".revision_model", ".thesis_model", ".watch_model"},
     "cross_rules": {".revision_model", ".thesis_model", ".watch_model"},
+    "serialization": {".revision_model", ".thesis_model", ".watch_model"},
+    "store_io": {".private_root", ".revision_model"},
+    "watch_store": {".revision_model", ".serialization", ".store_io", ".watch_model"},
+    "thesis_store": {".serialization", ".store_io", ".thesis_model"},
+    "authority_stores": {".cross_rules", ".revision_model", ".store_io", ".thesis_model", ".thesis_store",
+                         ".watch_model", ".watch_store"},
 }
 SANCTIONED_CORE_NAMES = {"..core.ids": {"content_id"}, "..core.time": {"to_utc_iso"}}
 #: authority の revision の型（runtime の code は作らない ・caller ＝ 人の入力の経路だけ）
@@ -47,14 +61,18 @@ AUTHORITY_TYPES = {"WatchEntryRevision", "ThesisRevision"}
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "docs/v2", "main.py",
                   "requirements.txt", "pyproject.toml")
 #: 外部の import として許す標準 library（module の完全一致）
-STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "enum", "json", "os.path", "pathlib", "re", "typing"}
+STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "enum", "hashlib", "json", "os", "os.path", "pathlib", "re",
+                  "typing"}
 FORBIDDEN_MODULE_PARTS = ("predictions", "analysis", "report", "notifier", "compass", "pages", "pwa", "llm", "anthropic",
                           "openai", "http", "urllib", "requests", "socket", "ssl", "subprocess", "jquants_local_transport",
                           "jquants_live", "jquants_pilot2_local", "theme", "narrative")   # 時計 ・乱数は標準 library の完全一致で除く
 FORBIDDEN_NAMES = {"execute_screen", "main", "_store_integrity", "LocalHttpsTransport", "JQuantsLiveClient", "LedgerWriter",
                    "_create_ledger", "initialize", "append", "write_text", "write_bytes", "mkdir", "unlink", "rmtree",
                    "remove", "rename", "touch", "environ", "getenv", "urlopen", "getattr", "setattr", "eval", "exec",
-                   "sleep", "now", "today", "utcnow", "open", "print", "input"}
+                   "sleep", "now", "today", "utcnow", "open", "print", "input", "truncate", "write", "fsync", "flush",
+                   "rmdir", "chmod", "symlink_to", "link_to", "system", "popen"}
+#: A3 の store が P9 の store の型の作成 ／ 開くことに使ってよい名前（P8 の store の initialize は使わない ・p8_handoff の guard）
+A3_STORE_NAMES = {"initialize", "open"}
 #: 識別子（名前 ・属性 ・引数 ・定義 ・欄）の語（構造の guard。文字列の定数 ・自由文は対象外）。"watchlist" は namespace の名
 FORBIDDEN_WORDS = {"rank", "ranking", "score", "scoring", "recommend", "recommendation", "buy", "sell", "portfolio",
                    "allocation", "target", "conviction", "priority", "weight", "rating", "preference", "holding",
@@ -88,7 +106,8 @@ def _imports(path: Path):
 
 def test_p9_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P9_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    assert PHASE9_RUNTIME == tuple(sorted(PHASE9_A1_RUNTIME + PHASE9_A2_RUNTIME)) and len(PHASE9_RUNTIME) == 8
+    assert PHASE9_RUNTIME == tuple(sorted(PHASE9_A1_RUNTIME + PHASE9_A2_RUNTIME + PHASE9_A3_RUNTIME))
+    assert len(PHASE9_RUNTIME) == 13
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE9_RUNTIME}
     assert P9_HANDOFF in PHASE9_RUNTIME
     for path in (*PHASE9_RUNTIME, *PHASE9_TESTS, *PHASE9_DOCS):
@@ -153,12 +172,20 @@ def test_p9_a1_imports_are_exactly_the_sanctioned_frozen_reconstruction_surfaces
 @pytest.mark.parametrize("path", PHASE9_RUNTIME)
 def test_p9_a1_never_executes_writes_reads_credentials_or_opens_stores_for_writing(path: str) -> None:
     tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+    stem = Path(path).stem
+    allowed = (IO_ALLOWED if stem == IO_MODULE else set()) | (A3_STORE_NAMES if path in PHASE9_A3_RUNTIME else set())
     for node in ast.walk(tree):
         assert not (isinstance(node, ast.Name) and node.id in FORBIDDEN_NAMES), node.id
-        assert not (isinstance(node, ast.Attribute) and node.attr in FORBIDDEN_NAMES - {"open"}), node.attr
+        assert not (isinstance(node, ast.Attribute) and node.attr in FORBIDDEN_NAMES - {"open"} - allowed), node.attr
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "open":
-            assert any(k.arg == "read_only" and isinstance(k.value, ast.Constant) and k.value.value is True
-                       for k in node.keywords), "store.open must be read_only=True"
+            receiver = node.func.value
+            if path == P9_HANDOFF:                                                       # 凍結の P8 の store
+                assert any(k.arg == "read_only" and isinstance(k.value, ast.Constant) and k.value.value is True
+                           for k in node.keywords), "P8 store.open must be read_only=True"
+            elif stem == IO_MODULE and not (isinstance(receiver, ast.Name) and receiver.id in P9_STORE_OPENERS):
+                assert [a.value for a in node.args if isinstance(a, ast.Constant)] == ["ab"], "append-only open"
+            else:
+                assert isinstance(receiver, ast.Name) and receiver.id in P9_STORE_OPENERS, "only P9 store types"
         assert not (isinstance(node, ast.ExceptHandler) and (node.type is None or (
             isinstance(node.type, ast.Name) and node.type.id in ("Exception", "BaseException")))), "broad except"
     relative, _ = _imports(REPO_ROOT / path)
@@ -223,4 +250,24 @@ def test_p9_a2_the_semantic_contract_records_the_required_clauses() -> None:
     for clause in ("ACTIVE", "PAUSED", "REMOVED", "CHALLENGED", "INVALIDATED", "RETIRED", "p9wat", "p9wrv", "p9ths",
                    "p9trv", "p9prp", "p9inv", "P8_SCREEN_RESULT", "HUMAN_NOTE", "MANUAL", "P8_PROPOSAL", "human:",
                    "reviewed_at <= T", "A3", "Phase 9 の凍結ではない"):
+        assert clause in text, clause
+
+
+def test_p9_a3_only_store_io_writes_and_the_stores_never_touch_phase8() -> None:
+    for path in PHASE9_RUNTIME:
+        stem = Path(path).stem
+        relative, absolute = _imports(REPO_ROOT / path)
+        if path in PHASE9_A3_RUNTIME:
+            assert ".p8_handoff" not in relative and not any("screener" in m or "jquants" in m for m in relative)
+        if stem != IO_MODULE:
+            assert "os" not in absolute and "hashlib" not in absolute, path               # fsync ・digest は store_io だけ
+            source = (REPO_ROOT / path).read_text(encoding="utf-8")
+            assert ".fsync(" not in source and '"ab"' not in source and ".write(" not in source, path
+
+
+def test_p9_a3_the_store_contract_records_the_required_clauses() -> None:
+    text = (REPO_ROOT / A3_DOC).read_text(encoding="utf-8")
+    for clause in ("watchlist_authority.jsonl", "thesis_authority.jsonl", "APPENDED", "REUSED", "fsync",
+                   "CONCURRENT_MODIFICATION", "STORE_CORRUPTION", "APPEND_REJECTED", "CHAIN_HEAD_MISMATCH",
+                   "check_world", "reviewed_at <= T", "A4", "A1 の発行体の存在", "Phase 9 の凍結ではない"):
         assert clause in text, clause

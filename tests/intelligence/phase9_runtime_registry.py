@@ -18,13 +18,18 @@ PHASE9_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE9_PACKAGE}/{name}.py" for nam
 #: P9-A2 で足した runtime（Watchlist ／ Thesis の意味の model ・L0 の提案 ・revision ・記録をまたぐ不変条件。純 ・保存なし）
 PHASE9_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE9_PACKAGE}/{name}.py" for name in (
     "cross_rules", "proposal_model", "revision_model", "thesis_model", "watch_model"))
-PHASE9_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE9_A1_RUNTIME + PHASE9_A2_RUNTIME))
+#: P9-A3 で足した runtime（正準の直列化 ・追記専用の private な authority の store ・記録をまたぐ不変条件の検査つきの追記）
+PHASE9_A3_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE9_PACKAGE}/{name}.py" for name in (
+    "authority_stores", "serialization", "store_io", "thesis_store", "watch_store"))
+PHASE9_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE9_A1_RUNTIME + PHASE9_A2_RUNTIME + PHASE9_A3_RUNTIME))
 PHASE9_TESTS: Tuple[str, ...] = ("tests/intelligence/phase9_runtime_registry.py",
                                  "tests/intelligence/test_watchlist_thesis_boundary.py",
                                  "tests/intelligence/test_watchlist_thesis_handoff.py",
-                                 "tests/intelligence/test_watchlist_thesis_semantics.py")
+                                 "tests/intelligence/test_watchlist_thesis_semantics.py",
+                                 "tests/intelligence/test_watchlist_thesis_stores.py")
 PHASE9_DOCS: Tuple[str, ...] = ("docs/databank/PHASE9_A1_P8_HANDOFF_CONTRACT.md",
-                                "docs/databank/PHASE9_A2_WATCHLIST_THESIS_SEMANTICS.md")
+                                "docs/databank/PHASE9_A2_WATCHLIST_THESIS_SEMANTICS.md",
+                                "docs/databank/PHASE9_A3_AUTHORITY_STORES.md")
 ADDITION_STATUSES = ("A", "??")
 #: 凍結の P8 を import してよい Phase 9 の file（P9-A1 の監督判断。完全な path だけ）と、その import の面（module → 名前。完全一致）
 P9_HANDOFF = f"{PHASE9_PACKAGE}/p8_handoff.py"
@@ -120,6 +125,6 @@ def only_phase9_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P9_HANDOFF", "PHASE9_A2_RUNTIME", "SANCTIONED_P9_A1_IMPORTS", "is_phase9_addition", "only_phase9_registration",
+__all__ = ["ADDITION_STATUSES", "P9_HANDOFF", "PHASE9_A2_RUNTIME", "PHASE9_A3_RUNTIME", "SANCTIONED_P9_A1_IMPORTS", "is_phase9_addition", "only_phase9_registration",
            "registration_diff", "P9_BASE", "PHASE9_A1_RUNTIME", "PHASE9_DOCS", "PHASE9_PACKAGE", "PHASE9_RUNTIME", "PHASE9_TESTS",
            "PHASE9_TEST_REGISTRATION"]

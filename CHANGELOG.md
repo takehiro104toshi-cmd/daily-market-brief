@@ -4,6 +4,29 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.96 (2026-10-14) — Phase 9 P9-A3 private authority stores
+
+Watchlist ／ Thesis の追記専用の private な authority の store（`<P9 の root>/watchlist_thesis_intelligence/` の
+`watchlist_authority.jsonl` ・`thesis_authority.jsonl`）と正準の直列化 ／ 復元を足した。読み込みのたびに全行を A2 の model で復元し、
+鎖 ・不変の欄 ・終端 ・発行体ごとの一意を検査する（破損 ・切断 ・非正準 ・重複は fail closed ・修復しない）。追記は `AuthorityStores`
+だけが、両方の file の不変（byte 長 ・sha256）・鎖の先頭 ・A2 の `check_world`（全ての審査の瞬間の像）を検査した後に、対象の store に
+だけ 1 行を fsync で追記する（APPENDED ／ REUSED ・連鎖の書き込みなし）。時点 T の状態は明示の T だけ（最新 ／ 現在の API なし）。A1 の
+発行体の存在は A4 の実行器（store を P8 に結び付けない）。凍結の P7 ／ P8 の test ・P8 runtime は不変。Phase 9 の凍結ではない。
+
+追加
+・`src/intelligence/watchlist_thesis_intelligence/serialization.py`
+・`src/intelligence/watchlist_thesis_intelligence/store_io.py`
+・`src/intelligence/watchlist_thesis_intelligence/watch_store.py`
+・`src/intelligence/watchlist_thesis_intelligence/thesis_store.py`
+・`src/intelligence/watchlist_thesis_intelligence/authority_stores.py`
+・`tests/intelligence/test_watchlist_thesis_stores.py`
+・`docs/databank/PHASE9_A3_AUTHORITY_STORES.md`
+改善
+・`tests/intelligence/phase9_runtime_registry.py`（A3 の runtime ・test ・文書の登録）
+・`tests/intelligence/test_watchlist_thesis_boundary.py`（書き込みは store_io だけ ・store は P8 に触れない ・import の面）
+修正
+・なし
+
 ## v5.95 (2026-10-14) — Phase 9 P9-A2 Watchlist / Thesis semantic model
 
 Watchlist の項目 ・Thesis の意味の model（発行体だけ ・人の authority ・不変の revision ・状態機械）、L0 の提案（P8 の EVALUATED の発行体
