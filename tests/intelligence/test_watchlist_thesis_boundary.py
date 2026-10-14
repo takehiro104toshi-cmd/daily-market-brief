@@ -23,7 +23,7 @@ import pytest
 
 from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
-from tests.intelligence.phase9_runtime_registry import (P9_BASE, P9_HANDOFF, PHASE9_A1_RUNTIME, PHASE9_A2_RUNTIME,
+from tests.intelligence.phase9_runtime_registry import (P9_A5, P9_BASE, P9_HANDOFF, PHASE9_A1_RUNTIME, PHASE9_A2_RUNTIME,
                                                         PHASE9_A3_RUNTIME, PHASE9_A4_RUNTIME, PHASE9_DOCS,
                                                         SANCTIONED_P9_P8_IMPORTERS,
                                                         PHASE9_PACKAGE, PHASE9_RUNTIME, PHASE9_TEST_REGISTRATION,
@@ -339,3 +339,31 @@ def test_p9_a4_the_executor_contract_records_the_required_clauses() -> None:
                    "NOT_A_LISTING_OR_COVERAGE_CLAIM", "STALE_AUTHORITY_HEAD", "REUSED", "expected_head_revision_id",
                    "AuthorityStores", "as_of_date", "dry-run", "A5", "Phase 9 の凍結ではない"):
         assert clause in text, clause
+
+
+# ================================================ P9 凍結の記録（P9-FREEZE-RECORD: 文書 ・registry ・guard だけ。runtime の意味は変えない）
+
+FREEZE_DOC = "docs/databank/PHASE9_FINAL_FREEZE.md"
+#: 凍結の記録に置かない private な値の形（実の id ・code ・瞬間 ・root ・著者 ・A5 の理由の文）
+PRIVATE_PATTERNS = (r"p8(run|srs|iss|sec|pol|uni)_[0-9a-f]{6,}", r"p9(wat|wrv|ths|trv|prp|inv)_[0-9a-f]{6,}",
+                    r"\b[0-9]{4}0\b", r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", r"[A-Za-z]:\\", r"_private\b",
+                    r"human:[A-Za-z0-9]", r"validation only: exercises")
+
+
+def test_p9_freeze_the_18_registered_runtime_files_are_byte_identical_to_the_a5_freeze_anchor() -> None:
+    assert P9_A5 == "4c1970174f678245b569fdbb812a8a6ced52410b"
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P9_A5, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert len(PHASE9_RUNTIME) == 18 and len(set(PHASE9_RUNTIME)) == 18
+    anchored = {path for path in _git("ls-tree", "-r", "--name-only", P9_A5, "--", PHASE9_PACKAGE).splitlines()
+                if path.endswith(".py")}
+    assert anchored == set(PHASE9_RUNTIME)                                          # anchor の package ＝ 登録の 18
+    for path in PHASE9_RUNTIME:
+        assert _git("ls-tree", P9_A5, "--", path).strip(), path                     # anchor に在る
+        assert _git("show", f"{P9_A5}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    assert _git("diff", "--name-status", P9_A5, "--", *PHASE9_RUNTIME) == ""
+    assert _git("status", "--porcelain", "--", *PHASE9_RUNTIME) == ""
+    assert not _git("ls-tree", P9_A5, "--", FREEZE_DOC).strip()                    # 記録は anchor の後（新しい anchor ではない）
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    assert "COMPLETE / CLOSED / FROZEN" in text and P9_A5 in text
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern                               # private な値を記録しない

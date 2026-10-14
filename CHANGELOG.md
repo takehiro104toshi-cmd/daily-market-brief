@@ -4,6 +4,20 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.99 (2026-10-14) — Phase 9 final freeze record（文書 ・registry ・guard だけ）
+
+PHASE 9 — WATCHLIST / THESIS INTELLIGENCE v1 を COMPLETE / CLOSED / FROZEN として記録した。意味 ／ runtime の凍結 anchor は
+`4c19701`（P9-A5）のまま（本記録の commit は新しい anchor ではない）。P9-A5 の実の private な検証 PASS ・P9-A6 の最終監査 PASS。
+runtime の変更は無い。
+
+追加
+・`docs/databank/PHASE9_FINAL_FREEZE.md`
+改善
+・`tests/intelligence/phase9_runtime_registry.py`（凍結 anchor `P9_A5` ・凍結の記録の文書の登録）
+・`tests/intelligence/test_watchlist_thesis_boundary.py`（登録済みの runtime 18 file を `P9_A5` に pin する guard ・記録に private な値なし）
+修正
+・なし
+
 ## v5.98 (2026-10-14) — Phase 9 P9-A5 Windows pre-flight test-fixture fix（test だけ）
 
 Windows の本人の環境の P9-A5 の事前の test で、生の JSONL の fixture を `Path.write_text` で書く 3 つの test が、意図した鎖 ／ 世界の

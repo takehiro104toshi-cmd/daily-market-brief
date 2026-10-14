@@ -11,6 +11,9 @@ from typing import Mapping, Sequence, Set, Tuple
 
 #: P9 の基準（P8 の凍結の記録の commit。P9-A1 はここから足す）
 P9_BASE = "471e98de5f90dcbbf4ecae9970745eb896e2b3c5"
+#: P9-A5 の凍結 anchor ＝ Phase 9 の意味 ／ runtime の最終凍結 anchor（runtime 18。P9-FREEZE-RECORD で登録。記録の commit は
+#: 新しい anchor ではない。記録: `docs/databank/PHASE9_FINAL_FREEZE.md`）
+P9_A5 = "4c1970174f678245b569fdbb812a8a6ced52410b"
 PHASE9_PACKAGE = "src/intelligence/watchlist_thesis_intelligence"
 #: P9-A1 で足した runtime（package の外の P8 の runner を read-only の再構成の部品として使う。本番から import されない）
 PHASE9_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE9_PACKAGE}/{name}.py" for name in (
@@ -35,7 +38,8 @@ PHASE9_TESTS: Tuple[str, ...] = ("tests/intelligence/phase9_runtime_registry.py"
 PHASE9_DOCS: Tuple[str, ...] = ("docs/databank/PHASE9_A1_P8_HANDOFF_CONTRACT.md",
                                 "docs/databank/PHASE9_A2_WATCHLIST_THESIS_SEMANTICS.md",
                                 "docs/databank/PHASE9_A3_AUTHORITY_STORES.md",
-                                "docs/databank/PHASE9_A4_HUMAN_DECISION_EXECUTOR.md")
+                                "docs/databank/PHASE9_A4_HUMAN_DECISION_EXECUTOR.md",
+                                "docs/databank/PHASE9_FINAL_FREEZE.md")
 ADDITION_STATUSES = ("A", "??")
 #: 凍結の P8 を import してよい Phase 9 の file（P9-A1 の監督判断。完全な path だけ）と、その import の面（module → 名前。完全一致）
 P9_HANDOFF = f"{PHASE9_PACKAGE}/p8_handoff.py"
@@ -142,7 +146,7 @@ def only_phase9_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P9_HANDOFF", "PHASE9_A2_RUNTIME", "PHASE9_A3_RUNTIME", "PHASE9_A4_RUNTIME", "P9_IDENTITY",
+__all__ = ["ADDITION_STATUSES", "P9_A5", "P9_HANDOFF", "PHASE9_A2_RUNTIME", "PHASE9_A3_RUNTIME", "PHASE9_A4_RUNTIME", "P9_IDENTITY",
            "SANCTIONED_P9_A4_IDENTITY_IMPORTS", "SANCTIONED_P9_P8_IMPORTERS", "SANCTIONED_P9_A1_IMPORTS", "is_phase9_addition", "only_phase9_registration",
            "registration_diff", "P9_BASE", "PHASE9_A1_RUNTIME", "PHASE9_DOCS", "PHASE9_PACKAGE", "PHASE9_RUNTIME", "PHASE9_TESTS",
            "PHASE9_TEST_REGISTRATION"]
