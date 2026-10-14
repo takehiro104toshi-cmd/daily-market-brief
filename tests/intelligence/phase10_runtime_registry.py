@@ -1,4 +1,4 @@
-"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1）。
+"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1 ・A2）。
 
 - 凍結の Phase 7 ／ 8 ／ 9 の test に入れた登録の行は `PHASE10_TEST_REGISTRATION` に完全に列挙し、Phase 10 の guard
   （`test_personal_intelligence_boundary.py`）が `P10_BASE` との差分の完全一致を pin する（test だけの狭い再開。runtime は不変）。
@@ -14,11 +14,16 @@ P10_BASE = "3bfc76c6b2f76f613bb50710e6e7eb976a642326"
 PHASE10_PACKAGE = "src/intelligence/personal_intelligence"
 #: P10-A1 で足した runtime（凍結の Phase 9 の read-only の adapter だけ。本番から import されない）
 PHASE10_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in ("__init__", "p9_view"))
-PHASE10_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE10_A1_RUNTIME))
+#: P10-A2 で足した runtime（Personal Profile ／ Attention の純な意味の model だけ。入出力 ・store ・実行器なし）
+PHASE10_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
+    "attention_model", "cross_rules", "profile_model", "revision_model"))
+PHASE10_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME))
 PHASE10_TESTS: Tuple[str, ...] = ("tests/intelligence/phase10_runtime_registry.py",
                                   "tests/intelligence/test_personal_intelligence_boundary.py",
-                                  "tests/intelligence/test_personal_intelligence_p9_view.py")
-PHASE10_DOCS: Tuple[str, ...] = ("docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md",)
+                                  "tests/intelligence/test_personal_intelligence_p9_view.py",
+                                  "tests/intelligence/test_personal_intelligence_semantics.py")
+PHASE10_DOCS: Tuple[str, ...] = ("docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md",
+                                 "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md")
 ADDITION_STATUSES = ("A", "??")
 #: 凍結の Phase 9 を import してよい Phase 10 の file（完全な path）と、その import の面（module → 名前。完全一致）
 P10_P9_VIEW = f"{PHASE10_PACKAGE}/p9_view.py"
@@ -31,6 +36,15 @@ SANCTIONED_P10_P9_IMPORTS: Mapping[str, Set[str]] = {
     "..watchlist_thesis_intelligence.watch_store": {"WatchlistStore"},
 }
 SANCTIONED_P10_P9_IMPORTERS: Mapping[str, Mapping[str, Set[str]]] = {P10_P9_VIEW: SANCTIONED_P10_P9_IMPORTS}
+#: P10-A2 の純な model の import の面（path → 相対 import の module の集合。完全一致）。package の外は `..core` の id ・時刻の
+#: 補助だけ（名前も完全一致）。Phase 9 ・P8 ・`p9_view` は import しない
+SANCTIONED_P10_A2_MODULES: Mapping[str, Set[str]] = {
+    f"{PHASE10_PACKAGE}/revision_model.py": {"..core.ids", "..core.time"},
+    f"{PHASE10_PACKAGE}/profile_model.py": {".revision_model"},
+    f"{PHASE10_PACKAGE}/attention_model.py": {".revision_model"},
+    f"{PHASE10_PACKAGE}/cross_rules.py": {".attention_model", ".profile_model", ".revision_model"},
+}
+SANCTIONED_P10_CORE_IMPORTS: Mapping[str, Set[str]] = {"..core.ids": {"content_id"}, "..core.time": {"to_utc_iso"}}
 #: 凍結の Phase 7 ／ 8 ／ 9 の test に入れた登録（path → (取り除いた行, 加えた行)）。行は改行を含まない。P10-A1 で確定する
 PHASE10_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {
     'tests/intelligence/phase7_runtime_registry.py': ((
@@ -118,6 +132,7 @@ def only_phase10_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P10_BASE", "P10_P9_VIEW", "PHASE10_A1_RUNTIME", "PHASE10_DOCS", "PHASE10_PACKAGE",
-           "PHASE10_RUNTIME", "PHASE10_TESTS", "PHASE10_TEST_REGISTRATION", "SANCTIONED_P10_P9_IMPORTERS",
+__all__ = ["ADDITION_STATUSES", "P10_BASE", "P10_P9_VIEW", "PHASE10_A1_RUNTIME", "PHASE10_A2_RUNTIME", "PHASE10_DOCS",
+           "PHASE10_PACKAGE", "PHASE10_RUNTIME", "PHASE10_TESTS", "PHASE10_TEST_REGISTRATION",
+           "SANCTIONED_P10_A2_MODULES", "SANCTIONED_P10_CORE_IMPORTS", "SANCTIONED_P10_P9_IMPORTERS",
            "SANCTIONED_P10_P9_IMPORTS", "is_phase10_addition", "only_phase10_registration", "registration_diff"]

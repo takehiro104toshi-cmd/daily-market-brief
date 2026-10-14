@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.01 (2026-10-14) — Phase 10 P10-A2 personal profile + attention semantics
+
+人が持つ質的な Personal Profile と Attention（FOCUS ／ MUTE ＝ 表示の意図だけ）の純な意味の model を足した。不変の revision
+（内容 address の id ・seq ・直前の revision ・人の著者 ・明示の瞬間）・時点の状態 ・記録をまたぐ規則（ACTIVE な profile は高々 1 つ ・
+P9 の対象ごとに生きている印は高々 1 つ）。文の数字は検閲せず、型の schema で点数 ・配分 ・売買の概念を持てなくした。file の入出力 ・
+store ・実行器 ・Phase 9 の import は無い。凍結の P7 ／ P8 ／ P9 の test は再開していない。Phase 10 の凍結ではない。
+
+追加
+・`src/intelligence/personal_intelligence/revision_model.py`
+・`src/intelligence/personal_intelligence/profile_model.py`
+・`src/intelligence/personal_intelligence/attention_model.py`
+・`src/intelligence/personal_intelligence/cross_rules.py`
+・`tests/intelligence/test_personal_intelligence_semantics.py`
+・`docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md`
+改善
+・`tests/intelligence/phase10_runtime_registry.py` ・`tests/intelligence/test_personal_intelligence_boundary.py`（A2 の登録 ・
+  import の面 ・語彙）
+修正
+・なし
+
 ## v6.00 (2026-10-14) — Phase 10 P10-A1 registration + read-only P9 adapter
 
 Phase 10（Personal Intelligence）の登録と、凍結の Phase 9 を read-only で読む専用の adapter（`personal_intelligence/p9_view.py`）を

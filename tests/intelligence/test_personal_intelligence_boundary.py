@@ -1,10 +1,11 @@
-"""P10-A1 — Phase 10（Personal Intelligence）の境界の guard。
+"""P10-A1 ・A2 — Phase 10（Personal Intelligence）の境界の guard。
 
 - registry の完全一致 ・P10_BASE 以後の面は登録した P10 の追加だけ ・凍結の P7 ／ P8 ／ P9 の test の差分は宣言した登録の行だけ。
 - P9 runtime は凍結 anchor `P9_A5` と ・P8 runtime は `P8_B5C` と byte 一致 ・P7 runtime は P10_BASE と不変。
 - `p9_view` の import の面は凍結 P9 の read-only の部品の完全一致だけ（`AuthorityStores` ・実行器 ・local の入口 ・P8 ・J-Quants ・
   network ・LLM ・P5 ・公開の出力は無い）。書き込み ・作成 ・環境変数 ・時計なし。store は P9 の read-only の型の `open` だけ。
 - production runtime closure の外 ・他の package から import されない ・識別子に順位 ／ 推奨 ／ 売買の語なし。
+- A2 の純な model は package の中と `..core` の id ・時刻の補助だけを import する（Phase 9 ・P8 ・`p9_view` ・file の入出力なし）。
 """
 from __future__ import annotations
 
@@ -16,8 +17,10 @@ from pathlib import Path
 from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
-from tests.intelligence.phase10_runtime_registry import (P10_BASE, P10_P9_VIEW, PHASE10_DOCS, PHASE10_PACKAGE,
-                                                         PHASE10_RUNTIME, PHASE10_TEST_REGISTRATION, PHASE10_TESTS,
+from tests.intelligence.phase10_runtime_registry import (P10_BASE, P10_P9_VIEW, PHASE10_A1_RUNTIME, PHASE10_A2_RUNTIME,
+                                                         PHASE10_DOCS, PHASE10_PACKAGE, PHASE10_RUNTIME,
+                                                         PHASE10_TEST_REGISTRATION, PHASE10_TESTS,
+                                                         SANCTIONED_P10_A2_MODULES, SANCTIONED_P10_CORE_IMPORTS,
                                                          SANCTIONED_P10_P9_IMPORTERS, SANCTIONED_P10_P9_IMPORTS,
                                                          only_phase10_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
@@ -25,9 +28,10 @@ from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE10_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md"
+A2_CONTRACT_DOC = "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md"
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "docs/v2", "main.py",
                   "requirements.txt", "pyproject.toml")
-STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "typing"}
+STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "enum", "json", "re", "typing"}
 FORBIDDEN_MODULE_PARTS = ("screener_intelligence", "jquants", "predictions", "analysis", "report", "notifier",
                           "compass", "pages", "pwa", "llm", "anthropic", "openai", "http", "urllib", "requests",
                           "socket", "ssl", "subprocess", "authority_stores", "executor", "local_cli", "decision_model",
@@ -37,8 +41,12 @@ FORBIDDEN_NAMES = {"AuthorityStores", "initialize", "_append_line", "append_watc
                    "truncate", "environ", "getenv", "now", "today", "utcnow", "print", "input", "sleep", "getattr",
                    "setattr", "eval", "exec", "fsync", "flush", "system", "popen"}
 FORBIDDEN_WORDS = {"rank", "ranking", "score", "scoring", "recommend", "recommendation", "buy", "sell", "portfolio",
-                   "allocation", "target", "conviction", "priority", "weight", "rating", "position", "trade",
-                   "instruction", "llm", "prompt", "latest", "current", "automation", "schedule", "cron"}
+                   "allocation", "conviction", "priority", "weight", "rating", "position", "trade",
+                   "instruction", "llm", "prompt", "latest", "current", "automation", "schedule", "cron",
+                   "holding", "holdings", "rebalance", "suitability", "urgency", "importance", "return", "returns"}
+#: 単語では禁止しない語（「対象」の `target`）の複合の禁止
+FORBIDDEN_COMPOUNDS = ("target_price", "target_return", "target_weight", "price_target", "expected_return",
+                       "risk_score", "risk_category", "position_size")
 P9_STORE_OPENERS = {"WatchlistStore", "ThesisStore"}
 
 
@@ -68,7 +76,10 @@ def _imports(path: Path):
 def test_p10_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
     assert P10_BASE == "3bfc76c6b2f76f613bb50710e6e7eb976a642326"
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P10_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    assert PHASE10_RUNTIME == (f"{PHASE10_PACKAGE}/__init__.py", P10_P9_VIEW)
+    assert PHASE10_A1_RUNTIME == (f"{PHASE10_PACKAGE}/__init__.py", P10_P9_VIEW)
+    assert PHASE10_A2_RUNTIME == tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
+        "attention_model", "cross_rules", "profile_model", "revision_model"))
+    assert PHASE10_RUNTIME == tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME))
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE10_RUNTIME}
     for path in (*PHASE10_RUNTIME, *PHASE10_TESTS, *PHASE10_DOCS):
         assert (REPO_ROOT / path).is_file(), path
@@ -116,8 +127,14 @@ def test_p10_a1_imports_are_exactly_the_sanctioned_read_only_phase9_surfaces() -
         assert absolute <= STDLIB_IMPORTS, absolute - STDLIB_IMPORTS
         if path == P10_P9_VIEW:
             assert relative == SANCTIONED_P10_P9_IMPORTS
+        elif path in SANCTIONED_P10_A2_MODULES:                                         # A2: package の中と core の補助だけ
+            assert set(relative) == SANCTIONED_P10_A2_MODULES[path], path
+            for module, names in relative.items():
+                assert module.startswith(".") and not module.startswith("..") or (
+                    names == SANCTIONED_P10_CORE_IMPORTS[module]), (path, module)
+                assert module != ".p9_view", path                                         # A2 は P9 を読まない
         else:
-            assert relative == {} and absolute == set()                                 # docstring だけ
+            assert path == f"{PHASE10_PACKAGE}/__init__.py" and relative == {} and absolute == set()   # docstring だけ
         for module in (*relative, *absolute):
             assert not any(part in module for part in FORBIDDEN_MODULE_PARTS), module
         assert not any(n.startswith("_") for names in relative.values() for n in names)
@@ -141,6 +158,9 @@ def test_p10_a1_the_adapter_never_writes_creates_reads_credentials_or_uses_write
             for name in names:
                 words |= {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name)}
         assert not words & FORBIDDEN_WORDS, words & FORBIDDEN_WORDS
+        identifiers = {n.lower() for n in (_identifiers(tree))}
+        for compound in FORBIDDEN_COMPOUNDS:
+            assert not any(compound in name for name in identifiers), compound
         source = (REPO_ROOT / path).read_text(encoding="utf-8")
         for token in ("JQUANTS_API_KEY", "x-api-key", "api.jquants.com", "://", "config.yaml", "watchlist:"):
             assert token not in source, token
@@ -155,9 +175,44 @@ def test_p10_a1_is_outside_production_and_no_other_code_imports_it() -> None:
         assert "personal_intelligence" not in path.read_text(encoding="utf-8", errors="replace"), path
 
 
+def _identifiers(tree: ast.AST) -> set:
+    found = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            found.add(node.id)
+        elif isinstance(node, ast.Attribute):
+            found.add(node.attr)
+        elif isinstance(node, ast.arg):
+            found.add(node.arg)
+        elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+            found.add(node.name)
+    return found
+
+
+def test_p10_a2_the_pure_models_have_no_io_store_executor_clock_or_phase9_surface() -> None:
+    assert set(SANCTIONED_P10_A2_MODULES) == set(PHASE10_A2_RUNTIME)
+    for path in PHASE10_A2_RUNTIME:
+        source = (REPO_ROOT / path).read_text(encoding="utf-8")
+        identifiers = _identifiers(ast.parse(source))
+        for name in ("Path", "pathlib", "os", "io", "open", "read_text", "read_bytes", "initialize", "append",
+                     "store", "Store", "executor", "execute", "p9_view", "read_p9_safe_view",
+                     "read_p9_private_snapshot", "now", "today", "random", "uuid", "time_ns"):
+            assert name not in identifiers, (path, name)
+        for token in ("watchlist_thesis_intelligence", "screener_intelligence", "narrative_intelligence"):
+            assert token not in source, (path, token)
+
+
 def test_p10_a1_the_contract_records_the_required_clauses() -> None:
     text = (REPO_ROOT / CONTRACT_DOC).read_text(encoding="utf-8")
     for clause in ("P9-OBS-019", "AuthorityStores", "read_p9_safe_view", "read_p9_private_snapshot", "check_world",
                    "P9_WORLD_INVALID", "P9_STORE_UNAVAILABLE", "P10_BASE", "3bfc76c6b2f76f613bb50710e6e7eb976a642326",
                    "PHASE10_TEST_REGISTRATION", "FOCUS", "Phase 10 の凍結ではない"):
+        assert clause in text, clause
+
+
+def test_p10_a2_the_contract_records_the_required_clauses() -> None:
+    text = (REPO_ROOT / A2_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in ("PersonalProfileRevision", "AttentionRevision", "check_personal_world", "FOCUS", "MUTE", "CLEARED",
+                   "RETIRED", "REVIEW_LOOKAHEAD_MAX_DAYS", "observed_p9_revision_id", "A4", "store",
+                   "Phase 10 の凍結ではない", "P10-OBS-017"):
         assert clause in text, clause
