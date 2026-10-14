@@ -99,6 +99,9 @@ P8_B4B = "ff89a75c0f6c73d4372b89e7a4acd5fc46b0c5e8"
 P8_B5A = "479de19d42a76610085bb56a18d7cd77d8b78742"
 #: P8-B5B の凍結 anchor（runtime 53 ・Phase 8 の test ・先行の文書はここと byte 一致。B5C で登録）
 P8_B5B = "474b1d9fc83b414edb4557a9d87ad25c6ffa37c4"
+#: P8-B5C の凍結 anchor ＝ Phase 8 の意味 ／ runtime の最終凍結 anchor（runtime 54。P8-FREEZE-RECORD で登録。記録の commit は
+#: 新しい anchor ではない。記録: `docs/databank/PHASE8_FINAL_FREEZE.md`）
+P8_B5C = "0a32d86bd80d0f9a0b9f4cecbd7c961a93dfa15f"
 PHASE8_PACKAGE = "src/intelligence/screener_intelligence"
 #: 登録済みの Phase 8 runtime（P8-A1: __init__ / identity_model / identity_resolver / identity_store、
 #: P8-A2: observation_model / observation_resolver / observation_store、
@@ -299,7 +302,8 @@ PHASE8_DOCS: Tuple[str, ...] = ("docs/databank/PHASE8_SCREENER_INTELLIGENCE_ARCH
                                 "docs/databank/PHASE8_B4B_PRIVATE_SCREENER_RUNNER.md",
                                 "docs/databank/PHASE8_B5A_UNIVERSE_AUTHORITY.md",
                                 "docs/databank/PHASE8_B5B_RESULT_SET.md",
-                                "docs/databank/PHASE8_B5C_MULTI_ISSUER_EXECUTOR.md")
+                                "docs/databank/PHASE8_B5C_MULTI_ISSUER_EXECUTOR.md",
+                                "docs/databank/PHASE8_FINAL_FREEZE.md")
 ADDITION_STATUSES = ("A", "??")
 
 _TEST_DIR = "tests/intelligence"
@@ -365,7 +369,7 @@ def only_phase8_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P8_A0", "P8_A1", "P8_A1R", "P8_A2", "P8_LV1", "P8_PILOT1", "P8_A2R", "P8_A2RI", "P8_A2RV",
            "P8_A2_5", "P8_A3A", "P8_A3B", "P8_A3R", "P8_ST1", "P8_ADP0", "P8_EXE", "P8_ID1", "P8_LIVE0", "P8_LIVE1",
-           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_PILOT2B", "P8_B1", "P8_B2", "P8_B3", "P8_B4A", "P8_B4B", "P8_B5A", "P8_B5B", "P8_V",
+           "P8_LIVE2", "P8_PILOT2A", "P8_ADP0R", "P8_ACQ0", "P8_OBS60_I1", "P8_EXE_R", "P8_EPOCH1", "P8_A2C", "P8_EPOCH1R", "P8_A2C_R", "P8_F1", "P8_A3_RA", "P8_PILOT2B", "P8_B1", "P8_B2", "P8_B3", "P8_B4A", "P8_B4B", "P8_B5A", "P8_B5B", "P8_B5C", "P8_V",
            "P8_VR",
            "PHASE7_TEST_REGISTRATION", "PHASE8_A1R_RUNTIME", "PHASE8_A1_RUNTIME", "PHASE8_A2R_RUNTIME",
            "PHASE8_A2_RUNTIME", "PHASE8_A3A_RUNTIME", "PHASE8_A3B_METRIC_MODEL_REGISTRATION", "PHASE8_A3B_RUNTIME",

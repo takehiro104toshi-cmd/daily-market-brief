@@ -4,6 +4,20 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.93 (2026-10-14) — Phase 8 final freeze record（文書 ・registry ・guard だけ）
+
+PHASE 8 — SCREENER INTELLIGENCE v1 を COMPLETE / CLOSED / FROZEN として記録した。意味 ／ runtime の凍結 anchor は
+`0a32d86`（P8-B5C）のまま（本記録の commit は新しい anchor ではない）。P8-B5D の実 data の検証 PASS ・P8-B5E の最終監査 PASS。
+runtime の変更は無い。
+
+追加
+・`docs/databank/PHASE8_FINAL_FREEZE.md`
+改善
+・`tests/intelligence/phase8_runtime_registry.py`（凍結 anchor `P8_B5C` ・凍結の記録の文書の登録）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（登録済みの runtime 54 file を `P8_B5C` に pin する guard ・先行の guard の文書の除外）
+修正
+・なし
+
 ## v5.92 (2026-10-06) — Phase 8 P8-B5C multi-issuer private executor / bounded batch + continuation（合成の検証だけ）
 
 凍結の部品をつなぐ別の private な実行器（`jquants_screen_local.py`。package の外 ・本番から import されない）を足した。明示の Universe ・方針の
