@@ -47,6 +47,11 @@ def thesis_file(root: Path) -> Path:
     return root / "watchlist_thesis_intelligence" / THESIS_FILENAME
 
 
+def write_lines(path: Path, *lines: str) -> None:
+    """生の JSONL の fixture を正準の byte（UTF-8 ・LF）で書く（OS の改行の変換を受けない。Windows の text mode は CRLF にする）。"""
+    path.write_bytes("".join(line + "\n" for line in lines).encode("utf-8"))
+
+
 def store_fails(category: StoreFailureCategory, code: str, fn, *args, **kwargs) -> AuthorityStoreError:
     with pytest.raises(AuthorityStoreError) as exc:
         fn(*args, **kwargs)
@@ -175,11 +180,11 @@ def test_b_d_raw_written_broken_chains_and_duplicate_live_issuers_fail_on_load(r
     AuthorityStores.initialize(root)
     w1 = watch_create()
     gap = watch_next(watch_next(w1, ChangeKind.REVISE, rationale="b"), ChangeKind.REVISE, rationale="c")
-    watch_file(root).write_text(se.watch_line(w1) + "\n" + se.watch_line(gap) + "\n", encoding="utf-8")
+    write_lines(watch_file(root), se.watch_line(w1), se.watch_line(gap))
     error = store_fails(C.STORE_CORRUPTION, "CHAIN_INVALID:SEQ_NOT_CONSECUTIVE", WatchlistStore.open, root)
     assert error.detail == w1.watch_entry_id
     twin = watch_create(at=T0 + HOUR, rationale="twin")
-    watch_file(root).write_text(se.watch_line(w1) + "\n" + se.watch_line(twin) + "\n", encoding="utf-8")
+    write_lines(watch_file(root), se.watch_line(w1), se.watch_line(twin))
     store_fails(C.STORE_CORRUPTION, "DUPLICATE_LIVE_WATCH_ENTRY", WatchlistStore.open, root)
 
 
@@ -238,7 +243,7 @@ def test_c_b_thesis_corruption_and_broken_chains_fail_closed(root: Path) -> None
     path = thesis_file(root)
     path.write_bytes(path.read_bytes()[:-3])
     store_fails(C.STORE_CORRUPTION, "TRUNCATED_FINAL_LINE", ThesisStore.open, root)
-    path.write_text(se.thesis_line(t2) + "\n", encoding="utf-8")                     # seq 2 だけ（先頭が無い）
+    write_lines(path, se.thesis_line(t2))                                             # seq 2 だけ（先頭が無い）
     store_fails(C.STORE_CORRUPTION, "CHAIN_INVALID:INVALID_INITIAL_REVISION", ThesisStore.open, root)
 
 
@@ -292,7 +297,7 @@ def test_d_d_a_raw_written_cross_store_violation_fails_on_open(root: Path) -> No
     stores = AuthorityStores.initialize(root)
     w = watch_create()
     stores.append_watch(w)
-    thesis_file(root).write_text(se.thesis_line(thesis_create(w, at=T0 - HOUR)) + "\n", encoding="utf-8")
+    write_lines(thesis_file(root), se.thesis_line(thesis_create(w, at=T0 - HOUR)))
     store_fails(C.STORE_CORRUPTION, "WORLD_INVALID:THESIS_WITHOUT_WATCH_ENTRY", AuthorityStores.open, root)
 
 
@@ -309,7 +314,7 @@ def test_e_a_external_modification_of_either_store_is_detected_before_append(roo
                 watch_next(w, ChangeKind.REVISE, rationale="late writer"))
     fresh = AuthorityStores.open(root)
     fresh.append_watch(watch_next(w, ChangeKind.REVISE, rationale="fine"))
-    thesis_file(root).write_text(se.thesis_line(thesis_create(w)) + "\n", encoding="utf-8")
+    write_lines(thesis_file(root), se.thesis_line(thesis_create(w)))
     store_fails(C.CONCURRENT_MODIFICATION, "STORE_CHANGED_SINCE_LOAD", fresh.append_watch,
                 watch_next(fresh.watch.chain(w.watch_entry_id)[-1], ChangeKind.REVISE, rationale="x"))
 

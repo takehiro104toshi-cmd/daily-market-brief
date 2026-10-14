@@ -184,7 +184,7 @@ def _rewrite_spec(path: Path, change) -> None:
         event["digest"] = sl._event_digest(event)
         prev = event["digest"]
         events.append(canonical_json(event))
-    path.write_text("".join(e + "\n" for e in events), encoding="utf-8")
+    path.write_bytes("".join(e + "\n" for e in events).encode("utf-8"))           # 正準の byte（LF ・OS の変換なし）
 
 
 @pytest.mark.parametrize("change", [

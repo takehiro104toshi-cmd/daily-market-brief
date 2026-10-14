@@ -4,6 +4,21 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.98 (2026-10-14) — Phase 9 P9-A5 Windows pre-flight test-fixture fix（test だけ）
+
+Windows の本人の環境の P9-A5 の事前の test で、生の JSONL の fixture を `Path.write_text` で書く 3 つの test が、意図した鎖 ／ 世界の
+破損の code ではなく `NON_CANONICAL_LINE` で止まった。原因は Windows の text mode の改行の変換（LF → CRLF）で、authority の store が
+正準の LF の行を要求するのは正しい（runtime は不変 ・CRLF は受けない）。生の fixture を正準の UTF-8 ・LF の byte で書くように直した
+（同じ型の A1 の引き渡しの test の台帳の書き直しも）。
+
+追加
+・なし
+改善
+・なし
+修正
+・`tests/intelligence/test_watchlist_thesis_stores.py`（生の JSONL の fixture を `write_bytes` の正準の byte で書く `write_lines`）
+・`tests/intelligence/test_watchlist_thesis_handoff.py`（台帳の書き直しを `write_bytes` の正準の byte で）
+
 ## v5.97 (2026-10-14) — Phase 9 P9-A4 human decision executor / private projection
 
 人の判断 ／ 著述の入力（Watchlist: P8 の提案からの作成 ・MANUAL の作成 ・内容 ・遷移 ・訂正。Thesis: 作成 ・内容 ・遷移 ・訂正）を
