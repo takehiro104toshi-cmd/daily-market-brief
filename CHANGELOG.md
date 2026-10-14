@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v5.94 (2026-10-14) — Phase 9 P9-A1 P8 → P9 handoff contract / registration / read-only reconstruction adapter
+
+Phase 9（Watchlist / Thesis Intelligence）の最初の gate。凍結の Phase 8 の完了した screen の run を、network ・transport ・credential ・
+書き込みなしで再構成する read-only の adapter（凍結 B5C の `load_ledger` ・`ScreenRunSpec` ・`assemble` と store の read-only の open
+だけ）と、`run_id` ・`screen_result_id` への結び付き（違えば `P8_RESULT_DRIFT`）を足した。COMPLETE の run だけを消費し、閉じていない
+呼び出し ・PARTIAL ・spec の不一致 ・台帳の破損 ・無い store は fail closed（作らない）。Watchlist ／ Thesis の authority は無い。
+凍結の P7 ／ P8 の test の guard は test だけの狭い再開（登録の行を `PHASE9_TEST_REGISTRATION` に完全に列挙して pin）。P8 runtime は
+`0a32d86` と byte 一致。Phase 9 の凍結ではない。
+
+追加
+・`src/intelligence/watchlist_thesis_intelligence/__init__.py`
+・`src/intelligence/watchlist_thesis_intelligence/p8_handoff.py`
+・`src/intelligence/watchlist_thesis_intelligence/private_root.py`
+・`tests/intelligence/phase9_runtime_registry.py`
+・`tests/intelligence/test_watchlist_thesis_handoff.py`
+・`tests/intelligence/test_watchlist_thesis_boundary.py`
+・`docs/databank/PHASE9_A1_P8_HANDOFF_CONTRACT.md`
+改善
+・`tests/intelligence/phase7_runtime_registry.py`（P9 の runtime の登録）
+・`tests/intelligence/test_narrative_intelligence_boundary.py`（P9 の runtime ・test ・文書の登録）
+・`tests/intelligence/test_screener_intelligence_boundary.py`（P9 の登録 ・P9 の adapter の import の面の pin）
+修正
+・なし
+
 ## v5.93 (2026-10-14) — Phase 8 final freeze record（文書 ・registry ・guard だけ）
 
 PHASE 8 — SCREENER INTELLIGENCE v1 を COMPLETE / CLOSED / FROZEN として記録した。意味 ／ runtime の凍結 anchor は
