@@ -1,4 +1,4 @@
-"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1 ・A2 ・A3）。
+"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1 〜 A4）。
 
 - 凍結の Phase 7 ／ 8 ／ 9 の test に入れた登録の行は `PHASE10_TEST_REGISTRATION` に完全に列挙し、Phase 10 の guard
   （`test_personal_intelligence_boundary.py`）が `P10_BASE` との差分の完全一致を pin する（test だけの狭い再開。runtime は不変）。
@@ -20,15 +20,23 @@ PHASE10_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for n
 #: P10-A3 で足した runtime（Personal Profile ／ Attention の private な追記専用の authority の store だけ）
 PHASE10_A3_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
     "attention_store", "authority_stores", "profile_store", "serialization", "store_io"))
-PHASE10_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME + PHASE10_A3_RUNTIME))
+#: P10-A4 で足した runtime（人の決定の実行器 ・P9 の参照の検査 ・個人の見直しの view ・安全な投影 ・private な local の CLI）
+PHASE10_A4_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
+    "admin_init", "decisions", "executor", "local_cli", "personal_projection", "review_view"))
+PHASE10_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME + PHASE10_A3_RUNTIME
+                                                + PHASE10_A4_RUNTIME))
 PHASE10_TESTS: Tuple[str, ...] = ("tests/intelligence/phase10_runtime_registry.py",
                                   "tests/intelligence/test_personal_intelligence_boundary.py",
                                   "tests/intelligence/test_personal_intelligence_p9_view.py",
                                   "tests/intelligence/test_personal_intelligence_semantics.py",
-                                  "tests/intelligence/test_personal_intelligence_stores.py")
+                                  "tests/intelligence/test_personal_intelligence_stores.py",
+                                  "tests/intelligence/test_personal_intelligence_executor.py",
+                                  "tests/intelligence/test_personal_intelligence_review_view.py",
+                                  "tests/intelligence/test_personal_intelligence_cli.py")
 PHASE10_DOCS: Tuple[str, ...] = ("docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md",
                                  "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md",
-                                 "docs/databank/PHASE10_A3_PROFILE_ATTENTION_STORES.md")
+                                 "docs/databank/PHASE10_A3_PROFILE_ATTENTION_STORES.md",
+                                 "docs/databank/PHASE10_A4_EXECUTOR_REVIEW_VIEW.md")
 ADDITION_STATUSES = ("A", "??")
 #: 凍結の Phase 9 を import してよい Phase 10 の file（完全な path）と、その import の面（module → 名前。完全一致）
 P10_P9_VIEW = f"{PHASE10_PACKAGE}/p9_view.py"
@@ -60,6 +68,26 @@ SANCTIONED_P10_A3_MODULES: Mapping[str, Set[str]] = {
     f"{PHASE10_PACKAGE}/attention_store.py": {".attention_model", ".cross_rules", ".serialization", ".store_io"},
     P10_AUTHORITY_STORES: {".attention_model", ".attention_store", ".cross_rules", ".profile_model", ".profile_store",
                            ".revision_model", ".store_io"},
+}
+#: P10-A4 の import の面（path → 相対 import の module の集合。完全一致 ・package の中だけ）
+P10_EXECUTOR = f"{PHASE10_PACKAGE}/executor.py"
+P10_REVIEW_VIEW = f"{PHASE10_PACKAGE}/review_view.py"
+P10_ADMIN_INIT = f"{PHASE10_PACKAGE}/admin_init.py"
+P10_LOCAL_CLI = f"{PHASE10_PACKAGE}/local_cli.py"
+SANCTIONED_P10_A4_MODULES: Mapping[str, Set[str]] = {
+    f"{PHASE10_PACKAGE}/decisions.py": {".attention_model"},
+    P10_EXECUTOR: {".attention_model", ".authority_stores", ".cross_rules", ".decisions", ".p9_view", ".profile_model",
+                   ".revision_model", ".store_io"},
+    P10_REVIEW_VIEW: {".attention_model", ".attention_store", ".cross_rules", ".p9_view", ".profile_model",
+                      ".profile_store", ".revision_model", ".store_io"},
+    f"{PHASE10_PACKAGE}/personal_projection.py": {".review_view"},
+    P10_ADMIN_INIT: {".authority_stores", ".store_io"},
+    P10_LOCAL_CLI: {".admin_init", ".decisions", ".executor", ".personal_projection", ".review_view"},
+}
+#: A1 の adapter（`p9_view`）を使ってよい Phase 10 の file（完全一致）。P9 の情報はこの経路だけ
+SANCTIONED_P10_P9_VIEW_IMPORTERS: Mapping[str, Set[str]] = {
+    P10_EXECUTOR: {"P9ViewError", "read_p9_private_snapshot"},
+    P10_REVIEW_VIEW: {"P9ViewError", "read_p9_private_snapshot"},
 }
 #: 物理的な書き込み ・初期化の私的な関数（store_io）を import してよい file（完全一致 ・coordinator だけ）
 SANCTIONED_P10_PRIVATE_WRITER_IMPORTS: Mapping[str, Set[str]] = {P10_AUTHORITY_STORES: {"_append_line",
@@ -153,6 +181,8 @@ def only_phase10_registration(path: str, anchored: str, current: str) -> bool:
 
 __all__ = ["ADDITION_STATUSES", "P10_BASE", "P10_P9_VIEW", "PHASE10_A1_RUNTIME", "PHASE10_A2_RUNTIME", "PHASE10_DOCS",
            "PHASE10_A3_RUNTIME", "PHASE10_PACKAGE", "PHASE10_RUNTIME", "PHASE10_TESTS", "PHASE10_TEST_REGISTRATION",
-           "P10_AUTHORITY_STORES", "P10_STORE_IO", "SANCTIONED_P10_A2_MODULES", "SANCTIONED_P10_A3_MODULES",
+           "P10_ADMIN_INIT", "P10_AUTHORITY_STORES", "P10_EXECUTOR", "P10_LOCAL_CLI", "P10_REVIEW_VIEW", "P10_STORE_IO",
+           "PHASE10_A4_RUNTIME", "SANCTIONED_P10_A2_MODULES", "SANCTIONED_P10_A3_MODULES", "SANCTIONED_P10_A4_MODULES",
+           "SANCTIONED_P10_P9_VIEW_IMPORTERS",
            "SANCTIONED_P10_CORE_IMPORTS", "SANCTIONED_P10_P9_IMPORTERS", "SANCTIONED_P10_PRIVATE_WRITER_IMPORTS",
            "SANCTIONED_P10_P9_IMPORTS", "is_phase10_addition", "only_phase10_registration", "registration_diff"]

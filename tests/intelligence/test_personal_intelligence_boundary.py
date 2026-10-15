@@ -1,4 +1,4 @@
-"""P10-A1 ・A2 ・A3 — Phase 10（Personal Intelligence）の境界の guard。
+"""P10-A1 〜 A4 — Phase 10（Personal Intelligence）の境界の guard。
 
 - registry の完全一致 ・P10_BASE 以後の面は登録した P10 の追加だけ ・凍結の P7 ／ P8 ／ P9 の test の差分は宣言した登録の行だけ。
 - P9 runtime は凍結 anchor `P9_A5` と ・P8 runtime は `P8_B5C` と byte 一致 ・P7 runtime は P10_BASE と不変。
@@ -8,6 +8,8 @@
 - A2 の純な model は package の中と `..core` の id ・時刻の補助だけを import する（Phase 9 ・P8 ・`p9_view` ・file の入出力なし）。
 - A3 の store: 物理的な書き込み（open ・write ・flush ・fsync ・mkdir）は `store_io` だけ（追記 ・排他の作成の mode だけ）。私的な
   書き込み ／ 初期化の関数を import するのは coordinator だけ。個々の store に追記 ・初期化の API は無い。
+- A4: 新しい authority の revision を作るのは実行器だけ（直列化は永続の記録の復元だけ）・追記の経路を呼ぶのも実行器だけ ・
+  初期化を呼ぶのは管理の初期化だけ ・`p9_view` を使うのは実行器と見直しの view だけ ・CLI の書き込みは標準出力の stream だけ。
 """
 from __future__ import annotations
 
@@ -19,8 +21,11 @@ from pathlib import Path
 from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
-from tests.intelligence.phase10_runtime_registry import (P10_AUTHORITY_STORES, P10_BASE, P10_P9_VIEW, P10_STORE_IO,
+from tests.intelligence.phase10_runtime_registry import (P10_ADMIN_INIT, P10_AUTHORITY_STORES, P10_BASE, P10_EXECUTOR,
+                                                         P10_LOCAL_CLI, P10_P9_VIEW, P10_REVIEW_VIEW, P10_STORE_IO,
                                                          PHASE10_A1_RUNTIME, PHASE10_A2_RUNTIME, PHASE10_A3_RUNTIME,
+                                                         PHASE10_A4_RUNTIME, SANCTIONED_P10_A4_MODULES,
+                                                         SANCTIONED_P10_P9_VIEW_IMPORTERS,
                                                          PHASE10_DOCS, PHASE10_PACKAGE, PHASE10_RUNTIME,
                                                          PHASE10_TEST_REGISTRATION, PHASE10_TESTS,
                                                          SANCTIONED_P10_A2_MODULES, SANCTIONED_P10_A3_MODULES,
@@ -35,11 +40,13 @@ PACKAGE_DIR = REPO_ROOT / PHASE10_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md"
 A2_CONTRACT_DOC = "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md"
 A3_CONTRACT_DOC = "docs/databank/PHASE10_A3_PROFILE_ATTENTION_STORES.md"
+A4_CONTRACT_DOC = "docs/databank/PHASE10_A4_EXECUTOR_REVIEW_VIEW.md"
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "docs/v2", "main.py",
                   "requirements.txt", "pyproject.toml")
 STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "enum", "json", "re", "typing"}
-#: store_io だけの追加の stdlib（sha256 ・fsync ・path）
-STORE_IO_STDLIB = {"hashlib", "os", "pathlib"}
+#: file ごとの追加の stdlib（store_io: sha256 ・fsync ・path ／ 管理の初期化: path ／ CLI: 引数 ・標準出力 ・decision の file）
+EXTRA_STDLIB = {P10_STORE_IO: {"hashlib", "os", "pathlib"}, P10_ADMIN_INIT: {"pathlib"},
+                P10_LOCAL_CLI: {"argparse", "pathlib", "sys"}}
 FORBIDDEN_MODULE_PARTS = ("screener_intelligence", "jquants", "predictions", "analysis", "report", "notifier",
                           "compass", "pages", "pwa", "llm", "anthropic", "openai", "http", "urllib", "requests",
                           "socket", "ssl", "subprocess", "authority_stores", "executor", "local_cli", "decision_model",
@@ -57,10 +64,13 @@ FORBIDDEN_COMPOUNDS = ("target_price", "target_return", "target_weight", "price_
                        "risk_score", "risk_category", "position_size")
 P9_STORE_OPENERS = {"WatchlistStore", "ThesisStore"}
 #: `.open(...)` の規則（file → 受け手の名前の集合 ／ store_io は mode の文字列）。他の file に `.open` は無い
-OPEN_RECEIVERS = {P10_P9_VIEW: P9_STORE_OPENERS, P10_AUTHORITY_STORES: {"ProfileStore", "AttentionStore", "cls"}}
+OPEN_RECEIVERS = {P10_P9_VIEW: P9_STORE_OPENERS, P10_AUTHORITY_STORES: {"ProfileStore", "AttentionStore", "cls"},
+                  P10_EXECUTOR: {"PersonalAuthorityStores"}, P10_ADMIN_INIT: {"PersonalAuthorityStores"},
+                  P10_REVIEW_VIEW: {"ProfileStore", "AttentionStore"}}
 STORE_IO_OPEN_MODES = {"ab", "xb"}                                                # 追記 ・排他の作成だけ（切り詰め ・上書きなし）
 #: 禁止の名前のうち file ごとに許すもの（store_io の物理的な書き込み ・coordinator の私的な追記の呼び出し）
-NAME_ALLOWANCES = {P10_STORE_IO: {"write", "flush", "fsync", "mkdir"}, P10_AUTHORITY_STORES: {"_append_line"}}
+NAME_ALLOWANCES = {P10_STORE_IO: {"write", "flush", "fsync", "mkdir"}, P10_AUTHORITY_STORES: {"_append_line"},
+                   P10_ADMIN_INIT: {"initialize"}, P10_LOCAL_CLI: {"write"}}
 
 
 def _git(*args: str) -> str:
@@ -94,7 +104,10 @@ def test_p10_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
         "attention_model", "cross_rules", "profile_model", "revision_model"))
     assert PHASE10_A3_RUNTIME == tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
         "attention_store", "authority_stores", "profile_store", "serialization", "store_io"))
-    assert PHASE10_RUNTIME == tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME + PHASE10_A3_RUNTIME))
+    assert PHASE10_A4_RUNTIME == tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in (
+        "admin_init", "decisions", "executor", "local_cli", "personal_projection", "review_view"))
+    assert PHASE10_RUNTIME == tuple(sorted(PHASE10_A1_RUNTIME + PHASE10_A2_RUNTIME + PHASE10_A3_RUNTIME
+                                           + PHASE10_A4_RUNTIME))
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE10_RUNTIME}
     for path in (*PHASE10_RUNTIME, *PHASE10_TESTS, *PHASE10_DOCS):
         assert (REPO_ROOT / path).is_file(), path
@@ -139,7 +152,7 @@ def test_p10_a1_earlier_phase_runtime_is_byte_identical_to_its_freeze_anchor() -
 def test_p10_a1_imports_are_exactly_the_sanctioned_read_only_phase9_surfaces() -> None:
     for path in PHASE10_RUNTIME:
         relative, absolute = _imports(REPO_ROOT / path)
-        allowed = STDLIB_IMPORTS | (STORE_IO_STDLIB if path == P10_STORE_IO else set())
+        allowed = STDLIB_IMPORTS | EXTRA_STDLIB.get(path, set())
         assert absolute <= allowed, absolute - allowed
         if path == P10_P9_VIEW:
             assert relative == SANCTIONED_P10_P9_IMPORTS
@@ -149,12 +162,14 @@ def test_p10_a1_imports_are_exactly_the_sanctioned_read_only_phase9_surfaces() -
                 assert module.startswith(".") and not module.startswith("..") or (
                     names == SANCTIONED_P10_CORE_IMPORTS[module]), (path, module)
                 assert module != ".p9_view", path                                         # A2 は P9 を読まない
-        elif path in SANCTIONED_P10_A3_MODULES:                                         # A3: package の中だけ
-            assert set(relative) == SANCTIONED_P10_A3_MODULES[path], path
+        elif path in SANCTIONED_P10_A3_MODULES or path in SANCTIONED_P10_A4_MODULES:     # A3 ・A4: package の中だけ
+            assert set(relative) == {**SANCTIONED_P10_A3_MODULES, **SANCTIONED_P10_A4_MODULES}[path], path
             assert all(m.startswith(".") and not m.startswith("..") for m in relative), path
+            if ".p9_view" in relative:                                                   # A1 の adapter の使い手
+                assert relative[".p9_view"] == SANCTIONED_P10_P9_VIEW_IMPORTERS[path], path
         else:
             assert path == f"{PHASE10_PACKAGE}/__init__.py" and relative == {} and absolute == set()   # docstring だけ
-        for module in (*relative, *absolute):
+        for module in (*[m for m in relative if m.startswith("..")], *absolute):     # package の外（中は上で完全一致）
             assert not any(part in module for part in FORBIDDEN_MODULE_PARTS), module
         private = {n for names in relative.values() for n in names if n.startswith("_")}
         assert private == SANCTIONED_P10_PRIVATE_WRITER_IMPORTS.get(path, set()), (path, private)
@@ -258,8 +273,9 @@ def test_p10_a3_only_store_io_writes_and_only_the_coordinator_can_append_or_init
         attrs = {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)}
         writes = attrs & {"write", "flush", "fsync", "mkdir", "read_bytes", "stat", "chmod", "replace", "rmdir",
                           "symlink_to", "link_to", "hardlink_to", "write_text", "write_bytes"}
-        assert writes <= ({"write", "flush", "fsync", "mkdir", "read_bytes", "stat"} if path == P10_STORE_IO
-                          else set()), (path, writes)
+        allowed = {P10_STORE_IO: {"write", "flush", "fsync", "mkdir", "read_bytes", "stat"},
+                   P10_LOCAL_CLI: {"write", "read_bytes"}}.get(path, set())              # CLI: 標準出力 ・decision の file
+        assert writes <= allowed, (path, writes)
         defined = {n.name for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.ClassDef))}
         if path != P10_STORE_IO:
             assert not {"_append_line", "_initialize_files"} & defined, path
@@ -282,4 +298,44 @@ def test_p10_a3_the_contract_records_the_required_clauses() -> None:
                    "profile_authority.jsonl", "attention_authority.jsonl", "personal_intelligence/", "_append_line",
                    "CONCURRENT_MODIFICATION", "REUSED", "CHAIN_HEAD_MISMATCH", "REVISION_CONFLICT", "fsync",
                    "check_personal_world", "A4", "Phase 10 の凍結ではない", "P10-OBS-025"):
+        assert clause in text, clause
+
+
+def test_p10_a4_only_the_executor_constructs_or_appends_authority_and_only_admin_init_initializes() -> None:
+    assert set(SANCTIONED_P10_A4_MODULES) == set(PHASE10_A4_RUNTIME)
+    constructors = {"PersonalProfileRevision", "AttentionRevision", "derive_profile_id", "derive_attention_id",
+                    "replace"}
+    for path in PHASE10_A3_RUNTIME + PHASE10_A4_RUNTIME:
+        tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+        calls = {(n.func.id if isinstance(n.func, ast.Name) else n.func.attr) for n in ast.walk(tree)
+                 if isinstance(n, ast.Call) and isinstance(n.func, (ast.Name, ast.Attribute))}
+        attrs = {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)}
+        made = calls & constructors
+        if path == P10_EXECUTOR:
+            assert made == constructors - {"replace"}, made                                # 新しい authority は実行器だけ
+        elif path == f"{PHASE10_PACKAGE}/serialization.py":
+            assert made == {"PersonalProfileRevision", "AttentionRevision"}, made          # 永続の記録の復元だけ
+        else:
+            assert not made, (path, made)
+        appends = attrs & {"append_profile_revision", "append_attention_revision"}
+        assert not appends or path == P10_EXECUTOR, (path, appends)                       # 追記の経路は実行器だけ
+        assert "initialize" not in attrs or path == P10_ADMIN_INIT, path                   # 初期化は管理の操作だけ
+    for path in PHASE10_RUNTIME:                                                        # P9 の情報は A1 の adapter だけ
+        relative, _ = _imports(REPO_ROOT / path)
+        assert (".p9_view" in relative) == (path in SANCTIONED_P10_P9_VIEW_IMPORTERS), path
+    cli = (REPO_ROOT / P10_LOCAL_CLI).read_text(encoding="utf-8")
+    tree = ast.parse(cli)
+    writes = [n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "write"]
+    assert len(writes) == 1 and isinstance(writes[0].value, ast.Name) and writes[0].value.id == "stream"
+    for token in ("environ", "getenv", "default=", "now(", "today("):
+        assert token not in cli, token
+
+
+def test_p10_a4_the_contract_records_the_required_clauses() -> None:
+    text = (REPO_ROOT / A4_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in ("apply_decision", "dry_run_decision", "read_personal_review", "personal_safe_projection",
+                   "init_personal_root", "PARTIAL_LAYOUT", "STALE_AUTHORITY_HEAD", "P9_TARGET_ABSENT",
+                   "P9_TARGET_KIND_MISMATCH", "P9_REVISION_STALE_OR_MISMATCH", "UNENCODABLE_TEXT",
+                   "read_p9_private_snapshot", "EXCLUDED_BY_PROFILE", "FOCUS", "NORMAL", "MUTE", "A5",
+                   "Phase 10 の凍結ではない", "P10-OBS-033"):
         assert clause in text, clause

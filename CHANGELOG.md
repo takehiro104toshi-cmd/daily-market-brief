@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.03 (2026-10-14) — Phase 10 P10-A4 human decision executor + P9 validation + personalized review view
+
+人の決定の型（7 つ）と実行器（`apply_decision` ・`dry_run_decision`）を足した。人の文は revision を作る前に UTF-8 を検査し、
+`expected_head_revision_id` で古い先頭を拒み（`STALE_AUTHORITY_HEAD`）、正確な再試行は `REUSED`。Attention は A1 の
+`read_p9_private_snapshot` だけで対象の存在 ・種類 ・その時点の revision の一致を検査する。決定論の個人の見直しの view（期日が主 ・
+同じ日の中だけ FOCUS → NORMAL → MUTE ・除外 ／ MUTE を消さない）・件数だけの安全な投影 ・部分の配置を拒む管理の初期化 ・private ／
+local の CLI。A1 〜 A3 の runtime ・凍結の P7 ／ P8 ／ P9 は不変。Phase 10 の凍結ではない。
+
+追加
+・`src/intelligence/personal_intelligence/decisions.py`
+・`src/intelligence/personal_intelligence/executor.py`
+・`src/intelligence/personal_intelligence/review_view.py`
+・`src/intelligence/personal_intelligence/personal_projection.py`
+・`src/intelligence/personal_intelligence/admin_init.py`
+・`src/intelligence/personal_intelligence/local_cli.py`
+・`tests/intelligence/test_personal_intelligence_executor.py`
+・`tests/intelligence/test_personal_intelligence_review_view.py`
+・`tests/intelligence/test_personal_intelligence_cli.py`
+・`docs/databank/PHASE10_A4_EXECUTOR_REVIEW_VIEW.md`
+改善
+・`tests/intelligence/phase10_runtime_registry.py` ・`tests/intelligence/test_personal_intelligence_boundary.py`（A4 の登録 ・
+  authority の作成 ／ 追記 ／ 初期化 ／ P9 の経路の guard）
+修正
+・なし
+
 ## v6.02 (2026-10-14) — Phase 10 P10-A3 private profile / attention authority stores
 
 Personal Profile と Attention の private ・local ・追記専用の authority の store を足した（`<P10 の root>/personal_intelligence/` の
