@@ -4,6 +4,22 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.04 (2026-10-16) — Phase 10 P10-A5 Windows preflight test-only fix（test だけ）
+
+P10-A5 の Windows の preflight で Phase 10 の境界の test の 2 つが失敗した。原因は test の補助 `_git()` の
+`subprocess.run(text=True)` が git の出力を locale の符号化（日本語の Windows は cp932）で復号し、UTF-8 の blob の `git show` が
+`UnicodeDecodeError` になること（CRLF ではない。CRLF の checkout だけでは失敗しないことを再現で確認）。`_git()` を UTF-8 の厳密な
+復号にし、byte の一致の guard を git の object の id の比較（anchor の blob と、git の checkout の正規化で hash した worktree の
+file）に替えた（checkout の改行の変換だけを除き、内容の違い ・余分な CR は検出する）。UTF-8 mode でない Python と CRLF の checkout の
+回帰の test を足した。runtime ・凍結の P7 ／ P8 ／ P9 の test は不変。新しい semantic ／ runtime の anchor ではない。
+
+追加
+・なし
+改善
+・なし
+修正
+・`tests/intelligence/test_personal_intelligence_boundary.py`（locale に依らない git の読み ・git の object の id の一致 ・回帰の test）
+
 ## v6.03 (2026-10-14) — Phase 10 P10-A4 human decision executor + P9 validation + personalized review view
 
 人の決定の型（7 つ）と実行器（`apply_decision` ・`dry_run_decision`）を足した。人の文は revision を作る前に UTF-8 を検査し、

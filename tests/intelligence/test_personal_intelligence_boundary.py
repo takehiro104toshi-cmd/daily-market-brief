@@ -74,7 +74,18 @@ NAME_ALLOWANCES = {P10_STORE_IO: {"write", "flush", "fsync", "mkdir"}, P10_AUTHO
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, text=True, check=True).stdout
+    """git の出力を UTF-8 で厳密に復号する（`text=True` は locale の符号化 ＝ Windows の cp932 等で復号し、UTF-8 の
+    blob の `git show` が `UnicodeDecodeError` になる ・P10-A5 の Windows の preflight）。改行は universal newline。"""
+    return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, encoding="utf-8", errors="strict",
+                          check=True).stdout
+
+
+def _blob_ids(anchor: str, paths) -> tuple:
+    """(anchor の git の object の id, worktree の file を git の checkout の正規化（autocrlf ・attributes）で hash した id)。
+    checkout の改行の変換だけを除き、内容の byte の違いは全て検出する。"""
+    anchored = tuple(_git("rev-parse", *(f"{anchor}:{path}" for path in paths)).split())
+    current = tuple(_git("hash-object", "--", *paths).split())
+    return anchored, current
 
 
 def _changes(*args: str) -> set:
@@ -139,9 +150,10 @@ def test_p10_a1_since_the_base_only_registered_phase10_files_and_declared_regist
 
 def test_p10_a1_earlier_phase_runtime_is_byte_identical_to_its_freeze_anchor() -> None:
     assert P9_A5 == "4c1970174f678245b569fdbb812a8a6ced52410b" and len(PHASE9_RUNTIME) == 18
-    for anchor, runtime in ((P9_A5, PHASE9_RUNTIME), (P8_B5C, PHASE8_RUNTIME)):
-        for path in runtime:
-            assert _git("show", f"{anchor}:{path}") == (REPO_ROOT / path).read_text(encoding="utf-8"), path
+    for anchor, runtime in ((P9_A5, PHASE9_RUNTIME), (P8_B5C, PHASE8_RUNTIME)):     # git の object の id の一致
+        anchored, current = _blob_ids(anchor, runtime)
+        assert len(anchored) == len(current) == len(runtime)
+        assert [p for p, a, c in zip(runtime, anchored, current) if a != c] == []
     assert _git("diff", "--name-status", P10_BASE, "--", *PHASE7_RUNTIME, *PHASE8_RUNTIME, *PHASE9_RUNTIME) == ""
     assert _git("status", "--porcelain", "--", *PHASE7_RUNTIME, *PHASE8_RUNTIME, *PHASE9_RUNTIME) == ""
 
@@ -339,3 +351,36 @@ def test_p10_a4_the_contract_records_the_required_clauses() -> None:
                    "read_p9_private_snapshot", "EXCLUDED_BY_PROFILE", "FOCUS", "NORMAL", "MUTE", "A5",
                    "Phase 10 の凍結ではない", "P10-OBS-033"):
         assert clause in text, clause
+
+
+def test_p10_windows_portability_git_guards_are_locale_and_checkout_newline_independent(tmp_path: Path) -> None:
+    """P10-A5 の Windows の preflight の回帰: locale が UTF-8 でない Python（Windows の cp932 等）と CRLF の checkout。"""
+    anchor_path = PHASE9_RUNTIME[0]
+    raw = subprocess.run(["git", "show", f"{P9_A5}:{anchor_path}"], cwd=REPO_ROOT, capture_output=True,
+                         check=True).stdout
+    assert any(byte >= 0x80 for byte in raw)                                          # 非 ASCII（日本語）の blob
+    assert _git("show", f"{P9_A5}:{anchor_path}") == raw.decode("utf-8").replace("\r\n", "\n")
+    with __import__("pytest").raises(UnicodeDecodeError):
+        raw.decode("cp932")                                                            # Windows の locale の既定では読めない
+    # 同じ 2 つの guard を UTF-8 mode でない Python（ASCII の locale）で走らせる（Windows の条件の再現）
+    env = {k: v for k, v in __import__("os").environ.items() if k not in ("PYTHONUTF8", "LC_ALL", "LC_CTYPE", "LANG")}
+    env.update(PYTHONUTF8="0", LC_ALL="C", PYTHONIOENCODING="utf-8")
+    node = "tests/intelligence/test_personal_intelligence_boundary.py::"
+    result = subprocess.run([__import__("sys").executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                             node + "test_p10_a1_since_the_base_only_registered_phase10_files_and_declared_registration_changed",
+                             node + "test_p10_a1_earlier_phase_runtime_is_byte_identical_to_its_freeze_anchor"],
+                            cwd=REPO_ROOT, env=env, capture_output=True, check=False)
+    assert result.returncode == 0, result.stdout.decode("utf-8", "replace")[-2000:]
+    # CRLF の checkout は git の正規化で同じ object（意味の byte の一致）・内容の 1 byte の違い ／ 正規化なしの CR は検出する
+    crlf = tmp_path / "crlf_copy.py"
+    crlf.write_bytes(raw.replace(b"\n", b"\r\n"))
+    anchored = _git("rev-parse", f"{P9_A5}:{anchor_path}").strip()
+
+    def hashed(path: Path, autocrlf: str) -> str:
+        return _git("-c", f"core.autocrlf={autocrlf}", "hash-object", f"--path={anchor_path}", str(path)).strip()
+
+    assert hashed(crlf, "true") == anchored                                            # Windows の checkout の変換だけ
+    assert hashed(crlf, "false") != anchored                                           # 正規化なしの CR は違い
+    changed = tmp_path / "changed_copy.py"
+    changed.write_bytes(raw.replace(b"\n", b"\r\n") + b"# changed\r\n")
+    assert hashed(changed, "true") != anchored                                         # 意味の違いは検出
