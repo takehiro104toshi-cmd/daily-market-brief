@@ -4,6 +4,23 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.07 (2026-10-17) — Phase 11 P11-A2 loopback local server
+
+P11-A1 の governed な read の adapter を loopback（`127.0.0.1` だけ）・read-only ・決定論の local な HTTP で出す `local_server.py` を
+足した。明示の root ・body の JSON の `at` ／ `as_of_date` だけ ・Host の完全一致 ・Fetch Metadata ・CORS なし ・`no-store` ・
+`Date` ／ `Server` なし ・P11-A1 の正準の byte をそのまま ・cache なし ・`JQUANTS_API_KEY` が在れば起動を拒む ・log なし。browser の
+UI ・PWA の shell ・書き込みは無い。A1 の runtime ・凍結の P7 〜 P10 ・公開の Pages ／ report ／ Cloudflare は不変。
+
+追加
+・`src/intelligence/personal_ui/local_server.py`
+・`tests/intelligence/test_personal_ui_server.py`
+・`docs/databank/PHASE11_A2_LOOPBACK_SERVER.md`
+改善
+・`tests/intelligence/phase11_runtime_registry.py` ・`tests/intelligence/test_personal_ui_boundary.py`（A2 の登録 ・server の import ／
+  名前の許し ・公開 ／ Cloudflare の面の不変の guard）
+修正
+・なし
+
 ## v6.06 (2026-10-17) — Phase 11 P11-A1 governed read adapter + UI model
 
 Phase 11（PWA ／ 利用者との対話の面 ・read-only）の最初の実装。凍結の Phase 10 を governed な read の API（見直しの view ・安全な投影 ・

@@ -1,4 +1,4 @@
-"""P11-A1 — Phase 11（personal_ui）の境界の guard。
+"""P11-A1 ・A2 — Phase 11（personal_ui）の境界の guard。
 
 - registry の完全一致 ・P11_BASE 以後の面は登録した P11 の追加だけ ・凍結の P7 ／ P8 ／ P9 ／ P10 の test の差分は宣言した登録の行だけ。
 - P7 〜 P10 の runtime は凍結 anchor と git の object で一致（locale ・改行に依らない）。
@@ -6,6 +6,9 @@
   snapshot ・P9 の store ・P8 ・J-Quants ・公開 ・通知 ・network ・LLM は無い）。stdlib も狭い。書き込み ・環境変数 ・時計なし。
 - production runtime closure の外 ・公開の Pages の workflow ／ script ／ 公開の report の code から参照されない ・公開の report の code は
   P8 〜 P11 の package を import しない。
+- A2 の local server は A1 の公開の API（`read_ui_model` ・UI model）だけを使い、Phase 10 ／ 9 を直接 import しない。bind の文字は
+  `127.0.0.1` だけ ・CORS なし ・outbound の client（requests ・urllib ・http.client）なし。予期しない例外を `INTERNAL_ERROR` に写す
+  1 つの広い except だけを許す。公開の report ・Cloudflare ・Pages の workflow は `P11_BASE` 以後も不変。
 """
 from __future__ import annotations
 
@@ -18,20 +21,28 @@ from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_PACKAGE, PHASE10_RUNTIME
-from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_ADAPTER, P11_BASE,
-                                                         P11_UI_MODEL, PHASE11_A1_RUNTIME, PHASE11_DOCS,
-                                                         PHASE11_PACKAGE, PHASE11_RUNTIME, PHASE11_TEST_REGISTRATION,
-                                                         PHASE11_TESTS, SANCTIONED_P11_MODULES,
-                                                         SANCTIONED_P11_P10_IMPORTERS, SANCTIONED_P11_P10_IMPORTS,
+from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_A1, P11_ADAPTER, P11_BASE,
+                                                         P11_LOCAL_SERVER, P11_UI_MODEL, PHASE11_A1_RUNTIME,
+                                                         PHASE11_A2_RUNTIME, PHASE11_DOCS, PHASE11_PACKAGE,
+                                                         PHASE11_RUNTIME, PHASE11_TEST_REGISTRATION, PHASE11_TESTS,
+                                                         SANCTIONED_P11_MODULES, SANCTIONED_P11_P10_IMPORTERS,
+                                                         SANCTIONED_P11_P10_IMPORTS, SANCTIONED_P11_SERVER_STDLIB,
                                                          only_phase11_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE11_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md"
+A2_CONTRACT_DOC = "docs/databank/PHASE11_A2_LOOPBACK_SERVER.md"
+#: `P11_BASE` 以後も不変であるべき公開 ／ 外部の面（Pages の workflow ・公開の report ・Cloudflare ・通知）
+PUBLIC_FROZEN = (".github/workflows", "src/report/html_builder.py", "cloudflare", "notifiers", "docs/pages",
+                 "scripts/p43b2c_graft_v2.py", "scripts/p43b2c_pages_manifest.py")
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
                   "pyproject.toml", "cloudflare", "notifiers", "src/report")
 STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "json", "re", "typing"}
+#: file ごとの禁止の名前の許し（server: 環境変数の有無 ・socket への書き込み）・広い except の許し（server の INTERNAL_ERROR だけ）
+NAME_ALLOWANCES = {P11_LOCAL_SERVER: {"environ", "write"}}
+BROAD_EXCEPT_ALLOWED = {P11_LOCAL_SERVER: 1}
 FORBIDDEN_NAMES = {"open", "write", "write_text", "write_bytes", "read_text", "read_bytes", "mkdir", "unlink", "remove",
                    "rename", "environ", "getenv", "now", "today", "utcnow", "print", "input", "sleep", "eval", "exec",
                    "getattr_static", "setattr", "random", "urandom", "uuid4", "system", "popen", "initialize",
@@ -90,7 +101,13 @@ def test_p11_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
     assert P11_BASE == "d01f6bc01fba783e77cc3a623745b8b033883e1a"
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
     assert PHASE11_A1_RUNTIME == (f"{PHASE11_PACKAGE}/__init__.py", P11_ADAPTER, P11_UI_MODEL)
-    assert PHASE11_RUNTIME == tuple(sorted(PHASE11_A1_RUNTIME)) and len(PHASE11_RUNTIME) == 3
+    assert PHASE11_A2_RUNTIME == (P11_LOCAL_SERVER,)
+    assert PHASE11_RUNTIME == tuple(sorted(PHASE11_A1_RUNTIME + PHASE11_A2_RUNTIME)) and len(PHASE11_RUNTIME) == 4
+    assert P11_A1 == "da806753868da597d50875300064722fd12e4bb8"
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_A1, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert _git("diff", "--name-status", P11_A1, "HEAD", "--", *PHASE11_A1_RUNTIME) == ""   # A1 の runtime は A1 の commit のまま
+    assert _git("diff", "--cached", "--name-status", P11_A1, "--", *PHASE11_A1_RUNTIME) == ""   # index も
+    assert _git("status", "--porcelain", "--", *PHASE11_A1_RUNTIME) == ""                       # worktree も
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE11_RUNTIME}
     for path in (*PHASE11_RUNTIME, *PHASE11_TESTS, *PHASE11_DOCS):
         assert (REPO_ROOT / path).is_file(), path
@@ -142,39 +159,55 @@ def test_p11_a1_frozen_phase_runtime_is_object_identical_to_its_anchor() -> None
 def test_p11_a1_imports_are_exactly_the_sanctioned_governed_read_surfaces() -> None:
     for path in PHASE11_RUNTIME:
         relative, absolute = _imports(REPO_ROOT / path)
-        assert absolute <= STDLIB_IMPORTS, (path, absolute - STDLIB_IMPORTS)
+        allowed_stdlib = STDLIB_IMPORTS | (SANCTIONED_P11_SERVER_STDLIB if path == P11_LOCAL_SERVER else set())
+        assert absolute <= allowed_stdlib, (path, absolute - allowed_stdlib)
         assert set(relative) == SANCTIONED_P11_MODULES[path], (path, set(relative))
         if path == P11_ADAPTER:
             assert {m: n for m, n in relative.items() if m.startswith("..")} == SANCTIONED_P11_P10_IMPORTS
             assert relative[".ui_model"] == {"UiModel", "UiReadError", "UiReviewEntry"}
-        for module in (*relative, *absolute):                                          # module の部品の完全一致で禁止
+        if path == P11_LOCAL_SERVER:                                                   # A1 の公開の API だけ
+            assert relative[".p10_read_adapter"] == {"ADAPTER_RULES_VERSION", "read_ui_model"}
+            assert relative[".ui_model"] == {"UI_ERROR_SCHEMA_VERSION", "UI_MODEL_SCHEMA_VERSION", "UiReadError",
+                                             "canonical_json", "ui_model_json_bytes"}
+        for module in (*relative, *(m for m in absolute if m not in allowed_stdlib)):   # module の部品の完全一致で禁止
             components = set(module.lstrip(".").split("."))
             assert not components & set(FORBIDDEN_P11_IMPORT_PARTS), (path, module)
         assert not any(n.startswith("_") for names in relative.values() for n in names)
         source = (REPO_ROOT / path).read_text(encoding="utf-8")
-        for token in ("JQUANTS_API_KEY", "x-api-key", "api.jquants.com", "://", "config.yaml", "watchlist:",
-                      "AuthorityStores", "read_p9_private_snapshot", "executor", "store_io"):
+        for token in ("x-api-key", "api.jquants.com", "config.yaml", "watchlist:", "AuthorityStores",
+                      "read_p9_private_snapshot", "executor", "store_io", "personal_intelligence."
+                      if path == P11_LOCAL_SERVER else "\x00", "0.0.0.0", "Access-Control", "urlopen", "requests.",
+                      "HTTPConnection(", "create_connection"):
             assert token not in source, (path, token)
+        if path != P11_LOCAL_SERVER:
+            assert "JQUANTS_API_KEY" not in source and "://" not in source, path
+        else:
+            assert source.count('"JQUANTS_API_KEY"') == 1 and "http://127.0.0.1" in source   # 有無の検査（定数 1 つ）・自分の origin だけ
+            assert "os.environ.get(CREDENTIAL_VARIABLE" in source and "environ[" not in source   # 値は読まない
 
 
 def test_p11_a1_the_runtime_never_writes_reads_files_env_or_clock_and_has_no_investment_vocabulary() -> None:
     for path in PHASE11_RUNTIME:
         tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+        banned = FORBIDDEN_NAMES - NAME_ALLOWANCES.get(path, set())
         words = set()
         identifiers = set()
+        broad = 0
         for node in ast.walk(tree):
             if isinstance(node, ast.Name):
-                assert node.id not in FORBIDDEN_NAMES, (path, node.id)
+                assert node.id not in banned, (path, node.id)
                 identifiers.add(node.id)
             elif isinstance(node, ast.Attribute):
-                assert node.attr not in FORBIDDEN_NAMES, (path, node.attr)
+                assert node.attr not in banned, (path, node.attr)
                 identifiers.add(node.attr)
             elif isinstance(node, ast.arg):
                 identifiers.add(node.arg)
             elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                 identifiers.add(node.name)
-            assert not (isinstance(node, ast.ExceptHandler) and (node.type is None or (
-                isinstance(node.type, ast.Name) and node.type.id in ("Exception", "BaseException")))), "broad except"
+            if isinstance(node, ast.ExceptHandler) and (node.type is None or (
+                    isinstance(node.type, ast.Name) and node.type.id in ("Exception", "BaseException"))):
+                broad += 1
+        assert broad == BROAD_EXCEPT_ALLOWED.get(path, 0), (path, "broad except")       # server の INTERNAL_ERROR だけ
         for name in identifiers:
             words |= {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name)}
         assert not words & FORBIDDEN_WORDS, (path, words & FORBIDDEN_WORDS)
@@ -197,6 +230,27 @@ def test_p11_a1_is_outside_production_pages_and_public_code_and_public_code_impo
         if PACKAGE_DIR in path.parents:
             continue
         assert "personal_ui" not in path.read_text(encoding="utf-8", errors="replace"), path
+
+
+def test_p11_a2_public_report_pages_and_cloudflare_surfaces_are_unchanged_since_the_base() -> None:
+    assert _git("diff", "--name-status", P11_BASE, "HEAD", "--", *PUBLIC_FROZEN) == ""
+    assert _git("diff", "--cached", "--name-status", P11_BASE, "--", *PUBLIC_FROZEN) == ""
+    assert _git("status", "--porcelain", "--", *PUBLIC_FROZEN) == ""
+    for path in _files_under(".github/workflows", "scripts", "cloudflare", "docs/pages"):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        assert "local_server" not in text and "personal_ui" not in text, path          # Pages ／ worker の入力に入らない
+    server = (REPO_ROOT / P11_LOCAL_SERVER).read_text(encoding="utf-8")
+    assert "<html" not in server.lower() and ".js" not in server and ".css" not in server   # static な file は A3
+
+
+def test_p11_a2_the_contract_records_the_required_clauses() -> None:
+    text = (REPO_ROOT / A2_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in ("127.0.0.1", "LocalServer", "/api/view", "/health", "Host", "Sec-Fetch-Site", "no-store",
+                   "CREDENTIAL_PRESENT", "INTERNAL_ERROR", "HOST_REJECTED", "FETCH_SITE_REJECTED", "Date",
+                   "ThreadingHTTPServer", "P11-OBS-027", "Phase 11 の凍結ではない", "localhost"):
+        assert clause in text, clause
+    for banned in ("p9wat_", "p10prf_", "human:", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
 
 
 def test_p11_a1_the_contract_records_the_required_clauses() -> None:

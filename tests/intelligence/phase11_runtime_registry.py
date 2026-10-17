@@ -1,4 +1,4 @@
-"""Phase 11（PWA ／ 利用者との対話の面）の登録済み runtime ・test ・文書の完全な一覧（P11-A1）。
+"""Phase 11（PWA ／ 利用者との対話の面）の登録済み runtime ・test ・文書の完全な一覧（P11-A1 ・A2）。
 
 - `P11_BASE` ＝ Phase 10 の凍結の記録の commit。P11-A1 はここから足す。
 - 凍結の Phase 7 ／ 8 ／ 9 ／ 10 の test に入れた登録の行は `PHASE11_TEST_REGISTRATION` に完全に列挙し、Phase 11 の guard
@@ -13,18 +13,25 @@ from typing import Mapping, Sequence, Set, Tuple
 
 #: P11 の基準（P10 の凍結の記録の commit）
 P11_BASE = "d01f6bc01fba783e77cc3a623745b8b033883e1a"
+#: P11-A1 の runtime の commit（後の phase の guard の登録のため。意味 ／ runtime の凍結 anchor ではない）
+P11_A1 = "da806753868da597d50875300064722fd12e4bb8"
 PHASE11_PACKAGE = "src/intelligence/personal_ui"
 #: P11-A1 で足した runtime（governed な read の adapter と UI model だけ。server ・UI ・SW ・書き込みなし）
 PHASE11_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE11_PACKAGE}/{name}.py" for name in (
     "__init__", "p10_read_adapter", "ui_model"))
-PHASE11_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE11_A1_RUNTIME))
+#: P11-A2 で足した runtime（loopback の local server だけ。browser の UI ・manifest ・SW ・static な file なし）
+PHASE11_A2_RUNTIME: Tuple[str, ...] = (f"{PHASE11_PACKAGE}/local_server.py",)
+PHASE11_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE11_A1_RUNTIME + PHASE11_A2_RUNTIME))
 PHASE11_TESTS: Tuple[str, ...] = ("tests/intelligence/phase11_runtime_registry.py",
                                   "tests/intelligence/test_personal_ui_adapter.py",
-                                  "tests/intelligence/test_personal_ui_boundary.py")
-PHASE11_DOCS: Tuple[str, ...] = ("docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md",)
+                                  "tests/intelligence/test_personal_ui_boundary.py",
+                                  "tests/intelligence/test_personal_ui_server.py")
+PHASE11_DOCS: Tuple[str, ...] = ("docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md",
+                                 "docs/databank/PHASE11_A2_LOOPBACK_SERVER.md")
 ADDITION_STATUSES = ("A", "??")
 P11_ADAPTER = f"{PHASE11_PACKAGE}/p10_read_adapter.py"
 P11_UI_MODEL = f"{PHASE11_PACKAGE}/ui_model.py"
+P11_LOCAL_SERVER = f"{PHASE11_PACKAGE}/local_server.py"
 #: 凍結 Phase 10 の governed な read の面（module → 名前。完全一致）。adapter 1 file だけが import する
 SANCTIONED_P11_P10_IMPORTS: Mapping[str, Set[str]] = {
     "..personal_intelligence.p9_view": {"P9ViewError", "read_p9_safe_view"},
@@ -37,7 +44,10 @@ SANCTIONED_P11_MODULES: Mapping[str, Set[str]] = {
     P11_ADAPTER: set(SANCTIONED_P11_P10_IMPORTS) | {".ui_model"},
     P11_UI_MODEL: set(),
     f"{PHASE11_PACKAGE}/__init__.py": set(),
+    P11_LOCAL_SERVER: {".p10_read_adapter", ".ui_model"},                           # A1 の公開の API だけ（P10 ・P9 は直接触れない）
 }
+#: local server だけに許す stdlib（loopback の server ・引数 ・環境変数の有無 ・標準出力）
+SANCTIONED_P11_SERVER_STDLIB: Set[str] = {"argparse", "http.server", "ipaddress", "os", "sys", "threading"}
 #: Phase 11 が import してはならない module の部品（凍結の store ・実行器 ・P9 ／ P8 ・J-Quants ・公開 ・通知 ・network ・LLM）
 FORBIDDEN_P11_IMPORT_PARTS: Tuple[str, ...] = (
     "profile_store", "attention_store", "authority_stores", "store_io", "serialization", "admin_init", "executor",
@@ -150,7 +160,8 @@ def only_phase11_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P11_IMPORT_PARTS", "P11_ADAPTER", "P11_BASE", "P11_UI_MODEL",
-           "PHASE11_A1_RUNTIME", "PHASE11_DOCS", "PHASE11_PACKAGE", "PHASE11_RUNTIME", "PHASE11_TESTS",
-           "PHASE11_TEST_REGISTRATION", "SANCTIONED_P11_MODULES", "SANCTIONED_P11_P10_IMPORTERS",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P11_IMPORT_PARTS", "P11_A1", "P11_ADAPTER", "P11_BASE", "P11_LOCAL_SERVER",
+           "P11_UI_MODEL", "PHASE11_A1_RUNTIME", "PHASE11_A2_RUNTIME", "PHASE11_DOCS", "PHASE11_PACKAGE",
+           "PHASE11_RUNTIME", "PHASE11_TESTS", "PHASE11_TEST_REGISTRATION", "SANCTIONED_P11_MODULES",
+           "SANCTIONED_P11_P10_IMPORTERS", "SANCTIONED_P11_SERVER_STDLIB",
            "SANCTIONED_P11_P10_IMPORTS", "is_phase11_addition", "only_phase11_registration", "registration_diff"]
