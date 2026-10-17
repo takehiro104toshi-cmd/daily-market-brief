@@ -8,11 +8,11 @@
 **日経平均の直近値は65,324.29円（前日比 +898.34 (+1.39%)）。**
 
 ## 2. 岡三ストラテジスト視点　★★★★★
-**Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models** ★★★☆☆
+**Microsoft, Shopify and 3 more AI stocks that are favorite Wall Street earnings plays** ★★★☆☆
 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 恩恵: 該当なし ／ 悪影響: 該当なし
 
-**Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal** ★★★☆☆
+**Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models** ★★★☆☆
 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 恩恵: 該当なし ／ 悪影響: 該当なし
 
@@ -98,9 +98,9 @@ NYダウが前日比-0.34%と下落したこと、VIX指数が19.99と落ち着�
 追い風1件 ／ 逆風1件
 「本日の金融関連ニュースは強弱まちまちです」
 
-**③半導体・電子部品** ★★★☆☆
+**③資源・エネルギー** ★★★☆☆
 追い風0件 ／ 逆風0件
-「本日の半導体・電子部品関連ニュースは強弱まちまちです」
+「本日の資源・エネルギー関連ニュースは強弱まちまちです」
 
 ## 7. 監視銘柄チェック　★★★★☆
 **日本株:**
