@@ -12,6 +12,8 @@ P10 ／ P9 の root → P11-A1 の adapter（`read_ui_model`）→ 本 server �
   守る）。CORS の header は出さない。
 - static な shell（P11-A3）: `/app/` の下の **allowlist の経路だけ**を、起動の時に package の `static/` から読んだ committed な byte の
   まま配る（directory の一覧 ・任意の file ・path の露出は無い）。`Cache-Control: no-cache` ・CSP（`'self'` だけ）・COOP。
+- 硬化（P11-A4）: Host ・Content-Length は 1 つだけ ・ASCII の数字だけ、body の読みの timeout は安全な 400、stdlib の
+  handle_error（stderr への traceback）は出さない、static な asset は symlink でない通常の file だけ。
 - 応答は P11-A1 の正準の byte をそのまま（再直列化しない）。header は固定（`Cache-Control: no-store` 他）。`Date` ・`Server` は出さない
   （`send_response_only`）。result の cache ・memo は無い（毎回 governed な read）。
 - 誤りは正準の JSON `{"code","detail","schema_version"}`。detail は大文字の code だけ。予期しない例外は `INTERNAL_ERROR`（traceback ・
@@ -65,12 +67,13 @@ STATIC_ROUTES: Mapping[str, Tuple[str, str]] = {
 STATIC_CACHE_CONTROL = "no-cache"
 CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; "
                            "manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; "
-                           "frame-ancestors 'none'; object-src 'none'")
+                           "frame-ancestors 'none'; object-src 'none'; font-src 'self'; media-src 'none'")
 STATIC_EXTRA_HEADERS: Tuple[Tuple[str, str], ...] = (("Content-Security-Policy", CONTENT_SECURITY_POLICY),
                                                      ("Cross-Origin-Opener-Policy", "same-origin"))
 _AT_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}:\d{2}\Z")   # 末尾の改行も拒む
 _DATE_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}\Z")
 _SAFE_DETAIL_RE = re.compile(r"^[A-Z0-9_:]{1,80}$")
+_CONTENT_LENGTH_RE = re.compile(r"\A[0-9]{1,7}\Z")                                  # ASCII の数字だけ（他の数字 ・符号 ・空白は拒む）
 _STATUS_CODES = {400: "BAD_REQUEST", 403: "FETCH_SITE_REJECTED", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED",
                  413: "PAYLOAD_TOO_LARGE", 415: "UNSUPPORTED_MEDIA_TYPE", 503: "VIEW_UNAVAILABLE",
                  500: "INTERNAL_ERROR"}
@@ -154,8 +157,15 @@ def _load_static_assets() -> Dict[str, bytes]:
     """起動の時に allowlist の asset を package の static/ から読む（committed な byte のまま ・無ければ起動を拒む）。"""
     loaded: Dict[str, bytes] = {}
     for route, (name, _content_type) in STATIC_ROUTES.items():
+        path = STATIC_DIR / name
+        if path.is_symlink():                                                      # symlink は（先が在っても）配らない
+            raise ServerStartupError("STATIC_ASSET_INVALID")
+        if not path.exists():
+            raise ServerStartupError("STATIC_ASSET_MISSING")
+        if not path.is_file():                                                     # directory ・特殊な file も配らない
+            raise ServerStartupError("STATIC_ASSET_INVALID")
         try:
-            loaded[route] = (STATIC_DIR / name).read_bytes()
+            loaded[route] = path.read_bytes()
         except OSError:
             raise ServerStartupError("STATIC_ASSET_MISSING") from None
     return loaded
@@ -250,7 +260,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def send_error(self, code: int, message: Optional[str] = None, explain: Optional[str] = None) -> None:
         """stdlib の解析の失敗（長すぎる要求行 ・不明な method 等）も正準の JSON で（HTML ・Server ・Date は出さない）。"""
-        status = 405 if code == 501 else (400 if 400 <= code < 500 else 500)
+        status = 405 if code == 501 else (400 if 400 <= code < 500 or code == 505 else 500)   # 505（版）も client の誤り
         self._respond(status, error_bytes(_STATUS_CODES[status]), route="UNKNOWN", kind="PARSE")
 
     # ---- 応答（決定論の header ・Date ・Server なし）
@@ -278,7 +288,8 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _check_host(self) -> None:
         expected = f"{LOOPBACK_BIND}:{self.server.context.port}"
-        if self.headers.get("Host") != expected:                                   # 完全一致。X-Forwarded-* は見ない
+        hosts = self.headers.get_all("Host") or []
+        if len(hosts) != 1 or hosts[0] != expected:                                # 1 つだけ ・完全一致。X-Forwarded-* は見ない
             raise _Refusal(400, "HOST_REJECTED")
 
     def _check_fetch_site(self) -> None:
@@ -295,15 +306,18 @@ class _Handler(BaseHTTPRequestHandler):
         content_type = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
         if content_type != "application/json":
             raise _Refusal(415, "UNSUPPORTED_MEDIA_TYPE")
-        raw_length = self.headers.get("Content-Length")
-        if raw_length is None or not raw_length.isdigit():
+        lengths = self.headers.get_all("Content-Length") or []
+        if len(lengths) != 1 or not _CONTENT_LENGTH_RE.match(lengths[0]):
             raise _Refusal(400, "BAD_REQUEST", "CONTENT_LENGTH")
-        length = int(raw_length)
+        length = int(lengths[0])
         if length == 0:
             raise _Refusal(400, "BAD_REQUEST", "EMPTY_BODY")
         if length > MAX_BODY_BYTES:
             raise _Refusal(413, "PAYLOAD_TOO_LARGE")
-        body = self.rfile.read(length)
+        try:
+            body = self.rfile.read(length)
+        except OSError:                                                            # 遅い ・途切れた body（socket の timeout）
+            raise _Refusal(400, "BAD_REQUEST", "BODY_TIMEOUT") from None
         if len(body) != length:
             raise _Refusal(400, "BAD_REQUEST", "BODY_TRUNCATED")
         return body
@@ -359,6 +373,10 @@ class LoopbackHTTPServer(ThreadingHTTPServer):
         super().__init__((LOOPBACK_BIND, 0), _Handler, bind_and_activate=False)
         self.context: ServerContext = ServerContext(p10_root="", p9_root="", port=0)
         self._context_factory = context_factory
+
+    def handle_error(self, request: Any, client_address: Any) -> None:
+        """stdlib は例外の traceback を stderr に出す。path ・内容を出さないため何も出さない（接続は閉じられる）。"""
+        return None
 
     def bind_to(self, port: int) -> None:
         self.server_address = (LOOPBACK_BIND, port)

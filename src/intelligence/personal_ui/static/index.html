@@ -14,16 +14,16 @@
 <header>
   <h1>Personal Intelligence</h1>
   <p class="badge" id="private-indicator">PRIVATE ・ LOCAL ・ READ-ONLY — この端末の loopback だけ。外へは送らない。</p>
-  <p id="server-status" class="status" data-state="unknown">server: 未接続</p>
+  <p id="server-status" class="status" role="status" data-state="unknown">server: 未接続</p>
 </header>
 <main>
   <section id="pit" aria-labelledby="pit-title">
     <h2 id="pit-title">時点（明示。自動では決めない）</h2>
-    <form id="pit-form" autocomplete="off" novalidate>
+    <form id="pit-form" method="post" action="/app/" autocomplete="off" novalidate>
       <label for="at">at — aware な瞬間（例 2026-01-01T09:00:00+09:00）</label>
-      <input id="at" name="at" type="text" maxlength="40" placeholder="YYYY-MM-DDTHH:MM:SS+09:00" spellcheck="false">
+      <input id="at" name="at" type="text" maxlength="40" placeholder="YYYY-MM-DDTHH:MM:SS+09:00" spellcheck="false" autocomplete="off">
       <label for="as-of-date">as_of_date — 見直しの基準の日（YYYY-MM-DD）</label>
-      <input id="as-of-date" name="as_of_date" type="text" maxlength="10" placeholder="YYYY-MM-DD" spellcheck="false">
+      <input id="as-of-date" name="as_of_date" type="text" maxlength="10" placeholder="YYYY-MM-DD" spellcheck="false" autocomplete="off">
       <div class="actions">
         <button type="submit" id="load">読み込む</button>
         <button type="button" id="fill-clock">この端末の時計で欄を埋める（送信はしない）</button>
@@ -33,6 +33,7 @@
   <section id="status-area" aria-live="polite">
     <p id="message" class="message" hidden></p>
     <p id="offline" class="message offline" hidden>App shell available offline; private data requires the local server.</p>
+    <p id="update-notice" class="message" hidden>新しい shell の版が入りました。再読み込みで切り替わります（private な data は再度「読み込む」で明示に）。</p>
   </section>
   <section id="profile" hidden>
     <h2>Profile（要約）</h2>
@@ -50,7 +51,7 @@
     <p class="small">順は governed な view のまま。印（FOCUS ／ NORMAL ／ MUTE）は表示の意図だけで、順位 ・点数 ・推奨ではない。</p>
     <table id="review-table">
       <thead>
-        <tr><th>#</th><th>種類</th><th>状態</th><th>出所</th><th>期日</th><th>区分</th><th>印</th><th>除外</th><th>組</th><th>link</th></tr>
+        <tr><th scope="col">#</th><th scope="col">種類</th><th scope="col">状態</th><th scope="col">出所</th><th scope="col">期日</th><th scope="col">区分</th><th scope="col">印</th><th scope="col">除外</th><th scope="col">組</th><th scope="col">link</th></tr>
       </thead>
       <tbody id="review-rows"></tbody>
     </table>

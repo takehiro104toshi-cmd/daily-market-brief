@@ -1,4 +1,4 @@
-"""Phase 11（PWA ／ 利用者との対話の面）の登録済み runtime ・test ・文書の完全な一覧（P11-A1 〜 A3）。
+"""Phase 11（PWA ／ 利用者との対話の面）の登録済み runtime ・test ・文書の完全な一覧（P11-A1 〜 A4）。
 
 - `P11_BASE` ＝ Phase 10 の凍結の記録の commit。P11-A1 はここから足す。
 - 凍結の Phase 7 ／ 8 ／ 9 ／ 10 の test に入れた登録の行は `PHASE11_TEST_REGISTRATION` に完全に列挙し、Phase 11 の guard
@@ -17,6 +17,8 @@ P11_BASE = "d01f6bc01fba783e77cc3a623745b8b033883e1a"
 P11_A1 = "da806753868da597d50875300064722fd12e4bb8"
 #: P11-A2 の runtime の commit（同上。凍結 anchor ではない）
 P11_A2 = "3ceb36b3496703c7fad315986e52c49a2c24d71b"
+#: P11-A3 の runtime の commit（同上）
+P11_A3 = "19686a6f12abfcb1859f84b71acda90015b291c3"
 PHASE11_PACKAGE = "src/intelligence/personal_ui"
 #: P11-A1 で足した runtime（governed な read の adapter と UI model だけ。server ・UI ・SW ・書き込みなし）
 PHASE11_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE11_PACKAGE}/{name}.py" for name in (
@@ -38,27 +40,30 @@ P11_STATIC_ROUTES: Mapping[str, str] = {
 #: service worker が precache する経路（sw.js 自身は含まない）。shell の cache の名前は precache の asset の git blob から導く
 P11_SHELL_PRECACHE: Tuple[str, ...] = ("/app/", "/app/index.html", "/app/app.js", "/app/app.css",
                                         "/app/manifest.webmanifest", "/app/icon-192.png", "/app/icon-512.png")
-P11_SHELL_CACHE_NAME = "p11-shell-a2ac11ca2067"
-#: static な asset の git blob の id（P11-A3 で確定。checkout の改行に依らない object の意味）
+P11_SHELL_CACHE_NAME = "p11-shell-2729564d0ff5"
+#: static な asset の git blob の id（P11-A3 で確定 ・A4 の硬化で更新。checkout の改行に依らない object の意味）
 P11_STATIC_BLOB_IDS: Mapping[str, str] = {
     'src/intelligence/personal_ui/static/.gitattributes': 'fa1385d99a319b43c06f5309d1aae9fdd3adea46',
     'src/intelligence/personal_ui/static/app.css': 'f3db2832edcfdcc02d302a6510b2b6bbbe9d1e05',
-    'src/intelligence/personal_ui/static/app.js': '6ba1a6a3106ec6ff6772cb92f55fd944bd8c9054',
+    'src/intelligence/personal_ui/static/app.js': '9bf12c66aa36d0131da81f3125715589c30b081d',
     'src/intelligence/personal_ui/static/icon-192.png': '60ea4a088a2fe2c81f4602d33c4290a65d5a035a',
     'src/intelligence/personal_ui/static/icon-512.png': 'b37421a7d8433c8b18e3637c1b00c1bc99a7d953',
-    'src/intelligence/personal_ui/static/index.html': 'b4a91ef2c8bc3bd020b08a0d033af1c63d0dddaf',
+    'src/intelligence/personal_ui/static/index.html': '352cfff59abce81a29765f3ce5ced01356e3cd86',
     'src/intelligence/personal_ui/static/manifest.webmanifest': '65372b8dbf4e4badbd6e64f1e71948b1be1a0db5',
-    'src/intelligence/personal_ui/static/sw.js': 'a75a08b93ca57b31f18bf64db272b9c066891ad9',
+    'src/intelligence/personal_ui/static/sw.js': '55ade163c455e3481eeac2a6ae0a6fcc7951b5fb',
 }
 PHASE11_TESTS: Tuple[str, ...] = ("tests/intelligence/phase11_runtime_registry.py",
                                   "tests/intelligence/test_personal_ui_adapter.py",
                                   "tests/intelligence/test_personal_ui_boundary.py",
                                   "tests/intelligence/test_personal_ui_server.py",
                                   "tests/intelligence/test_personal_ui_static.py",
-                                  "tests/intelligence/test_personal_ui_browser.py")
+                                  "tests/intelligence/test_personal_ui_browser.py",
+                                  "tests/intelligence/test_personal_ui_hardening.py",
+                                  "tests/intelligence/test_personal_ui_browser_hardening.py")
 PHASE11_DOCS: Tuple[str, ...] = ("docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md",
                                  "docs/databank/PHASE11_A2_LOOPBACK_SERVER.md",
-                                 "docs/databank/PHASE11_A3_STATIC_PWA_SHELL.md")
+                                 "docs/databank/PHASE11_A3_STATIC_PWA_SHELL.md",
+                                 "docs/databank/PHASE11_A4_PRIVACY_OFFLINE_HARDENING.md")
 ADDITION_STATUSES = ("A", "??")
 P11_ADAPTER = f"{PHASE11_PACKAGE}/p10_read_adapter.py"
 P11_UI_MODEL = f"{PHASE11_PACKAGE}/ui_model.py"
@@ -196,7 +201,7 @@ def only_phase11_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P11_IMPORT_PARTS", "P11_A1", "P11_A2", "P11_ADAPTER", "P11_BASE",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P11_IMPORT_PARTS", "P11_A1", "P11_A2", "P11_A3", "P11_ADAPTER", "P11_BASE",
            "P11_LOCAL_SERVER", "P11_SHELL_CACHE_NAME", "P11_SHELL_PRECACHE", "P11_STATIC_ASSETS", "P11_STATIC_BLOB_IDS",
            "P11_STATIC_ROUTES", "P11_UI_MODEL", "PHASE11_A1_RUNTIME", "PHASE11_A2_RUNTIME", "PHASE11_A3_RUNTIME",
            "PHASE11_DOCS", "PHASE11_PACKAGE", "PHASE11_PY_RUNTIME", "PHASE11_RUNTIME", "PHASE11_STATIC_DIR",

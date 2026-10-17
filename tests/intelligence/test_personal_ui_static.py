@@ -24,7 +24,7 @@ STATIC = REPO_ROOT / PHASE11_STATIC_DIR
 FORBIDDEN_JS = ("localStorage", "sessionStorage", "indexedDB", "document.cookie", "eval(", "Function(", "innerHTML",
                 "outerHTML", "document.write", "insertAdjacentHTML", "WebSocket", "EventSource", "http://", "https://",
                 "import(", "importScripts", "console.", "XMLHttpRequest", "sendBeacon", "postMessage", "window.open",
-                "location.href", "history.pushState", "history.replaceState", "setTimeout(", "setInterval(")
+                "location.href", "history.pushState", "history.replaceState", "setInterval(")
 
 
 def _read(name: str) -> str:
@@ -101,6 +101,8 @@ def test_b_c_app_js_fetches_only_the_same_origin_view_route_and_stores_nothing()
     for token in FORBIDDEN_JS:
         assert token not in js, token
     assert js.count("fetch(") == 1 and "fetch(VIEW_ROUTE" in js and "const VIEW_ROUTE = '/api/view';" in js
+    assert js.count("setTimeout(") == 1 and "setTimeout(function () { controller.abort(); }, FETCH_TIMEOUT_MS)" in js   # A4: 中止の timer だけ
+    assert "const FETCH_TIMEOUT_MS = 10000;" in js and "signal: controller.signal" in js
     for option in ("method: 'POST'", "mode: 'same-origin'", "credentials: 'omit'", "cache: 'no-store'",
                    "redirect: 'error'", "referrerPolicy: 'no-referrer'", "'Content-Type': 'application/json'"):
         assert option in js, option
@@ -128,8 +130,12 @@ def test_b_d_service_worker_is_shell_only_versioned_and_never_touches_the_api() 
     assert tuple(re.findall(r"'([^']+)'", precache)) == P11_SHELL_PRECACHE
     assert "/app/sw.js" not in precache and all(route in P11_STATIC_ROUTES for route in P11_SHELL_PRECACHE)
     assert "const NETWORK_ONLY_PREFIXES = ['/api/', '/health', '/version'];" in sw
-    assert ".put(" not in sw and "cache.add(" not in sw and sw.count("addAll(") == 1   # precache は install だけ
-    assert "{ cache: 'reload', credentials: 'omit' }" in sw                              # HTTP の cache を経ない
+    assert sw.count(".put(") == 1 and "addAll(" not in sw and "cache.add(" not in sw     # 保存は install の precacheOne だけ
+    assert "return cache.put(path, response);" in sw and sw.index(".put(") < sw.index("addEventListener('install'")
+    assert "{ cache: 'reload', credentials: 'omit', redirect: 'error' }" in sw           # HTTP の cache ・redirect を経ない
+    assert "response.status !== 200 || response.type !== 'basic' || response.redirected" in sw   # 200 の basic だけ
+    assert "return caches.delete(SHELL_CACHE).then(function () { throw error; });" in sw   # fail closed（部分の cache を残さない）
+    assert "url.search !== ''" in sw                                                     # query 付きは server と同じく扱わない
     assert "request.method !== 'GET'" in sw and "url.origin !== self.location.origin" in sw
     assert "PRECACHE.indexOf(url.pathname) === -1" in sw                                 # shell の asset 以外は触らない
     assert "name.indexOf('p11-shell-') === 0 && name !== SHELL_CACHE" in sw           # 古い P11 の shell の cache だけ消す

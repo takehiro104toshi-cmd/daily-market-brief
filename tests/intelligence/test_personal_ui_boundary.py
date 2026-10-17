@@ -23,7 +23,7 @@ from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_PACKAGE, PHASE10_RUNTIME
-from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_A1, P11_A2, P11_ADAPTER,
+from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_A1, P11_A2, P11_A3, P11_ADAPTER,
                                                          P11_BASE, P11_LOCAL_SERVER, P11_STATIC_ASSETS,
                                                          P11_STATIC_BLOB_IDS, P11_STATIC_ROUTES, P11_UI_MODEL,
                                                          PHASE11_A1_RUNTIME, PHASE11_A2_RUNTIME, PHASE11_A3_RUNTIME,
@@ -115,7 +115,9 @@ def test_p11_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
     assert set(P11_STATIC_ROUTES.values()) == {Path(p).name for p in P11_STATIC_ASSETS} - {".gitattributes"}
     assert P11_A1 == "da806753868da597d50875300064722fd12e4bb8"
     assert P11_A2 == "3ceb36b3496703c7fad315986e52c49a2c24d71b"
-    assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_A2, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert P11_A3 == "19686a6f12abfcb1859f84b71acda90015b291c3"
+    for commit in (P11_A2, P11_A3):
+        assert subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=REPO_ROOT).returncode == 0
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_A1, "HEAD"], cwd=REPO_ROOT).returncode == 0
     assert _git("diff", "--name-status", P11_A1, "HEAD", "--", *PHASE11_A1_RUNTIME) == ""   # A1 の runtime は A1 の commit のまま
     assert _git("diff", "--cached", "--name-status", P11_A1, "--", *PHASE11_A1_RUNTIME) == ""   # index も
@@ -260,6 +262,31 @@ def test_p11_a2_public_report_pages_and_cloudflare_surfaces_are_unchanged_since_
     for asset in P11_STATIC_ASSETS:                                                       # static な asset は git blob の pin と一致
         actual = _git("hash-object", "--", asset).strip()
         assert actual == P11_STATIC_BLOB_IDS[asset], asset
+
+
+def test_p11_a4_no_personal_ui_file_or_static_asset_is_published_through_any_public_surface() -> None:
+    """公開の面（Pages の workflow ・docs/pages ・publisher の script ・公開の report ・Cloudflare ・公開の manifest）は
+    personal_ui を参照せず、static な asset の byte（git blob）は static/ の外のどこにも無い（複製の検出）。"""
+    public_dirs = (".github", "docs/pages", "scripts", "src/report", "notifiers", "cloudflare", "output", "main.py")
+    asset_names = {Path(p).name for p in P11_STATIC_ASSETS} - {".gitattributes"}
+    for path in _files_under(*public_dirs):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        assert "personal_ui" not in text and "/app/sw.js" not in text and "p11-shell-" not in text, path
+        assert "/app/manifest.webmanifest" not in text and "PHASE11" not in text, path
+        assert path.name not in asset_names or path.suffix == ".css" and path.name != "app.css", path   # 同名の asset を置かない
+    staged = _git("ls-files", "--stage").splitlines()
+    by_blob: dict = {}
+    for line in staged:
+        meta, _, path = line.partition("\t")
+        by_blob.setdefault(meta.split()[1], []).append(path)
+    for asset, blob in P11_STATIC_BLOB_IDS.items():
+        assert by_blob.get(blob, []) == [asset], (asset, by_blob.get(blob))              # byte の複製は repo のどこにも無い
+    for name in ("manifest.webmanifest", "sw.js"):                                        # 公開の PWA の面は無い
+        assert not any(p.name == name for p in _files_under(*public_dirs)), name
+    for workflow in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")):
+        text = workflow.read_text(encoding="utf-8")
+        assert "static/" not in text or "personal_ui" not in text, workflow
+        assert "src/intelligence/personal_ui" not in text, workflow
 
 
 def test_p11_a2_the_contract_records_the_required_clauses() -> None:

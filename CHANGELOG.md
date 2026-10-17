@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.09 (2026-10-17) — Phase 11 P11-A4 privacy / offline hardening
+
+A3 の private な local PWA を硬化する（機能は足さない）。browser は応答を表示の schema で検査し、失敗の全てで前の private な model を
+DOM と memory から消す。fetch は 10 秒で中止（再試行なし）。SW は 200 の basic だけを precache し 1 つでも落ちれば cache 全体を消す。
+server は Host ／ Content-Length の重複 ・非 ASCII の数字 ・遅い body ・stdlib の traceback ・symlink を閉じ、CSP に font ／ media を足す。
+公開の面への参照と asset の複製を guard。A1 ・凍結の P7 〜 P10 ・Pages は不変。
+
+追加
+・`tests/intelligence/test_personal_ui_hardening.py` ・`tests/intelligence/test_personal_ui_browser_hardening.py`
+・`docs/databank/PHASE11_A4_PRIVACY_OFFLINE_HARDENING.md`
+改善
+・`src/intelligence/personal_ui/local_server.py`（Host ／ Content-Length の 1 つ ・ASCII ・BODY_TIMEOUT ・handle_error 無効 ・
+  STATIC_ASSET_INVALID ・CSP の font-src ／ media-src）
+・`src/intelligence/personal_ui/static/app.js`（応答の schema の検査 ・AbortController の timeout ・失敗での全消去 ・更新の表示）
+・`src/intelligence/personal_ui/static/sw.js`（fail closed の precache ・query の除外）・`index.html`（form は post ・autocomplete off ・
+  role ／ scope ・更新の表示）
+・`tests/intelligence/phase11_runtime_registry.py` ・`tests/intelligence/test_personal_ui_boundary.py` ・
+  `tests/intelligence/test_personal_ui_static.py`（A4 の pin ・公開の面の guard ・SW ／ JS の規則）
+修正
+・なし
+
 ## v6.08 (2026-10-17) — Phase 11 P11-A3 static PWA shell
 
 loopback の server が allowlist で配る static な PWA の shell（HTML ・CSS ・vanilla JS ・manifest ・shell だけの service worker ・
