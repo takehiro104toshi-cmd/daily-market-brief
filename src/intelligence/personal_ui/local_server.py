@@ -14,6 +14,9 @@ P10 ／ P9 の root → P11-A1 の adapter（`read_ui_model`）→ 本 server �
   まま配る（directory の一覧 ・任意の file ・path の露出は無い）。`Cache-Control: no-cache` ・CSP（`'self'` だけ）・COOP。
 - 硬化（P11-A4）: Host ・Content-Length は 1 つだけ ・ASCII の数字だけ、body の読みの timeout は安全な 400、stdlib の
   handle_error（stderr への traceback）は出さない、static な asset は symlink でない通常の file だけ。
+- 閉じ方（P11-A5 の Windows の移植性）: body を読む前に拒んだ要求（415 ・413 ・400 ・403 ・405 ・解析の失敗）は、応答を書いた後に
+  FIN を送り、まだ届く byte を短い timeout ・上限の中で読み捨ててから閉じる（未読の受信 data が残る close は RST になり、Winsock は
+  client が受け取った応答を捨てる）。読み捨てた byte は使わない ・出さない。body を全部読んだ要求では何もしない。
 - 応答は P11-A1 の正準の byte をそのまま（再直列化しない）。header は固定（`Cache-Control: no-store` 他）。`Date` ・`Server` は出さない
   （`send_response_only`）。result の cache ・memo は無い（毎回 governed な read）。
 - 誤りは正準の JSON `{"code","detail","schema_version"}`。detail は大文字の code だけ。予期しない例外は `INTERNAL_ERROR`（traceback ・
@@ -74,6 +77,11 @@ _AT_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}
 _DATE_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}\Z")
 _SAFE_DETAIL_RE = re.compile(r"^[A-Z0-9_:]{1,80}$")
 _CONTENT_LENGTH_RE = re.compile(r"\A[0-9]{1,7}\Z")                                  # ASCII の数字だけ（他の数字 ・符号 ・空白は拒む）
+#: 早い拒否の後の閉じ方（P11-A5）: 1 回の recv の timeout ・読み捨ての上限 ・回数の上限（時計を使わず有界にする: 最大 8 × 0.5 秒）
+DRAIN_TIMEOUT_SECONDS = 0.5
+DRAIN_MAX_BYTES = 65536
+DRAIN_CHUNK_BYTES = 8192
+_SHUT_WR = 1                                                                        # socket.SHUT_WR（socket は import しない）
 _STATUS_CODES = {400: "BAD_REQUEST", 403: "FETCH_SITE_REJECTED", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED",
                  413: "PAYLOAD_TOO_LARGE", 415: "UNSUPPORTED_MEDIA_TYPE", 503: "VIEW_UNAVAILABLE",
                  500: "INTERNAL_ERROR"}
@@ -98,6 +106,27 @@ class _Refusal(Exception):
 
 def _safe_detail(detail: Any) -> str:
     return detail if isinstance(detail, str) and _SAFE_DETAIL_RE.match(detail) else ""
+
+
+def linger_close(connection: Any, *, timeout: float = DRAIN_TIMEOUT_SECONDS, cap: int = DRAIN_MAX_BYTES) -> int:
+    """応答を書き終えた接続に FIN を送り、client がまだ送っている byte を有界に読み捨てる。読み捨てた byte 数を返す（内容は捨てる）。
+
+    Windows の Winsock は、未読の受信 data が残る socket の close で RST を出し、client が既に受け取った応答を捨てる。
+    FIN を先に送れば client は応答の終わりを見る。読み捨ては最大 `cap` byte ・`cap // DRAIN_CHUNK_BYTES` 回の recv ・各 `timeout` 秒。"""
+    drained = 0
+    try:
+        connection.shutdown(_SHUT_WR)
+        connection.settimeout(timeout)
+        for _attempt in range(max(1, cap // DRAIN_CHUNK_BYTES)):
+            chunk = connection.recv(min(DRAIN_CHUNK_BYTES, cap - drained))
+            if not chunk:
+                break
+            drained += len(chunk)
+            if drained >= cap:
+                break
+    except OSError:
+        pass
+    return drained
 
 
 def error_bytes(code: str, detail: str = "") -> bytes:
@@ -247,6 +276,15 @@ class _Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
     timeout = 10
     server: "LoopbackHTTPServer"
+    body_consumed = False                                                           # `_read_body` が全部読んだ時だけ True
+
+    def finish(self) -> None:
+        """応答を flush した後、body を読み切っていない接続だけ有界に読み捨ててから閉じる（P11-A5。200 の経路では何もしない）。"""
+        try:
+            super().finish()
+        finally:
+            if not self.body_consumed:
+                linger_close(self.connection)
 
     # ---- log は既定で無し（本文 ・瞬間 ・Host ・path を出さない）
     def log_message(self, format: str, *args: Any) -> None:                        # noqa: A002 - stdlib の署名
@@ -320,6 +358,7 @@ class _Handler(BaseHTTPRequestHandler):
             raise _Refusal(400, "BAD_REQUEST", "BODY_TIMEOUT") from None
         if len(body) != length:
             raise _Refusal(400, "BAD_REQUEST", "BODY_TRUNCATED")
+        self.body_consumed = True
         return body
 
     def _dispatch(self, method: str) -> None:
@@ -479,10 +518,11 @@ def main(argv: Optional[Sequence[str]] = None, stdout: Optional[Any] = None) -> 
     return 0
 
 
-__all__ = ["CONTENT_SECURITY_POLICY", "CREDENTIAL_VARIABLE", "KNOWN_ROUTES", "LOOPBACK_BIND", "LocalServer",
-           "MAX_BODY_BYTES", "SAFE_HEADERS", "SERVER_SCHEMA_VERSION", "STATIC_CACHE_CONTROL", "STATIC_EXTRA_HEADERS",
-           "STATIC_ROUTES", "STATUS_BYTES", "ServerContext", "ServerStartupError", "VERSION_BYTES", "VIEW_ROUTE",
-           "error_bytes", "main", "parse_view_request"]
+__all__ = ["CONTENT_SECURITY_POLICY", "CREDENTIAL_VARIABLE", "DRAIN_MAX_BYTES", "DRAIN_TIMEOUT_SECONDS", "KNOWN_ROUTES",
+           "LOOPBACK_BIND", "LocalServer", "MAX_BODY_BYTES", "SAFE_HEADERS", "SERVER_SCHEMA_VERSION",
+           "STATIC_CACHE_CONTROL", "STATIC_EXTRA_HEADERS", "STATIC_ROUTES", "STATUS_BYTES", "ServerContext",
+           "ServerStartupError", "VERSION_BYTES", "VIEW_ROUTE", "error_bytes", "linger_close", "main",
+           "parse_view_request"]
 
 
 if __name__ == "__main__":

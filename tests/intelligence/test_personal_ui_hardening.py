@@ -1,7 +1,8 @@
 """P11-A4 — privacy ／ offline の硬化（Python の層）。server の要求の敵対的な検査（Host ・Origin ・Fetch Metadata ・path の符号化 ・
 method ・Content-Length ・Transfer-Encoding ・遅い body ・大きな header）・static の asset の integrity（通常の file ・symlink なし ・
 committed な byte）・header の決定（CSP の font ／ media ・COEP なし ・cookie なし）・error ／ log の漏れ（typed error ・Host ・
-Origin ・body の sentinel ・stdlib の handle_error）。browser の層は `test_personal_ui_browser_hardening.py`。"""
+Origin ・body の sentinel ・stdlib の handle_error）・Windows の移植性（body を読む前の拒否で header と body が別の segment で
+届いても正準の応答が読め、未読の byte は有界に読み捨てられる）。browser の層は `test_personal_ui_browser_hardening.py`。"""
 from __future__ import annotations
 
 import io
@@ -334,3 +335,122 @@ def test_c_a_typed_errors_hostile_headers_and_stdlib_error_paths_leak_nothing(se
     monkeypatch.setattr(ls.LocalServer, "serve_forever", lambda self: None)
     assert ls.main(["--p10-root", str(world_root := server["p10"]), "--p9-root", str(server["p9"]["root"])], stdout=out) == 0
     assert SENTINEL not in out.getvalue() and str(world_root) not in out.getvalue()
+
+
+# ================================================ Windows の移植性（P11-A5）: body を読む前の拒否と分割送信
+
+
+def _wait_for(condition, timeout: float) -> None:
+    deadline = time.monotonic() + timeout
+    while not condition() and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+
+def _split_send(port: int, head: bytes, body: bytes, pause: float = 0.2) -> bytes:
+    """header と body を別の segment で送る（http.client は 2 回の send で送る。Windows ではこの形で応答が失われた）。
+    応答を EOF まで読み切り、client の側では例外が起きないことを確かめる。"""
+    with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+        sock.sendall(head)
+        time.sleep(pause)                                             # server はこの間に拒否を書き終える
+        sock.sendall(body)                                            # 未読の byte として届く
+        chunks = []
+        while True:
+            chunk = sock.recv(65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def test_a_d_split_send_early_refusals_keep_the_canonical_response_and_drain_the_unread_body(server, monkeypatch) -> None:
+    from tests.intelligence.test_personal_intelligence_executor import tree
+    port = server["port"]
+    before = (tree(server["p10"]), tree(server["p9"]["root"]))
+    drained: list = []
+    real = ls.linger_close
+    monkeypatch.setattr(ls, "linger_close", lambda connection, **kw: drained.append(real(connection, **kw)) or drained[-1])
+    good = json.dumps(GOOD).encode()
+    big = b"{" + b" " * 5000 + b"}"
+    hostile = (NOTE + " " + SENTINEL).encode()
+    origin = f"http://127.0.0.1:{port}".encode()
+    cases = (
+        ("415 media type", b"POST /api/view HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n"
+         % (port, len(hostile)), hostile, 415, "UNSUPPORTED_MEDIA_TYPE", ""),
+        ("413 oversized", b"POST /api/view HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n"
+         % (port, len(big)), big, 413, "PAYLOAD_TOO_LARGE", ""),
+        ("400 transfer-encoding", b"POST /api/view HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nContent-Type: application/json\r\n"
+         b"Transfer-Encoding: chunked\r\nContent-Length: %d\r\n\r\n" % (port, len(good)), good, 400, "BAD_REQUEST", "TRANSFER_ENCODING"),
+        ("400 host", b"POST /api/view HTTP/1.0\r\nHost: evil.example:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n"
+         % (port, len(good)), good, 400, "HOST_REJECTED", ""),
+        ("403 origin", b"POST /api/view HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nOrigin: http://evil.example\r\nContent-Type: application/json\r\n"
+         b"Content-Length: %d\r\n\r\n" % (port, len(good)), good, 403, "FETCH_SITE_REJECTED", "ORIGIN"),
+        ("403 fetch-site", b"POST /api/view HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nSec-Fetch-Site: cross-site\r\nOrigin: %s\r\n"
+         b"Content-Type: application/json\r\nContent-Length: %d\r\n\r\n" % (port, origin, len(good)), good, 403,
+         "FETCH_SITE_REJECTED", "SEC_FETCH_SITE"),
+        ("405 method", b"POST /health HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n"
+         % (port, len(good)), good, 405, "METHOD_NOT_ALLOWED", ""),
+        ("404 path", b"POST /api/views HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nContent-Type: application/json\r\nContent-Length: %d\r\n\r\n"
+         % (port, len(good)), good, 404, "NOT_FOUND", ""),
+    )
+    for label, head, body, status, code, detail in cases:
+        drained.clear()
+        response = _split_send(port, head, body)
+        header, _, payload = response.partition(b"\r\n\r\n")
+        assert header.split(b"\r\n")[0] == b"HTTP/1.0 %d %s" % (status, {415: b"Unsupported Media Type", 413: b"Request Entity Too Large",
+                                                                           400: b"Bad Request", 403: b"Forbidden", 405: b"Method Not Allowed",
+                                                                           404: b"Not Found"}[status]), label
+        assert json.loads(payload) == {"code": code, "detail": detail, "schema_version": ls.SERVER_SCHEMA_VERSION}, label
+        assert b"Set-Cookie" not in header and b"Date:" not in header and b"Server:" not in header, label
+        _wait_for(lambda: drained, 5)                                   # FIN は読み捨ての前に届く: server の側の完了を待つ
+        assert drained == [len(body)], (label, drained)                 # 未読の body は server が読み捨てた（内容は使わない）
+        assert SENTINEL not in response.decode("utf-8") and NOTE not in response.decode("utf-8")
+    # 解析の失敗（長い要求行）の後も読み捨てる（stdlib が読まなかった残りの byte）
+    drained.clear()
+    long_line = b"GET /" + b"a" * 70000 + b" HTTP/1.0\r\nHost: 127.0.0.1:%d\r\n\r\n" % port
+    response = _split_send(port, long_line[:60000], long_line[60000:])
+    assert response.startswith(b"HTTP/1.0 400") and b'"code":"BAD_REQUEST"' in response
+    _wait_for(lambda: drained, 5)
+    assert len(drained) == 1 and 0 <= drained[0] <= len(long_line)
+    # 読み切った要求（200 の経路）では読み捨てを呼ばない ・応答は A1 の byte のまま
+    drained.clear()
+    ok = request(port, "POST", "/api/view", GOOD)
+    assert ok["status"] == 200 and drained == []
+    static = request(port, "GET", "/app/")
+    assert static["status"] == 200 and drained == []
+    assert (tree(server["p10"]), tree(server["p9"]["root"])) == before                 # 何も書かない
+    assert all(SENTINEL not in repr(e) for e in server["events"])
+
+
+def test_a_e_linger_close_is_bounded_in_bytes_and_time_and_sends_fin_first() -> None:
+    assert (ls.DRAIN_TIMEOUT_SECONDS, ls.DRAIN_MAX_BYTES, ls.DRAIN_CHUNK_BYTES) == (0.5, 65536, 8192)
+    assert ls._SHUT_WR == socket.SHUT_WR
+    # 1. 送られた byte を全部読み捨て、peer は先に FIN（EOF）を見る
+    a, b = socket.socketpair()
+    with a, b:
+        b.sendall(b"x" * 1000)
+        assert ls.linger_close(a, timeout=0.5, cap=65536) == 1000
+        b.settimeout(1)
+        assert b.recv(10) == b""                                                       # FIN が届いている
+    # 2. 上限で止まる（cap を越える byte は読まない）
+    a, b = socket.socketpair()
+    with a, b:
+        b.setblocking(False)
+        sent = 0
+        payload = b"y" * 8192
+        while sent < 200000:
+            try:
+                sent += b.send(payload)
+            except BlockingIOError:
+                break
+        assert sent >= 16384 + 1024
+        assert ls.linger_close(a, timeout=0.5, cap=16384) == 16384
+    # 3. 何も来なければ timeout で止まる（有界 ・時計を使わない回数の上限）
+    a, b = socket.socketpair()
+    with a, b:
+        started = time.monotonic()
+        assert ls.linger_close(a, timeout=0.2, cap=16384) == 0
+        assert time.monotonic() - started < 1.5
+    # 4. 閉じた socket でも例外を出さない
+    a, b = socket.socketpair()
+    a.close(); b.close()
+    assert ls.linger_close(a) == 0

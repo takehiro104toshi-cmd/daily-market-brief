@@ -4,6 +4,21 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.10 (2026-10-17) — Phase 11 P11-A5 Windows portability remediation（server の閉じ方だけ）
+
+Windows の実機の preflight で、body を読む前に拒む要求（415 ・413 ・400 ・403 ・405 ・解析の失敗）が client で接続の reset になった
+（header と body が別の segment で届き、未読の受信 data が残る close を Winsock が RST にする）。server は応答を書いた後、body を読み
+切っていない接続だけ FIN を送って残りを有界（64 KiB ・8 回 ・各 0.5 秒）に読み捨ててから閉じる。応答 ・header ・規則 ・意味は不変。
+凍結の P7 〜 P9 の test ・Phase 6 〜 10 の runtime ・anchor は不変（P7 〜 P9 の locale の復号は P11-A5 の helper の環境で補正）。
+
+追加
+・`tests/intelligence/test_personal_ui_hardening.py`（分割送信の早い拒否の回帰 test ・`linger_close` の上限の test）
+改善
+・`src/intelligence/personal_ui/local_server.py`（`linger_close` ・`_Handler.finish` ・`body_consumed`）
+・`docs/databank/PHASE11_A4_PRIVACY_OFFLINE_HARDENING.md`（§5a Windows の移植性）
+修正
+・なし
+
 ## v6.09 (2026-10-17) — Phase 11 P11-A4 privacy / offline hardening
 
 A3 の private な local PWA を硬化する（機能は足さない）。browser は応答を表示の schema で検査し、失敗の全てで前の private な model を

@@ -67,11 +67,25 @@ boolean ・非負の整数 ・件数の map（鍵 `[A-Za-z0-9_.]{1,80}` ・値�
   cross-origin isolation の利点が無い。将来の互換の負債だけ）。COOP ・CORP ・nosniff ・no-referrer は維持。
 - cookie ・session ・CSRF token は無い（read-only）。**P11.1 で書き込みを足す時は別の write の脅威の審査が要る**（CSRF ・同意 ・冪等性）。
 
+## 5a. Windows の移植性（P11-A5 の remediation ・transport の閉じ方だけ）
+
+Windows の実機の preflight で、body を読む前に拒む経路（415 ・413 ・TRANSFER_ENCODING ・HOST_REJECTED ・FETCH_SITE_REJECTED ・405 ・
+解析の失敗）が client で `ConnectionResetError` になった。`http.client` は header と body を 2 回の send で送るので、server が応答を書いて
+閉じた時に未読の受信 data が残り、Winsock は RST で client の受信 buffer を捨てる（Linux は届いた応答を渡すので見えなかった）。
+対処: `_Handler.finish` で、`_read_body` が body を全部読んでいない接続だけ `linger_close`（FIN → 最大 64 KiB ・8 回 ・各 0.5 秒の
+recv で読み捨て。内容は使わず ・出さず ・時計を使わない有界）。200 の経路（body を読み切った要求 ・body の無い GET）では何もしない。
+status ・body ・header ・Host ／ Origin ／ Fetch Metadata ・大きさ ・型の規則 ・CORS 無し ・loopback だけ ・fail closed は不変。
+`socket` module は import しない（`_SHUT_WR = 1`）。import の面は A1 〜 A4 のまま。
+
+凍結の P7 〜 P9 の test の `subprocess.run(text=True)`（locale の復号）は本 gate では触れない。P11-A5 の helper が pytest の
+subprocess に `PYTHONUTF8=1` ・`PYTHONIOENCODING=utf-8` を与える（検証の環境の補正。test の byte は不変）。
+
 ## 6. 証拠
 
 `test_personal_ui_hardening.py`（Python）: Host ／ Origin ／ Fetch Metadata の敵対 ・path の符号化 ・method ・Content-Length ／
 Transfer-Encoding ／ 途切れ ／ 遅い body ／ 大きな header ・static の integrity（mode 100644 ・symlink ・directory ・index の byte ・
-templating 無し）・header の決定 ・typed error ／ hostile な header ／ body ／ `handle_error` の漏れ無し。
+templating 無し）・header の決定 ・typed error ／ hostile な header ／ body ／ `handle_error` の漏れ無し ・分割送信の早い拒否（8 経路 ＋
+長い要求行）で正準の応答と読み捨て ・`linger_close` の byte ／ 時間の上限と FIN の順。
 `test_personal_ui_browser_hardening.py`（Playwright）: 敵対的な文字列 × 10 の欄 ＋ 鍵（> 100 件）・崩れた応答 ＋ 失敗の種類の全て ・
 timeout ・URL ／ history ／ reload ・SW の更新と毒の entry ・外部の要求ゼロ ・console 空 ・cookie 空 ・6 段階の保存の証明 ・
 accessibility の smoke ・keyboard。`test_personal_ui_boundary.py`: 公開の面への参照 ・asset の blob の複製の検出。
