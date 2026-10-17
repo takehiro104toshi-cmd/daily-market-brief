@@ -19,6 +19,8 @@ P11_A1 = "da806753868da597d50875300064722fd12e4bb8"
 P11_A2 = "3ceb36b3496703c7fad315986e52c49a2c24d71b"
 #: P11-A3 の runtime の commit（同上）
 P11_A3 = "19686a6f12abfcb1859f84b71acda90015b291c3"
+#: Phase 11 v1 の意味 ／ runtime の凍結 anchor（P11-A5 の Windows の移植性の follow-up の commit。P11-A6 で確定）
+P11_A5 = "43c0b856d41efed397de213a1a06178c5e97ab10"
 PHASE11_PACKAGE = "src/intelligence/personal_ui"
 #: P11-A1 で足した runtime（governed な read の adapter と UI model だけ。server ・UI ・SW ・書き込みなし）
 PHASE11_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE11_PACKAGE}/{name}.py" for name in (
@@ -63,7 +65,8 @@ PHASE11_TESTS: Tuple[str, ...] = ("tests/intelligence/phase11_runtime_registry.p
 PHASE11_DOCS: Tuple[str, ...] = ("docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md",
                                  "docs/databank/PHASE11_A2_LOOPBACK_SERVER.md",
                                  "docs/databank/PHASE11_A3_STATIC_PWA_SHELL.md",
-                                 "docs/databank/PHASE11_A4_PRIVACY_OFFLINE_HARDENING.md")
+                                 "docs/databank/PHASE11_A4_PRIVACY_OFFLINE_HARDENING.md",
+                                 "docs/databank/PHASE11_FINAL_FREEZE.md")
 ADDITION_STATUSES = ("A", "??")
 P11_ADAPTER = f"{PHASE11_PACKAGE}/p10_read_adapter.py"
 P11_UI_MODEL = f"{PHASE11_PACKAGE}/ui_model.py"
@@ -201,7 +204,7 @@ def only_phase11_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P11_IMPORT_PARTS", "P11_A1", "P11_A2", "P11_A3", "P11_ADAPTER", "P11_BASE",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P11_IMPORT_PARTS", "P11_A1", "P11_A2", "P11_A3", "P11_A5", "P11_ADAPTER", "P11_BASE",
            "P11_LOCAL_SERVER", "P11_SHELL_CACHE_NAME", "P11_SHELL_PRECACHE", "P11_STATIC_ASSETS", "P11_STATIC_BLOB_IDS",
            "P11_STATIC_ROUTES", "P11_UI_MODEL", "PHASE11_A1_RUNTIME", "PHASE11_A2_RUNTIME", "PHASE11_A3_RUNTIME",
            "PHASE11_DOCS", "PHASE11_PACKAGE", "PHASE11_PY_RUNTIME", "PHASE11_RUNTIME", "PHASE11_STATIC_DIR",

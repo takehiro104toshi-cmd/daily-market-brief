@@ -4,6 +4,20 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.12 (2026-10-17) — Phase 11 final freeze record（P11-A6。文書 ・registry ・guard だけ）
+
+Phase 11 v1（private local PWA）を COMPLETE / CLOSED / FROZEN とする。意味 ／ runtime の凍結 anchor は `43c0b856d41efed397de213a1a06178c5e97ab10`
+（registry の `P11_A5`）。Windows の実機の P11-A5（Edge ・DevTools protocol の自動検証）は A5_PASS。本記録の commit は anchor ではない。
+runtime ・Phase 6 〜 10 ・公開の面は不変。
+
+追加
+・`docs/databank/PHASE11_FINAL_FREEZE.md`
+・`tests/intelligence/test_personal_ui_boundary.py`（runtime 12 file の object 一致の guard ・記録に private な値の形が無い guard）
+改善
+・`tests/intelligence/phase11_runtime_registry.py`（`P11_A5` ・凍結の記録の文書の登録）
+修正
+・なし
+
 ## v6.11 (2026-10-17) — Phase 11 P11-A5 Windows preflight follow-up（読み捨ての条件だけ）
 
 v6.10 の読み捨て（linger close）が、body を宣言しない GET（static ・health ・version）でも走っていた（0 byte ・応答は正しい）。

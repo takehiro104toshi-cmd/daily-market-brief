@@ -23,7 +23,7 @@ from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_PACKAGE, PHASE10_RUNTIME
-from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_A1, P11_A2, P11_A3, P11_ADAPTER,
+from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_A1, P11_A2, P11_A3, P11_A5, P11_ADAPTER,
                                                          P11_BASE, P11_LOCAL_SERVER, P11_STATIC_ASSETS,
                                                          P11_STATIC_BLOB_IDS, P11_STATIC_ROUTES, P11_UI_MODEL,
                                                          PHASE11_A1_RUNTIME, PHASE11_A2_RUNTIME, PHASE11_A3_RUNTIME,
@@ -39,6 +39,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE11_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md"
 A2_CONTRACT_DOC = "docs/databank/PHASE11_A2_LOOPBACK_SERVER.md"
+FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
+#: 凍結の記録に在ってはならない private な値の形（id の接頭辞 ・発行体 ・5 桁の code ・著者 ・瞬間 ・Windows の path ・profile の文）
+FREEZE_DOC_PRIVATE_PATTERNS = (r"p9wat_", r"p9ths_", r"p9wrv_", r"p9trv_", r"p8iss_", r"p10prf_", r"p10prv_", r"p10att_",
+                               r"human:", r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", r"[A-Za-z]:\\", r"\b\d{5}\b", r"validation-only profile")
 #: `P11_BASE` 以後も不変であるべき公開 ／ 外部の面（Pages の workflow ・公開の report ・Cloudflare ・通知）
 PUBLIC_FROZEN = (".github/workflows", "src/report/html_builder.py", "cloudflare", "notifiers", "docs/pages",
                  "scripts/p43b2c_graft_v2.py", "scripts/p43b2c_pages_manifest.py")
@@ -262,6 +266,42 @@ def test_p11_a2_public_report_pages_and_cloudflare_surfaces_are_unchanged_since_
     for asset in P11_STATIC_ASSETS:                                                       # static な asset は git blob の pin と一致
         actual = _git("hash-object", "--", asset).strip()
         assert actual == P11_STATIC_BLOB_IDS[asset], asset
+
+
+def test_p11_freeze_the_12_registered_runtime_files_are_object_identical_to_the_anchor() -> None:
+    """P11-A6: Phase 11 v1 の runtime 12 file（.py 4 ＋ static 8）は anchor `P11_A5` と index ・worktree で git の object が同じ。
+    記録の commit（本文書）は anchor の後に足され、anchor ではない。"""
+    assert P11_A5 == "43c0b856d41efed397de213a1a06178c5e97ab10"
+    for older in (P11_BASE, P11_A1, P11_A2, P11_A3):
+        assert subprocess.run(["git", "merge-base", "--is-ancestor", older, P11_A5], cwd=REPO_ROOT).returncode == 0
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_A5, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert len(PHASE11_RUNTIME) == 12 and len(set(PHASE11_RUNTIME)) == 12
+    anchored_package = set(_git("ls-tree", "-r", "--name-only", P11_A5, "--", PHASE11_PACKAGE).splitlines())
+    assert anchored_package == set(PHASE11_RUNTIME)                                   # anchor の package ＝ 登録の 12
+    at_anchor, in_worktree = _blob_ids(P11_A5, PHASE11_RUNTIME)
+    in_index = tuple(_git("rev-parse", *(f":{path}" for path in PHASE11_RUNTIME)).split())
+    assert len(at_anchor) == len(in_worktree) == len(in_index) == 12
+    assert at_anchor == in_index, "runtime blob differs between P11_A5 and the index"
+    assert at_anchor == in_worktree, "runtime blob differs between P11_A5 and the worktree"
+    assert _git("diff", "--name-status", P11_A5, "HEAD", "--", PHASE11_PACKAGE) == ""     # anchor 以後に package は不変
+    assert _git("diff", "--cached", "--name-status", P11_A5, "--", PHASE11_PACKAGE) == ""
+    assert _git("status", "--porcelain", "--", *PHASE11_RUNTIME) == ""
+    assert {Path(p).name for p in PHASE11_RUNTIME if p.endswith(".py")} == {"__init__.py", "local_server.py",
+                                                                            "p10_read_adapter.py", "ui_model.py"}
+    assert FREEZE_DOC in PHASE11_DOCS and not _git("ls-tree", P11_A5, "--", FREEZE_DOC).strip()   # 記録は anchor の後
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for needle in ("COMPLETE / CLOSED / FROZEN", P11_A5, "新しい anchor ではない", "A5_PASS", "P11_FINAL_AUDIT_PASS",
+                   "手動の y/n の証拠には依らない", "P11-OBS-075", "transfer/p11-a5-helper-v2"):
+        assert needle in text, needle
+
+
+def test_p11_freeze_the_record_holds_no_private_validation_values() -> None:
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for pattern in FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for sample in ("p9wat_" + "0" * 24, "p10prf_" + "0" * 24, "human:reviewer", "2026-01-01T09:00", "D:\\x", "72030",
+                   "A5 validation-only profile."):
+        assert any(re.search(pattern, sample) for pattern in FREEZE_DOC_PRIVATE_PATTERNS), sample   # 形は実際に検出する
 
 
 def test_p11_a4_no_personal_ui_file_or_static_asset_is_published_through_any_public_surface() -> None:
