@@ -350,6 +350,9 @@ def test_d_a_errors_and_events_leak_nothing_private_including_internal_errors(se
     assert (internal["status"], body_json(internal)) == (500, {"code": "INTERNAL_ERROR", "detail": "",
                                                                "schema_version": ls.SERVER_SCHEMA_VERSION})
     texts.append(internal["body"].decode("utf-8"))
+    deadline = time.monotonic() + 5                                                     # sink は body の後に呼ばれる（短い待ち）
+    while server["events"][-1][2] != 500 and time.monotonic() < deadline:
+        time.sleep(0.01)
     assert server["events"][-1] == ("POST", "/api/view", 500, "RuntimeError")          # class 名だけ
     texts.append(repr(server["events"]))
     captured = capsys.readouterr()
@@ -393,7 +396,8 @@ def test_d_c_module_entry_prints_only_the_url_and_refuses_with_a_credential(worl
     try:
         line = proc.stdout.readline()
         payload = json.loads(line)
-        assert payload == {"schema_version": ls.SERVER_SCHEMA_VERSION, "status": "listening", "url": payload["url"]}
+        assert payload == {"app_url": payload["url"] + "app/", "schema_version": ls.SERVER_SCHEMA_VERSION,
+                           "status": "listening", "url": payload["url"]}
         assert payload["url"].startswith("http://127.0.0.1:") and str(world["tmp"]) not in line
         port = int(payload["url"].rsplit(":", 1)[1].rstrip("/"))
         deadline = time.time() + 10

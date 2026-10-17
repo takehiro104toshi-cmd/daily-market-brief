@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.08 (2026-10-17) — Phase 11 P11-A3 static PWA shell
+
+loopback の server が allowlist で配る static な PWA の shell（HTML ・CSS ・vanilla JS ・manifest ・shell だけの service worker ・
+local で生成した icon）を足し、P11-A1 の read-only の UI model を browser で描く。browser は何も保存しない（localStorage ・IndexedDB ・
+cookie ・URL に model ・時点 ・id を入れない）。SW は shell の asset だけを precache し `/api/*` には触れない。CSP は `'self'` だけ。
+時点は人が明示に入れる（時計の既定なし）。server の変更は static の配信だけ。A1 ・凍結の P7 〜 P10 ・公開の Pages ／ report ／ Cloudflare は不変。
+
+追加
+・`src/intelligence/personal_ui/static/`（`index.html` ・`app.js` ・`app.css` ・`manifest.webmanifest` ・`sw.js` ・`icon-192.png` ・
+  `icon-512.png` ・`.gitattributes`）
+・`tests/intelligence/test_personal_ui_static.py` ・`tests/intelligence/test_personal_ui_browser.py`（Playwright は任意）
+・`docs/databank/PHASE11_A3_STATIC_PWA_SHELL.md`
+改善
+・`src/intelligence/personal_ui/local_server.py`（static の allowlist の配信 ・CSP ／ COOP の header ・`app_url`）
+・`tests/intelligence/phase11_runtime_registry.py` ・`tests/intelligence/test_personal_ui_boundary.py` ・
+  `tests/intelligence/test_personal_ui_server.py`（A3 の登録 ・asset の blob の pin ・起動の出力 ・event の確認の待ち）
+・`tests/intelligence/phase7_runtime_registry.py`（凍結の helper の行の単位の再開: 凍結していない Phase 11 の runtime の修正を受ける）
+修正
+・なし
+
 ## v6.07 (2026-10-17) — Phase 11 P11-A2 loopback local server
 
 P11-A1 の governed な read の adapter を loopback（`127.0.0.1` だけ）・read-only ・決定論の local な HTTP で出す `local_server.py` を

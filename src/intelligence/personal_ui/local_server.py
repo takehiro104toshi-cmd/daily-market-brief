@@ -10,6 +10,8 @@ P10 ／ P9 の root → P11-A1 の adapter（`read_ui_model`）→ 本 server �
 - `Host` は `127.0.0.1:<bound port>` と完全一致だけ（`localhost` ・`X-Forwarded-*` は信じない）。`/api/*` は `Sec-Fetch-Site` が
   在れば `same-origin` ／ `none` だけ ・`Origin` が在れば自分の origin だけ（無ければ CLI ／ test の client として許す。Host ・loopback が
   守る）。CORS の header は出さない。
+- static な shell（P11-A3）: `/app/` の下の **allowlist の経路だけ**を、起動の時に package の `static/` から読んだ committed な byte の
+  まま配る（directory の一覧 ・任意の file ・path の露出は無い）。`Cache-Control: no-cache` ・CSP（`'self'` だけ）・COOP。
 - 応答は P11-A1 の正準の byte をそのまま（再直列化しない）。header は固定（`Cache-Control: no-store` 他）。`Date` ・`Server` は出さない
   （`send_response_only`）。result の cache ・memo は無い（毎回 governed な read）。
 - 誤りは正準の JSON `{"code","detail","schema_version"}`。detail は大文字の code だけ。予期しない例外は `INTERNAL_ERROR`（traceback ・
@@ -26,10 +28,11 @@ import os
 import re
 import sys
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple
+from pathlib import Path
+from typing import Any, Callable, Dict, Mapping, Optional, Sequence, Tuple
 
 from .p10_read_adapter import ADAPTER_RULES_VERSION, read_ui_model
 from .ui_model import UI_ERROR_SCHEMA_VERSION, UI_MODEL_SCHEMA_VERSION, UiReadError, canonical_json, ui_model_json_bytes
@@ -42,9 +45,29 @@ CREDENTIAL_VARIABLE = "JQUANTS_API_KEY"
 VIEW_ROUTE = "/api/view"
 GET_ROUTES = ("/", "/health", "/version")
 KNOWN_ROUTES = GET_ROUTES + (VIEW_ROUTE,)
-SAFE_HEADERS: Tuple[Tuple[str, str], ...] = (("Cache-Control", "no-store"), ("Pragma", "no-cache"),
-                                             ("X-Content-Type-Options", "nosniff"), ("Referrer-Policy", "no-referrer"),
-                                             ("Cross-Origin-Resource-Policy", "same-origin"))
+JSON_CONTENT_TYPE = "application/json; charset=utf-8"
+COMMON_HEADERS: Tuple[Tuple[str, str], ...] = (("Pragma", "no-cache"), ("X-Content-Type-Options", "nosniff"),
+                                               ("Referrer-Policy", "no-referrer"),
+                                               ("Cross-Origin-Resource-Policy", "same-origin"))
+SAFE_HEADERS: Tuple[Tuple[str, str], ...] = (("Cache-Control", "no-store"),) + COMMON_HEADERS
+#: static な shell（P11-A3）: 経路 → (package の static/ の file, Content-Type)。この allowlist の外は配らない
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_ROUTES: Mapping[str, Tuple[str, str]] = {
+    "/app/": ("index.html", "text/html; charset=utf-8"),
+    "/app/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/app/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/app/app.css": ("app.css", "text/css; charset=utf-8"),
+    "/app/manifest.webmanifest": ("manifest.webmanifest", "application/manifest+json; charset=utf-8"),
+    "/app/sw.js": ("sw.js", "text/javascript; charset=utf-8"),
+    "/app/icon-192.png": ("icon-192.png", "image/png"),
+    "/app/icon-512.png": ("icon-512.png", "image/png"),
+}
+STATIC_CACHE_CONTROL = "no-cache"
+CONTENT_SECURITY_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; "
+                           "manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; "
+                           "frame-ancestors 'none'; object-src 'none'")
+STATIC_EXTRA_HEADERS: Tuple[Tuple[str, str], ...] = (("Content-Security-Policy", CONTENT_SECURITY_POLICY),
+                                                     ("Cross-Origin-Opener-Policy", "same-origin"))
 _AT_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}:\d{2}\Z")   # 末尾の改行も拒む
 _DATE_RE = re.compile(r"\A\d{4}-\d{2}-\d{2}\Z")
 _SAFE_DETAIL_RE = re.compile(r"^[A-Z0-9_:]{1,80}$")
@@ -93,6 +116,7 @@ class ServerContext:
     p9_root: Any
     port: int
     on_event: Optional[EventSink] = None
+    static_assets: Mapping[str, bytes] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return f"ServerContext(port={self.port}, roots=<private>)"
@@ -124,6 +148,17 @@ def _check_port(port: Any) -> int:
     if type(port) is not int or not 0 <= port <= 65535:
         raise ServerStartupError("PORT_INVALID")
     return port
+
+
+def _load_static_assets() -> Dict[str, bytes]:
+    """起動の時に allowlist の asset を package の static/ から読む（committed な byte のまま ・無ければ起動を拒む）。"""
+    loaded: Dict[str, bytes] = {}
+    for route, (name, _content_type) in STATIC_ROUTES.items():
+        try:
+            loaded[route] = (STATIC_DIR / name).read_bytes()
+        except OSError:
+            raise ServerStartupError("STATIC_ASSET_MISSING") from None
+    return loaded
 
 
 def _check_root(value: Any, code: str) -> Any:
@@ -219,12 +254,15 @@ class _Handler(BaseHTTPRequestHandler):
         self._respond(status, error_bytes(_STATUS_CODES[status]), route="UNKNOWN", kind="PARSE")
 
     # ---- 応答（決定論の header ・Date ・Server なし）
-    def _respond(self, status: int, body: bytes, *, route: str, kind: str = "", allow: str = "") -> None:
+    def _respond(self, status: int, body: bytes, *, route: str, kind: str = "", allow: str = "",
+                 content_type: str = JSON_CONTENT_TYPE, cache_control: str = "no-store",
+                 extra: Tuple[Tuple[str, str], ...] = ()) -> None:
         self.close_connection = True
         self.send_response_only(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
-        for name, value in SAFE_HEADERS:
+        self.send_header("Cache-Control", cache_control)
+        for name, value in COMMON_HEADERS + extra:
             self.send_header(name, value)
         if allow:
             self.send_header("Allow", allow)
@@ -236,7 +274,7 @@ class _Handler(BaseHTTPRequestHandler):
             sink(self.command or "", route, status, kind)
 
     def _route(self) -> str:
-        return self.path if self.path in KNOWN_ROUTES else "UNKNOWN"
+        return self.path if (self.path in KNOWN_ROUTES or self.path in STATIC_ROUTES) else "UNKNOWN"
 
     def _check_host(self) -> None:
         expected = f"{LOOPBACK_BIND}:{self.server.context.port}"
@@ -280,6 +318,13 @@ class _Handler(BaseHTTPRequestHandler):
                 if method != "GET":
                     raise _Refusal(405, "METHOD_NOT_ALLOWED")
                 self._respond(200, VERSION_BYTES if route == "/version" else STATUS_BYTES, route=route, kind="OK")
+                return
+            if route in STATIC_ROUTES:                                                 # P11-A3: committed な shell の byte
+                if method != "GET":
+                    raise _Refusal(405, "METHOD_NOT_ALLOWED")
+                self._respond(200, self.server.context.static_assets[route], route=route, kind="OK",
+                              content_type=STATIC_ROUTES[route][1], cache_control=STATIC_CACHE_CONTROL,
+                              extra=STATIC_EXTRA_HEADERS)
                 return
             if method != "POST":
                 raise _Refusal(405, "METHOD_NOT_ALLOWED")
@@ -337,9 +382,11 @@ class LocalServer:
         bound_port = _check_port(port)
         _check_root(p10_root, "P10_ROOT_REQUIRED")
         _check_root(p9_root, "P9_ROOT_REQUIRED")
+        static_assets = _load_static_assets()
 
         def factory(actual_port: int) -> ServerContext:
-            return ServerContext(p10_root=p10_root, p9_root=p9_root, port=actual_port, on_event=on_event)
+            return ServerContext(p10_root=p10_root, p9_root=p9_root, port=actual_port, on_event=on_event,
+                                 static_assets=static_assets)
 
         server = LoopbackHTTPServer(factory)
         try:
@@ -356,6 +403,10 @@ class LocalServer:
     @property
     def url(self) -> str:
         return f"http://{LOOPBACK_BIND}:{self.port}/"
+
+    @property
+    def app_url(self) -> str:
+        return self.url + "app/"
 
     def serve_forever(self) -> None:
         self._server.serve_forever(poll_interval=0.2)
@@ -398,8 +449,8 @@ def main(argv: Optional[Sequence[str]] = None, stdout: Optional[Any] = None) -> 
                                      "status": "refused"}) + "\n")
         stream.flush()
         return 2
-    stream.write(canonical_json({"schema_version": SERVER_SCHEMA_VERSION, "status": "listening", "url": server.url})
-                 + "\n")
+    stream.write(canonical_json({"app_url": server.app_url, "schema_version": SERVER_SCHEMA_VERSION,
+                                 "status": "listening", "url": server.url}) + "\n")
     stream.flush()
     try:
         server.serve_forever()
@@ -410,9 +461,10 @@ def main(argv: Optional[Sequence[str]] = None, stdout: Optional[Any] = None) -> 
     return 0
 
 
-__all__ = ["CREDENTIAL_VARIABLE", "KNOWN_ROUTES", "LOOPBACK_BIND", "LocalServer", "MAX_BODY_BYTES", "SAFE_HEADERS",
-           "SERVER_SCHEMA_VERSION", "STATUS_BYTES", "ServerContext", "ServerStartupError", "VERSION_BYTES",
-           "VIEW_ROUTE", "error_bytes", "main", "parse_view_request"]
+__all__ = ["CONTENT_SECURITY_POLICY", "CREDENTIAL_VARIABLE", "KNOWN_ROUTES", "LOOPBACK_BIND", "LocalServer",
+           "MAX_BODY_BYTES", "SAFE_HEADERS", "SERVER_SCHEMA_VERSION", "STATIC_CACHE_CONTROL", "STATIC_EXTRA_HEADERS",
+           "STATIC_ROUTES", "STATUS_BYTES", "ServerContext", "ServerStartupError", "VERSION_BYTES", "VIEW_ROUTE",
+           "error_bytes", "main", "parse_view_request"]
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""P11-A1 ・A2 — Phase 11（personal_ui）の境界の guard。
+"""P11-A1 〜 A3 — Phase 11（personal_ui）の境界の guard。
 
 - registry の完全一致 ・P11_BASE 以後の面は登録した P11 の追加だけ ・凍結の P7 ／ P8 ／ P9 ／ P10 の test の差分は宣言した登録の行だけ。
 - P7 〜 P10 の runtime は凍結 anchor と git の object で一致（locale ・改行に依らない）。
@@ -9,6 +9,8 @@
 - A2 の local server は A1 の公開の API（`read_ui_model` ・UI model）だけを使い、Phase 10 ／ 9 を直接 import しない。bind の文字は
   `127.0.0.1` だけ ・CORS なし ・outbound の client（requests ・urllib ・http.client）なし。予期しない例外を `INTERNAL_ERROR` に写す
   1 つの広い except だけを許す。公開の report ・Cloudflare ・Pages の workflow は `P11_BASE` 以後も不変。
+- A3 の static な shell は registry の asset の集合 ・git blob の id ・経路の allowlist と完全一致（内容の guard は
+  `test_personal_ui_static.py`）。
 """
 from __future__ import annotations
 
@@ -21,10 +23,13 @@ from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_PACKAGE, PHASE10_RUNTIME
-from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_A1, P11_ADAPTER, P11_BASE,
-                                                         P11_LOCAL_SERVER, P11_UI_MODEL, PHASE11_A1_RUNTIME,
-                                                         PHASE11_A2_RUNTIME, PHASE11_DOCS, PHASE11_PACKAGE,
-                                                         PHASE11_RUNTIME, PHASE11_TEST_REGISTRATION, PHASE11_TESTS,
+from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PARTS, P11_A1, P11_A2, P11_ADAPTER,
+                                                         P11_BASE, P11_LOCAL_SERVER, P11_STATIC_ASSETS,
+                                                         P11_STATIC_BLOB_IDS, P11_STATIC_ROUTES, P11_UI_MODEL,
+                                                         PHASE11_A1_RUNTIME, PHASE11_A2_RUNTIME, PHASE11_A3_RUNTIME,
+                                                         PHASE11_DOCS, PHASE11_PACKAGE, PHASE11_PY_RUNTIME,
+                                                         PHASE11_RUNTIME, PHASE11_STATIC_DIR,
+                                                         PHASE11_TEST_REGISTRATION, PHASE11_TESTS,
                                                          SANCTIONED_P11_MODULES, SANCTIONED_P11_P10_IMPORTERS,
                                                          SANCTIONED_P11_P10_IMPORTS, SANCTIONED_P11_SERVER_STDLIB,
                                                          only_phase11_registration)
@@ -41,7 +46,7 @@ FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages"
                   "pyproject.toml", "cloudflare", "notifiers", "src/report")
 STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "json", "re", "typing"}
 #: file ごとの禁止の名前の許し（server: 環境変数の有無 ・socket への書き込み）・広い except の許し（server の INTERNAL_ERROR だけ）
-NAME_ALLOWANCES = {P11_LOCAL_SERVER: {"environ", "write"}}
+NAME_ALLOWANCES = {P11_LOCAL_SERVER: {"environ", "write", "read_bytes"}}        # server: static な asset を起動の時に読む
 BROAD_EXCEPT_ALLOWED = {P11_LOCAL_SERVER: 1}
 FORBIDDEN_NAMES = {"open", "write", "write_text", "write_bytes", "read_text", "read_bytes", "mkdir", "unlink", "remove",
                    "rename", "environ", "getenv", "now", "today", "utcnow", "print", "input", "sleep", "eval", "exec",
@@ -102,13 +107,22 @@ def test_p11_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
     assert PHASE11_A1_RUNTIME == (f"{PHASE11_PACKAGE}/__init__.py", P11_ADAPTER, P11_UI_MODEL)
     assert PHASE11_A2_RUNTIME == (P11_LOCAL_SERVER,)
-    assert PHASE11_RUNTIME == tuple(sorted(PHASE11_A1_RUNTIME + PHASE11_A2_RUNTIME)) and len(PHASE11_RUNTIME) == 4
+    assert PHASE11_PY_RUNTIME == tuple(sorted(PHASE11_A1_RUNTIME + PHASE11_A2_RUNTIME)) and len(PHASE11_PY_RUNTIME) == 4
+    assert PHASE11_A3_RUNTIME == P11_STATIC_ASSETS and len(P11_STATIC_ASSETS) == 8
+    assert all(p.startswith(PHASE11_STATIC_DIR + "/") for p in P11_STATIC_ASSETS)
+    assert PHASE11_RUNTIME == tuple(sorted(PHASE11_PY_RUNTIME + PHASE11_A3_RUNTIME)) and len(PHASE11_RUNTIME) == 12
+    assert set(P11_STATIC_BLOB_IDS) == set(P11_STATIC_ASSETS)
+    assert set(P11_STATIC_ROUTES.values()) == {Path(p).name for p in P11_STATIC_ASSETS} - {".gitattributes"}
     assert P11_A1 == "da806753868da597d50875300064722fd12e4bb8"
+    assert P11_A2 == "3ceb36b3496703c7fad315986e52c49a2c24d71b"
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_A2, "HEAD"], cwd=REPO_ROOT).returncode == 0
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P11_A1, "HEAD"], cwd=REPO_ROOT).returncode == 0
     assert _git("diff", "--name-status", P11_A1, "HEAD", "--", *PHASE11_A1_RUNTIME) == ""   # A1 の runtime は A1 の commit のまま
     assert _git("diff", "--cached", "--name-status", P11_A1, "--", *PHASE11_A1_RUNTIME) == ""   # index も
     assert _git("status", "--porcelain", "--", *PHASE11_A1_RUNTIME) == ""                       # worktree も
-    assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE11_RUNTIME}
+    assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {
+        Path(p).name for p in PHASE11_PY_RUNTIME} | {"static"}
+    assert {p.name for p in (REPO_ROOT / PHASE11_STATIC_DIR).iterdir()} == {Path(p).name for p in P11_STATIC_ASSETS}
     for path in (*PHASE11_RUNTIME, *PHASE11_TESTS, *PHASE11_DOCS):
         assert (REPO_ROOT / path).is_file(), path
     assert not set(PHASE11_RUNTIME) & (set(PHASE10_RUNTIME) | set(PHASE9_RUNTIME) | set(PHASE8_RUNTIME)
@@ -116,7 +130,7 @@ def test_p11_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
     assert not any(_git("ls-tree", P11_BASE, "--", p).strip() for p in (*PHASE11_RUNTIME, *PHASE11_TESTS,
                                                                        *PHASE11_DOCS))
     assert set(SANCTIONED_P11_P10_IMPORTERS) == {P11_ADAPTER}                        # Phase 10 の importer は 1 file だけ
-    assert set(SANCTIONED_P11_MODULES) == set(PHASE11_RUNTIME)
+    assert set(SANCTIONED_P11_MODULES) == set(PHASE11_PY_RUNTIME)                      # import の規則は .py だけ
 
 
 def test_p11_a1_since_the_base_only_registered_phase11_files_and_declared_registration_changed() -> None:
@@ -157,7 +171,7 @@ def test_p11_a1_frozen_phase_runtime_is_object_identical_to_its_anchor() -> None
 
 
 def test_p11_a1_imports_are_exactly_the_sanctioned_governed_read_surfaces() -> None:
-    for path in PHASE11_RUNTIME:
+    for path in PHASE11_PY_RUNTIME:
         relative, absolute = _imports(REPO_ROOT / path)
         allowed_stdlib = STDLIB_IMPORTS | (SANCTIONED_P11_SERVER_STDLIB if path == P11_LOCAL_SERVER else set())
         assert absolute <= allowed_stdlib, (path, absolute - allowed_stdlib)
@@ -187,7 +201,7 @@ def test_p11_a1_imports_are_exactly_the_sanctioned_governed_read_surfaces() -> N
 
 
 def test_p11_a1_the_runtime_never_writes_reads_files_env_or_clock_and_has_no_investment_vocabulary() -> None:
-    for path in PHASE11_RUNTIME:
+    for path in PHASE11_PY_RUNTIME:
         tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
         banned = FORBIDDEN_NAMES - NAME_ALLOWANCES.get(path, set())
         words = set()
@@ -240,7 +254,12 @@ def test_p11_a2_public_report_pages_and_cloudflare_surfaces_are_unchanged_since_
         text = path.read_text(encoding="utf-8", errors="replace")
         assert "local_server" not in text and "personal_ui" not in text, path          # Pages ／ worker の入力に入らない
     server = (REPO_ROOT / P11_LOCAL_SERVER).read_text(encoding="utf-8")
-    assert "<html" not in server.lower() and ".js" not in server and ".css" not in server   # static な file は A3
+    assert "<html" not in server.lower() and "innerHTML" not in server                  # markup は asset だけ（server に無い）
+    from src.intelligence.personal_ui.local_server import STATIC_ROUTES
+    assert {route: name for route, (name, _ct) in STATIC_ROUTES.items()} == dict(P11_STATIC_ROUTES)   # allowlist は registry と一致
+    for asset in P11_STATIC_ASSETS:                                                       # static な asset は git blob の pin と一致
+        actual = _git("hash-object", "--", asset).strip()
+        assert actual == P11_STATIC_BLOB_IDS[asset], asset
 
 
 def test_p11_a2_the_contract_records_the_required_clauses() -> None:
