@@ -21,7 +21,8 @@ from pathlib import Path
 from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
-from tests.intelligence.phase10_runtime_registry import (P10_ADMIN_INIT, P10_AUTHORITY_STORES, P10_BASE, P10_EXECUTOR,
+from tests.intelligence.phase10_runtime_registry import (P10_A4, P10_ADMIN_INIT, P10_AUTHORITY_STORES, P10_BASE,
+                                                         P10_EXECUTOR, P10_VALIDATED_TREE,
                                                          P10_LOCAL_CLI, P10_P9_VIEW, P10_REVIEW_VIEW, P10_STORE_IO,
                                                          PHASE10_A1_RUNTIME, PHASE10_A2_RUNTIME, PHASE10_A3_RUNTIME,
                                                          PHASE10_A4_RUNTIME, SANCTIONED_P10_A4_MODULES,
@@ -41,6 +42,13 @@ CONTRACT_DOC = "docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md"
 A2_CONTRACT_DOC = "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md"
 A3_CONTRACT_DOC = "docs/databank/PHASE10_A3_PROFILE_ATTENTION_STORES.md"
 A4_CONTRACT_DOC = "docs/databank/PHASE10_A4_EXECUTOR_REVIEW_VIEW.md"
+FREEZE_DOC = "docs/databank/PHASE10_FINAL_FREEZE.md"
+#: 凍結の記録に書いてはならない private な値の形（P9 ／ P10 の id の接頭辞 ・発行体 ・5 桁の code ・著者 ・瞬間 ・Windows の path ・
+#: A5 の validation の profile の文）。集計の件数は許す
+FREEZE_DOC_PRIVATE_PATTERNS = (r"p9wat_", r"p9ths_", r"p9wrv_", r"p9trv_", r"p8iss_", r"p10prf_", r"p10prv_", r"p10att_",
+                               r"p10arv_", r"\b[0-9]{5}\b", r"human:", r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}",
+                               r"[A-Za-z]:\\", r"p9_a5_private", r"p10_a5_private", r"p10_a5_work",
+                               r"A5 validation-only profile", r"No personal or financial content")
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "docs/v2", "main.py",
                   "requirements.txt", "pyproject.toml")
 STDLIB_IMPORTS = {"__future__", "dataclasses", "datetime", "enum", "json", "re", "typing"}
@@ -384,3 +392,54 @@ def test_p10_windows_portability_git_guards_are_locale_and_checkout_newline_inde
     changed = tmp_path / "changed_copy.py"
     changed.write_bytes(raw.replace(b"\n", b"\r\n") + b"# changed\r\n")
     assert hashed(changed, "true") != anchored                                         # 意味の違いは検出
+
+
+# ================================================ 凍結の記録（P10-FREEZE-RECORD。記録の commit は新しい anchor ではない）
+
+
+def _is_ancestor(older: str, newer: str) -> bool:
+    return subprocess.run(["git", "merge-base", "--is-ancestor", older, newer], cwd=REPO_ROOT).returncode == 0
+
+
+def test_p10_freeze_the_17_registered_runtime_files_are_object_identical_to_the_anchor_and_the_validated_tree() -> None:
+    assert P10_A4 == "1a7b9a26c8ee6a2b86a30e88c224a737565ce979"
+    assert P10_VALIDATED_TREE == "e46bbae85167ab3dbcb70285f214a066ec01781e"
+    assert _is_ancestor(P10_A4, "HEAD") and _is_ancestor(P10_VALIDATED_TREE, "HEAD")
+    assert _is_ancestor(P10_A4, P10_VALIDATED_TREE) and P10_A4 != P10_VALIDATED_TREE
+    assert len(PHASE10_RUNTIME) == 17 and len(set(PHASE10_RUNTIME)) == 17
+    anchored_package = {path for path in _git("ls-tree", "-r", "--name-only", P10_A4, "--", PHASE10_PACKAGE).splitlines()
+                        if path.endswith(".py")}
+    assert anchored_package == set(PHASE10_RUNTIME)                                   # anchor の package ＝ 登録の 17
+    for path in PHASE10_RUNTIME:
+        assert _git("ls-tree", P10_A4, "--", path).strip(), path                      # anchor に在る
+    at_anchor, in_worktree = _blob_ids(P10_A4, PHASE10_RUNTIME)                       # git の object の id（locale ・改行に依らない）
+    at_validated, _ = _blob_ids(P10_VALIDATED_TREE, PHASE10_RUNTIME)
+    in_index = tuple(_git("rev-parse", *(f":{path}" for path in PHASE10_RUNTIME)).split())
+    assert len(at_anchor) == len(at_validated) == len(in_worktree) == len(in_index) == 17
+    assert at_anchor == at_validated, "runtime blob differs between P10_A4 and P10_VALIDATED_TREE"
+    assert at_anchor == in_index, "runtime blob differs between P10_A4 and the index"
+    assert at_anchor == in_worktree, "runtime blob differs between P10_A4 and the worktree"
+    # anchor 以後に Phase 10 の src runtime は変わっていない（commit ・index ・worktree）。validated tree は test と CHANGELOG だけ
+    assert _git("diff", "--name-status", P10_A4, "HEAD", "--", "src") == ""
+    assert _git("diff", "--cached", "--name-status", P10_A4, "--", "src") == ""
+    assert _git("status", "--porcelain", "--", *PHASE10_RUNTIME) == ""
+    assert set(_git("diff", "--name-only", P10_A4, P10_VALIDATED_TREE).splitlines()) == {
+        "CHANGELOG.md", "tests/intelligence/test_personal_intelligence_boundary.py"}
+    # 凍結の記録は anchor ・validated tree の後に足された（記録の commit は新しい anchor ではない）
+    assert FREEZE_DOC in PHASE10_DOCS
+    assert not _git("ls-tree", P10_A4, "--", FREEZE_DOC).strip()
+    assert not _git("ls-tree", P10_VALIDATED_TREE, "--", FREEZE_DOC).strip()
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for clause in ("COMPLETE / CLOSED / FROZEN", P10_A4, P10_VALIDATED_TREE, "17", "A5_PASS", "P10_FINAL_AUDIT_PASS",
+                   "P10-OBS-054", "Phase 10.1", "Phase 11"):
+        assert clause in text, clause
+
+
+def test_p10_freeze_the_record_holds_no_private_validation_values() -> None:
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for pattern in FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for sample in ("p9wat_" + "0" * 24, "p10prf_" + "0" * 24, "human:reviewer", "2026-01-01T09:00", "D:\\x", "72030",
+                   "A5 validation-only profile."):
+        assert any(re.search(pattern, sample) for pattern in FREEZE_DOC_PRIVATE_PATTERNS), sample   # 形は実際に検出する
+    assert re.search(r"\b\d{1,4}\b", text)                                               # 集計の件数は許す

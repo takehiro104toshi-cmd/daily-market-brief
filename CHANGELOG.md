@@ -4,6 +4,23 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.05 (2026-10-17) — Phase 10 final freeze record（文書 ・registry ・guard だけ）
+
+Phase 10（Personal Intelligence v1）を **COMPLETE / CLOSED / FROZEN** とする記録。意味 ／ runtime の凍結 anchor は P10-A4 の commit
+`1a7b9a26c8ee6a2b86a30e88c224a737565ce979`（registry の `P10_A4`）のまま。Windows の P10-A5 real private validation は
+`e46bbae85167ab3dbcb70285f214a066ec01781e`（registry の `P10_VALIDATED_TREE`。test と CHANGELOG だけが anchor と違い、runtime 17 file
+の blob は同じ）で走り **A5_PASS**。P10-A6 final audit は **P10_FINAL_AUDIT_PASS**。runtime の意味は変えていない。この記録の commit
+は新しい anchor ではない。
+
+追加
+・`docs/databank/PHASE10_FINAL_FREEZE.md`（凍結の記録 ・A5 の集計の証拠 ・観察の分類 ・延期 ・以後の境界）
+・`tests/intelligence/test_personal_intelligence_boundary.py`（凍結の guard: 17 file の git の object の id が anchor ・validated tree ・
+  index ・worktree で一致 ・記録に private な値なし）
+改善
+・`tests/intelligence/phase10_runtime_registry.py`（`P10_A4` ・`P10_VALIDATED_TREE` ・凍結の文書の登録）
+修正
+・なし
+
 ## v6.04 (2026-10-16) — Phase 10 P10-A5 Windows preflight test-only fix（test だけ）
 
 P10-A5 の Windows の preflight で Phase 10 の境界の test の 2 つが失敗した。原因は test の補助 `_git()` の

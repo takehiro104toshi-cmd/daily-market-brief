@@ -1,4 +1,8 @@
-"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1 〜 A4）。
+"""Phase 10（Personal Intelligence）の登録済み runtime ・test ・文書の完全な一覧（P10-A1 〜 A4 ・P10-FREEZE-RECORD）。
+
+- `P10_A4` ＝ Phase 10 の意味 ／ runtime の最終凍結 anchor（runtime 17 file）。`P10_VALIDATED_TREE` ＝ Windows の P10-A5 real private
+  validation を走らせた repo の tree（test と CHANGELOG だけが anchor と違う。runtime の blob は 17 file 全て anchor と同じ）。
+  凍結の記録の commit は新しい anchor ではない。記録: `docs/databank/PHASE10_FINAL_FREEZE.md`。
 
 - 凍結の Phase 7 ／ 8 ／ 9 の test に入れた登録の行は `PHASE10_TEST_REGISTRATION` に完全に列挙し、Phase 10 の guard
   （`test_personal_intelligence_boundary.py`）が `P10_BASE` との差分の完全一致を pin する（test だけの狭い再開。runtime は不変）。
@@ -11,6 +15,10 @@ from typing import Mapping, Sequence, Set, Tuple
 
 #: P10 の基準（P9 の凍結の記録の commit。P10-A1 はここから足す）
 P10_BASE = "3bfc76c6b2f76f613bb50710e6e7eb976a642326"
+#: Phase 10 の意味 ／ runtime の最終凍結 anchor（P10-A4 の commit。P10-FREEZE-RECORD で登録。記録の commit は新しい anchor ではない）
+P10_A4 = "1a7b9a26c8ee6a2b86a30e88c224a737565ce979"
+#: Windows の P10-A5 real private validation を走らせた tree（P10_A4 ＋ test ／ CHANGELOG だけの Windows の移植の修正。runtime は同じ）
+P10_VALIDATED_TREE = "e46bbae85167ab3dbcb70285f214a066ec01781e"
 PHASE10_PACKAGE = "src/intelligence/personal_intelligence"
 #: P10-A1 で足した runtime（凍結の Phase 9 の read-only の adapter だけ。本番から import されない）
 PHASE10_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE10_PACKAGE}/{name}.py" for name in ("__init__", "p9_view"))
@@ -36,7 +44,8 @@ PHASE10_TESTS: Tuple[str, ...] = ("tests/intelligence/phase10_runtime_registry.p
 PHASE10_DOCS: Tuple[str, ...] = ("docs/databank/PHASE10_A1_P9_READONLY_ADAPTER.md",
                                  "docs/databank/PHASE10_A2_PROFILE_ATTENTION_SEMANTICS.md",
                                  "docs/databank/PHASE10_A3_PROFILE_ATTENTION_STORES.md",
-                                 "docs/databank/PHASE10_A4_EXECUTOR_REVIEW_VIEW.md")
+                                 "docs/databank/PHASE10_A4_EXECUTOR_REVIEW_VIEW.md",
+                                 "docs/databank/PHASE10_FINAL_FREEZE.md")
 ADDITION_STATUSES = ("A", "??")
 #: 凍結の Phase 9 を import してよい Phase 10 の file（完全な path）と、その import の面（module → 名前。完全一致）
 P10_P9_VIEW = f"{PHASE10_PACKAGE}/p9_view.py"
@@ -179,7 +188,7 @@ def only_phase10_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "P10_BASE", "P10_P9_VIEW", "PHASE10_A1_RUNTIME", "PHASE10_A2_RUNTIME", "PHASE10_DOCS",
+__all__ = ["ADDITION_STATUSES", "P10_A4", "P10_BASE", "P10_P9_VIEW", "P10_VALIDATED_TREE", "PHASE10_A1_RUNTIME", "PHASE10_A2_RUNTIME", "PHASE10_DOCS",
            "PHASE10_A3_RUNTIME", "PHASE10_PACKAGE", "PHASE10_RUNTIME", "PHASE10_TESTS", "PHASE10_TEST_REGISTRATION",
            "P10_ADMIN_INIT", "P10_AUTHORITY_STORES", "P10_EXECUTOR", "P10_LOCAL_CLI", "P10_REVIEW_VIEW", "P10_STORE_IO",
            "PHASE10_A4_RUNTIME", "SANCTIONED_P10_A2_MODULES", "SANCTIONED_P10_A3_MODULES", "SANCTIONED_P10_A4_MODULES",
