@@ -41,7 +41,7 @@ import urllib.request  # noqa: E402
 from datetime import date, datetime  # noqa: E402
 from pathlib import Path  # noqa: E402
 
-EXPECTED_HEAD = "a10686df64b83d9f65869840ed2573216a21e0d2"
+EXPECTED_HEAD = "43c0b856d41efed397de213a1a06178c5e97ab10"
 DEFAULT_P9_ROOT = r"D:\p9_a5_private"            # READ ONLY (real Phase 9 private root)
 DEFAULT_P10_ROOT = r"D:\p10_a5_private"          # READ ONLY (real Phase 10 private root from P10-A5)
 DEFAULT_WORK = r"D:\p11_a5_work"                 # private work directory (this helper + private state + browser profile)

@@ -13,7 +13,7 @@ Paste back ONLY the lines that start with "REPORT:". Never paste anything else f
     git fetch origin claude/investment-intelligence-phase6
     git checkout claude/investment-intelligence-phase6
     git merge --ff-only origin/claude/investment-intelligence-phase6
-    git rev-parse HEAD            # must print a10686df64b83d9f65869840ed2573216a21e0d2
+    git rev-parse HEAD            # must print 43c0b856d41efed397de213a1a06178c5e97ab10
     Remove-Item Env:JQUANTS_API_KEY -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force D:\p11_a5_work | Out-Null
     # copy a5.py into D:\p11_a5_work\a5.py
