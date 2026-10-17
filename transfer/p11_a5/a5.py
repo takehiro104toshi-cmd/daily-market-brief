@@ -718,7 +718,12 @@ class Browser:
                                                            "uploadThroughput": -1}, session_id=self.session)
 
     def cookies(self) -> list:
+        """Every cookie in the (fresh, validation-only) profile: the browser vendor's own cookies appear here too."""
         return self.cdp.call("Storage.getCookies", session_id=self.session).get("cookies", [])
+
+    def app_cookies(self) -> list:
+        """Cookies that would be sent to the P11 app origin (host-only 127.0.0.1 cookies, HttpOnly included)."""
+        return self.cdp.call("Network.getCookies", {"urls": [self.origin + "/"]}, session_id=self.session).get("cookies", [])
 
     # ---- shell operations
     def cleanup_p11_only(self) -> None:
@@ -788,6 +793,12 @@ class Browser:
                 self._kill()
 
 
+def _cookie_metadata(cookies: list) -> list:
+    """Cookie attributes without values (private log only)."""
+    return [{k: c.get(k) for k in ("name", "domain", "path", "secure", "httpOnly", "sameSite", "session", "expires")}
+            for c in cookies]
+
+
 def check_storage(browser: Browser, rt: Runtime, tokens: tuple, model_bytes: bytes, state: dict, label: str) -> None:
     storage = browser.storage()
     if storage["localStorage"] or storage["sessionStorage"]:
@@ -796,8 +807,14 @@ def check_storage(browser: Browser, rt: Runtime, tokens: tuple, model_bytes: byt
         report(f"INDEXEDDB_ENUMERATION_UNAVAILABLE {label}")
     elif storage["indexedDB"]:
         raise Fail(f"INDEXEDDB_NOT_EMPTY:{label}")
-    if storage["cookie"] != "" or browser.cookies():
-        raise Fail(f"COOKIES_PRESENT:{label}")
+    app_cookies = browser.app_cookies()
+    if storage["cookie"] != "" or app_cookies:                                 # the P11 invariant: no cookie for the app origin
+        private_log(f"app-origin cookies ({label}): " + json.dumps(_cookie_metadata(app_cookies)))
+        raise Fail(f"APP_ORIGIN_COOKIES_PRESENT:{label}")
+    others = [c for c in browser.cookies() if c.get("domain", "").lstrip(".") != "127.0.0.1"]
+    if others:                                                               # browser-vendor cookies in the fresh profile: counted, not failed
+        private_log(f"non-app cookies ({label}): " + json.dumps(_cookie_metadata(others)))
+    report(f"NON_APP_COOKIES {label} COUNT={len(others)} DOMAINS={len({c.get('domain', '') for c in others})}")
     names = set(storage["caches"])
     if names != {rt.registry.P11_SHELL_CACHE_NAME}:
         raise Fail(f"CACHE_NAMESPACE_UNEXPECTED:{label}")
@@ -1052,7 +1069,11 @@ def automated_online(rt: Runtime, state: dict, headed: bool, label: str, keep_op
             raise Fail("PRIVATE_INDICATOR_MISSING")
         if served.api_calls() != 0:
             raise Fail("AUTOMATIC_REQUEST_DETECTED")
+        if browser.evaluate("() => document.cookie") != "" or browser.app_cookies():
+            private_log(f"app-origin cookies before load ({label}): " + json.dumps(_cookie_metadata(browser.app_cookies())))
+            raise Fail("APP_ORIGIN_COOKIES_BEFORE_LOAD")
         report(f"SHELL_LOADED_OK {label}")
+        report(f"APP_COOKIES_NONE_BEFORE_LOAD_OK {label}")
         manifest_json = json.loads(browser.evaluate("async () => (await fetch('/app/manifest.webmanifest')).text()"))
         if manifest_json.get("start_url") != "/app/" or manifest_json.get("scope") != "/app/":
             raise Fail("MANIFEST_INVALID")
@@ -1071,6 +1092,12 @@ def automated_online(rt: Runtime, state: dict, headed: bool, label: str, keep_op
                f"EXCLUDED_VISIBLE={excluded}")
         check_dom_private(browser, tokens, label)
         report(f"DOM_PRIVATE_CLEAN_OK {label}")
+        for method, path, body in (("GET", "/app/", None), ("GET", "/app/app.js", None), ("GET", "/health", None),
+                                   ("POST", "/api/view", {"at": state["at"], "as_of_date": state["as_of_date"]})):
+            headers = {"Origin": f"http://127.0.0.1:{served.port}"} if method == "POST" else None
+            if "set-cookie" in http_request(served.port, method, path, body, headers)["headers"]:
+                raise Fail("SERVER_SET_COOKIE")
+        report(f"NO_SET_COOKIE_OK {label}")
         if not browser.evaluate("async () => !!(await navigator.serviceWorker.getRegistration('/app/'))"):
             raise Fail("SW_NOT_REGISTERED")
         report(f"SW_REGISTERED_OK {label}")
