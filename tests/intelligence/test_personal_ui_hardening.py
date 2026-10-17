@@ -367,8 +367,16 @@ def test_a_d_split_send_early_refusals_keep_the_canonical_response_and_drain_the
     port = server["port"]
     before = (tree(server["p10"]), tree(server["p9"]["root"]))
     drained: list = []
+    calls: list = []                                                  # 呼ばれた瞬間に記録（FIN は読み捨ての中で送られるので競合しない）
     real = ls.linger_close
-    monkeypatch.setattr(ls, "linger_close", lambda connection, **kw: drained.append(real(connection, **kw)) or drained[-1])
+
+    def recording(connection, **kw):
+        calls.append(True)
+        result = real(connection, **kw)
+        drained.append(result)
+        return result
+
+    monkeypatch.setattr(ls, "linger_close", recording)
     good = json.dumps(GOOD).encode()
     big = b"{" + b" " * 5000 + b"}"
     hostile = (NOTE + " " + SENTINEL).encode()
@@ -394,6 +402,7 @@ def test_a_d_split_send_early_refusals_keep_the_canonical_response_and_drain_the
     )
     for label, head, body, status, code, detail in cases:
         drained.clear()
+        calls.clear()
         response = _split_send(port, head, body)
         header, _, payload = response.partition(b"\r\n\r\n")
         assert header.split(b"\r\n")[0] == b"HTTP/1.0 %d %s" % (status, {415: b"Unsupported Media Type", 413: b"Request Entity Too Large",
@@ -406,17 +415,29 @@ def test_a_d_split_send_early_refusals_keep_the_canonical_response_and_drain_the
         assert SENTINEL not in response.decode("utf-8") and NOTE not in response.decode("utf-8")
     # 解析の失敗（長い要求行）の後も読み捨てる（stdlib が読まなかった残りの byte）
     drained.clear()
+    calls.clear()
     long_line = b"GET /" + b"a" * 70000 + b" HTTP/1.0\r\nHost: 127.0.0.1:%d\r\n\r\n" % port
     response = _split_send(port, long_line[:60000], long_line[60000:])
     assert response.startswith(b"HTTP/1.0 400") and b'"code":"BAD_REQUEST"' in response
     _wait_for(lambda: drained, 5)
     assert len(drained) == 1 and 0 <= drained[0] <= len(long_line)
-    # 読み切った要求（200 の経路）では読み捨てを呼ばない ・応答は A1 の byte のまま
+    # 読み切った要求（200 の POST）と body を宣言しない GET（static ・health ・version）では読み捨てを呼ばない。
+    # 読み捨てが無い接続では FIN は finish の後に送られるので、client が EOF を見た時点で `calls` は確定している
+    for method, path, body in (("POST", "/api/view", GOOD), ("GET", "/app/", None), ("GET", "/app/app.js", None),
+                               ("GET", "/health", None), ("GET", "/version", None)):
+        calls.clear()
+        drained.clear()
+        response = request(port, method, path, body)
+        assert response["status"] == 200, (method, path)
+        assert calls == [] and drained == [], (method, path, calls, drained)
+    # 成功する経路でも、宣言された body が未読なら読み捨てる（static の GET に body が付いた場合）
+    calls.clear()
     drained.clear()
-    ok = request(port, "POST", "/api/view", GOOD)
-    assert ok["status"] == 200 and drained == []
-    static = request(port, "GET", "/app/")
-    assert static["status"] == 200 and drained == []
+    with_body = _split_send(port, b"GET /app/ HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nContent-Type: text/plain\r\nContent-Length: 30\r\n\r\n"
+                            % port, b"x" * 30)
+    assert with_body.startswith(b"HTTP/1.0 200") and with_body.endswith((REPO_ROOT / PHASE11_STATIC_DIR / "index.html").read_bytes())
+    _wait_for(lambda: drained, 5)
+    assert calls == [True] and drained == [30]
     assert (tree(server["p10"]), tree(server["p9"]["root"])) == before                 # 何も書かない
     assert all(SENTINEL not in repr(e) for e in server["events"])
 

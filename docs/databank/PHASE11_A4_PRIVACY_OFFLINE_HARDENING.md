@@ -72,8 +72,10 @@ boolean ・非負の整数 ・件数の map（鍵 `[A-Za-z0-9_.]{1,80}` ・値�
 Windows の実機の preflight で、body を読む前に拒む経路（415 ・413 ・TRANSFER_ENCODING ・HOST_REJECTED ・FETCH_SITE_REJECTED ・405 ・
 解析の失敗）が client で `ConnectionResetError` になった。`http.client` は header と body を 2 回の send で送るので、server が応答を書いて
 閉じた時に未読の受信 data が残り、Winsock は RST で client の受信 buffer を捨てる（Linux は届いた応答を渡すので見えなかった）。
-対処: `_Handler.finish` で、`_read_body` が body を全部読んでいない接続だけ `linger_close`（FIN → 最大 64 KiB ・8 回 ・各 0.5 秒の
-recv で読み捨て。内容は使わず ・出さず ・時計を使わない有界）。200 の経路（body を読み切った要求 ・body の無い GET）では何もしない。
+対処: `_Handler.finish` で、`unread_request_bytes_possible` の接続だけ `linger_close`（FIN → 最大 64 KiB ・8 回 ・各 0.5 秒の
+recv で読み捨て。内容は使わず ・出さず ・時計を使わない有界）。この flag は、要求が body を宣言（Content-Length ／ Transfer-Encoding）
+してまだ読み切っていない間、または stdlib の解析が失敗した時だけ True。body を宣言しない GET（static ・health ・version）と body を
+読み切った 200 の POST では False のまま（Windows の preflight で、static の GET でも 0 byte の読み捨てが走っていたのを直した）。
 status ・body ・header ・Host ／ Origin ／ Fetch Metadata ・大きさ ・型の規則 ・CORS 無し ・loopback だけ ・fail closed は不変。
 `socket` module は import しない（`_SHUT_WR = 1`）。import の面は A1 〜 A4 のまま。
 

@@ -16,7 +16,8 @@ P10 ／ P9 の root → P11-A1 の adapter（`read_ui_model`）→ 本 server �
   handle_error（stderr への traceback）は出さない、static な asset は symlink でない通常の file だけ。
 - 閉じ方（P11-A5 の Windows の移植性）: body を読む前に拒んだ要求（415 ・413 ・400 ・403 ・405 ・解析の失敗）は、応答を書いた後に
   FIN を送り、まだ届く byte を短い timeout ・上限の中で読み捨ててから閉じる（未読の受信 data が残る close は RST になり、Winsock は
-  client が受け取った応答を捨てる）。読み捨てた byte は使わない ・出さない。body を全部読んだ要求では何もしない。
+  client が受け取った応答を捨てる）。読み捨てた byte は使わない ・出さない。body を宣言しない要求（static ／ health ／ version の
+  GET）と body を読み切った要求（200 の POST）では何もしない。
 - 応答は P11-A1 の正準の byte をそのまま（再直列化しない）。header は固定（`Cache-Control: no-store` 他）。`Date` ・`Server` は出さない
   （`send_response_only`）。result の cache ・memo は無い（毎回 governed な read）。
 - 誤りは正準の JSON `{"code","detail","schema_version"}`。detail は大文字の code だけ。予期しない例外は `INTERNAL_ERROR`（traceback ・
@@ -276,14 +277,16 @@ class _Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
     timeout = 10
     server: "LoopbackHTTPServer"
-    body_consumed = False                                                           # `_read_body` が全部読んだ時だけ True
+    #: 未読の要求の byte が残り得る間だけ True: 要求が body を宣言（Content-Length ／ Transfer-Encoding）してまだ読み切っていない、
+    #: または stdlib の解析が失敗して要求の残りを読んでいない。body を宣言しない GET ・読み切った POST では False のまま。
+    unread_request_bytes_possible = False
 
     def finish(self) -> None:
-        """応答を flush した後、body を読み切っていない接続だけ有界に読み捨ててから閉じる（P11-A5。200 の経路では何もしない）。"""
+        """応答を flush した後、未読の要求の byte が残り得る接続だけ有界に読み捨ててから閉じる（P11-A5）。"""
         try:
             super().finish()
         finally:
-            if not self.body_consumed:
+            if self.unread_request_bytes_possible:
                 linger_close(self.connection)
 
     # ---- log は既定で無し（本文 ・瞬間 ・Host ・path を出さない）
@@ -298,6 +301,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def send_error(self, code: int, message: Optional[str] = None, explain: Optional[str] = None) -> None:
         """stdlib の解析の失敗（長すぎる要求行 ・不明な method 等）も正準の JSON で（HTML ・Server ・Date は出さない）。"""
+        self.unread_request_bytes_possible = True                                  # 要求の残りを読んでいない可能性
         status = 405 if code == 501 else (400 if 400 <= code < 500 or code == 505 else 500)   # 505（版）も client の誤り
         self._respond(status, error_bytes(_STATUS_CODES[status]), route="UNKNOWN", kind="PARSE")
 
@@ -358,11 +362,13 @@ class _Handler(BaseHTTPRequestHandler):
             raise _Refusal(400, "BAD_REQUEST", "BODY_TIMEOUT") from None
         if len(body) != length:
             raise _Refusal(400, "BAD_REQUEST", "BODY_TRUNCATED")
-        self.body_consumed = True
+        self.unread_request_bytes_possible = False                                 # 宣言された body を読み切った
         return body
 
     def _dispatch(self, method: str) -> None:
         route = self._route()
+        self.unread_request_bytes_possible = (self.headers.get("Content-Length") is not None
+                                              or self.headers.get("Transfer-Encoding") is not None)
         try:
             self._check_host()
             if route == "UNKNOWN":
