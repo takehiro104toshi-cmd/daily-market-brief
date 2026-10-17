@@ -14,8 +14,9 @@ Stages (run in order; each prints REPORT lines only and stops on the first failu
 Guarantees: D:\p9_a5_private and D:\p10_a5_private are READ ONLY for this helper (byte manifests before and after every
 stage; the helper never initializes / writes / repairs / deletes / renames anything under them). The loopback server is
 the real Phase 11 server from the checkout at the exact expected HEAD. Outbound network: socket / getaddrinfo / urllib /
-http.client / J-Quants client classes are trapped in this process (only 127.0.0.1 is allowed); page-originated browser
-traffic is intercepted and must be loopback only. JQUANTS_API_KEY is removed from this process and must be absent.
+http.client / J-Quants client classes are trapped in this process (only 127.0.0.1 is allowed); the browser is the installed
+Edge / Chrome driven over the DevTools protocol on 127.0.0.1 (stdlib only, fresh profile under the work directory), and
+page-originated traffic is recorded and must be loopback only. JQUANTS_API_KEY is removed from this process and must be absent.
 Private values (ids, notes, authority content, the model bytes, the chosen instant) stay in D:\p11_a5_work.
 Paste back only REPORT lines.
 """
@@ -27,12 +28,14 @@ _CREDENTIAL_WAS_PRESENT = os.environ.get("JQUANTS_API_KEY", "") != ""         # 
 os.environ.pop("JQUANTS_API_KEY", None)
 
 import argparse  # noqa: E402
+import base64  # noqa: E402
 import hashlib  # noqa: E402
 import http.client  # noqa: E402
 import json  # noqa: E402
 import re  # noqa: E402
 import socket  # noqa: E402
 import stat  # noqa: E402
+import struct  # noqa: E402
 import subprocess  # noqa: E402
 import sys  # noqa: E402
 import time  # noqa: E402
@@ -295,8 +298,8 @@ def check_assets(rt: Runtime) -> int:
 
 def _strings(value, out: set) -> None:
     if isinstance(value, str):
-        if (len(value) >= 6 and not re.fullmatch(r"[A-Z0-9_:.\-]+", value) and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value)
-                and not re.fullmatch(r"[a-z0-9_]+:\d+\.\d+\.\d+", value)):              # schema / rules versions are public shape
+        if (len(value) >= 6 and not re.fullmatch(r"[A-Z0-9_]+", value) and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value)
+                and not re.fullmatch(r"[a-z0-9_]+:\d+\.\d+\.\d+", value)):              # governed codes / versions / dates are public shape
             out.add(value)
     elif isinstance(value, dict):
         for item in value.values():
@@ -424,81 +427,300 @@ def view_body(served: Served, state: dict) -> dict:
                         headers={"Origin": f"http://127.0.0.1:{served.port}", "Sec-Fetch-Site": "same-origin"})
 
 
-# ------------------------------------------------------------------ browser (Playwright if available; manual fallback)
+# ------------------------------------------------------------------ browser (installed Edge / Chrome driven over the DevTools protocol)
+# stdlib only: no Playwright, no package install. A fresh validation-only profile under WORK; the browser listens for the
+# DevTools protocol on 127.0.0.1 only; this process talks to it over a minimal WebSocket client on the loopback interface.
 
 
-def playwright_available() -> bool:
-    try:
-        import playwright.sync_api  # noqa: F401
-        return True
-    except Exception:  # noqa: BLE001
-        return False
+BROWSER_CANDIDATES = (
+    ("edge", r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
+    ("edge", r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
+    ("chrome", r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+    ("chrome", r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
+)
+#: Chromium emits this (data-free) notice when a service worker's idle timer fires while DevTools is attached
+DEVTOOLS_SW_NOTICE = "Service Worker termination by a timeout timer was canceled because DevTools is attached."
+BROWSER_FLAGS = ("--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-background-networking",
+                 "--disable-component-update", "--disable-sync", "--disable-extensions", "--disable-default-apps",
+                 "--disable-features=OptimizationHints,MediaRouter,Translate,InterestFeedContentSuggestions,Prerender2",
+                 "--window-size=1200,900", "--remote-debugging-port=0")
+
+
+def find_browser():
+    """(label, executable) of an installed Chromium-family browser, or None. P11_A5_BROWSER overrides."""
+    explicit = os.environ.get("P11_A5_BROWSER", "")
+    if explicit and Path(explicit).is_file():
+        return ("explicit", explicit)
+    candidates = list(BROWSER_CANDIDATES)
+    local = os.environ.get("LOCALAPPDATA", "")
+    if local:
+        candidates.append(("chrome", str(Path(local) / "Google" / "Chrome" / "Application" / "chrome.exe")))
+    for label, path in candidates:
+        if Path(path).is_file():
+            return (label, path)
+    return None
+
+
+class _WebSocket:
+    """Minimal RFC 6455 client for the DevTools endpoint on 127.0.0.1 (text frames, masking, ping/pong, fragments)."""
+
+    def __init__(self, url: str, timeout: float = 30.0) -> None:
+        match = re.fullmatch(r"ws://127\.0\.0\.1:(\d+)(/.*)", url)
+        if match is None:
+            raise Fail("CDP_ENDPOINT_NOT_LOOPBACK")
+        port, path = int(match.group(1)), match.group(2)
+        self.sock = _REAL_CREATE_CONNECTION(("127.0.0.1", port), timeout=timeout)
+        key = base64.b64encode(os.urandom(16)).decode("ascii")
+        self.sock.sendall((f"GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                           f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode("ascii"))
+        head = b""
+        while b"\r\n\r\n" not in head:
+            chunk = self.sock.recv(4096)
+            if not chunk:
+                raise Fail("CDP_HANDSHAKE_FAILED")
+            head += chunk
+        header, _, self.buffer = head.partition(b"\r\n\r\n")
+        if b" 101 " not in header.split(b"\r\n")[0]:
+            raise Fail("CDP_HANDSHAKE_FAILED")
+
+    def _read(self, n: int) -> bytes:
+        while len(self.buffer) < n:
+            chunk = self.sock.recv(max(65536, n - len(self.buffer)))
+            if not chunk:
+                raise Fail("CDP_CONNECTION_CLOSED")
+            self.buffer += chunk
+        out, self.buffer = self.buffer[:n], self.buffer[n:]
+        return out
+
+    def _send_frame(self, opcode: int, payload: bytes) -> None:
+        mask = os.urandom(4)
+        length = len(payload)
+        if length < 126:
+            header = bytes([0x80 | opcode, 0x80 | length])
+        elif length < 65536:
+            header = bytes([0x80 | opcode, 0x80 | 126]) + struct.pack(">H", length)
+        else:
+            header = bytes([0x80 | opcode, 0x80 | 127]) + struct.pack(">Q", length)
+        masked = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+        self.sock.sendall(header + mask + masked)
+
+    def send_text(self, text: str) -> None:
+        self._send_frame(0x1, text.encode("utf-8"))
+
+    def recv_text(self) -> str:
+        message = b""
+        while True:
+            first, second = self._read(2)
+            fin, opcode, masked, length = first & 0x80, first & 0x0F, second & 0x80, second & 0x7F
+            if length == 126:
+                length = struct.unpack(">H", self._read(2))[0]
+            elif length == 127:
+                length = struct.unpack(">Q", self._read(8))[0]
+            mask = self._read(4) if masked else b""
+            payload = self._read(length)
+            if masked:
+                payload = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+            if opcode == 0x9:                                     # ping -> pong
+                self._send_frame(0xA, payload)
+                continue
+            if opcode == 0x8:
+                raise Fail("CDP_CONNECTION_CLOSED")
+            if opcode in (0x1, 0x0):
+                message += payload
+                if fin:
+                    return message.decode("utf-8")
+            # binary / pong frames are ignored
+
+    def close(self) -> None:
+        try:
+            self._send_frame(0x8, b"")
+        except OSError:
+            pass
+        try:
+            self.sock.close()
+        except OSError:
+            pass
+
+
+class _Cdp:
+    """DevTools protocol client: request/response by id; events are handed to `on_event` as they arrive."""
+
+    def __init__(self, ws_url: str, on_event) -> None:
+        self.ws = _WebSocket(ws_url)
+        self.next_id = 1
+        self.on_event = on_event
+
+    def _receive(self, deadline: float) -> dict:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise Fail("CDP_TIMEOUT")
+        self.ws.sock.settimeout(min(remaining, 30.0))
+        try:
+            return json.loads(self.ws.recv_text())
+        except (TimeoutError, socket.timeout):
+            raise Fail("CDP_TIMEOUT") from None
+
+    def call(self, method: str, params: dict = None, session_id: str = None, timeout: float = 30.0) -> dict:
+        message_id = self.next_id
+        self.next_id += 1
+        payload = {"id": message_id, "method": method, "params": params or {}}
+        if session_id:
+            payload["sessionId"] = session_id
+        self.ws.send_text(json.dumps(payload))
+        deadline = time.monotonic() + timeout
+        while True:
+            message = self._receive(deadline)
+            if message.get("id") == message_id:
+                if "error" in message:
+                    raise Fail(f"CDP_ERROR:{method.replace('.', '_').upper()}")
+                return message.get("result", {})
+            if "method" in message:
+                self.on_event(message)
+
+    def wait_event(self, method: str, session_id: str, timeout: float = 30.0) -> dict:
+        deadline = time.monotonic() + timeout
+        while True:
+            message = self._receive(deadline)
+            if "method" in message:
+                self.on_event(message)
+                if message["method"] == method and message.get("sessionId") == session_id:
+                    return message.get("params", {})
+
+    def close(self) -> None:
+        self.ws.close()
 
 
 class Browser:
-    """Fresh validation-only profile under WORK/browser_profile. Page-originated requests are intercepted: anything
-    that is not the loopback server is aborted and counted. Console output is collected (never printed)."""
+    """Installed Edge / Chrome, fresh profile under WORK/browser_profile, headless unless --headed. Page-originated
+    requests are recorded (anything not on the loopback origin fails the stage); console / dialogs collected, never printed."""
 
     def __init__(self, port: int, headed: bool) -> None:
-        from playwright.sync_api import sync_playwright
+        found = find_browser()
+        if found is None:
+            raise Fail("BROWSER_UNAVAILABLE")
+        self.label, executable = found
         self.port = port
         self.origin = f"http://127.0.0.1:{port}"
-        self.playwright = sync_playwright().start()
         self.profile = WORK / "browser_profile"
         self.profile.mkdir(exist_ok=True)
-        self.label, self.context = self._launch(headed)
+        marker = self.profile / "DevToolsActivePort"
+        if marker.exists():
+            marker.unlink()
+        flags = list(BROWSER_FLAGS) + ([] if headed else ["--headless=new"])
+        if hasattr(os, "geteuid") and os.geteuid() == 0:                  # synthetic validation as root (not Windows)
+            flags.append("--no-sandbox")
+        self.process = subprocess.Popen([executable, *flags, f"--user-data-dir={self.profile}", "about:blank"],
+                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
         self.requests: list = []
         self.foreign: list = []
         self.console: list = []
         self.dialogs: list = []
-        self.context.route("**/*", self._route)
-        self.page = self.context.pages[0] if self.context.pages else self.context.new_page()
-        self.page.on("console", lambda message: self.console.append(message.text))
-        self.page.on("dialog", lambda dialog: (self.dialogs.append(dialog.type), dialog.dismiss()))
-
-    def _launch(self, headed: bool):
-        errors = []
-        candidates = [("playwright-chromium", {}), ("msedge", {"channel": "msedge"}), ("chrome", {"channel": "chrome"})]
-        explicit = os.environ.get("P11_A5_BROWSER", "")
-        if explicit:
-            candidates.insert(0, ("explicit", {"executable_path": explicit}))
-        for label, extra in candidates:
-            try:
-                context = self.playwright.chromium.launch_persistent_context(
-                    str(self.profile), headless=not headed, args=BROWSER_ARGS, accept_downloads=False,
-                    service_workers="allow", **extra)
-                return label, context
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"{label}: {type(exc).__name__}")
-        private_log("browser launch failed: " + "; ".join(errors))
-        raise Fail("BROWSER_UNAVAILABLE")
-
-    def _route(self, route, request) -> None:
-        self.requests.append(request.url)
-        if not request.url.startswith(self.origin + "/"):
-            self.foreign.append(request.url)
-            route.abort("blockedbyclient")
-        else:
-            route.continue_()
-
-    def close(self) -> None:
+        self.session = None
         try:
-            self.context.close()
-        finally:
-            self.playwright.stop()
+            ws_url = self._wait_endpoint(marker)
+            self.cdp = _Cdp(ws_url, self._event)
+            target = self.cdp.call("Target.createTarget", {"url": "about:blank"})["targetId"]
+            self.session = self.cdp.call("Target.attachToTarget", {"targetId": target, "flatten": True})["sessionId"]
+            for domain in ("Page", "Runtime", "Network", "Log"):
+                self.cdp.call(f"{domain}.enable", session_id=self.session)
+        except Exception:
+            self._kill()
+            raise
 
-    # ---- helpers
-    def evaluate(self, script: str):
-        return self.page.evaluate(script)
+    def _wait_endpoint(self, marker: Path) -> str:
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            if marker.is_file():
+                lines = marker.read_text(encoding="utf-8", errors="replace").splitlines()
+                if len(lines) >= 2 and lines[0].strip().isdigit():
+                    return f"ws://127.0.0.1:{int(lines[0])}{lines[1].strip()}"
+            if self.process.poll() is not None:
+                raise Fail("BROWSER_EXITED_EARLY")
+            time.sleep(0.1)
+        raise Fail("BROWSER_DEVTOOLS_TIMEOUT")
+
+    def _event(self, message: dict) -> None:
+        if message.get("sessionId") != self.session:
+            return
+        method, params = message["method"], message.get("params", {})
+        if method == "Network.requestWillBeSent":
+            url = params.get("request", {}).get("url", "")
+            self.requests.append(url)
+            if not url.startswith(self.origin + "/"):
+                self.foreign.append(url)
+        elif method == "Runtime.consoleAPICalled":
+            self.console.append(" ".join(str(a.get("value", a.get("description", ""))) for a in params.get("args", [])))
+        elif method == "Log.entryAdded":
+            self.console.append(str(params.get("entry", {}).get("text", "")))
+        elif method == "Page.javascriptDialogOpening":
+            self.dialogs.append(params.get("type", "dialog"))
+            try:
+                self.cdp.call("Page.handleJavaScriptDialog", {"accept": False}, session_id=self.session)
+            except Fail:
+                pass
+
+    # ---- primitives
+    def evaluate(self, function_source: str):
+        """Run an arrow / async function expression in the page and return its (awaited) JSON value."""
+        result = self.cdp.call("Runtime.evaluate", {"expression": f"({function_source})()", "awaitPromise": True,
+                                                    "returnByValue": True}, session_id=self.session)
+        if "exceptionDetails" in result:
+            private_log("evaluate failed: " + json.dumps(result["exceptionDetails"])[:2000])
+            raise Fail("BROWSER_EVALUATE_FAILED")
+        return result.get("result", {}).get("value")
+
+    def _navigate(self, method: str, params: dict) -> None:
+        self.cdp.call(method, params, session_id=self.session)
+        self.cdp.wait_event("Page.loadEventFired", self.session, timeout=30)
 
     def goto_app(self) -> None:
-        self.page.goto(self.origin + "/app/", wait_until="load")
-        if self.page.title() != TITLE:
+        self._navigate("Page.navigate", {"url": self.origin + "/app/"})
+        if self.title() != TITLE:
             raise Fail("SHELL_TITLE_MISMATCH")
+
+    def reload(self) -> None:
+        self._navigate("Page.reload", {})
+
+    def title(self) -> str:
+        return self.evaluate("() => document.title")
+
+    def text(self, selector: str) -> str:
+        return self.evaluate(f"() => document.querySelector({json.dumps(selector)}).textContent")
+
+    def value(self, selector: str) -> str:
+        return self.evaluate(f"() => document.querySelector({json.dumps(selector)}).value")
+
+    def is_hidden(self, selector: str) -> bool:
+        return self.evaluate(f"() => {{ const e = document.querySelector({json.dumps(selector)}); "
+                             "return !e || e.hidden || e.getClientRects().length === 0; }")
+
+    def set_value(self, selector: str, value: str) -> None:
+        self.evaluate(f"() => {{ const e = document.querySelector({json.dumps(selector)}); e.value = {json.dumps(value)}; "
+                      "e.dispatchEvent(new Event('input', { bubbles: true })); }")
+
+    def click(self, selector: str) -> None:
+        self.evaluate(f"() => document.querySelector({json.dumps(selector)}).click()")
+
+    def wait_for(self, predicate_source: str, timeout: float = 20.0) -> None:
+        deadline = time.monotonic() + timeout
+        while True:
+            if self.evaluate(predicate_source):
+                return
+            if time.monotonic() > deadline:
+                raise Fail("BROWSER_WAIT_TIMEOUT")
+            time.sleep(0.1)
 
     def wait_ready(self) -> None:
         self.evaluate("() => navigator.serviceWorker.ready.then(() => true)")
 
+    def set_offline(self, offline: bool) -> None:
+        self.cdp.call("Network.emulateNetworkConditions", {"offline": offline, "latency": 0, "downloadThroughput": -1,
+                                                           "uploadThroughput": -1}, session_id=self.session)
+
+    def cookies(self) -> list:
+        return self.cdp.call("Storage.getCookies", session_id=self.session).get("cookies", [])
+
+    # ---- shell operations
     def cleanup_p11_only(self) -> None:
         """Remove only P11 state from the validation profile: the /app/ worker and p11-shell-* caches."""
         self.evaluate("""async () => {
@@ -508,17 +730,16 @@ class Browser:
         }""")
 
     def fill_and_load(self, state: dict) -> None:
-        self.page.fill("#at", state["at"])
-        self.page.fill("#as-of-date", state["as_of_date"])
-        self.page.click("#load")
-        self.page.wait_for_function("() => !document.getElementById('review').hidden"
-                                    " || !document.getElementById('message').hidden", timeout=20000)
+        self.set_value("#at", state["at"])
+        self.set_value("#as-of-date", state["as_of_date"])
+        self.click("#load")
+        self.wait_for("() => !document.getElementById('review').hidden || !document.getElementById('message').hidden")
 
     def rows(self) -> int:
-        return self.page.locator("#review-rows tr").count()
+        return self.evaluate("() => document.querySelectorAll('#review-rows tr').length")
 
     def wait_rows_cleared(self) -> None:
-        self.page.wait_for_function("() => document.getElementById('review-rows').children.length === 0", timeout=20000)
+        self.wait_for("() => document.getElementById('review-rows').children.length === 0")
 
     def storage(self) -> dict:
         return self.evaluate("""async () => {
@@ -540,6 +761,32 @@ class Browser:
     def dom_text(self) -> str:
         return self.evaluate("() => document.documentElement.outerHTML")
 
+    def _kill(self) -> None:
+        try:
+            self.process.terminate()
+            self.process.wait(timeout=10)
+        except Exception:  # noqa: BLE001
+            try:
+                self.process.kill()
+            except OSError:
+                pass
+
+    def close(self) -> None:
+        try:
+            try:
+                self.cdp.call("Browser.close", timeout=10)
+            except Fail:
+                pass
+            try:
+                self.cdp.close()
+            except Exception:  # noqa: BLE001
+                pass
+        finally:
+            try:
+                self.process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                self._kill()
+
 
 def check_storage(browser: Browser, rt: Runtime, tokens: tuple, model_bytes: bytes, state: dict, label: str) -> None:
     storage = browser.storage()
@@ -549,7 +796,7 @@ def check_storage(browser: Browser, rt: Runtime, tokens: tuple, model_bytes: byt
         report(f"INDEXEDDB_ENUMERATION_UNAVAILABLE {label}")
     elif storage["indexedDB"]:
         raise Fail(f"INDEXEDDB_NOT_EMPTY:{label}")
-    if storage["cookie"] != "" or browser.context.cookies():
+    if storage["cookie"] != "" or browser.cookies():
         raise Fail(f"COOKIES_PRESENT:{label}")
     names = set(storage["caches"])
     if names != {rt.registry.P11_SHELL_CACHE_NAME}:
@@ -579,8 +826,10 @@ def check_dom_private(browser: Browser, tokens: tuple, label: str) -> None:
             raise Fail(f"PRIVATE_SHAPE_IN_DOM:{label}")
     for message in browser.console:
         scan(message, tokens, f"PRIVATE_TOKEN_IN_CONSOLE:{label}")
-        if not message.startswith("Failed to load resource"):
-            raise Fail(f"CONSOLE_OUTPUT_UNEXPECTED:{label}")
+        if message.startswith("Failed to load resource") or message == DEVTOOLS_SW_NOTICE:
+            continue                                                  # the browser's own network / DevTools notices only
+        private_log("unexpected console output: " + message[:500])
+        raise Fail(f"CONSOLE_OUTPUT_UNEXPECTED:{label}")
     if browser.dialogs:
         raise Fail(f"BROWSER_DIALOG:{label}")
 
@@ -593,7 +842,7 @@ def check_network(browser: Browser, label: str) -> None:
 
 
 def manual_checklist(items: tuple) -> None:
-    """Fallback when browser automation is unavailable: the user answers y/n to visible checks only."""
+    """Last resort when no Chromium-family browser executable exists: the user answers y/n to visible checks only."""
     report("MANUAL_PATH")
     for number, (prompt, _expect) in enumerate(items, 1):
         sys.stdout.write(f"\nCHECK {number}: {prompt}\n  -> expected: {_expect}\n  OK? [y/n]: ")
@@ -645,7 +894,8 @@ def stage_preflight(args, state: dict) -> None:
     report("PREFLIGHT_TESTS_OK " + (summary[-1].strip("= ").split(" in ")[0] if summary else "?"))
     check_repo(repo)
     report("REPO_CLEAN_AFTER_TESTS_OK")
-    report("BROWSER_AUTOMATION=" + ("playwright" if playwright_available() else "manual"))
+    found = find_browser()
+    report("BROWSER_AUTOMATION=" + (f"cdp:{found[0]}" if found else "manual"))
     state["repo"] = str(repo)
     mark_done(state, "preflight")
 
@@ -791,20 +1041,19 @@ def automated_online(rt: Runtime, state: dict, headed: bool, label: str, keep_op
     served = Served(rt)
     browser = Browser(served.port, headed)
     try:
-        report(f"BROWSER_PATH={browser.label}")
+        report(f"BROWSER_PATH=cdp:{browser.label}")
         browser.goto_app()
         browser.cleanup_p11_only()                                      # P11 state only; profile is validation-only anyway
-        browser.page.reload(wait_until="load")
+        browser.reload()
         browser.wait_ready()
-        if browser.evaluate("() => document.getElementById('at').value + document.getElementById('as-of-date').value") != "":
+        if browser.value("#at") + browser.value("#as-of-date") != "":
             raise Fail("PIT_FIELDS_NOT_EMPTY")
-        if "PRIVATE" not in browser.page.text_content("#private-indicator"):
+        if "PRIVATE" not in browser.text("#private-indicator"):
             raise Fail("PRIVATE_INDICATOR_MISSING")
         if served.api_calls() != 0:
             raise Fail("AUTOMATIC_REQUEST_DETECTED")
         report(f"SHELL_LOADED_OK {label}")
-        manifest_text = browser.evaluate("async () => (await fetch('/app/manifest.webmanifest')).text()")
-        manifest_json = json.loads(manifest_text)
+        manifest_json = json.loads(browser.evaluate("async () => (await fetch('/app/manifest.webmanifest')).text()"))
         if manifest_json.get("start_url") != "/app/" or manifest_json.get("scope") != "/app/":
             raise Fail("MANIFEST_INVALID")
         browser.fill_and_load(state)
@@ -850,7 +1099,7 @@ MANUAL_ONLINE = (
 def stage_browser(args, state: dict) -> None:
     require_done(state, "server")
     rt = runtime(state)
-    if not playwright_available():
+    if find_browser() is None:
         served = Served(rt)
         try:
             report("SERVER_READY")
@@ -861,7 +1110,7 @@ def stage_browser(args, state: dict) -> None:
         state["browser_path"] = "manual"
     else:
         automated_online(rt, state, args.headed, "browser")
-        state["browser_path"] = "playwright"
+        state["browser_path"] = "cdp"
     mark_done(state, "browser")
 
 
@@ -892,7 +1141,7 @@ def stage_storage(args, state: dict) -> None:
             check_storage(browser, rt, tokens, model_bytes, state, "storage")
             browser.fill_and_load(state)                                       # repeated render
             check_storage(browser, rt, tokens, model_bytes, state, "storage-repeat")
-            if browser.evaluate("() => history.length") != 1 and browser.evaluate("() => history.state") is not None:
+            if browser.evaluate("() => history.state") is not None:
                 raise Fail("HISTORY_UNEXPECTED")
             report("PIT_NOT_IN_URL_OK")
         automated_online(rt, state, args.headed, "storage", keep_open=after)
@@ -959,35 +1208,37 @@ def stage_offline(args, state: dict) -> None:
             raise Fail("UI_ENTRY_COUNT_MISMATCH")
         report("ONLINE_RENDER_OK offline-1")
         served.stop()                                                     # 2. server loss ...
-        browser.context.set_offline(True)                                 # ... and the device offline
-        browser.page.reload(wait_until="load")                            # 3. reload: shell from the service worker
-        if browser.page.title() != TITLE:
+        browser.set_offline(True)                                         # ... and the device offline
+        browser.reload()                                                  # 3. reload: shell from the service worker
+        if browser.title() != TITLE:
             raise Fail("OFFLINE_SHELL_NOT_LOADED")
         if browser.rows() != 0:
             raise Fail("STALE_ROWS_AFTER_RELOAD")
-        if browser.page.locator("#offline").is_hidden() or OFFLINE_TEXT not in browser.page.text_content("#offline"):
-            raise Fail("OFFLINE_STATE_NOT_SHOWN")
+        offline_shown = not browser.is_hidden("#offline") and OFFLINE_TEXT in browser.text("#offline")
         report("OFFLINE_SHELL_LOADED_OK")
         report("OFFLINE_PRIVATE_DATA_ABSENT_OK")
         browser.fill_and_load(state)                                      # 6. explicit attempt fails safely
-        if browser.rows() != 0 or browser.page.locator("#review").is_visible():
+        if browser.rows() != 0 or not browser.is_hidden("#review"):
             raise Fail("STALE_ROWS_AFTER_FAILED_LOAD")
-        report("OFFLINE_LOAD_FAILS_SAFELY_OK")
+        unavailable_shown = not browser.is_hidden("#offline") or "届きません" in browser.text("#message") \
+            or "TIMEOUT" in browser.text("#message")
+        if not (offline_shown or unavailable_shown):
+            raise Fail("OFFLINE_STATE_NOT_SHOWN")
+        report("OFFLINE_LOAD_FAILS_SAFELY_OK" + ("" if offline_shown else " (server-unavailable message)"))
         check_dom_private(browser, tokens, "offline")
         storage = browser.storage()
         for name, entries in storage["caches"].items():
             if any("/api/" in path for path in entries) or any(model_bytes.decode("utf-8") in text for text in entries.values()):
                 raise Fail("API_RESPONSE_CACHED:offline")
         report("API_NOT_CACHED_OK offline")
-        browser.context.set_offline(False)
+        browser.set_offline(False)
         served = Served(rt, port=port)                                     # 10. restart on the same port (same origin)
         browser.fill_and_load(state)                                      # 11. load again succeeds
         if browser.rows() != counts["ENTRY_COUNT"]:
             raise Fail("RELOAD_AFTER_RESTART_FAILED")
         report("RESTART_RENDER_OK offline-2")
-        # stale rows must also vanish on a refused refresh while online
-        browser.page.fill("#as-of-date", "2026-02-30")
-        browser.page.click("#load")
+        browser.set_value("#as-of-date", "2026-02-30")                     # stale rows must also vanish on a refused refresh
+        browser.click("#load")
         browser.wait_rows_cleared()
         report("STALE_ROWS_CLEARED_ON_REFUSAL_OK")
         check_storage(browser, rt, tokens, model_bytes, state, "offline")

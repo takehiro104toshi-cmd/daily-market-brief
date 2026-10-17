@@ -20,11 +20,12 @@ Paste back ONLY the lines that start with "REPORT:". Never paste anything else f
     Test-Path D:\p9_a5_private    # must print True  (real P9 root; READ ONLY)
     Test-Path D:\p10_a5_private   # must print True  (real P10 root from P10-A5; READ ONLY)
 
-Browser automation: the helper uses the Python Playwright package if it is installed (pip show playwright) and launches,
-in this order, Playwright's own Chromium, Microsoft Edge, Google Chrome, or the executable in the environment variable
-P11_A5_BROWSER. Nothing is installed by the helper. If no browser can be launched automatically, the helper switches to a
-short manual checklist (y/n questions) and prints MANUAL_PATH. A fresh validation-only browser profile is created under
-D:\p11_a5_work\browser_profile; your normal browser profile is never touched. Add --headed to any browser stage to watch.
+Browser automation: the helper drives the installed Microsoft Edge or Google Chrome itself over the DevTools protocol
+(Python standard library only; nothing is installed). It looks for msedge.exe / chrome.exe in the usual Program Files
+locations, or uses the executable in the environment variable P11_A5_BROWSER. The browser runs headless with a fresh
+validation-only profile under D:\p11_a5_work\browser_profile and listens for the DevTools protocol on 127.0.0.1 only;
+your normal browser profile is never touched. Add --headed to any browser stage to watch it. Only if no browser executable
+exists at all does the helper fall back to a short manual checklist (y/n questions) and print MANUAL_PATH.
 
 1. Stages (run in order; each prints REPORT lines only and stops on the first failure)
 --------------------------------------------------------------------------------------
@@ -47,19 +48,19 @@ Do not paste <AT> or <DATE> back. They are bound once; re-running `read` with di
 -----------------------------------------------
 preflight: PYTHON_OK 3.x  WORK_DIR_OK  P9_ROOT_PRESENT_OK  P10_ROOT_PRESENT_OK  REPO_HEAD_OK  REPO_CLEAN_OK
            STATIC_ASSETS_OK COUNT=8  P9_MANIFEST_CAPTURED FILES=<n>  P10_MANIFEST_CAPTURED FILES=<n>
-           PREFLIGHT_TESTS_OK 648 passed  REPO_CLEAN_AFTER_TESTS_OK  BROWSER_AUTOMATION=playwright|manual
+           PREFLIGHT_TESTS_OK 648 passed  REPO_CLEAN_AFTER_TESTS_OK  BROWSER_AUTOMATION=cdp:edge|cdp:chrome|cdp:explicit|manual
 read:      MODEL_OK  MODEL_DETERMINISTIC_OK  MODEL_SCHEMA_OK  PRIVATE_TOKENS_CHECKED=<n>  ENTRY_COUNT=<n>
            ACTIVE_PROFILE=1  FOCUS_COUNT=<n>  MUTE_COUNT=<n>  EXCLUDED_COUNT=<n>  UNMATCHED_LIVE_MARKS=<n>
 server:    CLI_STARTUP_OK  CREDENTIAL_REFUSAL_OK  NON_LOOPBACK_BIND_REFUSED_OK  HEALTH_VERSION_OK  HOST_ORIGIN_POLICY_OK  SPLIT_SEND_REFUSAL_OK
            STATIC_SERVED_OK ROUTES=8  API_EQUALS_A1_BYTES_OK  SERVER_READY  APP_URL=http://127.0.0.1:<port>/app/
-browser:   BROWSER_PATH=<label>  SHELL_LOADED_OK  UI_RENDER_OK ENTRIES=<n> MUTE_VISIBLE=<n> EXCLUDED_VISIBLE=<n>
+browser:   BROWSER_PATH=cdp:<label>  SHELL_LOADED_OK  UI_RENDER_OK ENTRIES=<n> MUTE_VISIBLE=<n> EXCLUDED_VISIBLE=<n>
            DOM_PRIVATE_CLEAN_OK  SW_REGISTERED_OK  PAGE_LOOPBACK_ONLY_OK REQUESTS=<n>       (manual: MANUAL_CHECK_n_OK)
 storage:   BROWSER_STORAGE_EMPTY_OK x2  CACHE_SHELL_ONLY_OK ENTRIES=7 x2  PIT_NOT_IN_URL_OK  PAGE_LOOPBACK_ONLY_OK
 offline:   ONLINE_RENDER_OK  OFFLINE_SHELL_LOADED_OK  OFFLINE_PRIVATE_DATA_ABSENT_OK  OFFLINE_LOAD_FAILS_SAFELY_OK
            API_NOT_CACHED_OK  RESTART_RENDER_OK  STALE_ROWS_CLEARED_ON_REFUSAL_OK  BROWSER_STORAGE_EMPTY_OK  CACHE_SHELL_ONLY_OK
 restart:   RESTART_1_OK  RESTART_2_OK  RESPONSE_IDENTICAL_ACROSS_RESTART_OK  UI_ENTRY_COUNT_IDENTICAL_OK <n>
 verify:    P9_READ_ONLY_OK  P10_READ_ONLY_OK  REPO_UNCHANGED_OK  BROWSER_PRIVATE_STORAGE_EMPTY_OK  API_NOT_CACHED_OK
-           OFFLINE_SHELL_ONLY_OK  ZERO_OUTBOUND_OK  BROWSER_PATH=<label>  A5_PASS
+           OFFLINE_SHELL_ONLY_OK  ZERO_OUTBOUND_OK  BROWSER_PATH=cdp  A5_PASS
 every stage also prints CREDENTIAL_ABSENT_OK, ZERO_NETWORK_OK, ROOTS_UNCHANGED_OK before/after, P9_READ_ONLY_OK, P10_READ_ONLY_OK.
 
 The offline stage stops and restarts the local server by itself (the restart waits up to ~80 s for the port; on Windows it
@@ -72,10 +73,10 @@ is immediate). With the manual path the helper tells you exactly when it stops/r
 - Every stage may be re-run after the supervisor's decision. FAIL P9_MUTATED / P10_MUTATED means a root changed since
   preflight: STOP and report; the helper never repairs anything.
 - FAIL CREDENTIAL_PRESENT_UNSET_IT_AND_RERUN: run Remove-Item Env:JQUANTS_API_KEY in this window and re-run the stage.
-- FAIL BROWSER_UNAVAILABLE: the Python Playwright package is installed but no browser could be launched. Set
-  $env:P11_A5_BROWSER to the full path of msedge.exe or chrome.exe and re-run the stage. If no browser launches at all,
-  report it; the supervisor decides whether to use the manual checklist (it is used automatically only when the Python
-  Playwright package is absent). Always report the BROWSER_PATH / MANUAL_PATH line.
+- FAIL BROWSER_UNAVAILABLE / BROWSER_DEVTOOLS_TIMEOUT / BROWSER_EXITED_EARLY: no Edge / Chrome was found, or it could not
+  be started headless. Set $env:P11_A5_BROWSER to the full path of msedge.exe or chrome.exe and re-run the stage; report
+  the result. The manual checklist is a last resort used automatically only when no browser executable exists at all.
+  Always report the BROWSER_PATH / MANUAL_PATH line.
 
 4. Private files (stay in D:\p11_a5_work; never sent)
 -----------------------------------------------------
