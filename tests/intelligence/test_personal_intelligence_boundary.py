@@ -34,6 +34,8 @@ from tests.intelligence.phase10_runtime_registry import (P10_A4, P10_ADMIN_INIT,
                                                          SANCTIONED_P10_PRIVATE_WRITER_IMPORTS,
                                                          SANCTIONED_P10_P9_IMPORTERS, SANCTIONED_P10_P9_IMPORTS,
                                                          only_phase10_registration)
+from tests.intelligence.phase11_runtime_registry import (P11_BASE, PHASE11_DOCS, PHASE11_RUNTIME, PHASE11_TESTS,
+                                                         SANCTIONED_P11_P10_IMPORTERS)   # P11 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -137,18 +139,20 @@ def test_p10_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
 
 
 def test_p10_a1_since_the_base_only_registered_phase10_files_and_declared_registration_changed() -> None:
-    assert _changes("--cached", "--name-status", P10_BASE, "--", "src") == {("A", p) for p in PHASE10_RUNTIME}
+    assert _changes("--cached", "--name-status", P10_BASE, "--", "src") == {("A", p) for p in PHASE10_RUNTIME
+                                                                            + PHASE11_RUNTIME}
     assert _git("diff", "--cached", "--name-status", P10_BASE, "--", *FROZEN_SURFACE) == ""
-    assert _changes("--cached", "--name-status", P10_BASE, "--", "docs") <= {("A", p) for p in PHASE10_DOCS}
+    assert _changes("--cached", "--name-status", P10_BASE, "--", "docs") <= {("A", p) for p in PHASE10_DOCS
+                                                                             + PHASE11_DOCS}
     assert _changes("--cached", "--name-status", P10_BASE, "--", "tests") <= {
-        ("A", p) for p in PHASE10_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}
+        ("A", p) for p in PHASE10_TESTS + PHASE11_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}
     assert set(PHASE10_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
                                               "tests/intelligence/test_narrative_intelligence_boundary.py",
                                               "tests/intelligence/test_screener_intelligence_boundary.py",
                                               "tests/intelligence/test_watchlist_thesis_boundary.py"}
     for path in PHASE10_TEST_REGISTRATION:                                            # 凍結の P7 ／ P8 ／ P9 の test の狭い再開
         anchored = _git("show", f"{P10_BASE}:{path}")
-        current = (REPO_ROOT / path).read_text(encoding="utf-8")
+        current = _git("show", f"{P11_BASE}:{path}")             # P10 の登録は P10 の終わりまで（以後の差は P11 の guard が pin）
         assert only_phase10_registration(path, anchored, current), path
         assert not only_phase10_registration(path, anchored, current + "assert True\n")
         assert not only_phase10_registration(path, anchored, anchored)
@@ -234,6 +238,10 @@ def test_p10_a1_is_outside_production_and_no_other_code_imports_it() -> None:
     for path in [REPO_ROOT / "main.py", *sorted((REPO_ROOT / "src").rglob("*.py")),
                  *sorted((REPO_ROOT / "scripts").rglob("*.py"))]:
         if not path.exists() or PACKAGE_DIR in path.parents:
+            continue
+        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P11_P10_IMPORTERS:  # P11: governed な read の importer だけ
+            cross = {m: n for m, n in _imports(path)[0].items() if m.startswith("..")}
+            assert cross == SANCTIONED_P11_P10_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]   # 面は完全一致
             continue
         assert "personal_intelligence" not in path.read_text(encoding="utf-8", errors="replace"), path
 
@@ -420,8 +428,8 @@ def test_p10_freeze_the_17_registered_runtime_files_are_object_identical_to_the_
     assert at_anchor == in_index, "runtime blob differs between P10_A4 and the index"
     assert at_anchor == in_worktree, "runtime blob differs between P10_A4 and the worktree"
     # anchor 以後に Phase 10 の src runtime は変わっていない（commit ・index ・worktree）。validated tree は test と CHANGELOG だけ
-    assert _git("diff", "--name-status", P10_A4, "HEAD", "--", "src") == ""
-    assert _git("diff", "--cached", "--name-status", P10_A4, "--", "src") == ""
+    assert _git("diff", "--name-status", P10_A4, "HEAD", "--", PHASE10_PACKAGE) == ""     # Phase 10 の src runtime は不変
+    assert _git("diff", "--cached", "--name-status", P10_A4, "--", PHASE10_PACKAGE) == ""
     assert _git("status", "--porcelain", "--", *PHASE10_RUNTIME) == ""
     assert set(_git("diff", "--name-only", P10_A4, P10_VALIDATED_TREE).splitlines()) == {
         "CHANGELOG.md", "tests/intelligence/test_personal_intelligence_boundary.py"}

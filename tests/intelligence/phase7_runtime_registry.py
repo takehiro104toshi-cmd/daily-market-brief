@@ -22,6 +22,7 @@ from typing import Mapping, Sequence, Tuple
 from tests.intelligence.phase8_runtime_registry import PHASE8_RUNTIME   # P8-A1: Phase 8 の登録済み runtime（完全一致）
 from tests.intelligence.phase9_runtime_registry import PHASE9_RUNTIME   # P9-A1: Phase 9 の登録済み runtime（完全一致）
 from tests.intelligence.phase10_runtime_registry import PHASE10_RUNTIME   # P10-A1: Phase 10 の登録済み runtime（完全一致）
+from tests.intelligence.phase11_runtime_registry import PHASE11_RUNTIME   # P11-A1: Phase 11 の登録済み runtime（完全一致）
 
 PHASE7_PACKAGE = "src/intelligence/narrative_intelligence"
 #: 登録済みの Phase 7 runtime（P7-A1: __init__ / synthesis_model、P7-A2: input_model / pit_assembler、
@@ -32,7 +33,7 @@ PHASE7_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE7_PACKAGE}/{name}.py" for name i
     "render_templates_ja", "rendered_model", "synthesis_engine", "synthesis_model", "text_renderer"))
 ADDITION_STATUSES = ("A", "??")
 PHASE7_EXCLUDED_PATHSPECS: Tuple[str, ...] = tuple(f":(exclude,literal){path}" for path in PHASE7_RUNTIME + PHASE8_RUNTIME
-                                                   + PHASE9_RUNTIME + PHASE10_RUNTIME)
+                                                   + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME)
 #: Phase 6 の read-only API を import してよい Phase 7 の module（P7-A2 の監督判断。完全な path だけ）
 PHASE7_SANCTIONED_IMPORTERS: Tuple[str, ...] = (f"{PHASE7_PACKAGE}/pit_assembler.py",)
 
@@ -82,7 +83,8 @@ PHASE6_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] 
 
 
 def is_phase7_addition(status: str, path: str) -> bool:
-    return status in ADDITION_STATUSES and path in PHASE7_RUNTIME + PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME
+    return status in ADDITION_STATUSES and path in (PHASE7_RUNTIME + PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME
+                                                   + PHASE11_RUNTIME)
 
 
 def is_sanctioned_importer(path: str) -> bool:

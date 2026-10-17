@@ -1,0 +1,156 @@
+"""Phase 11（PWA ／ 利用者との対話の面）の登録済み runtime ・test ・文書の完全な一覧（P11-A1）。
+
+- `P11_BASE` ＝ Phase 10 の凍結の記録の commit。P11-A1 はここから足す。
+- 凍結の Phase 7 ／ 8 ／ 9 ／ 10 の test に入れた登録の行は `PHASE11_TEST_REGISTRATION` に完全に列挙し、Phase 11 の guard
+  （`test_personal_ui_boundary.py`）が `P11_BASE` との差分の完全一致を pin する（test だけの狭い再開。runtime は不変）。
+- 凍結の Phase 10 を import してよい Phase 11 の file は `SANCTIONED_P11_P10_IMPORTERS`（完全な path → governed な read の API の面）
+  だけ。store ・実行器 ・直列化 ・管理の初期化 ・private な P9 の snapshot は無い。
+"""
+from __future__ import annotations
+
+import difflib
+from typing import Mapping, Sequence, Set, Tuple
+
+#: P11 の基準（P10 の凍結の記録の commit）
+P11_BASE = "d01f6bc01fba783e77cc3a623745b8b033883e1a"
+PHASE11_PACKAGE = "src/intelligence/personal_ui"
+#: P11-A1 で足した runtime（governed な read の adapter と UI model だけ。server ・UI ・SW ・書き込みなし）
+PHASE11_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE11_PACKAGE}/{name}.py" for name in (
+    "__init__", "p10_read_adapter", "ui_model"))
+PHASE11_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE11_A1_RUNTIME))
+PHASE11_TESTS: Tuple[str, ...] = ("tests/intelligence/phase11_runtime_registry.py",
+                                  "tests/intelligence/test_personal_ui_adapter.py",
+                                  "tests/intelligence/test_personal_ui_boundary.py")
+PHASE11_DOCS: Tuple[str, ...] = ("docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md",)
+ADDITION_STATUSES = ("A", "??")
+P11_ADAPTER = f"{PHASE11_PACKAGE}/p10_read_adapter.py"
+P11_UI_MODEL = f"{PHASE11_PACKAGE}/ui_model.py"
+#: 凍結 Phase 10 の governed な read の面（module → 名前。完全一致）。adapter 1 file だけが import する
+SANCTIONED_P11_P10_IMPORTS: Mapping[str, Set[str]] = {
+    "..personal_intelligence.p9_view": {"P9ViewError", "read_p9_safe_view"},
+    "..personal_intelligence.personal_projection": {"personal_safe_projection"},
+    "..personal_intelligence.review_view": {"ReviewViewError", "read_personal_review"},
+}
+SANCTIONED_P11_P10_IMPORTERS: Mapping[str, Mapping[str, Set[str]]] = {P11_ADAPTER: SANCTIONED_P11_P10_IMPORTS}
+#: 各 runtime の相対 import の module の集合（完全一致）
+SANCTIONED_P11_MODULES: Mapping[str, Set[str]] = {
+    P11_ADAPTER: set(SANCTIONED_P11_P10_IMPORTS) | {".ui_model"},
+    P11_UI_MODEL: set(),
+    f"{PHASE11_PACKAGE}/__init__.py": set(),
+}
+#: Phase 11 が import してはならない module の部品（凍結の store ・実行器 ・P9 ／ P8 ・J-Quants ・公開 ・通知 ・network ・LLM）
+FORBIDDEN_P11_IMPORT_PARTS: Tuple[str, ...] = (
+    "profile_store", "attention_store", "authority_stores", "store_io", "serialization", "admin_init", "executor",
+    "decisions", "local_cli", "cross_rules", "revision_model", "profile_model", "attention_model",
+    "watchlist_thesis_intelligence", "screener_intelligence", "narrative_intelligence", "jquants", "report",
+    "notifier", "requests", "urllib", "http", "socket", "ssl", "subprocess", "anthropic", "openai", "llm", "pages",
+    "predictions", "analysis", "compass", "os", "pathlib", "sys", "io", "random", "time", "hashlib", "uuid")
+#: 凍結の Phase 7 ／ 8 ／ 9 ／ 10 の test に入れた登録（path → (取り除いた行, 加えた行)）。P11-A1 で確定する
+PHASE11_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {
+    'tests/intelligence/phase7_runtime_registry.py': ((
+        '                                                   + PHASE9_RUNTIME + PHASE10_RUNTIME)',
+        '    return status in ADDITION_STATUSES and path in PHASE7_RUNTIME + PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME',
+    ), (
+        'from tests.intelligence.phase11_runtime_registry import PHASE11_RUNTIME   # P11-A1: Phase 11 の登録済み runtime（完全一致）',
+        '                                                   + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME)',
+        '    return status in ADDITION_STATUSES and path in (PHASE7_RUNTIME + PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME',
+        '                                                   + PHASE11_RUNTIME)',
+    )),
+    'tests/intelligence/test_narrative_intelligence_boundary.py': ((
+        '                       + PHASE10_RUNTIME}                                                   # commit ／ index の差',
+        '                       ("A", P8_A0_DOC)} | {("A", path) for path in PHASE8_DOCS + PHASE9_DOCS + PHASE10_DOCS}',
+        '        ("A", path) for path in PHASE8_TESTS + PHASE9_TESTS + PHASE10_TESTS}',
+        '                                              + PHASE9_RUNTIME + PHASE10_RUNTIME)',
+        '        ("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME}        # 追加だけ',
+        '        ("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME}        # A4b と P8 ・P9 ・P10 の追加だけ',
+        '                                                                                  + PHASE9_RUNTIME + PHASE10_RUNTIME}',
+    ), (
+        'from tests.intelligence.phase11_runtime_registry import PHASE11_DOCS, PHASE11_RUNTIME, PHASE11_TESTS   # P11-A1 の登録',
+        '                       + PHASE10_RUNTIME + PHASE11_RUNTIME}                                 # commit ／ index の差',
+        '                       ("A", P8_A0_DOC)} | {("A", path) for path in PHASE8_DOCS + PHASE9_DOCS + PHASE10_DOCS',
+        '                                            + PHASE11_DOCS}',
+        '        ("A", path) for path in PHASE8_TESTS + PHASE9_TESTS + PHASE10_TESTS + PHASE11_TESTS}',
+        '                                              + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME)',
+        '        ("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME}   # 追加だけ',
+        '        ("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME}   # A4b と P8 〜 P11 の追加だけ',
+        '                                                                                  + PHASE9_RUNTIME + PHASE10_RUNTIME',
+        '                                                                                  + PHASE11_RUNTIME}',
+    )),
+    'tests/intelligence/test_screener_intelligence_boundary.py': ((
+        '        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS}',
+        '    assert changes == {("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME}',
+        '                       or is_phase10_addition(line[:2].strip(), line[3:]))]',
+        '                        ("A", path) for path in PHASE9_DOCS + PHASE10_DOCS}',
+    ), (
+        'from tests.intelligence.phase11_runtime_registry import (PHASE11_DOCS, PHASE11_RUNTIME, PHASE11_TESTS,',
+        '                                                         is_phase11_addition)   # P11 の登録',
+        '        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS + PHASE11_TESTS}',
+        '    assert changes == {("A", path) for path in PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME}',
+        '                       or is_phase10_addition(line[:2].strip(), line[3:])',
+        '                       or is_phase11_addition(line[:2].strip(), line[3:]))]',
+        '                        ("A", path) for path in PHASE9_DOCS + PHASE10_DOCS + PHASE11_DOCS}',
+    )),
+    'tests/intelligence/test_watchlist_thesis_boundary.py': ((
+        '                                                                           + PHASE10_RUNTIME}',
+        '                                                                            + PHASE10_DOCS}',
+        '        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS} | {("M", path) for path in PHASE9_TEST_REGISTRATION}',
+    ), (
+        'from tests.intelligence.phase11_runtime_registry import PHASE11_DOCS, PHASE11_RUNTIME, PHASE11_TESTS   # P11 の登録',
+        '                                                                           + PHASE10_RUNTIME + PHASE11_RUNTIME}',
+        '                                                                            + PHASE10_DOCS + PHASE11_DOCS}',
+        '        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS + PHASE11_TESTS} | {',
+        '            ("M", path) for path in PHASE9_TEST_REGISTRATION}',
+    )),
+    'tests/intelligence/test_personal_intelligence_boundary.py': ((
+        '    assert _changes("--cached", "--name-status", P10_BASE, "--", "src") == {("A", p) for p in PHASE10_RUNTIME}',
+        '    assert _changes("--cached", "--name-status", P10_BASE, "--", "docs") <= {("A", p) for p in PHASE10_DOCS}',
+        '        ("A", p) for p in PHASE10_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}',
+        '        current = (REPO_ROOT / path).read_text(encoding="utf-8")',
+        '    assert _git("diff", "--name-status", P10_A4, "HEAD", "--", "src") == ""',
+        '    assert _git("diff", "--cached", "--name-status", P10_A4, "--", "src") == ""',
+    ), (
+        'from tests.intelligence.phase11_runtime_registry import (P11_BASE, PHASE11_DOCS, PHASE11_RUNTIME, PHASE11_TESTS,',
+        '                                                         SANCTIONED_P11_P10_IMPORTERS)   # P11 の登録',
+        '    assert _changes("--cached", "--name-status", P10_BASE, "--", "src") == {("A", p) for p in PHASE10_RUNTIME',
+        '                                                                            + PHASE11_RUNTIME}',
+        '    assert _changes("--cached", "--name-status", P10_BASE, "--", "docs") <= {("A", p) for p in PHASE10_DOCS',
+        '                                                                             + PHASE11_DOCS}',
+        '        ("A", p) for p in PHASE10_TESTS + PHASE11_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}',
+        '        current = _git("show", f"{P11_BASE}:{path}")             # P10 の登録は P10 の終わりまで（以後の差は P11 の guard が pin）',
+        '            continue',
+        '        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P11_P10_IMPORTERS:  # P11: governed な read の importer だけ',
+        '            cross = {m: n for m, n in _imports(path)[0].items() if m.startswith("..")}',
+        '            assert cross == SANCTIONED_P11_P10_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]   # 面は完全一致',
+        '    assert _git("diff", "--name-status", P10_A4, "HEAD", "--", PHASE10_PACKAGE) == ""     # Phase 10 の src runtime は不変',
+        '    assert _git("diff", "--cached", "--name-status", P10_A4, "--", PHASE10_PACKAGE) == ""',
+    )),
+}
+
+
+def is_phase11_addition(status: str, path: str) -> bool:
+    return status in ADDITION_STATUSES and path in PHASE11_RUNTIME
+
+
+def registration_diff(anchored: str, current: str) -> Tuple[Sequence[str], Sequence[str]]:
+    """anchor と現在の行の差（取り除かれた行, 加えられた行）。順序は出現順。"""
+    old, new = anchored.split("\n"), current.split("\n")
+    removed, added = [], []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, old, new, autojunk=False).get_opcodes():
+        if tag in ("replace", "delete"):
+            removed.extend(old[i1:i2])
+        if tag in ("replace", "insert"):
+            added.extend(new[j1:j2])
+    return removed, added
+
+
+def only_phase11_registration(path: str, anchored: str, current: str) -> bool:
+    """`P11_BASE` と現在の差が、宣言した登録（取り除いた行・加えた行）と完全に一致する（未登録の file は byte 一致）。"""
+    declared_removed, declared_added = PHASE11_TEST_REGISTRATION.get(path, ((), ()))
+    removed, added = registration_diff(anchored, current)
+    return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
+
+
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P11_IMPORT_PARTS", "P11_ADAPTER", "P11_BASE", "P11_UI_MODEL",
+           "PHASE11_A1_RUNTIME", "PHASE11_DOCS", "PHASE11_PACKAGE", "PHASE11_RUNTIME", "PHASE11_TESTS",
+           "PHASE11_TEST_REGISTRATION", "SANCTIONED_P11_MODULES", "SANCTIONED_P11_P10_IMPORTERS",
+           "SANCTIONED_P11_P10_IMPORTS", "is_phase11_addition", "only_phase11_registration", "registration_diff"]

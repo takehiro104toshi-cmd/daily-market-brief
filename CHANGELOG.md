@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.06 (2026-10-17) — Phase 11 P11-A1 governed read adapter + UI model
+
+Phase 11（PWA ／ 利用者との対話の面 ・read-only）の最初の実装。凍結の Phase 10 を governed な read の API（見直しの view ・安全な投影 ・
+凍結 P9 の安全な view）だけで読む唯一の adapter と、不変の UI model ・決定論の JSON を足した。P9 ／ P10 の id ・発行体 ・profile の文 ・
+除外の id ／ 理由 ・著者 ・path は出さない（表示の鍵は応答の中の位置だけ）。順は凍結 P10 の見直しの view のまま。server ・UI ・SW ・
+書き込みは無い。凍結の P7 ／ P8 ／ P9 ／ P10 の test の guard に test だけの狭い再開で Phase 11 を登録した。runtime の anchor は不変。
+
+追加
+・`src/intelligence/personal_ui/__init__.py` ・`src/intelligence/personal_ui/p10_read_adapter.py` ・
+  `src/intelligence/personal_ui/ui_model.py`
+・`tests/intelligence/phase11_runtime_registry.py` ・`tests/intelligence/test_personal_ui_adapter.py` ・
+  `tests/intelligence/test_personal_ui_boundary.py`
+・`docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md`
+改善
+・`tests/intelligence/phase7_runtime_registry.py` ・`tests/intelligence/test_narrative_intelligence_boundary.py` ・
+  `tests/intelligence/test_screener_intelligence_boundary.py` ・`tests/intelligence/test_watchlist_thesis_boundary.py` ・
+  `tests/intelligence/test_personal_intelligence_boundary.py`（Phase 11 の登録 ・P10 の凍結の guard の src の範囲を Phase 10 の package に）
+修正
+・なし
+
 ## v6.05 (2026-10-17) — Phase 10 final freeze record（文書 ・registry ・guard だけ）
 
 Phase 10（Personal Intelligence v1）を **COMPLETE / CLOSED / FROZEN** とする記録。意味 ／ runtime の凍結 anchor は P10-A4 の commit

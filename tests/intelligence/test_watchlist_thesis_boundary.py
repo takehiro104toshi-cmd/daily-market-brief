@@ -31,6 +31,7 @@ from tests.intelligence.phase9_runtime_registry import (P9_A5, P9_BASE, P9_HANDO
                                                         only_phase9_registration)
 from tests.intelligence.phase10_runtime_registry import (P10_BASE, PHASE10_DOCS, PHASE10_RUNTIME, PHASE10_TESTS,
                                                          SANCTIONED_P10_P9_IMPORTERS)   # P10 の登録
+from tests.intelligence.phase11_runtime_registry import PHASE11_DOCS, PHASE11_RUNTIME, PHASE11_TESTS   # P11 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 from tests.intelligence.test_prediction_record import executable_source
 
@@ -141,12 +142,13 @@ def test_p9_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
 
 def test_p9_a1_since_the_base_only_the_registered_phase9_files_and_declared_registration_changed() -> None:
     assert _changes("--cached", "--name-status", P9_BASE, "--", "src") == {("A", path) for path in PHASE9_RUNTIME
-                                                                           + PHASE10_RUNTIME}
+                                                                           + PHASE10_RUNTIME + PHASE11_RUNTIME}
     assert _git("diff", "--cached", "--name-status", P9_BASE, "--", *FROZEN_SURFACE) == ""
     assert _changes("--cached", "--name-status", P9_BASE, "--", "docs") <= {("A", path) for path in PHASE9_DOCS
-                                                                            + PHASE10_DOCS}
+                                                                            + PHASE10_DOCS + PHASE11_DOCS}
     assert _changes("--cached", "--name-status", P9_BASE, "--", "tests") <= {
-        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS} | {("M", path) for path in PHASE9_TEST_REGISTRATION}
+        ("A", path) for path in PHASE9_TESTS + PHASE10_TESTS + PHASE11_TESTS} | {
+            ("M", path) for path in PHASE9_TEST_REGISTRATION}
     for path in PHASE9_TEST_REGISTRATION:                                             # 凍結の P7 ／ P8 の test の狭い再開
         anchored = _git("show", f"{P9_BASE}:{path}")
         current = _git("show", f"{P10_BASE}:{path}")             # P9 の登録は P9 の終わりまで（以後の差は P10 の guard が pin）
