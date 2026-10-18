@@ -57,9 +57,12 @@ runtime の identifier に掛かるもので、設計の散文には掛けない
 
 ### 2.2 提案する将来の interface（P13 の gate で初めて存在する）
 
-- **governed source adapter**: §2.1 の承認済み reader だけを呼ぶ read-only の薄い層。P8 は凍結済みの PIT resolver ・acquisition event ／
-  manifest の reader を通し、P9 ／ P10 は safe-view の 2 つの関数だけ、P11 は `read_ui_model`、P12 は ledger ・artifact の reader だけ。
-  新しい private の読み取り面を発明しない。P8 の広い private root を直接読む設計は **別の gate** を要する（監督の決定 2）。
+- **governed source adapter**: §2.1 の承認済み reader だけを呼ぶ read-only の薄い層。P9 ／ P10 は safe-view の関数だけ、P11 は
+  `read_ui_model`、P12 は ledger ・artifact の reader だけ。新しい private の読み取り面を発明しない。
+  **P8 の消費は、governed な PIT resolver ・acquisition event ／ manifest の reader を含めて全て GATED のまま**（P12.5-A4 で明確化）:
+  凍結の P8 PIT 契約 §18 が A1 の store ／ resolver の利用者を P8 内部の 2 module に限り、凍結の boundary test が package の外の importer を
+  文字列で禁じる（P12.5-A2 §4）。resolver を通す読みも、private root を直接読む設計も、どちらも **別の gate** を要する（監督の決定 2）。
+  **現時点で P13 に承認された P8 の access は無い。**
 - **memory store**: 構造化 ・追記専用 ・content-addressed ・決定論の DERIVED の記憶（§4 〜 §5）。
 - **projector**: memory から private な Markdown ／ Obsidian の vault へ export だけを行う層（§6）。
 - **acquisition interface**: P8 の型付きの取得の証拠だけを入力とする抽象（§8）。B-track はこの証拠を増やすだけで、本契約を変えない。
@@ -87,8 +90,15 @@ runtime の identifier に掛かるもので、設計の散文には掛けない
 
 ## 4. memory の authority の意味
 
-- 全ての memory item は `authority_class = DERIVED`。削除して再構築しても情報は失われない（source に全て在る）。Market Memory は
+- 全ての memory の record は `authority_class = DERIVED`。削除して再構築しても情報は失われない（source に全て在る）。Market Memory は
   覚えるだけで **決めない**: 順位 ・score ・推奨 ・配分 ・取引 ・目標の意味を持つ field ・語彙は NON-GOAL として存在しない。
+- **2 つの DERIVED の record の族を計画する**（P12.5-A4 で明確化。P12.5-A2 §7.5 に従う）:
+  - **`MemoryItem`**: source 自身の record の正準 digest と **本物の source の known_at**（精度つき）を持つ source（P8 の観測 ・取得の証拠など、
+    将来 gate するもの）のための族。§5.3 ・§5.4 の digest ・known_at の規則が完全に掛かる。
+  - **`ReviewStateSample` ／ `ReviewStateChange`**: P10 の governed な標本化した view（`read_personal_review` 等）のための族。source の known_at ・
+    P10 の revision の id ・digest は view が返さないので **持たない ・作らない**（P12.5-A2 §7.1 ・§7.6 の provenance の限界をそのまま記録する）。
+  - どちらも DERIVED であり、型で区別し、投影でも区別して表示する。**無い source の known_at ・P10 の revision の id ・digest を捏造しない。**
+    正確な schema ・id の接頭辞 ・永続化は P13-A1 の契約に先送りする（本文書は確定しない）。
 - source の間の食い違いは **解決しない**。P8 が AMBIGUOUS と答えたものは AMBIGUOUS のまま記録し、memory が一方を選ぶことは無い。
 - 人の note（vault の `notes/`）は authority ではない。authority へ入る唯一の経路は、人が P9 ／ P10 の executor で実行する決定である。
 - memory は source の「それ以上」を知らない: safe view が件数だけを返すなら memory も件数だけを持つ。source の safe surface を越える
@@ -116,9 +126,13 @@ runtime の identifier に掛かるもので、設計の散文には掛けない
 
 ### 5.3 provenance（必須 ・identity の一部）
 
-- 全ての item は source への **不変の参照**（phase ・store ・source 自身の record の id ・record の正準 digest ・source の schema version）を
+- **`MemoryItem`** は source への **不変の参照**（phase ・store ・source 自身の record の id ・record の正準 digest ・source の schema version）を
   1 つ以上持つ。取得の事実は P8 の acquisition event の content digest ・manifest の provider record の digest を参照する。
-- 参照の無い item は schema として無効。投影（Markdown）は参照を frontmatter に出す（§6）。
+- 参照の無い `MemoryItem` は schema として無効。投影（Markdown）は参照を frontmatter に出す（§6）。
+- **`ReviewStateSample` ／ `ReviewStateChange`** の provenance は、明示の cutoff `(at, as_of_date)` ・view の schema version ・P9 の
+  `p9_revision_id`（内容由来の id）に限られ、P10 の revision の id ・digest ・source の known_at は **無い**と明示に記録する（P12.5-A2 §7.6）。
+  無いものを digest ・時刻の欄に埋めない。この族を §5.3 の `MemoryItem` の規則に合わせて見せかけることも、逆に `MemoryItem` の規則を
+  この族に合わせて弱めることもしない。
 - rebuild の時に全ての参照を **再検証**する。digest の不一致は INTEGRITY_FAILURE（§5.5）であり、黙って再導出しない。
 
 ### 5.4 identity と replay
@@ -126,8 +140,12 @@ runtime の identifier に掛かるもので、設計の散文には掛けない
 - **item の identity は安定**: `item_id = p13mem_ + domain つき digest(kind ・subject の参照 ・source の参照 ・known_at ・型付きの内容)`。
   build の telemetry（build time ・host ・process ・path）は identity に **含めない**（監督の修正 C）。同じ source の同じ事実は、いつ ・どこで
   rebuild しても同じ `item_id` になる。
-- **build の identity** は明示の PIT（`as_of`）・入力の manifest（source root の manifest の digest）・規則の version から導く。build の
-  telemetry は build の証拠に別に残す（identity には入れない）。
+- **build の identity** は、**明示の順序つきの cutoff の集合**（単一の `as_of` も含む）・その gate で利用できる入力の記述子 ・view ／ store の
+  schema version ・規則の version から導く（P12.5-A4 で一般化）。source root の manifest（root の file の byte の digest）は **監督の将来の決定が
+  あるまで任意の入力**であり、MVP には無い（P12.5-A2 §7.6 ・§14）。build の telemetry は build の証拠に別に残す（identity には入れない）。
+- **決定論の identity は、それだけでは private な source の authority が不変であったことを証明しない**: 同じ identity は「同じ入力の記述子と
+  同じ内容から導いた」ことを言うだけで、root の byte の不変 ・改竄の不在は、root の manifest か実装の gate の前後の検証（§3 ・§10 の 6）が
+  在る時にだけ言える。本文書は root の manifest ・完全な source の整合性の検証が **既に存在するとは主張しない**。
 - **replay**: 同じ `as_of` ・同じ入力の manifest ・同じ規則の version からは byte 一致の item 集合が出る（受け入れ試験 §10）。差が出れば
   それは source の変化（manifest の差で説明できる）か INTEGRITY_FAILURE のどちらかであり、第三の説明は無い。
 - 不完全な build は結果にしない: 途中で失敗した build は証拠に FAILED を残し、store へは何も昇格しない。
@@ -147,6 +165,15 @@ runtime の identifier に掛かるもので、設計の散文には掛けない
 
 STALE（古い）と INTEGRITY_FAILURE（壊れている）と MISSING（無い）と UNKNOWN ／ UNCERTAIN（PIT で言えない）と AMBIGUOUS（矛盾）は
 別の field ・別の表示で区別し、どれも他へ畳み込まない。
+
+**P8 の時刻の語彙は 2 層であり、状態機械を統合しない**（P12.5-A4 で明確化。P12.5-A2 §7.3 の解釈を採る）: 上の表の UNKNOWN ／ UNCERTAIN は
+P8 の `KnowledgeTime.state_at(cutoff)` の **知識の状態**（KNOWN ／ UNKNOWN ／ UNCERTAIN: 1 つの知識の時刻と cutoff の関係）を指す。P8 の
+`observation_resolver.resolve` が返す **解決の status**（FOUND ／ NOT_FOUND ／ NOT_YET_KNOWN ／ INSUFFICIENT_TIME_PRECISION ／ AMBIGUOUS ／
+BEFORE_COVERAGE ／ OUTSIDE_COVERAGE ／ AUTHORITY_MISSING ／ STORE_CORRUPTION ／ SUBJECT_NOT_RESOLVED）は別の語彙である。対応は: UNKNOWN
+（次の revision が cutoff で確実に未知）→ 前の revision か NOT_YET_KNOWN ／ NOT_FOUND、UNCERTAIN（精度不足）→ INSUFFICIENT_TIME_PRECISION、
+表の AMBIGUOUS は resolver の AMBIGUOUS（複数の source の head の衝突）であって `KnowledgeTime` の状態ではない、AUTHORITY_MISSING ／
+STORE_CORRUPTION は PIT ではなく store の層（本文書の MISSING ／ INTEGRITY_FAILURE に対応）。memory は両方の語彙を **そのまま**運び、
+一方を他方に書き換えない。
 
 ## 6. Obsidian の local export の脅威 model と方針
 
@@ -181,7 +208,9 @@ projector は書く前と公開の前に、少なくとも次を検査し、1 �
 
 - **path**: export 先 ・staging ・全 file の path は vault の root の下に正規化後も収まる ・`..` ・絶対 path ・drive の指定を含まない ・
   **symlink ／ junction ／ reparse point** を vault の root から file までのどこにも含まない（辿らない ・作らない）。
-- **file 名**: id（`p13mem_` ＋ digest の一部）か固定の alphabet に sanitize した slot 名から作る ・長さの上限 ・人や provider の文字列から作らない。
+- **file 名**: 不変量は「id か固定の alphabet に sanitize した slot 名から作る ・長さの上限 ・人や provider の文字列から作らない」。
+  本文書の `p13mem_` ＋ digest の一部のような具体の形は **例示であり、承認した export の命名規則ではない**。export で用いる識別子 ・file 名の
+  最終の規則は P13-A4 の契約に先送りする（P12.5-A2 §8。P12.5-A4 で明確化）。
 - **Markdown の安全**: 生成 note に raw HTML ・script ・iframe ・data URI ・`file://` ・外部 URL ・外部 link ・絶対 path ・embed（`![[`）を含めない。
   wikilink は生成 note の id への内部 link だけ。frontmatter の値は quote する。改行は LF に固定。
 - **埋め込まれた秘密 ・private の形**: 全ての生成 byte を private の形の pattern（資格情報の変数名 ・API key の header ・provider の host ・
@@ -254,8 +283,10 @@ projector は書く前と公開の前に、少なくとも次を検査し、1 �
 
 ## 11. 未解決の問いと明示に先送りする決定
 
-- P9 ／ P10 の safe view は件数中心であるため、memory の P9 ／ P10 の面は件数 ・状態の粒度になる。id 粒度の記憶が要るなら **別の gate**で
-  read-only の面を監督が承認する（本文書は発明しない）。
+- （P12.5-A2 で解消 ・P12.5-A4 で訂正）P9 ／ P10 の governed な view は件数だけではない: `read_personal_review` は P9 の root の id ・revision の
+  id ・発行体の id ・状態 ・期日 ・印の **id 粒度**の状態を返す（P12.5-A2 §3.3）。従って将来の要件は **厳密に登録した P13 の importer**
+  （P12.5-A2 §10）であり、必ずしも richer な private の interface ではない。revision の鎖 ・`reviewed_at` ・P10 の revision の id は依然として
+  出ないので、それらが要る場合だけ別の gate（P12.5-A2 §12 の G5）になる。
 - P8 の観察 ・取得の証拠を「凍結済みの reader でどこまで読むか」（PIT resolver ・acquisition event ／ manifest の reader の範囲）は P13-A2 の
   契約で監督が確定する。
 - STALE の窓（日数）・鮮度の等級の名前は人が config で宣言する。本文書は値を決めない。

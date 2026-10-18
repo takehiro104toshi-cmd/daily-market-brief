@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.25 (2026-10-18) — Phase 12.5 P12.5-A4 A0 architecture contract remediation（文書だけ ・runtime は無い）
+
+P12.5-A3 の closeout investigation が見つけた A0 ／ A2 の不整合を A0 の文書だけで解消する（A2 の定義は不変 ・architecture は不変）。
+§5.5: P8 の `KnowledgeTime.state_at` の知識の状態（KNOWN ／ UNKNOWN ／ UNCERTAIN）と `observation_resolver` の解決の status（NOT_YET_KNOWN ・
+INSUFFICIENT_TIME_PRECISION ・AMBIGUOUS …）を 2 層として区別し、A2 §7.3 の解釈を採る（状態機械は統合しない）。§4 ・§5.3: DERIVED の record の
+族を 2 つ計画する — `MemoryItem`（source の正準 digest と本物の known_at を要する）と `ReviewStateSample` ／ `ReviewStateChange`（P10 の governed な
+標本の view。無い known_at ・P10 の revision の id ・digest は捏造しない）。schema ・接頭辞は P13-A1 に先送り。§5.4: build の identity を
+「明示の順序つきの cutoff の集合 ・入力の記述子 ・schema version ・規則の version」に一般化し、root の manifest は監督の将来の決定まで任意、
+決定論の identity だけでは private な source の不変を証明しないと明記（root の manifest ・完全な整合性の検証が既に在るとは主張しない）。
+§11: 「P9 ／ P10 の view は件数中心」の古い記述を訂正（`read_personal_review` は id 粒度 ・要るのは厳密に登録した P13 の importer）。
+§2.2: governed な resolver を含む P8 の全ての消費は凍結の P8 の利用者 ／ import の境界で GATED のまま ・P13 の access は未承認。
+§6.3: `p13mem_` ＋ digest の file 名は例示で、export の命名は P13-A4 に先送り。`src/` ・凍結の anchor ・test は不変。P13 の runtime は存在しない。
+
+追加
+・なし
+改善
+・`docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md`（§2.2 ・§4 ・§5.3 ・§5.4 ・§5.5 ・§6.3 ・§11 の明確化 ・訂正）
+修正
+・A0 §11 の古い記述（governed な view は件数だけ）・A0 §5.5 の P8 の語彙の混在
+
 ## v6.24 (2026-10-18) — Phase 12.5 P12.5-A2 source capability contract ／ P13 Review State Memory MVP（設計だけ ・runtime は無い）
 
 P12.5-A1 の source capability investigation（PASS）を正式な契約にする。凍結の Phase 8 〜 12 の実在する read-only の面を file ・symbol ・
