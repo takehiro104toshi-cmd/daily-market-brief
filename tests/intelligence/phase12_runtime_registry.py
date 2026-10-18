@@ -15,7 +15,8 @@
 - P12-A4 の runtime は lock ・process の探り ・ledger の commit の直列化 ・注入点 ・cancel ・回復 ・retry。network ・資格情報 ・scheduler は無い。
   A4 の file は `P12_A4` の commit と object 一致。A5 が登録して再開した `run_cli` だけが新しい基準。
 - P12-A5 の runtime は Task Scheduler の統合: runtime の pin ・scheduled-run の解決 ・決定論の task の定義 ・schtasks の adapter ・
-  install ／ remove ／ status。daemon ・service ・network ・資格情報は無い。
+  install ／ remove ／ status ・意味の skip の transaction（A5.1: MISSED ・NON_BUSINESS_DAY を ledger に PLANNED → SKIPPED で記録）。
+  daemon ・service ・network ・資格情報は無い。
 """
 from __future__ import annotations
 
@@ -56,10 +57,10 @@ PHASE12_A3_REOPENED_IN_A4: Tuple[str, ...] = (f"{PHASE12_PACKAGE}/crash_classifi
 PHASE12_A4_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for name in (
     "cancel_authority", "injection", "ledger_commit", "operational_lock", "process_probe", "recovery", "retry"))
 #: A5 が明示に再開した file（CLI に scheduled-run ・pin-runtime ・scheduler-install ／ -remove ／ -status を足す。他は不変）
-PHASE12_A4_REOPENED_IN_A5: Tuple[str, ...] = (f"{PHASE12_PACKAGE}/run_cli.py",)
+PHASE12_A4_REOPENED_IN_A5: Tuple[str, ...] = (f"{PHASE12_PACKAGE}/run_cli.py", f"{PHASE12_PACKAGE}/run_transaction.py")   # A5.1: preflight ・record_request の公開
 #: P12-A5 で足した runtime（runtime の pin ・scheduled-run の解決 ・task の定義 ・Task Scheduler の adapter ・install ／ remove ／ status）
 PHASE12_A5_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for name in (
-    "runtime_pin", "scheduled_run", "scheduler_install", "task_definition", "task_scheduler_adapter"))
+    "runtime_pin", "scheduled_run", "scheduler_install", "skip_transaction", "task_definition", "task_scheduler_adapter"))
 PHASE12_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME + PHASE12_A4_RUNTIME
                                                 + PHASE12_A5_RUNTIME))
 PHASE12_TESTS: Tuple[str, ...] = ("tests/intelligence/phase12_runtime_registry.py",
@@ -143,7 +144,11 @@ SANCTIONED_P12_MODULES: Mapping[str, Set[str]] = {
     f"{PHASE12_PACKAGE}/runtime_pin.py": {".atomic_files", ".canonical", ".failure_codes", ".schedule_authority"},
     f"{PHASE12_PACKAGE}/scheduled_run.py": {".calendar_authority", ".canonical", ".execution_request", ".failure_codes", ".ledger_commit",
                                             ".ledger_model", ".operational_lock", ".preconditions", ".process_probe", ".run_planning",
-                                            ".run_transaction", ".runtime_pin", ".schedule_authority", ".schedule_model"},
+                                            ".run_state", ".run_transaction", ".runtime_pin", ".schedule_authority", ".schedule_model",
+                                            ".skip_transaction"},
+    f"{PHASE12_PACKAGE}/skip_transaction.py": {".canonical", ".execution_request", ".failure_codes", ".injection", ".ledger_commit",
+                                               ".ledger_model", ".operational_lock", ".preconditions", ".process_probe", ".run_state",
+                                               ".run_transaction", ".status_store"},
     f"{PHASE12_PACKAGE}/scheduler_install.py": {".atomic_files", ".failure_codes", ".ledger_store", ".schedule_authority",
                                                 ".task_definition", ".task_scheduler_adapter"},
     f"{PHASE12_PACKAGE}/task_definition.py": {".failure_codes", ".schedule_model"},

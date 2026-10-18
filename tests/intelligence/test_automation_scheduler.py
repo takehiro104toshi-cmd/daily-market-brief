@@ -123,12 +123,12 @@ def test_scheduled_run_at_the_exact_instant_commits_a_scheduler_run_whose_pit_co
 def test_late_window_boundaries_not_due_and_missed(world) -> None:
     before = scheduled(world, "slot-a", tokyo(1, 14, 59, 59))
     assert (before.kind, before.code, before.exit_code) == ("SKIPPED", "OUTSIDE_WINDOW:NOT_DUE", EXIT_OK)
-    missed = scheduled(world, "slot-a", tokyo(1, 16, 0, 1))
-    assert (missed.kind, missed.code, missed.exit_code) == ("MISSED", "OUTSIDE_WINDOW:MISSED", EXIT_MISSED)
-    assert missed.scheduled_for == "2026-07-01T06:00:00Z" and not (world["root"] / "ledger").exists()   # backfill しない
+    assert not (world["root"] / "ledger").exists()                                        # NOT_DUE は書かない
     edge = scheduled(world, "slot-a", tokyo(1, 16, 0, 0))                                  # 両端を含む
     assert edge.kind == "SUCCEEDED" and edge.exit_code == EXIT_OK
-    assert scheduled(world, "slot-a", tokyo(1, 16, 0, 1)).code == "OUTSIDE_WINDOW:MISSED"   # 成功の後でも時計が窓の外なら MISSED（別の slot は選ばない）
+    late = scheduled(world, "slot-a", tokyo(1, 16, 0, 1))                                  # 成功の後の窓の外: 記録済みの SUCCEEDED が authority
+    assert (late.kind, late.code, late.exit_code) == ("SKIPPED", "ALREADY_SUCCEEDED", EXIT_OK)
+    assert ledger(world).open_verified().summary.record_count == 3
 
 
 def test_midnight_crossing_weekday_mask_weekend_holiday_and_missing_calendar(world) -> None:
@@ -142,8 +142,9 @@ def test_midnight_crossing_weekday_mask_weekend_holiday_and_missing_calendar(wor
     assert weekend.kind == "SUCCEEDED"
     weekend_request = json.loads((world["root"] / "requests" / f"{weekend.run_id}.json").read_text())
     assert weekend_request["readiness_only"] is True and weekend_request["session_date"] == "2026-07-03"
-    holiday = scheduled(world, "slot-a", tokyo(2, 15, 10))                                 # 木 ＝ 休日
+    holiday = scheduled(world, "slot-a", tokyo(2, 15, 10))                                 # 木 ＝ 休日: SKIPPED を ledger に記録
     assert (holiday.kind, holiday.code, holiday.exit_code) == ("SKIPPED", "NON_BUSINESS_DAY:HOLIDAY", EXIT_OK)
+    assert ledger(world).open_verified().run_states[holiday.run_id] is RunState.SKIPPED
     count = ledger(world).open_verified().summary.record_count
     calendar_file(world["root"]).unlink()
     missing = scheduled(world, "slot-a", tokyo(1, 15, 10))
@@ -366,9 +367,11 @@ def test_the_cli_scheduled_run_prints_safe_report_lines_and_returns_the_contract
     for sentinel in world["sentinels"]:
         assert sentinel not in out.getvalue(), sentinel
     out = io.StringIO()
-    code = run_cli.main(["scheduled-run", "--slot-id", "slot-a", "--selection-clock-at", "2026-07-01T08:00:00Z", *cli_args(world)],
-                        stdout=out, environment={})
-    assert code == EXIT_MISSED and out.getvalue() == "REPORT: SCHEDULED_RUN SLOT=slot-a OUTCOME=MISSED CODE=OUTSIDE_WINDOW:MISSED\nREPORT: EXIT=4\n"
+    code = run_cli.main(["scheduled-run", "--slot-id", "slot-b", "--selection-clock-at", "2026-07-01T18:00:00Z", *cli_args(world)],
+                        stdout=out, environment={})                                        # slot-b 23:30 の窓（〜01:30）の後 ＝ MISSED
+    lines = out.getvalue().splitlines()
+    assert code == EXIT_MISSED and lines[0] == "REPORT: SCHEDULED_RUN SLOT=slot-b OUTCOME=MISSED CODE=OUTSIDE_WINDOW:MISSED"
+    assert lines[1].startswith("REPORT: RUN_ID=") and lines[-1] == "REPORT: EXIT=4"
     out = io.StringIO()
     code = run_cli.main(["scheduled-run", "--slot-id", "slot-a", *cli_args(world)], stdout=out, environment={"JQUANTS_API_KEY": "x"})
     assert code == EXIT_PRECONDITION_REFUSED and "CODE=CREDENTIAL_PRESENT" in out.getvalue()
@@ -422,3 +425,97 @@ def test_two_scheduled_processes_for_the_same_slot_commit_exactly_once(world) ->
     state = ledger(world).open_verified()
     assert state.summary.record_count == 3 and set(state.run_states.values()) == {RunState.SUCCEEDED}
     assert len(list((world["root"] / "runs").iterdir())) == 1 and not list((world["root"] / "locks").glob("*.lock"))
+
+
+# ================================================================ A5.1: skip の証拠
+
+
+def test_missed_slot_commits_planned_then_skipped_without_execution_and_repeats_resolve_to_the_record(world) -> None:
+    root = world["root"]
+    missed = scheduled(world, "slot-a", tokyo(1, 16, 0, 1))                                # 水 15:00 の窓（〜16:00）の後
+    assert (missed.kind, missed.code, missed.exit_code) == ("MISSED", "OUTSIDE_WINDOW:MISSED", EXIT_MISSED)
+    assert missed.scheduled_for == "2026-07-01T06:00:00Z" and missed.skip.status == "SKIPPED" and missed.transaction is None
+    state = ledger(world).open_verified()
+    assert [r.transition_to for r in state.records] == [RunState.PLANNED, RunState.SKIPPED]
+    assert state.records[1].failure_code == "OUTSIDE_WINDOW:MISSED" and state.records[1].operator == "scheduler" and state.records[1].attempt == 1
+    assert state.checkpoint == HeadCheckpoint.of(state.records) and state.checkpoint_class == "CHECKPOINT_OK"
+    assert not (root / "runs").exists() and (root / "requests" / f"{missed.run_id}.json").exists()   # A2 は走らない ・要求の証拠はある
+    status_doc = read_status(root)
+    assert status_doc["projection"]["health_code"] == "SKIPPED" and status_doc["projection"]["last_terminal_run"]["state"] == "SKIPPED"
+    assert status_doc["projection"]["last_failure_code"] == "OUTSIDE_WINDOW:MISSED" and status_doc["ledger_record_count"] == 2
+    frozen = snapshot_of_root(root)
+    again = scheduled(world, "slot-a", tokyo(1, 17, 0))                                    # 2 度目: 記録済みの終端に解決
+    assert (again.kind, again.code, again.exit_code) == ("MISSED", "ALREADY_SKIPPED:OUTSIDE_WINDOW:MISSED", EXIT_MISSED)
+    assert again.run_id == missed.run_id and again.skip.status == "ALREADY_SKIPPED"
+    assert snapshot_of_root(root) == frozen and ledger(world).open_verified().summary.record_count == 2   # 重複は追記しない ・attempt 2 は無い
+    assert not list((root / "locks").glob("*.lock"))
+    request = json.loads((root / "requests" / f"{missed.run_id}.json").read_text())
+    assert request["attempt"] == 1 and request["as_of_date"] == "2026-07-01" and request["session_date"] == "2026-07-01"
+    for blob in ((root / "ledger" / "ledger.jsonl").read_text(encoding="utf-8"), status_file(root).read_text(encoding="utf-8")):
+        for sentinel in world["sentinels"] | {str(world["tmp"]), "Traceback", "Exception"}:
+            assert sentinel not in blob, sentinel
+    yesterday = scheduled(world, "slot-b", tokyo(2, 2, 0))                                 # 木 02:00: 水 23:30 の instance の窓（〜01:30）の後
+    assert yesterday.kind == "MISSED" and yesterday.scheduled_for == "2026-07-01T14:30:00Z"
+    assert scheduled(world, "slot-b", tokyo(2, 12, 0)).code == "ALREADY_SKIPPED:OUTSIDE_WINDOW:MISSED"   # 木 12:00: 同じ instance
+
+
+def test_non_business_day_skip_is_committed_once_and_readiness_slots_execute_normally(world) -> None:
+    root = world["root"]
+    holiday = scheduled(world, "slot-a", tokyo(2, 15, 10))
+    assert (holiday.kind, holiday.code, holiday.exit_code) == ("SKIPPED", "NON_BUSINESS_DAY:HOLIDAY", EXIT_OK)
+    state = ledger(world).open_verified()
+    assert [r.transition_to for r in state.records] == [RunState.PLANNED, RunState.SKIPPED] and state.records[1].failure_code == "NON_BUSINESS_DAY:HOLIDAY"
+    assert not (root / "runs").exists() and read_status(root)["projection"]["health_code"] == "SKIPPED"
+    frozen = snapshot_of_root(root)
+    again = scheduled(world, "slot-a", tokyo(2, 15, 30))
+    assert (again.kind, again.code, again.exit_code) == ("SKIPPED", "ALREADY_SKIPPED:NON_BUSINESS_DAY:HOLIDAY", EXIT_OK)
+    assert snapshot_of_root(root) == frozen
+    weekend = scheduled(world, "slot-b", tokyo(4, 23, 40))                                 # readiness を許す slot: 通常の readiness だけの run
+    assert weekend.kind == "SUCCEEDED" and weekend.skip is None and weekend.transaction is not None
+    assert (root / "runs" / weekend.run_id).is_dir()
+    assert json.loads((root / "requests" / f"{weekend.run_id}.json").read_text())["readiness_only"] is True
+    all_days = ScheduleSlot(slot_id="slot-a", local_time="15:00", weekday_mask=("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"),
+                            late_window_seconds=3600, readiness_on_non_business_day=False, enabled=True)
+    weekend_schedule = schedule(version=2, supersedes=schedule().content_digest, slots=(all_days, schedule().slots[1], schedule().slots[2]))
+    write_schedule_authority(root, weekend_schedule, operator="human")
+    saturday = scheduled(world, "slot-a", tokyo(4, 15, 10))
+    assert (saturday.kind, saturday.code, saturday.exit_code) == ("SKIPPED", "NON_BUSINESS_DAY:WEEKEND", EXIT_OK)
+    assert ledger(world).open_verified().records[-1].failure_code == "NON_BUSINESS_DAY:WEEKEND"
+
+
+def test_no_evidence_outcomes_never_touch_the_ledger(world) -> None:
+    root = world["root"]
+    scheduled(world, "slot-a", tokyo(1, 14, 0))                                            # NOT_DUE
+    scheduled(world, "slot-c", tokyo(6, 12, 0))                                            # DISABLED slot
+    assert not (root / "ledger").exists()
+    done = scheduled(world, "slot-a", tokyo(1, 15, 0))
+    assert done.kind == "SUCCEEDED"
+    frozen = snapshot_of_root(root)
+    assert scheduled(world, "slot-a", tokyo(1, 15, 30)).code == "ALREADY_SUCCEEDED"       # ALREADY_SUCCEEDED
+    assert snapshot_of_root(root) == frozen
+    live = acquire_lock(root, "RUN", "f" * 64, probe=ProcessProbe(), clock_instant=tokyo(1, 15, 0))   # 無関係な lock は影響しない
+    live.release()
+    off = schedule(version=2, enabled=False, supersedes=schedule().content_digest)
+    write_schedule_authority(root, off, operator="human")
+    disabled = scheduled(world, "slot-a", tokyo(1, 16, 30))                                # DISABLED schedule（窓の外でも書かない）
+    assert disabled.code == "DISABLED:SCHEDULE_DISABLED" and ledger(world).open_verified().summary.record_count == 3
+
+
+def test_two_processes_observing_the_same_missed_slot_commit_exactly_one_skip(world) -> None:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("JQUANTS_")}
+    argv = [sys.executable, "-m", "src.intelligence.automation.run_cli", "scheduled-run", "--slot-id", "slot-a", "--selection-clock-at",
+            "2026-07-01T07:30:00Z", *cli_args(world)]
+    processes = [subprocess.Popen(argv, cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env) for _ in range(2)]
+    outputs = [p.communicate(timeout=300) for p in processes]
+    assert all(e == "" for _, e in outputs), outputs
+    firsts = sorted(o.splitlines()[0] for o, _ in outputs)
+    codes = sorted(p.returncode for p in processes)
+    assert "REPORT: SCHEDULED_RUN SLOT=slot-a OUTCOME=MISSED CODE=OUTSIDE_WINDOW:MISSED" in firsts
+    other = [f for f in firsts if f != "REPORT: SCHEDULED_RUN SLOT=slot-a OUTCOME=MISSED CODE=OUTSIDE_WINDOW:MISSED"][0]
+    assert other in ("REPORT: SCHEDULED_RUN SLOT=slot-a OUTCOME=MISSED CODE=ALREADY_SKIPPED:OUTSIDE_WINDOW:MISSED",
+                     "REPORT: SCHEDULED_RUN SLOT=slot-a OUTCOME=DUPLICATE_ACTIVE CODE=DUPLICATE_INVOCATION:RUN_ACTIVE",
+                     "REPORT: SCHEDULED_RUN SLOT=slot-a OUTCOME=DUPLICATE_ACTIVE CODE=DUPLICATE_INVOCATION:LEDGER_LOCKED"), other
+    assert codes in ([EXIT_MISSED, EXIT_MISSED], [EXIT_MISSED, EXIT_DUPLICATE_ACTIVE])
+    state = ledger(world).open_verified()
+    assert [r.transition_to for r in state.records] == [RunState.PLANNED, RunState.SKIPPED] and state.checkpoint == HeadCheckpoint.of(state.records)
+    assert not (world["root"] / "runs").exists() and not list((world["root"] / "locks").glob("*.lock"))

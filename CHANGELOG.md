@@ -4,6 +4,23 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.19 (2026-10-18) — Phase 12 P12-A5.1 scheduler skip evidence remediation
+
+A5 の MISSED ・NON_BUSINESS_DAY は ledger に何も残さなかった（Task Scheduler の履歴だけ）。A0 の「ledger が運用の実行の authority」と矛盾する
+ので、意味の skip の transaction を足した: 同じ identity（attempt 1）で PLANNED → SKIPPED を A4 の lock ・直列化の上で commit し、status を再生成
+する（A2 の実行 ・artifact は無い）。NOT_DUE ・DISABLED ・ALREADY_SUCCEEDED ・DUPLICATE_ACTIVE ・RECOVERY_REQUIRED は追記しない。同じ instance の
+2 度目の起動は ALREADY_SKIPPED に解決し、attempt 2 は作らない。窓の分類は今日 ・昨日の候補の最新の instance で決める。
+
+追加
+・`src/intelligence/automation/skip_transaction.py`
+改善
+・`src/intelligence/automation/scheduled_run.py`（skip の記録 ・ALREADY_SKIPPED ・窓の候補）・`run_transaction.py`（`preflight` ・`record_request` の公開。
+　登録済みの再開）
+・`tests/intelligence/test_automation_scheduler.py` ・`phase12_runtime_registry.py` ・`test_automation_boundary.py`
+・`docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md`（結果 → ledger の方針）
+修正
+・なし
+
 ## v6.18 (2026-10-18) — Phase 12 P12-A5 Windows Task Scheduler integration ＋ unattended hardening
 
 Task Scheduler → `run_cli scheduled-run` → A1 の計画（selection_clock_at は入口で 1 回 ・意味は scheduled_for から）→ A3 ／ A4 の transaction。

@@ -2,8 +2,8 @@
 
 本文書は P12-A5 の狭い contract である。**Phase 12 の凍結ではない**。
 
-- 基準: P12-A4 の commit `dcad07351201ecab44d91acc98740b8833bc3996`（A4 の file は object 一致。A5 が登録して再開した `run_cli` だけが新しい基準。
-  A1 〜 A3 の pin は変わらない）
+- 基準: P12-A4 の commit `dcad07351201ecab44d91acc98740b8833bc3996`（A4 の file は object 一致。A5 が登録して再開した `run_cli` と、A5.1 が
+  `preflight` ・`record_request` を公開するために再開した `run_transaction` だけが新しい基準。A1 〜 A3 の pin は変わらない）
 - P11 の意味 ／ runtime の凍結 anchor（不変）: `43c0b856d41efed397de213a1a06178c5e97ab10`
 - A5 の runtime（`src/intelligence/automation/`）:
 
@@ -14,6 +14,7 @@
 | `task_definition` | 決定論の Task Scheduler XML ・名前空間 `\Compass\P12\<schedule_id>\<slot_id>` ・所有の印 `P12_OWNED` |
 | `task_scheduler_adapter` | `schtasks` ／ `tzutil` の狭い adapter（引数の list ・timeout ・sanitize）と InMemory の test double |
 | `scheduler_install` | install の計画 ・登録 ・P12 所有の task だけの削除 ・安全な status |
+| `skip_transaction`（A5.1） | 意味の skip（MISSED ・NON_BUSINESS_DAY）を ledger に PLANNED → SKIPPED で commit する transaction |
 | `run_cli`（再開） | `scheduled-run` ・`pin-runtime` ・`scheduler-install` ／ `-remove` ／ `-status` |
 
 ## 1. 構成
@@ -30,17 +31,28 @@ process の入口で `selection_clock_at` を 1 回だけ観測し、どの slot
 （recorded_at ・generated_at）は別で、意味に影響しない。`datetime.now` が PIT ・market の日 ・snapshot の source ・identity を直接決めることは
 無い。`--selection-clock-at` は人の診断の明示の上書き（task の定義は渡さない）。
 
-## 3. 窓 ・missed ・睡眠
+## 3. 窓 ・missed ・睡眠 ・結果の証拠（A5.1 ・監督の lock）
 
-`selection_clock_at < scheduled_for` → NOT_DUE（exit 0 ・何もしない）。late window の中（両端を含む）→ eligible。`scheduled_for + late window`
-の後 → MISSED（exit 4 ・backfill しない ・近い slot を選ばない ・曖昧な推定をしない）。StartWhenAvailable=true で遅れて起きても、まだ意味的に
-有効かは P12 の late window が決める。睡眠で run を逃せば MISSED になり得る: scheduled_for を起きた時刻に変えることは無い。
+候補は今日と昨日の instance。時計以前の最新の候補が無ければ NOT_DUE（exit 0 ・ledger に書かない: 意味の run ではない）。候補の late window の中
+（両端を含む）→ eligible。候補の `scheduled_for + late window` の後 → MISSED: **その instance の PLANNED → SKIPPED を ledger に commit する**
+（`skip_transaction` ・failure_code `OUTSIDE_WINDOW:MISSED` ・A2 の実行 ・artifact は無い ・exit 4）。backfill ・近い slot の選択 ・曖昧な推定は
+しない。StartWhenAvailable=true で遅れて起きても、まだ意味的に有効かは P12 の late window が決める。睡眠で run を逃せば MISSED として記録される:
+scheduled_for を起きた時刻に変えることは無い。
+
+結果 → ledger の方針（v1）: NOT_DUE ・DISABLED ＝ 書かない（authority が証拠）。MISSED ・NON_BUSINESS_DAY（readiness を許さない slot）＝ SKIPPED
+の終端を commit。ALREADY_SUCCEEDED ＝ 書かない（既存の SUCCEEDED が authority）。DUPLICATE_ACTIVE ＝ 書かない（RUNNING ＋ lock が証拠）。
+RECOVERY_REQUIRED ＝ 書かない（crash の証拠を不変に保つ）。Task Scheduler の履歴は補助の telemetry であり、MISSED ・NON_BUSINESS_DAY の証拠に
+P12 は依存しない。status.json だけの偽の skip はしない。
+
+skip の transaction: 1 ledger ＋ checkpoint の検証 ・重複の分類 → 2 run の lock → 3 要求の証拠 → 4 PLANNED → 5 PLANNED → SKIPPED → 6 再検証 →
+7 status の再生成 → 8 lock の解放。identity は通常の run と同じ（attempt 1）。同じ instance の 2 度目の起動は記録済みの終端に解決する
+（`ALREADY_SKIPPED:<code>` ・同じ exit ・attempt 2 は作らない）。retry の意味は SKIPPED には無い。
 
 ## 4. 週末 ・休日
 
 人が書いた休日 calendar の authority だけ（network の lookup は無い）。無い ・参照と違う → fail closed（AUTHORITY_INVALID ・exit 7）。
-非営業日は slot の `readiness_on_non_business_day` が真なら A1 の意味で readiness だけの run、偽なら SKIPPED（NON_BUSINESS_DAY ・exit 0）。
-schedule は変えない。
+非営業日は slot の `readiness_on_non_business_day` が真なら A1 の意味で readiness だけの run、偽なら ledger に PLANNED → SKIPPED を commit
+（failure_code `NON_BUSINESS_DAY:HOLIDAY` ／ `:WEEKEND` ・exit 0）。schedule は変えない。
 
 ## 5. Task の定義（決定論の XML ・UTF-16 ・CRLF）
 
@@ -77,10 +89,10 @@ RUN_OPEN ・RUN_TERMINAL ・LOCK_STALE ・LOCK_UNKNOWN_PROVENANCE ・LOCK_MALFOR
 
 | exit | 意味 |
 |---|---|
-| 0 | SUCCEEDED、または安全な no-op（NOT_DUE ・DISABLED ・NON_BUSINESS_DAY ・ALREADY_SUCCEEDED） |
+| 0 | SUCCEEDED、安全な no-op（NOT_DUE ・DISABLED ・ALREADY_SUCCEEDED）、または記録した skip（NON_BUSINESS_DAY） |
 | 1 | transaction が FAILED（A2 の step の失敗: repo が汚れている ・凍結の drift ・root 不在 ・readiness の失敗など。ledger に FAILED として記録） |
 | 2 | 使い方の誤り |
-| 4 | MISSED（late window の外） |
+| 4 | MISSED（late window の外。ledger に SKIPPED を記録済み ・2 度目は ALREADY_SKIPPED） |
 | 5 | RECOVERY_REQUIRED |
 | 6 | DUPLICATE_ACTIVE（生きた lock ・ledger lock の待ちの超過） |
 | 7 | AUTHORITY_INVALID（schedule ・calendar ・pin ・slot） |
@@ -129,4 +141,5 @@ J-Quants ・P12-B1 の取得 ・通知 ・公開 ・cloud の scheduler ・自�
 - P12-OBS-015: trigger は機械の local time。Tokyo 以外の機械は install で拒む（offset 付きの StartBoundary の挙動は A6 で調べる）。
 - P12-OBS-016: 文書だけの commit でも再 pin が要る（意図的 ・v1）。
 - P12-OBS-017: scheduler-status の `last_scheduler_result_code` は Task Scheduler の「最後の結果」の生の整数（exit code の契約で読む）。
+- P12-OBS-018（A5.1 で解消）: MISSED ・NON_BUSINESS_DAY は ledger に SKIPPED として記録する。NOT_DUE ・DISABLED だけが記録を持たない（意味の run ではない）。
 - 次は **P12-A6**（監督の GO の後）。

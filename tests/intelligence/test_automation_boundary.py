@@ -63,7 +63,7 @@ STRING_ALLOWANCES = {f"{_P12}/network_deny.py": {"127.0.0.1"},                  
                      f"{_P12}/server_readiness.py": {"://"},                          # 自分の loopback の origin の形だけ
                      f"{_P12}/run_cli.py": {"__main__", "argparse", "os.environ", "datetime.now", "Task Scheduler"},   # CLI（telemetry の時計だけ）
                      f"{_P12}/scheduled_run.py": {"Task Scheduler"}, f"{_P12}/scheduler_install.py": {"Task Scheduler"},
-                     f"{_P12}/runtime_pin.py": {"Task Scheduler"},
+                     f"{_P12}/runtime_pin.py": {"Task Scheduler"}, f"{_P12}/skip_transaction.py": {"Task Scheduler"},
                      f"{_P12}/task_definition.py": {"Task Scheduler", "://"},            # A5: XML の名前空間の URI だけ
                      f"{_P12}/task_scheduler_adapter.py": {"Task Scheduler", "schtasks"}}   # A5: 狭い adapter だけが schtasks を呼ぶ
 NAME_ALLOWANCES = {f"{_P12}/finalization.py": {"open", "write", "read_bytes", "mkdir", "rename", "exists"},   # .partial の中だけ
@@ -130,10 +130,10 @@ def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
     assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME + PHASE12_A4_RUNTIME
                                            + PHASE12_A5_RUNTIME))
-    assert len(PHASE12_RUNTIME) == 42 and len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10
-    assert len(PHASE12_A3_RUNTIME) == 9 and len(PHASE12_A4_RUNTIME) == 7 and len(PHASE12_A5_RUNTIME) == 5
+    assert len(PHASE12_RUNTIME) == 43 and len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10
+    assert len(PHASE12_A3_RUNTIME) == 9 and len(PHASE12_A4_RUNTIME) == 7 and len(PHASE12_A5_RUNTIME) == 6
     assert len(set(PHASE12_A1_RUNTIME) | set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)
-               | set(PHASE12_A5_RUNTIME)) == 42
+               | set(PHASE12_A5_RUNTIME)) == 43
     assert P12_A1 == "dd922c3eebd67de2ac273ba66e82e493d814e701" and P12_A2 == "bd0007d3b6684a1e4640a723010e197432939f95"
     assert P12_A3 == "66139db86e06130d7504a279b3d5ee820fd76b24" and set(PHASE12_A3_REOPENED_IN_A4) <= set(PHASE12_A3_RUNTIME)
     assert P12_A4 == "dcad07351201ecab44d91acc98740b8833bc3996" and set(PHASE12_A4_REOPENED_IN_A5) <= set(PHASE12_A3_REOPENED_IN_A4)
@@ -402,5 +402,7 @@ def test_p12_a5_the_contract_records_the_required_clauses_and_no_private_values(
         assert not re.search(pattern, text), pattern
     for banned in ("signed", "署名済み", "D:\\", "0.0.0.0", "C:\\Users"):
         assert banned not in text, banned
-    for name in ("runtime_pin", "scheduled_run", "scheduler_install", "task_definition", "task_scheduler_adapter"):
+    for name in ("runtime_pin", "scheduled_run", "scheduler_install", "skip_transaction", "task_definition", "task_scheduler_adapter"):
         assert name in text, name
+    for clause in ("ALREADY_SKIPPED", "PLANNED → SKIPPED", "Task Scheduler の履歴"):                    # A5.1: skip の証拠の方針
+        assert clause in text, clause

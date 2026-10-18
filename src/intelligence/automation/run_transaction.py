@@ -3,6 +3,7 @@
 **ledger が commit の authority**: run が運用上 SUCCEEDED なのは、検証に通る commit 済みの ledger の record が SUCCEEDED と言う時だけ。
 run の directory ・snapshot ・digests.json ・status.json だけでは成功を立てられない。
 
+A5.1 で `preflight` ・`record_request` を公開（skip の transaction が同じ重複の分類 ・要求の証拠を使う）。
 A4 で足したもの（A3 からの登録済みの再開）: run ごとの排他 lock ・ledger の commit の直列化（`LockedLedger`: lock の中で head を読み直す）・
 要求の証拠（`requests/<run_id>.json`）・協調的な cancel の検査 ・決定論の注入点。lock の取得は O_CREAT | O_EXCL（Windows でも原子的）。
 
@@ -83,7 +84,7 @@ def request_file(p12_root: Any, run_id: str):
     return run_directory(p12_root, run_id).parent.parent / REQUESTS_DIRECTORY / f"{run_id}.json"
 
 
-def _preflight(ledger: LockedLedger, request: AutomationExecutionRequest, roots: PrivateRoots, environment: Mapping[str, str],
+def preflight(ledger: LockedLedger, request: AutomationExecutionRequest, roots: PrivateRoots, environment: Mapping[str, str],
                probe: ProcessProbe) -> Any:
     if credential_present(environment):
         raise AutomationError("CREDENTIAL_PRESENT")                                     # orchestration の前に
@@ -104,7 +105,7 @@ def _preflight(ledger: LockedLedger, request: AutomationExecutionRequest, roots:
     return state
 
 
-def _record_request(p12_root: Any, request: AutomationExecutionRequest) -> None:
+def record_request(p12_root: Any, request: AutomationExecutionRequest) -> None:
     target = request_file(p12_root, request.run_id)
     existing = read_text_file(target)
     expected = request.to_bytes().decode("utf-8")
@@ -149,7 +150,7 @@ def commit_run(request: AutomationExecutionRequest, roots: PrivateRoots, *, repo
                                  status_projection_written=status_written)
 
     try:
-        state = _preflight(ledger, request, roots, environment, probe)
+        state = preflight(ledger, request, roots, environment, probe)
     except AutomationError as exc:
         return failed(exc.public_code)
     stages.append("LEDGER_VERIFIED")
@@ -196,7 +197,7 @@ def commit_run(request: AutomationExecutionRequest, roots: PrivateRoots, *, repo
         return finish(failed("CANCELLED" if code is None else code, state=state, status_written=code is None))
 
     try:
-        _record_request(roots.p12_root, request)
+        record_request(roots.p12_root, request)
         stages.append("REQUEST_RECORDED")
         state = transition(RunState.PLANNED, None)
         stages.append("PLANNED_RECORDED")
@@ -253,4 +254,4 @@ def classify_after_crash(roots: PrivateRoots, run_id: str, *, probe: Optional[Pr
 
 
 __all__ = ["REQUESTS_DIRECTORY", "STAGES", "TRANSACTION_SCHEMA_VERSION", "TransactionResult", "classify_after_crash", "commit_run",
-           "read_recorded_request", "request_file"]
+           "preflight", "read_recorded_request", "record_request", "request_file"]
