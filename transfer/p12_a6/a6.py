@@ -11,6 +11,7 @@ skips (MISSED / NON_BUSINESS_DAY / NOT_DUE / DISABLED), removal of only the A6-o
     python D:\\p12_a6_work\\a6.py validate --full-suite    # also run the whole pytest suite at the very end (optional)
     python D:\\p12_a6_work\\a6.py status                   # which stages are done
     python D:\\p12_a6_work\\a6.py archive-previous         # move a previous D:\\p12_a6_private (and state) into the archive
+    python D:\\p12_a6_work\\a6.py diagnose                 # preflight-only process-probe / lock-classification diagnostics (v2)
 
 Everything written to the screen starts with "REPORT: " and contains only codes, counts, digests, slot ids and task
 names. No path, pid, date, time, user name, private value or exception text is printed. Private details stay in
@@ -669,6 +670,50 @@ def check_p12_pins(rt: Runtime) -> None:
     report(f"P12_PINS_OK FILES={checked}")
 
 
+PROBE_TIMINGS = {"alive_ms": [], "identity_ms": [], "alive_none": 0, "identity_none": 0}
+
+
+def timed_alive(probe, pid: int):
+    started = time.monotonic()
+    value = probe.is_alive(pid)
+    PROBE_TIMINGS["alive_ms"].append(int((time.monotonic() - started) * 1000))
+    PROBE_TIMINGS["alive_none"] += 1 if value is None else 0
+    return value
+
+
+def timed_identity(probe, pid: int):
+    started = time.monotonic()
+    value = probe.identity(pid)
+    PROBE_TIMINGS["identity_ms"].append(int((time.monotonic() - started) * 1000))
+    PROBE_TIMINGS["identity_none"] += 1 if value is None else 0
+    return value
+
+
+def report_probe_timings(label: str) -> None:
+    alive_ms, identity_ms = PROBE_TIMINGS["alive_ms"], PROBE_TIMINGS["identity_ms"]
+    report(f"PROBE_TIMING_MS {label} ALIVE_CALLS={len(alive_ms)} ALIVE_MAX={max(alive_ms) if alive_ms else 0} "
+           f"IDENTITY_CALLS={len(identity_ms)} IDENTITY_MAX={max(identity_ms) if identity_ms else 0} "
+           f"ALIVE_NONE={PROBE_TIMINGS['alive_none']} IDENTITY_NONE={PROBE_TIMINGS['identity_none']} RUNTIME_TIMEOUT_S=15")
+
+
+def lock_live_facts(rt: Runtime, target: Path, classification: dict) -> str:
+    """Safe facts behind one classification of a lock held by THIS process (no pid, path, digest or raw probe text)."""
+    ol, probe = rt.operational_lock, rt.probe
+    try:
+        record = ol.read_lock(target)
+    except Exception:  # noqa: BLE001 - malformed is itself a fact
+        return "RECORD=MALFORMED"
+    if record is None:
+        return "RECORD=ABSENT"
+    alive = timed_alive(probe, record.pid)
+    identity_now = timed_identity(probe, record.pid)
+    boot_now = probe.boot_marker()
+    match = "NA" if record.process_identity is None or identity_now is None else ("YES" if identity_now == record.process_identity else "NO")
+    return (f"CLASS={classification['lock_class']} PID_IS_SELF={'YES' if record.pid == os.getpid() else 'NO'} "
+            f"RECORD_IDENTITY={'YES' if record.process_identity else 'NO'} RECORD_BOOT={'YES' if record.boot_marker else 'NO'} "
+            f"ALIVE_NOW={alive} IDENTITY_NOW={'YES' if identity_now else 'NO'} BOOT_NOW={'YES' if boot_now else 'NO'} IDENTITY_MATCH={match}")
+
+
 def probe_checks(rt: Runtime, evidence: dict) -> None:
     """Helper-owned child processes: liveness / identity / lock semantics on this machine."""
     probe = rt.probe
@@ -676,17 +721,22 @@ def probe_checks(rt: Runtime, evidence: dict) -> None:
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         time.sleep(1.0)
-        alive = probe.is_alive(child.pid)
-        identity_child = probe.identity(child.pid)
-        identity_self = probe.identity(os.getpid())
+        alive = timed_alive(probe, child.pid)
+        alive_self = timed_alive(probe, os.getpid())
+        identity_child = timed_identity(probe, child.pid)
+        identity_self = timed_identity(probe, os.getpid())
         boot = probe.boot_marker()
+        report(f"PROBE_FACTS CHILD_ALIVE={alive} SELF_ALIVE={alive_self} CHILD_IDENTITY={'YES' if identity_child else 'NO'} "
+               f"SELF_IDENTITY={'YES' if identity_self else 'NO'}")
         if alive is not True:
             raise Fail("PROBE_LIVE_CHILD_NOT_ALIVE")
+        if alive_self is not True:
+            raise Fail("PROBE_SELF_NOT_ALIVE")
         if identity_child is None or identity_self is None or not _HEX64.match(identity_child) or not _HEX64.match(identity_self):
             raise Fail("PROBE_IDENTITY_UNAVAILABLE")
         if identity_child == identity_self:
             raise Fail("PROBE_IDENTITY_NOT_DISTINCT")
-        if probe.identity(os.getpid()) != identity_self:
+        if timed_identity(probe, os.getpid()) != identity_self:
             raise Fail("PROBE_IDENTITY_NOT_STABLE")
         report(f"BOOT_MARKER={'PRESENT' if boot else 'ABSENT'}")
         dead_pid = child.pid
@@ -694,11 +744,11 @@ def probe_checks(rt: Runtime, evidence: dict) -> None:
         child.kill()
         child.wait(timeout=60)
     time.sleep(1.0)
-    if probe.is_alive(dead_pid) is not False:
+    if timed_alive(probe, dead_pid) is not False:
         raise Fail("PROBE_DEAD_CHILD_STILL_ALIVE")
     report("PROCESS_PROBE_OK")
-    lock_root = CFG.private_dir / "probe_root"
-    lock_root.mkdir(parents=True, exist_ok=True)
+    lock_root = CFG.private_dir / "probe_root" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")   # fresh per invocation: a failed
+    lock_root.mkdir(parents=True, exist_ok=False)                                             # run's lock stays as evidence, never reused
     ol = rt.operational_lock
     run_id = "a" * 64
     held = ol.acquire_lock(lock_root, "RUN", run_id, probe=probe, clock_instant=rt.clock())
@@ -710,7 +760,14 @@ def probe_checks(rt: Runtime, evidence: dict) -> None:
         raise Fail("LOCK_NOT_EXCLUSIVE")
     except ol.LockHeld:
         pass
-    if ol.classify_lock(target, probe=probe)["lock_class"] != "LOCK_LIVE":
+    live = ol.classify_lock(target, probe=probe)
+    report(f"LOCK_LIVE_ACTUAL={live['lock_class']}")
+    report("LOCK_LIVE_FACTS " + lock_live_facts(rt, target, live))
+    if live["lock_class"] != "LOCK_LIVE":
+        for attempt in range(3):                                                             # intermittent? classify again
+            again = ol.classify_lock(target, probe=probe)
+            report(f"LOCK_LIVE_RETRY {attempt + 1} CLASS={again['lock_class']}")
+        report_probe_timings("at_failure")
         raise Fail("LOCK_LIVE_NOT_CLASSIFIED")
     # open-file semantics: a child holding the lock file open (Windows refuses unlink; POSIX allows it) — observation only
     holder = subprocess.Popen([CFG.interpreter, "-c", "import sys, time; h = open(sys.argv[1], 'rb'); time.sleep(600)", str(target)],
@@ -758,6 +815,7 @@ def probe_checks(rt: Runtime, evidence: dict) -> None:
         path.unlink()
     report(f"O_EXCL_ATOMIC_OK ROUNDS={wins}")
     report("LOCK_PORTABILITY_OK")
+    report_probe_timings("preflight")
     evidence.update(boot_marker_present=bool(boot), unlink_while_open=unlink_while_open)
 
 
@@ -1496,6 +1554,42 @@ def run_validate(args) -> int:
     return 0
 
 
+def run_diagnose(_args) -> int:
+    """Preflight-only diagnostics of the Windows process probe and lock classification. Writes only under the work directory."""
+    report.attach(CFG.work)
+    if not CFG.work.is_dir():
+        report("FAIL WORK_DIR_MISSING")
+        return 1
+    CFG.private_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        report(f"PYTHON_OK {sys.version_info.major}.{sys.version_info.minor}")
+        report("WINDOWS_OK" if IS_WINDOWS else "WINDOWS_OK PLATFORM=SELFTEST")
+        check_repo()
+        report("REPO_HEAD_OK")
+        rt = runtime()
+        probe = rt.probe
+        me = os.getpid()
+        for _ in range(5):                                                                   # repeated: catches intermittent None / slow calls
+            timed_alive(probe, me)
+            timed_identity(probe, me)
+        identities = {timed_identity(probe, me) for _ in range(3)}
+        report(f"SELF_IDENTITY_DISTINCT_VALUES={len(identities)} NONE={'YES' if None in identities else 'NO'}")
+        report_probe_timings("repeat")
+        probe_checks(rt, {})
+        report("DIAGNOSE_DONE RESULT=PASS")
+        return 0
+    except Fail as exc:
+        report(f"FAIL {exc}")
+        report("DIAGNOSE_DONE RESULT=FAIL")
+        return 1
+    except Exception as exc:  # noqa: BLE001
+        import traceback
+        private_log(traceback.format_exc())
+        report(f"FAIL UNEXPECTED {type(exc).__name__}")
+        report("DIAGNOSE_DONE RESULT=FAIL")
+        return 1
+
+
 def run_status(_args) -> int:
     report.attach(CFG.work)
     state = load_state()
@@ -1539,7 +1633,8 @@ def main(argv=None) -> int:
     validate.add_argument("--full-suite", action="store_true")
     sub.add_parser("status")
     sub.add_parser("archive-previous")
-    for p in (validate, *[sub.choices[k] for k in ("status", "archive-previous")]):
+    sub.add_parser("diagnose")
+    for p in (validate, *[sub.choices[k] for k in ("status", "archive-previous", "diagnose")]):
         for name in ("--repo", "--p9-root", "--p10-root", "--p12-root", "--work"):       # self-test overrides only (not for operators)
             p.add_argument(name, default=None, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
@@ -1548,7 +1643,7 @@ def main(argv=None) -> int:
         if value is not None:
             setattr(CFG, attribute, Path(value))
     install_network_trap()
-    return {"validate": run_validate, "status": run_status, "archive-previous": run_archive_previous}[args.command](args)
+    return {"validate": run_validate, "status": run_status, "archive-previous": run_archive_previous, "diagnose": run_diagnose}[args.command](args)
 
 
 if __name__ == "__main__":

@@ -42,6 +42,16 @@ Use the repository's virtual-environment Python (the one pytest runs with). The 
 Scheduler tasks, so it must stay in place while the validation runs. Set UTF-8 for this window:
     $env:PYTHONUTF8 = "1"; $env:PYTHONIOENCODING = "utf-8"
 
+1a. v2 diagnostics first (one command; preflight-only; writes nothing to D:\p12_a6_private, registers no task, runs no pytest)
+-----------------------------------------------------------------------------------------------------------------------------
+    <venv python.exe> D:\p12_a6_work\a6.py diagnose
+
+Expected: PYTHON_OK  WINDOWS_OK  REPO_HEAD_OK  SELF_IDENTITY_DISTINCT_VALUES=1 NONE=NO  PROBE_TIMING_MS repeat ...  PROBE_FACTS ...
+BOOT_MARKER=ABSENT  PROCESS_PROBE_OK  LOCK_LIVE_ACTUAL=LOCK_LIVE  LOCK_LIVE_FACTS CLASS=LOCK_LIVE ...  OPEN_FILE_UNLINK=REFUSED
+O_EXCL_ATOMIC_OK ROUNDS=10  LOCK_PORTABILITY_OK  PROBE_TIMING_MS preflight ...  DIAGNOSE_DONE RESULT=PASS.
+On failure it prints LOCK_LIVE_ACTUAL=<class>, LOCK_LIVE_FACTS ..., LOCK_LIVE_RETRY ..., PROBE_TIMING_MS at_failure ... then FAIL <code>
+and DIAGNOSE_DONE RESULT=FAIL. Paste the REPORT lines; the supervisor decides whether `validate` may run.
+
 1. Run (one command; stages 0..9; stops on the first failure)
 -------------------------------------------------------------
     <venv python.exe> D:\p12_a6_work\a6.py validate
@@ -72,7 +82,7 @@ and paste the output of `git status --porcelain` (must be empty).
 
 2. Expected REPORT lines (safe aggregates only; <n> = a count, <d> = a digest prefix)
 --------------------------------------------------------------------------------------
-preflight: PYTHON_OK 3.x  WINDOWS_OK  CREDENTIAL_ENV_CLEAN_OK REMOVED=<n>  TIMEZONE_OK  WORK_DIR_OK  P12_ROOT_FRESH_OK  REPO_HEAD_OK  REPO_CLEAN_OK
+preflight: PYTHON_OK 3.x  WINDOWS_OK  CREDENTIAL_ENV_CLEAN_OK REMOVED=<n>  (v2 also prints PROBE_FACTS, LOCK_LIVE_ACTUAL, LOCK_LIVE_FACTS, PROBE_TIMING_MS)  TIMEZONE_OK  WORK_DIR_OK  P12_ROOT_FRESH_OK  REPO_HEAD_OK  REPO_CLEAN_OK
            INTERPRETER_VENV=YES  P11_ANCHOR_OK FILES=12  P12_PINS_OK FILES=<n>  P9_MANIFEST_CAPTURED FILES=<n>  P10_MANIFEST_CAPTURED FILES=<n>
            ROOTS_UNCHANGED_OK before  BOOT_MARKER=ABSENT (expected on Windows)  PROCESS_PROBE_OK  OPEN_FILE_UNLINK=REFUSED (expected on Windows)
            O_EXCL_ATOMIC_OK ROUNDS=10  LOCK_PORTABILITY_OK  PREFLIGHT_TESTS_OK <n> passed  REPO_CLEAN_AFTER_TESTS_OK  ROOTS_UNCHANGED_OK preflight
