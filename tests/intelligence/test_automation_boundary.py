@@ -23,7 +23,7 @@ from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PA
                                                          PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_REOPENED_IN_A4,
                                                          PHASE12_A3_RUNTIME, PHASE12_A4_REOPENED_IN_A5, PHASE12_A4_REOPENED_IN_A6, PHASE12_A4_RUNTIME,
                                                          PHASE12_A5_RUNTIME,
-                                                         PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
+                                                         PHASE12_5_DOCS, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
                                                          PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
                                                          SANCTIONED_P12_EXTRA_STDLIB, SANCTIONED_P12_MODULES,
                                                          SANCTIONED_P12_P11_IMPORTERS, SANCTIONED_P12_STDLIB,
@@ -39,6 +39,7 @@ A4_CONTRACT_DOC = "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md"
 A5_CONTRACT_DOC = "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md"
 P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
 FREEZE_DOC = "docs/databank/PHASE12_FINAL_FREEZE.md"
+P12_5_CONTRACT_DOC = "docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md"   # P12.5-A0: 設計だけの契約
 #: 凍結の記録に在ってはならない private な値の形（A1 の形 ＋ Windows の SID ・user profile の path ・validation の slot の時刻）
 FREEZE_DOC_PRIVATE_PATTERNS = (r"S-1-5-\d", r"C:\\Users", r"\\Users\\", r"\b[0-2]\d:[0-5]\d\b", r"JQUANTS_", r"human:")
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
@@ -259,6 +260,39 @@ def test_p12_freeze_the_record_holds_no_private_validation_values() -> None:
         assert banned not in text, banned
     for sample in ("S-1-5-21-1", "C:\\Users\\x", "09:00", "JQUANTS_API_KEY", "human:reviewer", "D:\\x", "2026-01-01T09:00", "12345"):
         assert any(re.search(pattern, sample) for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS) or "D:\\" in sample, sample
+
+
+def test_p12_5_a0_the_architecture_contract_is_design_only_and_holds_no_private_values() -> None:
+    """P12.5-A0: Market Memory ／ Obsidian の architecture の契約は設計だけ（runtime ・adapter ・store ・root ・vault は無い）。guard は
+    規範の境界（DERIVED ・PIT の歴史 ・状態の区別 ・export の安全 ・authority 不変）と private の形だけを見る。設計の散文に runtime の
+    語彙の禁止は掛けない（NON-GOAL は名指しで書く）。"""
+    assert PHASE12_5_DOCS == (P12_5_CONTRACT_DOC,) and set(PHASE12_5_DOCS) <= set(PHASE12_DOCS)
+    assert not set(PHASE12_5_DOCS) & {CONTRACT_DOC, A2_CONTRACT_DOC, A3_CONTRACT_DOC, A4_CONTRACT_DOC, A5_CONTRACT_DOC, FREEZE_DOC}
+    assert not _git("ls-tree", P12_A6, "--", P12_5_CONTRACT_DOC).strip()                     # 契約は A-track v1 の凍結の後に足した
+    assert not _git("ls-tree", P12_VALIDATED_TREE, "--", P12_5_CONTRACT_DOC).strip()
+    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", "src") == ""                 # 設計の gate は src を変えない
+    assert _git("status", "--porcelain", "--", "src") == ""
+    text = (REPO_ROOT / P12_5_CONTRACT_DOC).read_text(encoding="utf-8")
+    for needle in ("DESIGN ONLY", "設計だけ", "本 gate では作らない", "存在しない", "p13mem_", "authority_class = DERIVED", "hybrid",
+                   "read-only", "read_p9_safe_view", "read_personal_review", "read_ui_model", "networkless", "B-track",
+                   "HOLD", "LLM", "embedding", "自己学習", "NON-GOAL", "event time", "known_at", "telemetry", "as_of",
+                   "TIMESTAMP ／ DATE", "UNCERTAIN", "UNKNOWN", "AMBIGUOUS", "MISSING", "STALE", "INTEGRITY_FAILURE",
+                   "SUPERSEDED", "supersedes", "歴史の保存", "書き換えない", "再検証", "黙って再導出しない", "replay", "byte 一致",
+                   "generated/", "notes/", "export だけ", "staged", "verified", "published", "消さない", "回復可能",
+                   "symlink ／ junction", "traversal", "外部 URL", "raw HTML", "埋め込まれた秘密", "検出は不完全", "機密性の保証ではない",
+                   "plugin", "信頼の境界の外", "safe surface", "資格情報", "受け入れ試験", "未解決の問い", "P14", "Phase 4 〜 11",
+                   "A-track v1", "P12.5 全体 ・P13 ・P14 は閉じない", "自身の gate 無しに Phase 10 の private authority を消費しない"):
+        assert needle in text, needle
+    for banned in ("P12.5 は完了", "P13 は完了", "Phase 12 は完了", "署名済み", "最新の", "推奨する銘柄"):
+        assert banned not in text, banned
+    # 実装された署名の仕組みが在ると主張する文だけを禁じる（「signed」の部分文字列の一律の禁止ではない。将来の署名 ・整合性検証の
+    # 設計の説明は許す。memory の整合性は canonical ／ hash-addressed ／ hash-chained で語る）
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    assert not re.search(r"署名(?:済み|している|されている)", text)
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants", "http://", "https://"):
+        assert banned not in text, banned
 
 
 # ================================================ import ・名前 ・語彙 ・直列化

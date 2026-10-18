@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.23 (2026-10-18) — Phase 12.5 P12.5-A0 Market Memory ／ Obsidian architecture contract（設計だけ ・runtime は無い）
+
+Phase 12.5 の最初の正式な設計契約。監督が条件つきで承認した hybrid の architecture（統治された read-only の source adapter ＋ 構造化 ・
+決定論 ・DERIVED の memory ＋ private な Markdown ／ Obsidian の投影 ＋ 生成 note と人の note の分離 ＋ 人の note の自動取り込み無し）の
+**不変量**を文書で確定する: `p13mem_` の id ・`authority_class = DERIVED` ・P8 は凍結済みの統治された reader と PIT の意味（精度 ・曖昧さ ・
+supersedes の歴史の保存）だけ ・P9 ／ P10 は既存の safe view だけ ・item の identity は build の telemetry と無関係 ・MISSING ／ STALE ／ UNKNOWN ／
+UNCERTAIN ／ AMBIGUOUS ／ INTEGRITY_FAILURE の区別 ・staged → verified → published の crash-safe な export ・symlink ／ junction ／ traversal ／
+外部 link ／ HTML ／ 埋め込まれた秘密 ／ export 先の check ・既知の sync 先の拒否（検出は不完全で保証ではない）・B-track ・network ・新しい取得
+無しで動く ・LLM ／ embedding ／ 自己学習 ／ 自律の決定は v1 に無い。runtime ・adapter ・store ・private root ・vault は **作らない ・存在しない**。
+`src/` ・Phase 4 〜 12 A-track の凍結 ・anchor ・公開の面は不変。P12.5 全体 ・P13 ・P14 は閉じない。B-track は HOLD。
+
+追加
+・`docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md`
+・`tests/intelligence/test_automation_boundary.py`（契約の文書の guard: 設計だけ ・src 不変 ・規範の節 ・private の形の走査）
+改善
+・`tests/intelligence/phase12_runtime_registry.py`（`PHASE12_5_DOCS` の登録。docs の面の guard が受ける追加として `PHASE12_DOCS` にも載せる）
+修正
+・なし
+
 ## v6.22 (2026-10-18) — Phase 12 final freeze record（P12-A7。文書 ・registry ・guard だけ）
 
 Phase 12 の A-track v1（networkless の local scheduling）を COMPLETE / CLOSED / FROZEN とする。意味 ／ runtime の凍結 anchor は

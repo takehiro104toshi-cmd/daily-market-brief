@@ -85,12 +85,15 @@ PHASE12_TESTS: Tuple[str, ...] = ("tests/intelligence/phase12_runtime_registry.p
                                   "tests/intelligence/test_automation_recovery.py",
                                   "tests/intelligence/test_automation_scheduler.py",
                                   "tests/intelligence/test_automation_transaction.py")
+#: Phase 12.5 の設計だけの文書（P12.5-A0 の architecture の契約。runtime ・adapter ・store ・root ・vault は無い）。A-track v1 の凍結の
+#: 範囲 ・anchor は変えない。docs の面の guard（P7 〜 P12 の boundary）は `PHASE12_DOCS` の追加だけを受けるので、同じ登録に載せる
+PHASE12_5_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md",)
 PHASE12_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md",
                                  "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md",
                                  "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md",
                                  "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md",
                                  "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md",
-                                 "docs/databank/PHASE12_FINAL_FREEZE.md")
+                                 "docs/databank/PHASE12_FINAL_FREEZE.md") + PHASE12_5_DOCS   # P12.5-A0 の設計の文書（上の登録）
 ADDITION_STATUSES = ("A", "??")
 #: 各 runtime の相対 import の module の集合（完全一致。package の外 ・凍結の phase への import は無い）
 SANCTIONED_P12_MODULES: Mapping[str, Set[str]] = {
@@ -353,6 +356,6 @@ __all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_A2"
            "P12_VALIDATED_TREE", "PHASE12_A1_RUNTIME",
            "PHASE12_A2_RUNTIME", "PHASE12_A3_REOPENED_IN_A4", "PHASE12_A3_RUNTIME", "PHASE12_A4_REOPENED_IN_A5", "PHASE12_A4_REOPENED_IN_A6", "PHASE12_A4_RUNTIME",
            "PHASE12_A5_RUNTIME",
-           "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",
+           "PHASE12_5_DOCS", "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",
            "SANCTIONED_P12_EXTRA_STDLIB", "SANCTIONED_P12_MODULES", "SANCTIONED_P12_P11_IMPORTERS", "SANCTIONED_P12_STDLIB",
            "is_phase12_addition", "only_phase12_registration", "registration_diff"]
