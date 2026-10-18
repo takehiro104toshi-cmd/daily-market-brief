@@ -50,6 +50,17 @@ def _wait_for_caches(page, predicate, timeout_s: float = 15.0) -> list:
         time.sleep(0.1)
 
 
+def _load_and_wait_for_rejection(page, code: str = "RESPONSE_INVALID") -> None:
+    """今回の送信に属する拒否だけを待つ（P11 harness の安定化。runtime は不変）。
+
+    app.js の `load` は click と同期に `#message` を隠し、文は残す。「見えていて code を含む」は今回の応答の `fail` でだけ成り立ち、
+    前の iteration の隠れた RESPONSE_INVALID の文では成り立たない。`expect_response` が今回の /api/view の応答の到着を結ぶ。"""
+    with page.expect_response(VIEW_RE):
+        page.click("#load")
+    page.wait_for_function("code => { const m = document.getElementById('message'); "
+                           "return !m.hidden && m.textContent.includes(code); }", arg=code)
+
+
 def _assert_console_clean(messages, sentinels) -> None:
     """browser 自身の network の失敗の記録だけを許す（私たちの code は console に何も出さない）。"""
     for message in messages:
@@ -128,16 +139,14 @@ def test_a_hostile_model_strings_are_rejected_before_rendering_and_never_execute
                 continue
             target[slot[-1]] = payload
             injected["model"] = hostile
-            page.click("#load")
-            page.wait_for_function("() => document.getElementById('message').textContent.includes('RESPONSE_INVALID')")
+            _load_and_wait_for_rejection(page)                                             # 今回の応答の拒否を待つ（古い文は不可）
             _assert_cleared(page, (payload[:12], "__xss", SENTINEL))
             assert page.evaluate("() => window.__xss") is None
             seen += 1
         hostile = copy.deepcopy(base)
         hostile["personal_counts"][payload[:120]] = 1                                       # 鍵にも入れる
         injected["model"] = hostile
-        page.click("#load")
-        page.wait_for_function("() => document.getElementById('message').textContent.includes('RESPONSE_INVALID')")
+        _load_and_wait_for_rejection(page)
         _assert_cleared(page, (payload[:12], "__xss"))
     assert seen >= 100 and dialogs == [] and page.evaluate("() => document.scripts.length") == 1
     assert browser_app["console"] == []

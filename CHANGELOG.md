@@ -4,6 +4,22 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.14 (2026-10-18) — P11 browser test harness の安定化（PRE-P12-A2。test だけ ・runtime 不変）
+
+凍結の P11-A4 の browser の test（敵対的な model の文字列）が、前の iteration の隠れた `RESPONSE_INVALID` の文で待ちを満たし、今回の
+要求の途中で `#message` の可視を見て時々失敗していた（P12_BASE でも再現）。待ちを「今回の /api/view の応答の到着 ＋ 見えていて code を
+含む」に替えた。断言は弱めていない（sleep ・timeout の延長 ・retry ・skip ・payload の削減は無し）。P11 の runtime ・static ・anchor
+`43c0b856d41efed397de213a1a06178c5e97ab10` ・凍結の記録 `080d42aa3dad8bfc5ef82400beb6e2c62a873126` は不変。
+
+追加
+・なし
+改善
+・`tests/intelligence/test_personal_ui_browser_hardening.py`（`_load_and_wait_for_rejection` ・両方の敵対的な loop）
+・`tests/intelligence/phase12_runtime_registry.py` ・`test_automation_boundary.py`（上の test だけの変更を行の完全一致で登録）
+・`docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md`（P12-OBS-004 の解消の注記）
+修正
+・なし
+
 ## v6.13 (2026-10-18) — Phase 12 P12-A1 schedule authority ／ run identity ／ state model（純粋な domain の層）
 
 Phase 12（自動化）の最初の gate。`src/intelligence/automation/` に純粋な model と関数だけを足す: schedule の authority（運用の authority ・

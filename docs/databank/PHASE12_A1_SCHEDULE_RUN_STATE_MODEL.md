@@ -147,4 +147,7 @@ runtime ・凍結の記録 ・P8 〜 P11 の registry は不変。
 - P12-OBS-001: Asia/Tokyo を固定 `+09:00` で表す（DST 無し）。timezone の拡張は model の版を上げる。
 - P12-OBS-002: 鎖の末尾の切り捨ては鎖だけでは検出できない。head の digest の外部の照合は ledger の live の書き手（後の gate）の責務。
 - P12-OBS-003: `ALREADY_SUCCEEDED` は caller が前の run の要約を渡す時だけ出る。ledger から要約を作る橋は projection の後の gate。
+- P12-OBS-004（PRE-P12-A2 で解消 ・test だけ）: 凍結の P11-A4 の browser の test は、前の iteration の隠れた `RESPONSE_INVALID` の
+  文で待ちを満たし、今回の要求の途中で `#message` の可視を見て時々失敗していた（`P12_BASE` でも再現）。待ちを「今回の応答の到着 ＋
+  見えていて code を含む」に替えた（断言は不変 ・runtime 不変）。その test だけの差分は `PHASE12_TEST_REGISTRATION` に登録した。
 - 次は **P12-A2**（監督の GO の後）。

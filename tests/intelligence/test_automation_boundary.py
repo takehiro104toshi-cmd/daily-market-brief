@@ -107,7 +107,8 @@ def test_p12_a1_since_the_base_only_registered_phase12_files_and_declared_regist
                                               "tests/intelligence/test_screener_intelligence_boundary.py",
                                               "tests/intelligence/test_watchlist_thesis_boundary.py",
                                               "tests/intelligence/test_personal_intelligence_boundary.py",
-                                              "tests/intelligence/test_personal_ui_boundary.py"}
+                                              "tests/intelligence/test_personal_ui_boundary.py",
+                                              "tests/intelligence/test_personal_ui_browser_hardening.py"}   # harness の安定化
     for path in PHASE12_TEST_REGISTRATION:                                            # 凍結の P7 〜 P11 の test の狭い再開
         anchored = _git("show", f"{P12_BASE}:{path}")
         current = (REPO_ROOT / path).read_text(encoding="utf-8")

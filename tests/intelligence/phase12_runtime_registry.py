@@ -52,7 +52,8 @@ FORBIDDEN_P12_IMPORT_PARTS: Tuple[str, ...] = (
     "http", "socket", "ssl", "subprocess", "sched", "threading", "multiprocessing", "asyncio", "anthropic", "openai",
     "llm", "pages", "predictions", "analysis", "compass", "os", "pathlib", "sys", "io", "random", "time", "uuid",
     "zoneinfo", "tempfile", "shutil", "logging", "winreg", "ctypes", "signal")
-#: 凍結の Phase 7 〜 11 の test に入れた登録（path → (取り除いた行, 加えた行)）。P12-A1 で確定
+#: 凍結の Phase 7 〜 11 の test に入れた登録（path → (取り除いた行, 加えた行)）。P12-A1 で確定 ・PRE-P12-A2 で P11 の browser の
+#: test の harness の安定化（同期の待ちだけ ・runtime 不変）を test だけの再開として登録
 PHASE12_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] = {
     'tests/intelligence/phase7_runtime_registry.py': ((
         '                                                   + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME)',
@@ -120,6 +121,26 @@ PHASE12_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
         '                                                                            + PHASE11_RUNTIME + PHASE12_RUNTIME}',
         '                                                                             + PHASE11_DOCS + PHASE12_DOCS}',
         '        ("A", p) for p in PHASE10_TESTS + PHASE11_TESTS + PHASE12_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}',
+    )),
+    'tests/intelligence/test_personal_ui_browser_hardening.py': ((
+        '            page.click("#load")',
+        '            page.wait_for_function("() => document.getElementById(\'message\').textContent.includes(\'RESPONSE_INVALID\')")',
+        '        page.click("#load")',
+        '        page.wait_for_function("() => document.getElementById(\'message\').textContent.includes(\'RESPONSE_INVALID\')")',
+    ), (
+        '',
+        '',
+        'def _load_and_wait_for_rejection(page, code: str = "RESPONSE_INVALID") -> None:',
+        '    """今回の送信に属する拒否だけを待つ（P11 harness の安定化。runtime は不変）。',
+        '',
+        '    app.js の `load` は click と同期に `#message` を隠し、文は残す。「見えていて code を含む」は今回の応答の `fail` でだけ成り立ち、',
+        '    前の iteration の隠れた RESPONSE_INVALID の文では成り立たない。`expect_response` が今回の /api/view の応答の到着を結ぶ。"""',
+        '    with page.expect_response(VIEW_RE):',
+        '        page.click("#load")',
+        '    page.wait_for_function("code => { const m = document.getElementById(\'message\'); "',
+        '                           "return !m.hidden && m.textContent.includes(code); }", arg=code)',
+        '            _load_and_wait_for_rejection(page)                                             # 今回の応答の拒否を待つ（古い文は不可）',
+        '        _load_and_wait_for_rejection(page)',
     )),
     'tests/intelligence/test_personal_ui_boundary.py': ((
         '    assert _changes("--cached", "--name-status", P11_BASE, "--", "src") == {("A", p) for p in PHASE11_RUNTIME}',
