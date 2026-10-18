@@ -48,7 +48,7 @@ for _name in _CREDENTIAL_VARIABLES_REMOVED:
 
 # ------------------------------------------------------------------ fixed contract (A6 gate)
 
-EXPECTED_HEAD = "23e1cf5efe95c5f54f845aae3fed84982b3eb7cb"
+EXPECTED_HEAD = "e390cddff9101541d16ba308a15d9ad1df3ca7b7"
 P11_FROZEN_ANCHOR = "43c0b856d41efed397de213a1a06178c5e97ab10"
 DEFAULT_REPO = Path(r"D:\daily-market-brief\daily-market-brief")
 DEFAULT_P9_ROOT = Path(r"D:\p9_a5_private")
@@ -656,9 +656,10 @@ def stage_preflight(state: dict) -> None:
 
 def check_p12_pins(rt: Runtime) -> None:
     reg = rt.registry
+    reopened_a4 = set(reg.PHASE12_A4_REOPENED_IN_A5) | set(getattr(reg, "PHASE12_A4_REOPENED_IN_A6", ()))   # A6 remediation: lock writer
     groups = ((reg.P12_A1, reg.PHASE12_A1_RUNTIME), (reg.P12_A2, reg.PHASE12_A2_RUNTIME),
               (reg.P12_A3, tuple(p for p in reg.PHASE12_A3_RUNTIME if p not in reg.PHASE12_A3_REOPENED_IN_A4)),
-              (reg.P12_A4, tuple(p for p in reg.PHASE12_A4_RUNTIME + reg.PHASE12_A3_REOPENED_IN_A4 if p not in reg.PHASE12_A4_REOPENED_IN_A5)))
+              (reg.P12_A4, tuple(p for p in reg.PHASE12_A4_RUNTIME + reg.PHASE12_A3_REOPENED_IN_A4 if p not in reopened_a4)))
     checked = 0
     for pin, files in groups:
         for relative in files:

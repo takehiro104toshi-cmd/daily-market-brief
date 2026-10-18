@@ -1,7 +1,7 @@
 P12-A6  WINDOWS REAL-MACHINE AUTOMATION VALIDATION  (repo-external helper; do not commit a6.py or this file to the runtime branch)
 =====================================================================================================================================
 
-What this validates: the Phase 12 automation runtime at HEAD 23e1cf5efe95c5f54f845aae3fed84982b3eb7cb on a real Windows machine with
+What this validates: the Phase 12 automation runtime at HEAD e390cddff9101541d16ba308a15d9ad1df3ca7b7 on a real Windows machine with
 the real Task Scheduler: authority written through the real CLI, one manual scheduled-run, task install (XML clauses checked), one run
 started by Task Scheduler, duplicate invocations (two processes; the scheduler starting an already-succeeded instance again), the
 unattended RECOVERY_REQUIRED policy against synthetic evidence (stale lock, unknown-provenance lock, orphaned finalization, stale
@@ -19,7 +19,7 @@ from the screen or from D:\p12_a6_work or D:\p12_a6_private.
     git fetch origin claude/investment-intelligence-phase6
     git checkout claude/investment-intelligence-phase6
     git merge --ff-only origin/claude/investment-intelligence-phase6
-    git rev-parse HEAD             # must print 23e1cf5efe95c5f54f845aae3fed84982b3eb7cb
+    git rev-parse HEAD             # must print e390cddff9101541d16ba308a15d9ad1df3ca7b7
     git status --porcelain         # must print nothing
     tzutil /g                      # must print Tokyo Standard Time
     Remove-Item Env:JQUANTS_API_KEY -ErrorAction SilentlyContinue
@@ -28,8 +28,9 @@ from the screen or from D:\p12_a6_work or D:\p12_a6_private.
     Test-Path D:\p10_a5_private    # must print True  (real P10 root; READ ONLY)
     Test-Path D:\p12_a6_private    # must print False (fresh validation root; the helper creates it)
 
-Retrieve the helper from the temporary transfer branch (nothing is merged; the branch holds only these two files):
-    git fetch origin transfer/p12-a6-helper-v1
+Retrieve helper v3 from the temporary transfer branch (nothing is merged; the branch holds only these two files). v3 pins the
+remediated runtime HEAD (lock writer O_BINARY fix); earlier helper versions refuse the new HEAD with REPO_HEAD_MISMATCH.
+    git fetch origin transfer/p12-a6-helper-v3
     git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/a6.py      > D:\p12_a6_work\a6.py
     git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/RUNBOOK.txt > D:\p12_a6_work\RUNBOOK.txt
     certutil -hashfile D:\p12_a6_work\a6.py SHA256                  # must equal the SHA256 in the preparation report
