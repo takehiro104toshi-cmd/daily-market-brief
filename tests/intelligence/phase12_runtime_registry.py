@@ -1,10 +1,13 @@
-"""Phase 12（自動化 ・運用の authority）の登録済み runtime ・test ・文書の完全な一覧（P12-A1）。
+"""Phase 12（自動化 ・運用の authority）の登録済み runtime ・test ・文書の完全な一覧（P12-A1 〜 A2）。
 
 - `P12_BASE` ＝ Phase 11 の凍結の記録の commit。P12-A1 はここから足す。
 - 凍結の Phase 7 ／ 8 ／ 9 ／ 10 ／ 11 の test に入れた登録の行は `PHASE12_TEST_REGISTRATION` に完全に列挙し、Phase 12 の guard
   （`test_automation_boundary.py`）が `P12_BASE` との差分の完全一致を pin する（test だけの狭い再開。runtime は不変）。
 - P12-A1 の runtime は純粋な domain ／ state の層だけ: scheduler ・subprocess ・server ・socket ・network ・資格情報 ・file の
-  書き込みは無い。凍結の Phase 7 〜 11 の package を import しない（`SANCTIONED_P12_MODULES` は package 内の相対 import だけ）。
+  書き込みは無い。A1 の 11 file は `P12_A1` の commit と object 一致（A2 以後も不変）。
+- P12-A2 の runtime は決定論の local orchestrator: 凍結の P11 の read の面（adapter ・UI model ・loopback server）だけを
+  `SANCTIONED_P12_P11_IMPORTERS` の file が import する。file ごとに許す stdlib は `SANCTIONED_P12_EXTRA_STDLIB`（git の読み取り ・
+  private root の file ・loopback の probe ・network の拒否の guard）。
 """
 from __future__ import annotations
 
@@ -13,18 +16,28 @@ from typing import Mapping, Sequence, Set, Tuple
 
 #: P12 の基準（P11 の凍結の記録の commit）
 P12_BASE = "080d42aa3dad8bfc5ef82400beb6e2c62a873126"
+#: P12-A1 の runtime の commit（A1 の 11 file は以後も object 一致。意味 ／ runtime の凍結 anchor ではない）
+P12_A1 = "dd922c3eebd67de2ac273ba66e82e493d814e701"
 PHASE12_PACKAGE = "src/intelligence/automation"
 #: P12-A1 で足した runtime（schedule の authority ・計画 ・run の identity ・状態機械 ・失敗 code ・step の結果 ・ledger の record ・
 #: status の projection。純粋な model と関数だけ）
 PHASE12_A1_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for name in (
     "__init__", "canonical", "failure_codes", "holiday_calendar", "ledger_model", "run_identity", "run_planning",
     "run_state", "schedule_model", "status_projection", "step_result"))
-PHASE12_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE12_A1_RUNTIME))
+#: P12-A2 で足した runtime（決定論の local orchestrator: 前提条件 ・source の manifest ・P11 の snapshot ・loopback の readiness ・
+#: 原子的な finalize ・実行の要求 ／ 結果 ・network の拒否。scheduler ・Task Scheduler ・J-Quants ・資格情報 ・公開は無い）
+PHASE12_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for name in (
+    "execution_request", "execution_result", "finalization", "frozen_anchors", "network_deny", "preconditions",
+    "run_executor", "server_readiness", "snapshot_orchestrator", "source_manifests"))
+PHASE12_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME))
 PHASE12_TESTS: Tuple[str, ...] = ("tests/intelligence/phase12_runtime_registry.py",
                                   "tests/intelligence/test_automation_boundary.py",
+                                  "tests/intelligence/test_automation_executor.py",
                                   "tests/intelligence/test_automation_ledger.py",
-                                  "tests/intelligence/test_automation_models.py")
-PHASE12_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md",)
+                                  "tests/intelligence/test_automation_models.py",
+                                  "tests/intelligence/test_automation_preconditions.py")
+PHASE12_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md",
+                                 "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md")
 ADDITION_STATUSES = ("A", "??")
 #: 各 runtime の相対 import の module の集合（完全一致。package の外 ・凍結の phase への import は無い）
 SANCTIONED_P12_MODULES: Mapping[str, Set[str]] = {
@@ -42,9 +55,41 @@ SANCTIONED_P12_MODULES: Mapping[str, Set[str]] = {
     f"{PHASE12_PACKAGE}/status_projection.py": {".canonical", ".failure_codes", ".ledger_model", ".run_state",
                                                 ".step_result"},
     f"{PHASE12_PACKAGE}/step_result.py": {".canonical", ".failure_codes"},
+    # ---- P12-A2
+    f"{PHASE12_PACKAGE}/execution_request.py": {".canonical", ".failure_codes", ".run_identity", ".run_planning",
+                                                ".schedule_model"},
+    f"{PHASE12_PACKAGE}/execution_result.py": {".canonical", ".failure_codes", ".step_result"},
+    f"{PHASE12_PACKAGE}/finalization.py": {".canonical", ".failure_codes"},
+    f"{PHASE12_PACKAGE}/frozen_anchors.py": {".canonical"},
+    f"{PHASE12_PACKAGE}/network_deny.py": {".failure_codes"},
+    f"{PHASE12_PACKAGE}/preconditions.py": {".execution_request", ".failure_codes", ".frozen_anchors", ".network_deny"},
+    f"{PHASE12_PACKAGE}/run_executor.py": {".canonical", ".execution_request", ".execution_result", ".failure_codes",
+                                           ".finalization", ".frozen_anchors", ".network_deny", ".preconditions",
+                                           ".server_readiness", ".snapshot_orchestrator", ".source_manifests", ".step_result"},
+    f"{PHASE12_PACKAGE}/server_readiness.py": {"..personal_ui.local_server", ".execution_request", ".failure_codes",
+                                               ".frozen_anchors", ".preconditions"},
+    f"{PHASE12_PACKAGE}/snapshot_orchestrator.py": {"..personal_ui.p10_read_adapter", "..personal_ui.ui_model", ".canonical",
+                                                    ".execution_request", ".failure_codes", ".frozen_anchors", ".preconditions"},
+    f"{PHASE12_PACKAGE}/source_manifests.py": {".canonical", ".failure_codes"},
 }
-#: P12-A1 の runtime に許す stdlib（純粋な model: 時計 ・OS ・path ・socket ・subprocess ・乱数は無い）
+#: 凍結の Phase 11 の read の面を import してよい P12 の file（完全な path → module → 名前。完全一致）。P10 ・P9 ・P8 は直接触れない
+SANCTIONED_P12_P11_IMPORTERS: Mapping[str, Mapping[str, Set[str]]] = {
+    f"{PHASE12_PACKAGE}/snapshot_orchestrator.py": {
+        "..personal_ui.p10_read_adapter": {"ADAPTER_RULES_VERSION", "read_ui_model"},
+        "..personal_ui.ui_model": {"UiModel", "UiReadError", "ui_model_json_bytes"}},
+    f"{PHASE12_PACKAGE}/server_readiness.py": {
+        "..personal_ui.local_server": {"LOOPBACK_BIND", "STATUS_BYTES", "VERSION_BYTES", "LocalServer", "ServerStartupError"}},
+}
+#: P12 の runtime に許す stdlib（純粋な model: 時計 ・OS ・path ・socket ・subprocess ・乱数は無い）
 SANCTIONED_P12_STDLIB: Set[str] = {"__future__", "dataclasses", "datetime", "enum", "hashlib", "json", "re", "typing"}
+#: A2 の file ごとに足して許す stdlib（git の読み取り ・private root の file ・loopback の probe ・network の拒否の guard だけ）
+SANCTIONED_P12_EXTRA_STDLIB: Mapping[str, Set[str]] = {
+    f"{PHASE12_PACKAGE}/finalization.py": {"os", "pathlib"},
+    f"{PHASE12_PACKAGE}/network_deny.py": {"socket", "sys"},
+    f"{PHASE12_PACKAGE}/preconditions.py": {"os", "pathlib", "subprocess"},
+    f"{PHASE12_PACKAGE}/server_readiness.py": {"http.client"},
+    f"{PHASE12_PACKAGE}/source_manifests.py": {"pathlib"},
+}
 #: Phase 12 が import してはならない module の部品（凍結の phase ・J-Quants ・公開 ・通知 ・network ・process ・OS ・LLM）
 FORBIDDEN_P12_IMPORT_PARTS: Tuple[str, ...] = (
     "personal_ui", "personal_intelligence", "watchlist_thesis_intelligence", "screener_intelligence",
@@ -147,14 +192,18 @@ PHASE12_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
         '    assert _changes("--cached", "--name-status", P11_BASE, "--", "docs") <= {("A", p) for p in PHASE11_DOCS}',
         '        ("A", p) for p in PHASE11_TESTS} | {("M", p) for p in PHASE11_TEST_REGISTRATION}',
         '        current = (REPO_ROOT / path).read_text(encoding="utf-8")',
+        '        if PACKAGE_DIR in path.parents:',
     ), (
-        'from tests.intelligence.phase12_runtime_registry import P12_BASE, PHASE12_DOCS, PHASE12_RUNTIME, PHASE12_TESTS   # P12 の登録',
+        'from tests.intelligence.phase12_runtime_registry import (P12_BASE, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,',
+        '                                                         PHASE12_TESTS)   # P12 の登録',
+        'P12_PACKAGE_DIR = REPO_ROOT / PHASE12_PACKAGE      # P12-A2: automation の P11 の importer は P12 の guard が完全一致で pin',
         '    assert _changes("--cached", "--name-status", P11_BASE, "--", "src") == {("A", p) for p in PHASE11_RUNTIME',
         '                                                                            + PHASE12_RUNTIME}',
         '    assert _changes("--cached", "--name-status", P11_BASE, "--", "docs") <= {("A", p) for p in PHASE11_DOCS',
         '                                                                             + PHASE12_DOCS}',
         '        ("A", p) for p in PHASE11_TESTS + PHASE12_TESTS} | {("M", p) for p in PHASE11_TEST_REGISTRATION}',
         '        current = _git("show", f"{P12_BASE}:{path}")             # P11 の登録は P11 の終わりまで（以後の差は P12 の guard が pin）',
+        '        if PACKAGE_DIR in path.parents or P12_PACKAGE_DIR in path.parents:',
     )),
 }
 
@@ -186,6 +235,7 @@ def only_phase12_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_BASE", "PHASE12_A1_RUNTIME", "PHASE12_DOCS",
-           "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION", "SANCTIONED_P12_MODULES",
-           "SANCTIONED_P12_STDLIB", "is_phase12_addition", "only_phase12_registration", "registration_diff"]
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_BASE", "PHASE12_A1_RUNTIME", "PHASE12_A2_RUNTIME",
+           "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",
+           "SANCTIONED_P12_EXTRA_STDLIB", "SANCTIONED_P12_MODULES", "SANCTIONED_P12_P11_IMPORTERS", "SANCTIONED_P12_STDLIB",
+           "is_phase12_addition", "only_phase12_registration", "registration_diff"]

@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.15 (2026-10-18) — Phase 12 P12-A2 deterministic local orchestrator（networkless ・派生だけ）
+
+A1 の model を凍結の P11 の read-only の面（adapter ・UI model ・loopback server）に結ぶ決定論の orchestrator。完全に明示の実行の要求 →
+前提条件（HEAD ・clean ・P11 の凍結 blob ・root ・資格情報の不在 ・network policy）→ P9 ／ P10 の読み取り専用 manifest → 明示の PIT の P11
+snapshot（派生 ・昇格しない）→ 一時的な loopback の readiness（health ・version ・static shell ・api/view の byte 一致）→ `.partial` だけに
+書いて原子的に rename する finalize。rename は成功ではなく `FINALIZED_PENDING_LEDGER`（成功は ledger の commit だけ ・後の gate）。
+network の拒否の guard（loopback は readiness の間だけ）。scheduler ・Task Scheduler ・J-Quants ・資格情報 ・公開 ・repo の変更は無い。
+凍結の Phase 4 〜 11 の runtime ・anchor ・A1 の 11 file は不変。
+
+追加
+・`src/intelligence/automation/`（`execution_request` ・`preconditions` ・`frozen_anchors` ・`source_manifests` ・`snapshot_orchestrator` ・
+　`server_readiness` ・`network_deny` ・`finalization` ・`execution_result` ・`run_executor`）
+・`tests/intelligence/test_automation_preconditions.py` ・`test_automation_executor.py`
+・`docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md`
+改善
+・`tests/intelligence/phase12_runtime_registry.py` ・`test_automation_boundary.py`（A2 の登録 ・file ごとの許し ・A1 の object 一致の pin）
+・`tests/intelligence/test_personal_ui_boundary.py`（automation の P11 の importer を P12 の guard に委ねる 1 行。登録して pin）
+修正
+・なし
+
 ## v6.14 (2026-10-18) — P11 browser test harness の安定化（PRE-P12-A2。test だけ ・runtime 不変）
 
 凍結の P11-A4 の browser の test（敵対的な model の文字列）が、前の iteration の隠れた `RESPONSE_INVALID` の文で待ちを満たし、今回の

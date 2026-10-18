@@ -33,11 +33,13 @@ from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PA
                                                          SANCTIONED_P11_MODULES, SANCTIONED_P11_P10_IMPORTERS,
                                                          SANCTIONED_P11_P10_IMPORTS, SANCTIONED_P11_SERVER_STDLIB,
                                                          only_phase11_registration)
-from tests.intelligence.phase12_runtime_registry import P12_BASE, PHASE12_DOCS, PHASE12_RUNTIME, PHASE12_TESTS   # P12 の登録
+from tests.intelligence.phase12_runtime_registry import (P12_BASE, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
+                                                         PHASE12_TESTS)   # P12 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE11_PACKAGE
+P12_PACKAGE_DIR = REPO_ROOT / PHASE12_PACKAGE      # P12-A2: automation の P11 の importer は P12 の guard が完全一致で pin
 CONTRACT_DOC = "docs/databank/PHASE11_A1_GOVERNED_READ_ADAPTER.md"
 A2_CONTRACT_DOC = "docs/databank/PHASE11_A2_LOOPBACK_SERVER.md"
 FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
@@ -250,7 +252,7 @@ def test_p11_a1_is_outside_production_pages_and_public_code_and_public_code_impo
             assert package not in text, (path, package)
     for path in [REPO_ROOT / "main.py", *sorted((REPO_ROOT / "src").rglob("*.py")),
                  *sorted((REPO_ROOT / "scripts").rglob("*.py"))]:
-        if PACKAGE_DIR in path.parents:
+        if PACKAGE_DIR in path.parents or P12_PACKAGE_DIR in path.parents:
             continue
         assert "personal_ui" not in path.read_text(encoding="utf-8", errors="replace"), path
 

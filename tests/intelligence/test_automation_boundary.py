@@ -1,8 +1,9 @@
-"""P12-A1 — Phase 12（自動化の純粋な domain ／ state 層）の境界の guard。
+"""P12-A1 ／ A2 — Phase 12（自動化）の境界の guard。
 
 - registry の完全一致 ・P12_BASE 以後の面は登録した P12 の追加だけ ・凍結の P7 〜 P11 の test の差分は宣言した登録の行だけ。
-- runtime は stdlib の純粋な model だけ: 時計 ・OS ・path ・file ・環境変数 ・socket ・subprocess ・乱数 ・network ・資格情報 ・
-  凍結の phase の import ・free-form な payload ・投資の語彙は無い。CLI ・`__main__` も無い。
+- A1 の 11 file は `P12_A1` の commit と object 一致。A2 の file が足して使う stdlib（git の読み取り ・private root の file ・loopback の
+  probe ・network の拒否の guard）と凍結の P11 の read の面の import は、file ごとの完全一致で pin する。他は A1 と同じ純粋さ:
+  時計 ・環境変数の値 ・乱数 ・network ・資格情報 ・free-form な payload ・投資の語彙は無い。CLI ・`__main__` も無い。
 - 凍結の Phase 4 〜 11 の runtime は anchor と object 一致（P8 ・P9 ・P10 ・P11）・P12_BASE から不変（src 全体）。
 """
 from __future__ import annotations
@@ -17,16 +18,18 @@ from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
-from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_BASE, PHASE12_A1_RUNTIME,
-                                                         PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
-                                                         PHASE12_TEST_REGISTRATION, PHASE12_TESTS, SANCTIONED_P12_MODULES,
-                                                         SANCTIONED_P12_STDLIB, is_phase12_addition,
-                                                         only_phase12_registration)
+from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_BASE, PHASE12_A1_RUNTIME,
+                                                         PHASE12_A2_RUNTIME, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
+                                                         PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
+                                                         SANCTIONED_P12_EXTRA_STDLIB, SANCTIONED_P12_MODULES,
+                                                         SANCTIONED_P12_P11_IMPORTERS, SANCTIONED_P12_STDLIB,
+                                                         is_phase12_addition, only_phase12_registration)
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE12_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md"
+A2_CONTRACT_DOC = "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md"
 P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
                   "pyproject.toml", "cloudflare", "notifiers", "src/report")
@@ -46,7 +49,20 @@ FORBIDDEN_WORDS = {"rank", "ranking", "score", "scoring", "recommend", "recommen
 PRIVATE_PATTERNS = (r"[A-Za-z]:\\", r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", r"\b\d{5}\b", r"p9wat_", r"p9ths_", r"p8iss_", r"p10prf_",
                     r"p10att_", r"human:", r"x-api-key", r"api\.jquants")
 STATIC_STRING_BANS = ("x-api-key", "api.jquants.com", "JQUANTS", "config.yaml", "://", "D:\\", "0.0.0.0", "127.0.0.1",
-                      "__main__", "argparse", "sys.argv", "schtasks", "Task Scheduler")
+                      "__main__", "argparse", "sys.argv", "schtasks", "Task Scheduler", "datetime.now", "utcnow", "os.environ")
+_P12 = PHASE12_PACKAGE
+#: A2 の file ごとの許し（理由を伴う完全一致。A1 の file には無い）
+STRING_ALLOWANCES = {f"{_P12}/network_deny.py": {"127.0.0.1"},                       # loopback の allowlist（bind ・接続先ではない）
+                     f"{_P12}/preconditions.py": {"JQUANTS"},                         # 予約した資格情報の変数の名前（値は見ない）
+                     f"{_P12}/server_readiness.py": {"://"}}                           # 自分の loopback の origin の形だけ
+NAME_ALLOWANCES = {f"{_P12}/finalization.py": {"open", "write", "read_bytes", "mkdir", "rename", "exists"},   # .partial の中だけ
+                   f"{_P12}/network_deny.py": {"socket", "connect", "setattr"},      # 拒否の guard の差し替え（出る時に戻す）
+                   f"{_P12}/preconditions.py": {"exists", "iterdir", "read_bytes"},  # root が在って読めるか ・P11 の blob の再計算
+                   f"{_P12}/source_manifests.py": {"read_bytes", "rglob"}}            # 読み取り専用の manifest
+WORD_ALLOWANCES = {f"{_P12}/finalization.py": {"path"}, f"{_P12}/network_deny.py": {"socket"},
+                   f"{_P12}/preconditions.py": {"path", "subprocess", "credential"}, f"{_P12}/server_readiness.py": {"thread"},
+                   f"{_P12}/source_manifests.py": {"path"}}
+BROAD_EXCEPT_ALLOWED = {f"{_P12}/run_executor.py": 1}                                # 想定外 → STEP_FAILED:UNEXPECTED だけ
 
 
 def _git(*args: str) -> str:
@@ -82,7 +98,14 @@ def _imports(path: Path):
 def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
     assert P12_BASE == "080d42aa3dad8bfc5ef82400beb6e2c62a873126"
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME)) and len(PHASE12_RUNTIME) == 11
+    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME)) and len(PHASE12_RUNTIME) == 21
+    assert len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10 and not set(PHASE12_A1_RUNTIME) & set(PHASE12_A2_RUNTIME)
+    assert P12_A1 == "dd922c3eebd67de2ac273ba66e82e493d814e701"
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_A1, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert _git("diff", "--name-status", P12_A1, "HEAD", "--", *PHASE12_A1_RUNTIME) == ""   # A1 の runtime は A1 の commit のまま
+    assert _git("diff", "--cached", "--name-status", P12_A1, "--", *PHASE12_A1_RUNTIME) == ""
+    assert _git("status", "--porcelain", "--", *PHASE12_A1_RUNTIME) == ""
+    assert set(SANCTIONED_P12_P11_IMPORTERS) <= set(PHASE12_A2_RUNTIME) and set(SANCTIONED_P12_EXTRA_STDLIB) <= set(PHASE12_A2_RUNTIME)
     assert all(p.startswith(PHASE12_PACKAGE + "/") and p.endswith(".py") for p in PHASE12_RUNTIME)
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
     for path in (*PHASE12_RUNTIME, *PHASE12_TESTS, *PHASE12_DOCS):
@@ -146,30 +169,41 @@ def test_p12_a1_frozen_phase4_to_11_runtime_is_object_identical_to_its_anchor_an
 def test_p12_a1_imports_are_stdlib_only_and_never_reach_frozen_phases_os_clock_network_or_process() -> None:
     for path in PHASE12_RUNTIME:
         relative, absolute = _imports(REPO_ROOT / path)
-        assert absolute <= SANCTIONED_P12_STDLIB, (path, absolute - SANCTIONED_P12_STDLIB)
+        allowed_stdlib = SANCTIONED_P12_STDLIB | SANCTIONED_P12_EXTRA_STDLIB.get(path, set())
+        assert absolute <= allowed_stdlib, (path, absolute - allowed_stdlib)
         assert set(relative) == SANCTIONED_P12_MODULES[path], (path, set(relative))
-        assert not any(m.startswith("..") for m in relative), path                        # package の外へは出ない
+        cross = {m: n for m, n in relative.items() if m.startswith("..")}
+        assert cross == SANCTIONED_P12_P11_IMPORTERS.get(path, {}), (path, cross)         # 凍結の P11 の read の面だけ ・完全一致
         for module in (*relative, *absolute):
+            if module in cross or module in SANCTIONED_P12_EXTRA_STDLIB.get(path, set()):
+                continue
             components = set(module.lstrip(".").split("."))
             assert not components & set(FORBIDDEN_P12_IMPORT_PARTS), (path, module)
         assert not any(n.startswith("_") and n != "_require_id" and n != "_require_int" for names in relative.values()
                        for n in names), path
         source = (REPO_ROOT / path).read_text(encoding="utf-8")
         for token in STATIC_STRING_BANS:
+            if token in STRING_ALLOWANCES.get(path, set()):
+                continue
             assert token not in source, (path, token)
+        if path in PHASE12_A1_RUNTIME:
+            assert not cross and path not in SANCTIONED_P12_EXTRA_STDLIB and path not in NAME_ALLOWANCES
+        assert "personal_intelligence" not in source and "watchlist_thesis" not in source and "screener" not in source
         assert "ZoneInfo" not in source and "zoneinfo" not in source                     # 固定 +09:00 だけ（tzdata に依らない）
 
 
 def test_p12_a1_the_runtime_never_touches_files_env_clock_process_or_network_and_has_no_investment_vocabulary() -> None:
     for path in PHASE12_RUNTIME:
         tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+        banned = FORBIDDEN_NAMES - NAME_ALLOWANCES.get(path, set())
         identifiers = set()
+        broad = 0
         for node in ast.walk(tree):
             if isinstance(node, ast.Name):
-                assert node.id not in FORBIDDEN_NAMES, (path, node.id)
+                assert node.id not in banned, (path, node.id)
                 identifiers.add(node.id)
             elif isinstance(node, ast.Attribute):
-                assert node.attr not in FORBIDDEN_NAMES, (path, node.attr)
+                assert node.attr not in banned, (path, node.attr)
                 identifiers.add(node.attr)
             elif isinstance(node, ast.arg):
                 identifiers.add(node.arg)
@@ -179,14 +213,15 @@ def test_p12_a1_the_runtime_never_touches_files_env_clock_process_or_network_and
                 assert node.type is not None, (path, "bare except")
                 names = {node.type.id} if isinstance(node.type, ast.Name) else {
                     e.id for e in getattr(node.type, "elts", ()) if isinstance(e, ast.Name)}
-                assert not names & {"Exception", "BaseException"}, (path, "broad except")
+                broad += bool(names & {"Exception", "BaseException"})
             elif isinstance(node, ast.If) and isinstance(node.test, ast.Compare):
                 left = node.test.left
                 assert not (isinstance(left, ast.Name) and left.id == "__name__"), (path, "__main__")
+        assert broad == BROAD_EXCEPT_ALLOWED.get(path, 0), (path, "broad except")
         words = set()
         for name in identifiers:
             words |= {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name)}
-        assert not words & FORBIDDEN_WORDS, (path, words & FORBIDDEN_WORDS)
+        assert not words & (FORBIDDEN_WORDS - WORD_ALLOWANCES.get(path, set())), (path, words & FORBIDDEN_WORDS)
 
 
 def test_p12_a1_serialization_of_every_model_is_canonical_and_free_of_paths_payloads_and_private_shapes() -> None:
@@ -253,3 +288,21 @@ def test_p12_a1_the_contract_records_the_required_clauses_and_no_private_values(
         assert not re.search(pattern, text), pattern
     for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
         assert banned not in text, banned
+
+
+def test_p12_a2_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A2_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A1, "43c0b856d41efed397de213a1a06178c5e97ab10", "networkless", "FINALIZED_PENDING_LEDGER", "成功ではない",
+                   "PRECONDITIONS", "ROOT_MANIFESTS", "P11_MODEL_SNAPSHOT", "SERVER_READINESS", "FINALIZATION", ".partial",
+                   "DUPLICATE_INVOCATION", "FROZEN_DRIFT", "REPO_HEAD_MISMATCH", "REPO_NOT_CLEAN", "CREDENTIAL_PRESENT",
+                   "NETWORK_DENIED", "read_ui_model", "ui_model_json_bytes", "LocalServer", "昇格しない", "runs/",
+                   "digests.json", "selection_clock", "datetime.now", "Task Scheduler", "A2 がしないこと", "P12-A3",
+                   "Phase 12 の凍結ではない", "telemetry", "request.json", "snapshot.json", "manifests.json"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
+    for name in ("execution_request", "execution_result", "finalization", "frozen_anchors", "network_deny", "preconditions",
+                 "run_executor", "server_readiness", "snapshot_orchestrator", "source_manifests"):
+        assert name in text, name
