@@ -4,6 +4,23 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.22 (2026-10-18) — Phase 12 final freeze record（P12-A7。文書 ・registry ・guard だけ）
+
+Phase 12 の A-track v1（networkless の local scheduling）を COMPLETE / CLOSED / FROZEN とする。意味 ／ runtime の凍結 anchor は
+`e390cddff9101541d16ba308a15d9ad1df3ca7b7`（registry の `P12_A6`）。Windows の P12-A6 real-machine validation を走らせた commit は
+`3056e25586767fd7b5d8095f016a4d254de5c360`（registry の `P12_VALIDATED_TREE`。runtime 43 file の blob は anchor と同じ）。A6 は
+repo の外の helper v6（`transfer/p12-a6-helper-v6`）で A6_PASS（利用者の Windows からの報告）。本記録の commit は anchor ではない。runtime ・
+Phase 4 〜 11 ・公開の面は不変。Phase 12 全体（B-track ・P12.5 ・P13）は完了ではない。
+
+追加
+・`docs/databank/PHASE12_FINAL_FREEZE.md`
+改善
+・`tests/intelligence/phase12_runtime_registry.py`（`P12_A6` ・`P12_VALIDATED_TREE` ・凍結の記録の登録 ・`is_phase12_addition` は追加だけ）
+・`tests/intelligence/test_automation_boundary.py`（43 file の凍結の guard ・記録の private な値の guard）
+・`docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md` ・`PHASE12_A4_LOCK_RETRY_RECOVERY.md`（A6 の結果 ・観察の更新だけ。契約は不変）
+修正
+・なし
+
 ## v6.21 (2026-10-18) — Phase 12 P12-A6 Windows test portability stabilization
 
 A6 の Windows 実機の preflight（P12 ・凍結 guard の pytest）で 5 件の test が落ちた。全て test 側の移植性の問題で、runtime の不具合ではない:

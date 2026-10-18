@@ -18,7 +18,8 @@ from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
-from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_A3, P12_A4, P12_BASE,
+from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_A3, P12_A4, P12_A6, P12_BASE,
+                                                         P12_VALIDATED_TREE,
                                                          PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_REOPENED_IN_A4,
                                                          PHASE12_A3_RUNTIME, PHASE12_A4_REOPENED_IN_A5, PHASE12_A4_REOPENED_IN_A6, PHASE12_A4_RUNTIME,
                                                          PHASE12_A5_RUNTIME,
@@ -37,6 +38,9 @@ A3_CONTRACT_DOC = "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md"
 A4_CONTRACT_DOC = "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md"
 A5_CONTRACT_DOC = "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md"
 P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
+FREEZE_DOC = "docs/databank/PHASE12_FINAL_FREEZE.md"
+#: 凍結の記録に在ってはならない private な値の形（A1 の形 ＋ Windows の SID ・user profile の path ・validation の slot の時刻）
+FREEZE_DOC_PRIVATE_PATTERNS = (r"S-1-5-\d", r"C:\\Users", r"\\Users\\", r"\b[0-2]\d:[0-5]\d\b", r"JQUANTS_", r"human:")
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
                   "pyproject.toml", "cloudflare", "notifiers", "src/report")
 #: runtime が呼んではならない名前（file ・OS ・時計 ・環境 ・process ・socket ・乱数 ・出力）
@@ -207,6 +211,54 @@ def test_p12_a1_frozen_phase4_to_11_runtime_is_object_identical_to_its_anchor_an
                 *PHASE11_RUNTIME) == ""
     assert _git("diff", "--name-status", P12_BASE, "--", P11_FREEZE_DOC, "docs/databank/PHASE10_FINAL_FREEZE.md") == ""
     assert _git("show", f"{P12_BASE}:{P11_FREEZE_DOC}") == (REPO_ROOT / P11_FREEZE_DOC).read_text(encoding="utf-8")
+
+
+def test_p12_freeze_the_43_registered_runtime_files_are_object_identical_to_the_anchor_and_the_validated_tree() -> None:
+    """P12-A7: Phase 12 A-track v1 の runtime 43 file は anchor `P12_A6` ・Windows の検証を走らせた `P12_VALIDATED_TREE` ・index ・worktree で
+    git の object が同じ。記録の commit（本文書）は validated tree の後に足され、anchor ではない。runtime の修正 ・未登録の追加は受けない。"""
+    assert P12_A6 == "e390cddff9101541d16ba308a15d9ad1df3ca7b7" and P12_VALIDATED_TREE == "3056e25586767fd7b5d8095f016a4d254de5c360"
+    for older in (P12_BASE, P12_A1, P12_A2, P12_A3, P12_A4):
+        assert subprocess.run(["git", "merge-base", "--is-ancestor", older, P12_A6], cwd=REPO_ROOT).returncode == 0
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_A6, P12_VALIDATED_TREE], cwd=REPO_ROOT).returncode == 0
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_VALIDATED_TREE, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert len(PHASE12_RUNTIME) == 43 and len(set(PHASE12_RUNTIME)) == 43
+    for commit in (P12_A6, P12_VALIDATED_TREE):
+        assert set(_git("ls-tree", "-r", "--name-only", commit, "--", PHASE12_PACKAGE).splitlines()) == set(PHASE12_RUNTIME), commit
+    at_anchor, in_worktree = _blob_ids(P12_A6, PHASE12_RUNTIME)
+    at_validated, _ = _blob_ids(P12_VALIDATED_TREE, PHASE12_RUNTIME)
+    in_index = tuple(_git("rev-parse", *(f":{path}" for path in PHASE12_RUNTIME)).split())
+    assert len(at_anchor) == len(at_validated) == len(in_index) == len(in_worktree) == 43
+    assert at_anchor == at_validated, "runtime blob differs between P12_A6 and P12_VALIDATED_TREE"
+    assert at_anchor == in_index, "runtime blob differs between P12_A6 and the index"
+    assert at_anchor == in_worktree, "runtime blob differs between P12_A6 and the worktree"
+    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", PHASE12_PACKAGE) == ""           # anchor 以後に package は不変
+    assert _git("diff", "--cached", "--name-status", P12_A6, "--", PHASE12_PACKAGE) == ""
+    assert _git("status", "--porcelain", "--", PHASE12_PACKAGE) == ""
+    assert _git("diff", "--name-status", P12_VALIDATED_TREE, "HEAD", "--", "src") == ""         # validated tree 以後に src は不変
+    assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
+    assert all(not is_phase12_addition("M", path) for path in PHASE12_RUNTIME)                  # 凍結: 修正は受けない
+    assert not is_phase12_addition("A", f"{PHASE12_PACKAGE}/new_module.py") and not is_phase12_addition("??", f"{PHASE12_PACKAGE}/new_module.py")
+    assert FREEZE_DOC in PHASE12_DOCS and not _git("ls-tree", P12_VALIDATED_TREE, "--", FREEZE_DOC).strip()   # 記録は validated tree の後
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for needle in ("COMPLETE / CLOSED / FROZEN", P12_A6, P12_VALIDATED_TREE, "新しい anchor ではない", "43 file", "A6_PASS",
+                   "transfer/p12-a6-helper-v6", "8193c17081d2d55443e285cb9663f9dad43c416f", "a8bb4b41963328446201e11326614cad2214b56625573e18e7eba11ca771f7e8",
+                   "89ee341dfa076dbe1903d92a743cd0120f13cae56809336eb24074e7168c123b", "P12-OBS-020", "P12-OBS-027", "MultipleInstances",
+                   "InteractiveToken", "pin-runtime", "A-track", "B-track", "P12.5", "凍結しない", "利用者の Windows からの報告",
+                   "この Linux の session からは見えない", "資格情報", "O_BINARY", "IgnoreNew"):
+        assert needle in text, needle
+    for banned in ("P12.5 は完了", "P13 は完了", "Phase 12 は完了", "Phase 12 全体", "signed", "署名済み"):
+        assert banned not in text or banned == "Phase 12 全体", banned                         # 「Phase 12 全体は CLOSED ではない」だけ
+    assert "Phase 12 全体は CLOSED ではない" in text
+
+
+def test_p12_freeze_the_record_holds_no_private_validation_values() -> None:
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants"):
+        assert banned not in text, banned
+    for sample in ("S-1-5-21-1", "C:\\Users\\x", "09:00", "JQUANTS_API_KEY", "human:reviewer", "D:\\x", "2026-01-01T09:00", "12345"):
+        assert any(re.search(pattern, sample) for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS) or "D:\\" in sample, sample
 
 
 # ================================================ import ・名前 ・語彙 ・直列化

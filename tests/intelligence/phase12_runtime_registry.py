@@ -1,6 +1,9 @@
-"""Phase 12（自動化 ・運用の authority）の登録済み runtime ・test ・文書の完全な一覧（P12-A1 〜 A5）。
+"""Phase 12（自動化 ・運用の authority）の登録済み runtime ・test ・文書の完全な一覧（P12-A1 〜 A6 ・P12-FREEZE-RECORD）。
 
 - `P12_BASE` ＝ Phase 11 の凍結の記録の commit。P12-A1 はここから足す。
+- `P12_A6` ＝ Phase 12 A-track v1 の意味 ／ runtime の最終凍結 anchor（runtime 43 file。A6 の lock の writer の修正の commit）。
+  `P12_VALIDATED_TREE` ＝ Windows の P12-A6 real-machine validation を走らせた commit（test と CHANGELOG だけが anchor と違う。runtime の
+  blob は 43 file 全て anchor と同じ）。凍結の記録の commit は新しい anchor ではない。記録: `docs/databank/PHASE12_FINAL_FREEZE.md`。
 - 凍結の Phase 7 ／ 8 ／ 9 ／ 10 ／ 11 の test に入れた登録の行は `PHASE12_TEST_REGISTRATION` に完全に列挙し、Phase 12 の guard
   （`test_automation_boundary.py`）が `P12_BASE` との差分の完全一致を pin する（test だけの狭い再開。runtime は不変）。
 - P12-A1 の runtime は純粋な domain ／ state の層だけ: scheduler ・subprocess ・server ・socket ・network ・資格情報 ・file の
@@ -34,6 +37,10 @@ P12_A2 = "bd0007d3b6684a1e4640a723010e197432939f95"
 P12_A3 = "66139db86e06130d7504a279b3d5ee820fd76b24"
 #: P12-A4 の runtime の commit（A4 の file と A4 で再開した A3 の file は以後も object 一致。A5 が再開した run_cli を除く）
 P12_A4 = "dcad07351201ecab44d91acc98740b8833bc3996"
+#: Phase 12 A-track v1 の意味 ／ runtime の最終凍結 anchor（A6 の lock の writer の修正の commit。P12-A7 で確定。記録の commit は anchor ではない）
+P12_A6 = "e390cddff9101541d16ba308a15d9ad1df3ca7b7"
+#: Windows の P12-A6 real-machine validation を走らせた commit（test の移植性の修正だけ。runtime 43 file の blob は P12_A6 と同じ）
+P12_VALIDATED_TREE = "3056e25586767fd7b5d8095f016a4d254de5c360"
 PHASE12_PACKAGE = "src/intelligence/automation"
 #: P12-A1 で足した runtime（schedule の authority ・計画 ・run の identity ・状態機械 ・失敗 code ・step の結果 ・ledger の record ・
 #: status の projection。純粋な model と関数だけ）
@@ -82,7 +89,8 @@ PHASE12_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MO
                                  "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md",
                                  "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md",
                                  "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md",
-                                 "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md")
+                                 "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md",
+                                 "docs/databank/PHASE12_FINAL_FREEZE.md")
 ADDITION_STATUSES = ("A", "??")
 #: 各 runtime の相対 import の module の集合（完全一致。package の外 ・凍結の phase への import は無い）
 SANCTIONED_P12_MODULES: Mapping[str, Set[str]] = {
@@ -316,11 +324,10 @@ PHASE12_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
 
 
 def is_phase12_addition(status: str, path: str) -> bool:
-    """Phase 12 の runtime の変化か。Phase 12 は凍結していないので、A1 以外の登録済み runtime は gate の中の修正（M）も受ける
-    （A1 の runtime の不変は `test_automation_boundary.py` が別に守る）。"""
-    if status in ADDITION_STATUSES and path in PHASE12_RUNTIME:
-        return True
-    return status == "M" and path in PHASE12_RUNTIME and path not in PHASE12_A1_RUNTIME
+    """Phase 12 の登録済み runtime の追加（`git diff --name-status` の A ・`git status --porcelain` の A ／ ??）だけを認める。
+    P12-FREEZE-RECORD 以後、Phase 12 A-track v1 の runtime は凍結している: 修正（M）も未登録の file の追加も受けない
+    （凍結の guard は `test_automation_boundary.py`。再開は新しい gate と anchor の再設定だけ）。"""
+    return status in ADDITION_STATUSES and path in PHASE12_RUNTIME
 
 
 def registration_diff(anchored: str, current: str) -> Tuple[Sequence[str], Sequence[str]]:
@@ -342,7 +349,8 @@ def only_phase12_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_A2", "P12_A3", "P12_A4", "P12_BASE", "PHASE12_A1_RUNTIME",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_A2", "P12_A3", "P12_A4", "P12_A6", "P12_BASE",
+           "P12_VALIDATED_TREE", "PHASE12_A1_RUNTIME",
            "PHASE12_A2_RUNTIME", "PHASE12_A3_REOPENED_IN_A4", "PHASE12_A3_RUNTIME", "PHASE12_A4_REOPENED_IN_A5", "PHASE12_A4_REOPENED_IN_A6", "PHASE12_A4_RUNTIME",
            "PHASE12_A5_RUNTIME",
            "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",

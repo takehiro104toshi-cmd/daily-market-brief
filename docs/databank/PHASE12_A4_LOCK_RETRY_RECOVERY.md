@@ -120,7 +120,8 @@ scheduler が無人で run を作るのは、この commit ・回復の層の上
 
 - P12-OBS-011: 同じ process の中で複数の run を thread で同時に走らせることは支援しない（A2 の network guard は process 全体）。
 - P12-OBS-012: ledger の lock の待ちは 30 秒で諦める（`DUPLICATE_INVOCATION:LEDGER_LOCKED`）。無人の運用での値は A5 で決める。
-- P12-OBS-013: Windows の生存 ／ identity の問い合わせは実機で未検証（A6）。
+- P12-OBS-013（A6 の実機で解消）: Windows の生存（`tasklist`）／ identity（CIM の CreationDate）の問い合わせは実機で健全（identity は安定 ・
+  None は無し ・最大でも runtime の 15 秒の timeout より十分に短い）。boot marker は無いので再起動の検出は無い（`PHASE12_FINAL_FREEZE.md` P12-OBS-026）。
 - P12-OBS-019（A6 の実機 ・解消）: Windows の `os.open` は O_BINARY が無ければ text mode。lock の writer だけがその経路で、全ての lock が
   `LOCK_MALFORMED`（重複は RECOVERY_REQUIRED ・release-lock ／ recover-* は拒む）になっていた。writer に O_BINARY を足し、
   `operational_lock` を A4 の pin から登録して再開（`PHASE12_A4_REOPENED_IN_A6`）。生存 ／ identity の問い合わせは実機で健全を確認。

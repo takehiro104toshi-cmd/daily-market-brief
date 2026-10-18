@@ -124,12 +124,17 @@ A4 の規則で証拠を分類して RECOVERY_REQUIRED で止まる。
 StartWhenAvailable の遅れた起動、ExecutionTimeLimit の挙動、O_EXCL の lock ・rename ・開いた file の削除の挙動、`tasklist` ／ CIM の
 process の問い合わせ、venv の python.exe を Command に置けること。
 
+A6 の実機の結果（利用者の Windows からの報告）: `tzutil /g` ・UTF-16 の XML の登録 ・`/Query /XML` ・`/FO CSV /V`（英語の列名）・InteractiveToken の
+起動 ・IgnoreNew の重複 ・O_EXCL の lock ・開いた file の削除の拒否 ・`tasklist` ／ CIM の問い合わせは確認した。StartWhenAvailable の遅れた起動 ・
+ExecutionTimeLimit の打ち切り ・sleep ／ wake は観察していない。往復の所見は `PHASE12_FINAL_FREEZE.md` §5（P12-OBS-020 〜 027）。
+
 ## 13. A6 の計画（実機 ・人の手。task を手で作らせない）
 
 runbook の概念: (1) `pin-runtime` (2) `scheduler-install`（計画の確認）→ `--apply` (3) `scheduler-status` (4) `scheduled-run` を手で 1 回起こし
 exit code と REPORT を確かめる（NOT_DUE ・eligible ・MISSED を `--selection-clock-at` で） (5) Task Scheduler から 1 回起こす（logon 中）
 (6) 重複の起動（同じ task を 2 度）→ 1 つだけ commit (7) 強制終了 → 次の起動が RECOVERY_REQUIRED (8) `scheduler-remove --apply`。
 A5 の helper は P11-A5 の形（stdlib ・repo の外）を踏襲し、probe の一覧を A6 の gate で確定する。
+A6 は repo の外の helper v6（`transfer/p12-a6-helper-v6`）が 10 stage を自動で走らせ、`A6_PASS` で閉じた（記録は `PHASE12_FINAL_FREEZE.md`）。
 
 ## 14. 範囲の外
 
@@ -142,4 +147,6 @@ J-Quants ・P12-B1 の取得 ・通知 ・公開 ・cloud の scheduler ・自�
 - P12-OBS-016: 文書だけの commit でも再 pin が要る（意図的 ・v1）。
 - P12-OBS-017: scheduler-status の `last_scheduler_result_code` は Task Scheduler の「最後の結果」の生の整数（exit code の契約で読む）。
 - P12-OBS-018（A5.1 で解消）: MISSED ・NON_BUSINESS_DAY は ledger に SKIPPED として記録する。NOT_DUE ・DISABLED だけが記録を持たない（意味の run ではない）。
-- 次は **P12-A6**（監督の GO の後）。
+- P12-OBS-020 〜 027（A6 ・Windows Task Scheduler の往復の所見。既定値の省略 ・COM の実効の値 ・`MultipleInstances` の enum ・現在の user の SID の
+  注入 ・IgnoreNew の明示 ・資格情報の不在 ・CSV の locale ・boot marker の不在 ・pin の更新）は `PHASE12_FINAL_FREEZE.md` §5 に記録した。
+- P12-A6 は PASS ／ CLOSED。A-track v1 の凍結の記録は `PHASE12_FINAL_FREEZE.md`（P12-A7）。
