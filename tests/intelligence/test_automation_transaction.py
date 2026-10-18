@@ -14,9 +14,12 @@ from pathlib import Path
 
 import pytest
 
+from src.intelligence.automation import ledger_commit as lc
 from src.intelligence.automation import ledger_store as ls
 from src.intelligence.automation import run_cli
 from src.intelligence.automation import run_transaction as rt
+from src.intelligence.automation.process_probe import StaticProbe
+from src.intelligence.automation.recovery import release_lock
 from src.intelligence.automation.execution_request import AutomationExecutionRequest
 from src.intelligence.automation.head_checkpoint import HeadCheckpoint
 from src.intelligence.automation.ledger_store import LedgerStore
@@ -50,6 +53,7 @@ def ticking_clock(start: datetime = BASE_INSTANT):
 @pytest.fixture
 def world(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("JQUANTS_API_KEY", raising=False)
+    monkeypatch.setattr(lc, "LEDGER_LOCK_WAIT_SECONDS", 0.5)                               # test: 残った ledger lock を長く待たない
     built = build_world(tmp_path)
     repo, head = make_repo(tmp_path / "repo")
     request = AutomationExecutionRequest(schedule_id="ops-daily", slot_id="slot-a", scheduled_for=SCHEDULED_FOR, as_of_date=AS_OF,
@@ -96,11 +100,12 @@ def test_a_clean_first_run_commits_and_only_the_validated_ledger_record_establis
     assert status["ledger_head_digest"] == state.summary.head_digest and status["projection"]["health_code"] == "OK"
     assert status["projection"]["last_successful_run"]["run_id"] == world["request"].run_id
     assert classify(world) == "COMMITTED" and final_dir(world).is_dir()
-    assert sorted(p.name for p in world["roots"].p12_root.iterdir()) == ["ledger", "runs", "status"]
+    assert sorted(p.name for p in world["roots"].p12_root.iterdir()) == ["ledger", "locks", "requests", "runs", "status"]   # A4: lock ・要求の証拠
+    assert not any(world["roots"].p12_root.joinpath("locks").iterdir())                    # lock は解放済み
     text = json.dumps(result.to_dict())
     assert "SUCCEEDED" in text and str(world["tmp"]) not in text
     recorded = [r.recorded_at for r in state.records]
-    assert recorded == sorted(recorded) and recorded[0] == "2026-07-02T00:00:01Z"           # telemetry は注入した時計から
+    assert recorded == sorted(recorded) and recorded[0] > "2026-07-02T00:00:00Z"            # telemetry は注入した時計から（lock の後）
 
 
 def test_a_failed_execution_is_committed_as_failed_with_the_safe_code_and_no_artifacts(world) -> None:
@@ -201,12 +206,16 @@ def test_crash_window_b_after_ledger_append_before_checkpoint_replace_is_checkpo
     with pytest.raises(InjectedCrash):
         commit(world)
     monkeypatch.undo()
+    monkeypatch.setattr(lc, "LEDGER_LOCK_WAIT_SECONDS", 0.5)                               # undo は fixture の短い待ちも戻すので再設定
     store = store_of(world)
     stale = store.open_verified(allow_stale_checkpoint=True)
     assert stale.summary.record_count == 3 and stale.run_states == {world["request"].run_id: RunState.SUCCEEDED}
     assert stale.checkpoint.record_count == 2 and stale.checkpoint_class == "CHECKPOINT_STALE"
     assert classify(world) == "LEDGER_COMMITTED_CHECKPOINT_STALE" and final_dir(world).is_dir()
     before = (store.ledger_file.read_bytes(), store.checkpoint_file.read_bytes(), tree(final_dir(world)))
+    locked = commit(world)                                                                # A4: ledger lock の中で死んだ → lock が残る
+    assert locked.failure_code == "DUPLICATE_INVOCATION:LEDGER_LOCKED" and locked.stages_completed == ()
+    assert release_lock(world["roots"], probe=StaticProbe({os.getpid(): False}, {}, boot=None))["released"]
     again = commit(world)
     assert again.failure_code == "LEDGER_INVALID:CHECKPOINT_STALE" and again.stages_completed == ()
     assert (store.ledger_file.read_bytes(), store.checkpoint_file.read_bytes(), tree(final_dir(world))) == before

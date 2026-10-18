@@ -1,4 +1,4 @@
-"""Phase 12（自動化 ・運用の authority）の登録済み runtime ・test ・文書の完全な一覧（P12-A1 〜 A3）。
+"""Phase 12（自動化 ・運用の authority）の登録済み runtime ・test ・文書の完全な一覧（P12-A1 〜 A4）。
 
 - `P12_BASE` ＝ Phase 11 の凍結の記録の commit。P12-A1 はここから足す。
 - 凍結の Phase 7 ／ 8 ／ 9 ／ 10 ／ 11 の test に入れた登録の行は `PHASE12_TEST_REGISTRATION` に完全に列挙し、Phase 12 の guard
@@ -10,6 +10,9 @@
   private root の file ・loopback の probe ・network の拒否の guard）。A2 の 10 file は `P12_A2` の commit と object 一致（A3 以後も不変）。
 - P12-A3 の runtime は運用の commit の層: live の追記専用 ledger ＋ head checkpoint ・status の projection ・schedule ／ calendar の
   authority の file I/O ・crash の分類 ・1 run の transaction ・人の手の CLI。凍結の phase は import しない（A2 を経由する）。
+  A3 の file は `P12_A3` の commit と object 一致。ただし A4 が登録して再開した 2 file（`PHASE12_A3_REOPENED_IN_A4`: transaction に
+  lock ・直列化 ・cancel ・注入点を入れ、CLI に retry ・回復の命令を足す）だけは A4 の commit が新しい基準。
+- P12-A4 の runtime は lock ・process の探り ・ledger の commit の直列化 ・注入点 ・cancel ・回復 ・retry。network ・資格情報 ・scheduler は無い。
 """
 from __future__ import annotations
 
@@ -22,6 +25,8 @@ P12_BASE = "080d42aa3dad8bfc5ef82400beb6e2c62a873126"
 P12_A1 = "dd922c3eebd67de2ac273ba66e82e493d814e701"
 #: P12-A2 の runtime の commit（A2 の 10 file は以後も object 一致。凍結 anchor ではない）
 P12_A2 = "bd0007d3b6684a1e4640a723010e197432939f95"
+#: P12-A3 の runtime の commit（A3 の file は以後も object 一致。A4 が再開した 2 file を除く）
+P12_A3 = "66139db86e06130d7504a279b3d5ee820fd76b24"
 PHASE12_PACKAGE = "src/intelligence/automation"
 #: P12-A1 で足した runtime（schedule の authority ・計画 ・run の identity ・状態機械 ・失敗 code ・step の結果 ・ledger の record ・
 #: status の projection。純粋な model と関数だけ）
@@ -38,18 +43,28 @@ PHASE12_A2_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for n
 PHASE12_A3_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for name in (
     "atomic_files", "calendar_authority", "crash_classification", "head_checkpoint", "ledger_store", "run_cli",
     "run_transaction", "schedule_authority", "status_store"))
-PHASE12_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME))
+#: A4 が明示に再開した A3 の file（lock ・直列化 ・cancel ・注入点を transaction に ・retry ／ 回復の命令を CLI に ・回復済みの終端を
+#: 孤児から除く 1 条件を分類に。他の A3 の file は不変）
+PHASE12_A3_REOPENED_IN_A4: Tuple[str, ...] = (f"{PHASE12_PACKAGE}/crash_classification.py", f"{PHASE12_PACKAGE}/run_cli.py",
+                                              f"{PHASE12_PACKAGE}/run_transaction.py")
+#: P12-A4 で足した runtime（運用の lock ・process の探り ・ledger の commit の直列化 ・失敗の注入点 ・協調的な cancel ・回復 ・retry）
+PHASE12_A4_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for name in (
+    "cancel_authority", "injection", "ledger_commit", "operational_lock", "process_probe", "recovery", "retry"))
+PHASE12_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME + PHASE12_A4_RUNTIME))
 PHASE12_TESTS: Tuple[str, ...] = ("tests/intelligence/phase12_runtime_registry.py",
                                   "tests/intelligence/test_automation_boundary.py",
                                   "tests/intelligence/test_automation_executor.py",
                                   "tests/intelligence/test_automation_ledger.py",
                                   "tests/intelligence/test_automation_ledger_store.py",
+                                  "tests/intelligence/test_automation_locks.py",
                                   "tests/intelligence/test_automation_models.py",
                                   "tests/intelligence/test_automation_preconditions.py",
+                                  "tests/intelligence/test_automation_recovery.py",
                                   "tests/intelligence/test_automation_transaction.py")
 PHASE12_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md",
                                  "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md",
-                                 "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md")
+                                 "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md",
+                                 "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md")
 ADDITION_STATUSES = ("A", "??")
 #: 各 runtime の相対 import の module の集合（完全一致。package の外 ・凍結の phase への import は無い）
 SANCTIONED_P12_MODULES: Mapping[str, Set[str]] = {
@@ -90,11 +105,26 @@ SANCTIONED_P12_MODULES: Mapping[str, Set[str]] = {
     f"{PHASE12_PACKAGE}/crash_classification.py": {".finalization", ".head_checkpoint", ".ledger_store", ".run_state", ".status_store"},
     f"{PHASE12_PACKAGE}/head_checkpoint.py": {".canonical", ".failure_codes", ".ledger_model"},
     f"{PHASE12_PACKAGE}/ledger_store.py": {".atomic_files", ".failure_codes", ".head_checkpoint", ".ledger_model", ".run_state"},
-    f"{PHASE12_PACKAGE}/run_cli.py": {".calendar_authority", ".execution_request", ".failure_codes", ".holiday_calendar",
-                                      ".preconditions", ".run_transaction", ".schedule_authority", ".schedule_model"},
-    f"{PHASE12_PACKAGE}/run_transaction.py": {".canonical", ".crash_classification", ".execution_request", ".execution_result",
-                                              ".failure_codes", ".finalization", ".ledger_model", ".ledger_store", ".network_deny",
-                                              ".preconditions", ".run_executor", ".run_state", ".status_store"},
+    f"{PHASE12_PACKAGE}/run_cli.py": {".calendar_authority", ".cancel_authority", ".execution_request", ".failure_codes",
+                                      ".holiday_calendar", ".ledger_store", ".preconditions", ".process_probe", ".recovery", ".retry",
+                                      ".run_transaction", ".schedule_authority", ".schedule_model"},
+    f"{PHASE12_PACKAGE}/run_transaction.py": {".atomic_files", ".cancel_authority", ".canonical", ".crash_classification",
+                                              ".execution_request", ".execution_result", ".failure_codes", ".finalization", ".injection",
+                                              ".ledger_commit", ".ledger_model", ".ledger_store", ".network_deny", ".operational_lock",
+                                              ".preconditions", ".process_probe", ".run_executor", ".run_state", ".status_store"},
+    # ---- P12-A4
+    f"{PHASE12_PACKAGE}/cancel_authority.py": {".atomic_files", ".canonical", ".failure_codes", ".schedule_authority"},
+    f"{PHASE12_PACKAGE}/injection.py": {".failure_codes"},
+    f"{PHASE12_PACKAGE}/ledger_commit.py": {".failure_codes", ".injection", ".ledger_model", ".ledger_store", ".operational_lock",
+                                            ".process_probe"},
+    f"{PHASE12_PACKAGE}/operational_lock.py": {".atomic_files", ".canonical", ".failure_codes", ".ledger_store", ".process_probe",
+                                               ".run_state"},
+    f"{PHASE12_PACKAGE}/process_probe.py": set(),
+    f"{PHASE12_PACKAGE}/recovery.py": {".atomic_files", ".canonical", ".crash_classification", ".execution_request", ".failure_codes",
+                                       ".finalization", ".ledger_commit", ".ledger_model", ".ledger_store", ".operational_lock",
+                                       ".preconditions", ".process_probe", ".run_state", ".run_transaction", ".status_store"},
+    f"{PHASE12_PACKAGE}/retry.py": {".execution_request", ".failure_codes", ".ledger_store", ".operational_lock", ".preconditions",
+                                    ".process_probe", ".run_state", ".run_transaction"},
     f"{PHASE12_PACKAGE}/schedule_authority.py": {".atomic_files", ".failure_codes", ".schedule_model"},
     f"{PHASE12_PACKAGE}/status_store.py": {".atomic_files", ".canonical", ".failure_codes", ".ledger_store", ".status_projection"},
 }
@@ -123,6 +153,12 @@ SANCTIONED_P12_EXTRA_STDLIB: Mapping[str, Set[str]] = {
     f"{PHASE12_PACKAGE}/run_cli.py": {"argparse", "os", "sys"},
     f"{PHASE12_PACKAGE}/schedule_authority.py": {"pathlib"},
     f"{PHASE12_PACKAGE}/status_store.py": {"pathlib"},
+    # ---- P12-A4（lock の file ・process の探り ・有界の待ち ・.partial の rename）
+    f"{PHASE12_PACKAGE}/ledger_commit.py": {"time"},
+    f"{PHASE12_PACKAGE}/operational_lock.py": {"os", "pathlib"},
+    f"{PHASE12_PACKAGE}/process_probe.py": {"os", "subprocess", "sys"},
+    f"{PHASE12_PACKAGE}/recovery.py": {"os", "pathlib"},
+    f"{PHASE12_PACKAGE}/cancel_authority.py": {"pathlib"},
 }
 #: Phase 12 が import してはならない module の部品（凍結の phase ・J-Quants ・公開 ・通知 ・network ・process ・OS ・LLM）
 FORBIDDEN_P12_IMPORT_PARTS: Tuple[str, ...] = (
@@ -269,8 +305,8 @@ def only_phase12_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_A2", "P12_BASE", "PHASE12_A1_RUNTIME",
-           "PHASE12_A2_RUNTIME", "PHASE12_A3_RUNTIME",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_A2", "P12_A3", "P12_BASE", "PHASE12_A1_RUNTIME",
+           "PHASE12_A2_RUNTIME", "PHASE12_A3_REOPENED_IN_A4", "PHASE12_A3_RUNTIME", "PHASE12_A4_RUNTIME",
            "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",
            "SANCTIONED_P12_EXTRA_STDLIB", "SANCTIONED_P12_MODULES", "SANCTIONED_P12_P11_IMPORTERS", "SANCTIONED_P12_STDLIB",
            "is_phase12_addition", "only_phase12_registration", "registration_diff"]

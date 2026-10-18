@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.17 (2026-10-18) — Phase 12 P12-A4 lock ／ retry ／ crash recovery ／ idempotency
+
+運用の transaction を同時実行 ・中断 ・stale な lock ・retry ・重複 ・孤児 ・遅れた checkpoint ・古い status に対して安全にした。run ごとの lock ＋
+短い ledger の lock（O_CREAT｜O_EXCL ・Windows でも原子的）・process の生存 ／ identity ／ 起動 token による stale の分類（曖昧なら fail closed ・
+自動では壊さない）・ledger の commit の直列化（lock の中で head を読み直す）・retry は常に新しい run（attempt ＋ 1 ・retry_of）・crash の窓
+A ／ B ／ C ・partial ・crashed の明示の回復（分類が先 ・証拠を消さない ・SUCCEEDED には変えない）・協調的な cancel ・決定論の失敗の注入点。
+CLI に retry ・cancel ・recover-orphan ・recover-crashed ・recover-partial ・repair-checkpoint ・regenerate-status ・release-lock を足した。
+network ・資格情報 ・scheduler は無い。凍結の Phase 4 〜 11 ・A1 ・A2 の runtime は不変。A3 は `run_transaction` ・`run_cli` だけを登録して再開。
+
+追加
+・`src/intelligence/automation/`（`operational_lock` ・`process_probe` ・`ledger_commit` ・`injection` ・`cancel_authority` ・`recovery` ・`retry`）
+・`tests/intelligence/test_automation_locks.py` ・`test_automation_recovery.py`
+・`docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md`
+改善
+・`src/intelligence/automation/run_transaction.py`（lock ・直列化 ・要求の証拠 ・cancel ・注入点）・`run_cli.py`（retry ・回復の命令）
+・`tests/intelligence/phase12_runtime_registry.py` ・`test_automation_boundary.py`（A4 の登録 ・A3 の pin と再開の登録）
+・`tests/intelligence/test_automation_transaction.py`（root の配置に locks ・requests）
+修正
+・なし
+
 ## v6.16 (2026-10-18) — Phase 12 P12-A3 operational commit layer ＋ manual CLI（ledger が commit の authority）
 
 A2 の決定論の実行を運用の transaction に結ぶ: live の追記専用 ledger（A1 の record ・鎖の検証 ・head で追記 ・fsync）・独立な head

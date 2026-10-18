@@ -1,9 +1,14 @@
-"""P12-A3 — 人が手で使う P12 の CLI（`python -m src.intelligence.automation.run_cli`）。scheduler ・background ・network ・資格情報は無い。
+"""P12-A3 ／ A4 — 人が手で使う P12 の CLI（`python -m src.intelligence.automation.run_cli`）。scheduler ・background ・network ・資格情報は無い。
 
     run            --request-file <正準な実行の要求の JSON> --private-root --p9-root --p10-root --repo-root --runtime-root
+    retry          --run-id <前の run_id> --private-root --p9-root --p10-root --repo-root --runtime-root   （A4: attempt ＋ 1 ・retry_of）
+    cancel         --run-id <run_id> --private-root                     （A4: 協調的な cancel の要求。kill ではない）
+    classify       --run-id <run_id> --private-root
+    recover-orphan / recover-crashed / recover-partial  --run-id <run_id> --private-root   （A4: 分類が先 ・曖昧なら拒む）
+    repair-checkpoint / regenerate-status               --private-root                     （A4）
+    release-lock   --private-root [--run-id <run_id>]                   （A4: stale と証明できた lock だけ）
     write-schedule --file <正準な schedule の JSON> --private-root
     write-calendar --file <正準な休日 calendar の JSON> --private-root
-    classify       --run-id <run_id> --private-root
 
 - PIT の欄は要求の file から来る（暗黙の scheduled_for は無い）。`datetime.now` は telemetry（ledger の recorded_at ・status の
   generated_at）だけに使い、意味の欄 ・identity ・artifact の byte に影響しない。
@@ -21,11 +26,17 @@ from datetime import datetime, timezone
 from typing import Any, Mapping, Optional, Sequence
 
 from .calendar_authority import write_calendar_authority
+from .cancel_authority import write_cancel_request
 from .execution_request import AutomationExecutionRequest
 from .failure_codes import AutomationError
 from .holiday_calendar import HolidayCalendar
+from .ledger_store import LedgerStore
 from .preconditions import PrivateRoots, credential_present
-from .run_transaction import classify_after_crash, commit_run
+from .process_probe import ProcessProbe
+from .recovery import (recover_crashed, recover_orphan, recover_partial, regenerate_status, release_lock,
+                       repair_checkpoint)
+from .retry import build_retry_request, retry_summary
+from .run_transaction import TransactionResult, classify_after_crash, commit_run
 from .schedule_authority import HUMAN_OPERATOR, write_schedule_authority
 from .schedule_model import AutomationSchedule
 
@@ -61,6 +72,23 @@ def _parser() -> argparse.ArgumentParser:
     run = commands.add_parser("run", help="commit one explicitly requested run")
     for name in ("--request-file", "--private-root", "--p9-root", "--p10-root", "--repo-root", "--runtime-root"):
         run.add_argument(name, required=True)
+    retry = commands.add_parser("retry", help="retry a FAILED / CRASHED / ORPHANED run as a new attempt (human only)")
+    for name in ("--run-id", "--private-root", "--p9-root", "--p10-root", "--repo-root", "--runtime-root"):
+        retry.add_argument(name, required=True)
+    for command, help_text in (("cancel", "request cooperative cancellation of one run (human only)"),
+                               ("recover-orphan", "record ORPHANED_FINALIZATION for a finalized run without a terminal record"),
+                               ("recover-crashed", "record CRASHED for an open run whose process is provably gone"),
+                               ("recover-partial", "preserve a .partial directory as .crashed evidence after classification")):
+        sub = commands.add_parser(command, help=help_text)
+        sub.add_argument("--run-id", required=True)
+        sub.add_argument("--private-root", required=True)
+    for command, help_text in (("repair-checkpoint", "catch the ledger head checkpoint up to a verified ledger tail"),
+                               ("regenerate-status", "regenerate status.json from the verified ledger")):
+        sub = commands.add_parser(command, help=help_text)
+        sub.add_argument("--private-root", required=True)
+    release = commands.add_parser("release-lock", help="release a lock proven stale (evidence kept under locks/stale)")
+    release.add_argument("--private-root", required=True)
+    release.add_argument("--run-id", required=False, default=None)
     for command, help_text in (("write-schedule", "write the schedule authority (human only)"),
                                ("write-calendar", "write the holiday calendar authority (human only)")):
         sub = commands.add_parser(command, help=help_text)
@@ -87,6 +115,10 @@ def _command_run(args: argparse.Namespace, stdout: Any, environment: Mapping[str
     roots = PrivateRoots(args.p9_root, args.p10_root, args.private_root)
     result = commit_run(request, roots, repo_root=args.repo_root, runtime_root=args.runtime_root,
                         environment=_presence_environment(environment), clock=_telemetry_clock)
+    return _report_transaction(result, stdout)
+
+
+def _report_transaction(result: TransactionResult, stdout: Any) -> int:
     if result.execution is not None:
         for step in result.execution.step_results:
             suffix = f" CODE={step.failure_code}" if step.failure_code else ""
@@ -102,6 +134,49 @@ def _command_run(args: argparse.Namespace, stdout: Any, environment: Mapping[str
         return EXIT_SUCCEEDED
     _report(stdout, f"RUN_FAILED CODE={result.failure_code}")
     return EXIT_FAILED
+
+
+def _command_retry(args: argparse.Namespace, stdout: Any, environment: Mapping[str, str]) -> int:
+    if credential_present(environment):
+        _report(stdout, "RUN_FAILED CODE=CREDENTIAL_PRESENT")
+        return EXIT_FAILED
+    roots = PrivateRoots(args.p9_root, args.p10_root, args.private_root)
+    probe = ProcessProbe()
+    state = LedgerStore(args.private_root).open_verified()
+    request = build_retry_request(roots, args.run_id, state=state, probe=probe, operator=HUMAN_OPERATOR)
+    summary = retry_summary(args.run_id, request)
+    _report(stdout, f"RETRY_OF={summary['retry_of']} ATTEMPT={summary['attempt']}")
+    _report(stdout, f"RUN_ID={request.run_id}")
+    result = commit_run(request, roots, repo_root=args.repo_root, runtime_root=args.runtime_root,
+                        environment=_presence_environment(environment), clock=_telemetry_clock, probe=probe)
+    return _report_transaction(result, stdout)
+
+
+def _command_recovery(args: argparse.Namespace, stdout: Any) -> int:
+    roots = PrivateRoots(None, None, args.private_root)
+    probe = ProcessProbe()
+    if args.command == "cancel":
+        document = write_cancel_request(args.private_root, args.run_id, operator=HUMAN_OPERATOR, requested_at=_telemetry_clock())
+        _report(stdout, f"CANCEL_REQUESTED RUN_ID={document['run_id']}")
+        return EXIT_SUCCEEDED
+    if args.command in ("recover-orphan", "recover-crashed", "recover-partial"):
+        evidence = classify_after_crash(roots, args.run_id, probe=probe)
+        _report(stdout, f"RUN_CLASSIFICATION RUN_ID={args.run_id} CLASS={evidence['classification']} LOCK={evidence['lock_class']}")
+        action = {"recover-orphan": recover_orphan, "recover-crashed": recover_crashed, "recover-partial": recover_partial}[args.command]
+        outcome = action(roots, args.run_id, probe=probe, clock=_telemetry_clock)
+        _report(stdout, f"RECOVERY {outcome['recovery']} RUN_ID={args.run_id}")
+        return EXIT_SUCCEEDED
+    if args.command == "repair-checkpoint":
+        outcome = repair_checkpoint(roots, probe=probe, clock=_telemetry_clock)
+        _report(stdout, f"RECOVERY {outcome['recovery']} RECORDS={outcome['ledger_record_count']} HEAD={outcome['ledger_head_digest']}")
+        return EXIT_SUCCEEDED
+    if args.command == "regenerate-status":
+        outcome = regenerate_status(roots, clock=_telemetry_clock)
+        _report(stdout, f"RECOVERY {outcome['recovery']} HEALTH={outcome['health_code']}")
+        return EXIT_SUCCEEDED
+    outcome = release_lock(roots, probe=probe, run_id=args.run_id)
+    _report(stdout, f"LOCK {outcome['lock_class']} RELEASED={'YES' if outcome['released'] else 'NO'}")
+    return EXIT_SUCCEEDED
 
 
 def _command_write_schedule(args: argparse.Namespace, stdout: Any) -> int:
@@ -135,6 +210,11 @@ def main(argv: Optional[Sequence[str]] = None, stdout: Optional[Any] = None,
     try:
         if args.command == "run":
             return _command_run(args, out, env)
+        if args.command == "retry":
+            return _command_retry(args, out, env)
+        if args.command in ("cancel", "recover-orphan", "recover-crashed", "recover-partial", "repair-checkpoint", "regenerate-status",
+                            "release-lock"):
+            return _command_recovery(args, out)
         if args.command == "write-schedule":
             return _command_write_schedule(args, out)
         if args.command == "write-calendar":

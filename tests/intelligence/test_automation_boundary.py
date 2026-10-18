@@ -1,4 +1,4 @@
-"""P12-A1 ／ A2 ／ A3 — Phase 12（自動化）の境界の guard。
+"""P12-A1 〜 A4 — Phase 12（自動化）の境界の guard。
 
 - registry の完全一致 ・P12_BASE 以後の面は登録した P12 の追加だけ ・凍結の P7 〜 P11 の test の差分は宣言した登録の行だけ。
 - A1 の 11 file は `P12_A1` の commit と、A2 の 10 file は `P12_A2` の commit と object 一致。A2 ／ A3 の file が足して使う stdlib（git の読み取り ・private root の file ・loopback の
@@ -18,8 +18,9 @@ from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
-from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_BASE,
-                                                         PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_RUNTIME,
+from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_A3, P12_BASE,
+                                                         PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_REOPENED_IN_A4,
+                                                         PHASE12_A3_RUNTIME, PHASE12_A4_RUNTIME,
                                                          PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
                                                          PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
                                                          SANCTIONED_P12_EXTRA_STDLIB, SANCTIONED_P12_MODULES,
@@ -32,6 +33,7 @@ PACKAGE_DIR = REPO_ROOT / PHASE12_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md"
 A2_CONTRACT_DOC = "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md"
 A3_CONTRACT_DOC = "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md"
+A4_CONTRACT_DOC = "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md"
 P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
                   "pyproject.toml", "cloudflare", "notifiers", "src/report")
@@ -65,13 +67,19 @@ NAME_ALLOWANCES = {f"{_P12}/finalization.py": {"open", "write", "read_bytes", "m
                    f"{_P12}/atomic_files.py": {"open", "write", "read_bytes", "mkdir", "exists", "unlink"},   # 原子的な置換 ・追記
                    f"{_P12}/crash_classification.py": {"exists"},                     # 証拠を読むだけ
                    f"{_P12}/run_transaction.py": {"exists"},                          # final ／ .partial の有無
-                   f"{_P12}/run_cli.py": {"open", "write", "now", "environ"}}         # 入力 file ・REPORT の出力 ・telemetry の時計 ・環境の有無の写し
+                   f"{_P12}/run_cli.py": {"open", "write", "now", "environ"},        # 入力 file ・REPORT の出力 ・telemetry の時計 ・環境の有無の写し
+                   f"{_P12}/operational_lock.py": {"open", "write", "unlink", "exists", "mkdir"},   # O_CREAT|O_EXCL の lock ・解放 ・stale/
+                   f"{_P12}/process_probe.py": {"open", "system", "run"},            # /proc の読み ・tasklist ／ CIM の問い合わせ
+                   f"{_P12}/ledger_commit.py": {"sleep"},                             # 短い ledger lock の有界の待ち
+                   f"{_P12}/recovery.py": {"exists", "rename", "read_bytes", "read_text", "iterdir"}}   # .partial → .crashed ・artifact の照合
 WORD_ALLOWANCES = {f"{_P12}/finalization.py": {"path"}, f"{_P12}/network_deny.py": {"socket"},
                    f"{_P12}/preconditions.py": {"path", "subprocess", "credential"}, f"{_P12}/server_readiness.py": {"thread"},
                    f"{_P12}/source_manifests.py": {"path"}, f"{_P12}/atomic_files.py": {"path"},
                    f"{_P12}/calendar_authority.py": {"path"}, f"{_P12}/crash_classification.py": {"path"},
                    f"{_P12}/ledger_store.py": {"path"}, f"{_P12}/schedule_authority.py": {"path"}, f"{_P12}/status_store.py": {"path"},
-                   f"{_P12}/run_transaction.py": {"credential"}, f"{_P12}/run_cli.py": {"credential", "now"}}
+                   f"{_P12}/run_transaction.py": {"credential"}, f"{_P12}/run_cli.py": {"credential", "now"},
+                   f"{_P12}/operational_lock.py": {"path"}, f"{_P12}/process_probe.py": {"subprocess"},
+                   f"{_P12}/recovery.py": {"path"}, f"{_P12}/cancel_authority.py": {"path"}}
 BROAD_EXCEPT_ALLOWED = {f"{_P12}/run_executor.py": 1}                                # 想定外 → STEP_FAILED:UNEXPECTED だけ
 MAIN_ENTRY_ALLOWED = {f"{_P12}/run_cli.py"}                                           # `python -m` の入口だけ
 
@@ -109,17 +117,21 @@ def _imports(path: Path):
 def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
     assert P12_BASE == "080d42aa3dad8bfc5ef82400beb6e2c62a873126"
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME)) and len(PHASE12_RUNTIME) == 30
-    assert len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10 and len(PHASE12_A3_RUNTIME) == 9
-    assert len(set(PHASE12_A1_RUNTIME) | set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME)) == 30
+    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME + PHASE12_A4_RUNTIME))
+    assert len(PHASE12_RUNTIME) == 37 and len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10
+    assert len(PHASE12_A3_RUNTIME) == 9 and len(PHASE12_A4_RUNTIME) == 7
+    assert len(set(PHASE12_A1_RUNTIME) | set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)) == 37
     assert P12_A1 == "dd922c3eebd67de2ac273ba66e82e493d814e701" and P12_A2 == "bd0007d3b6684a1e4640a723010e197432939f95"
-    for commit, pinned in ((P12_A1, PHASE12_A1_RUNTIME), (P12_A2, PHASE12_A2_RUNTIME)):
+    assert P12_A3 == "66139db86e06130d7504a279b3d5ee820fd76b24" and set(PHASE12_A3_REOPENED_IN_A4) <= set(PHASE12_A3_RUNTIME)
+    a3_pinned = tuple(p for p in PHASE12_A3_RUNTIME if p not in PHASE12_A3_REOPENED_IN_A4)
+    for commit, pinned in ((P12_A1, PHASE12_A1_RUNTIME), (P12_A2, PHASE12_A2_RUNTIME), (P12_A3, a3_pinned)):
         assert subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=REPO_ROOT).returncode == 0
-        assert _git("diff", "--name-status", commit, "HEAD", "--", *pinned) == ""          # A1 ／ A2 の runtime はその commit のまま
+        assert _git("diff", "--name-status", commit, "HEAD", "--", *pinned) == ""          # A1 ／ A2 ／ A3 の runtime はその commit のまま
         assert _git("diff", "--cached", "--name-status", commit, "--", *pinned) == ""
         assert _git("status", "--porcelain", "--", *pinned) == ""
     assert set(SANCTIONED_P12_P11_IMPORTERS) <= set(PHASE12_A2_RUNTIME)
-    assert set(SANCTIONED_P12_EXTRA_STDLIB) <= set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME)
+    assert set(SANCTIONED_P12_EXTRA_STDLIB) <= set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)
+    assert _git("diff", "--cached", "--name-status", P12_A3, "--", *PHASE12_A3_REOPENED_IN_A4) != ""   # 再開は実在する（登録どおり）
     assert all(p.startswith(PHASE12_PACKAGE + "/") and p.endswith(".py") for p in PHASE12_RUNTIME)
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
     for path in (*PHASE12_RUNTIME, *PHASE12_TESTS, *PHASE12_DOCS):
@@ -202,8 +214,8 @@ def test_p12_a1_imports_are_stdlib_only_and_never_reach_frozen_phases_os_clock_n
             assert token not in source, (path, token)
         if path in PHASE12_A1_RUNTIME:
             assert not cross and path not in SANCTIONED_P12_EXTRA_STDLIB and path not in NAME_ALLOWANCES
-        if path in PHASE12_A3_RUNTIME:
-            assert not cross, path                                                    # A3 は凍結の phase を直接 import しない（A2 経由）
+        if path in PHASE12_A3_RUNTIME or path in PHASE12_A4_RUNTIME:
+            assert not cross, path                                                    # A3 ／ A4 は凍結の phase を直接 import しない（A2 経由）
         assert "personal_intelligence" not in source and "watchlist_thesis" not in source and "screener" not in source
         assert "ZoneInfo" not in source and "zoneinfo" not in source                     # 固定 +09:00 だけ（tzdata に依らない）
 
@@ -339,4 +351,22 @@ def test_p12_a3_the_contract_records_the_required_clauses_and_no_private_values(
         assert banned not in text, banned
     for name in ("atomic_files", "calendar_authority", "crash_classification", "head_checkpoint", "ledger_store", "run_cli",
                  "run_transaction", "schedule_authority", "status_store"):
+        assert name in text, name
+
+
+def test_p12_a4_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A4_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A3, "43c0b856d41efed397de213a1a06178c5e97ab10", "O_CREAT", "O_EXCL", "run の lock", "ledger の lock",
+                   "LOCK_LIVE", "LOCK_STALE_DEAD", "LOCK_STALE_PID_REUSED", "LOCK_STALE_REBOOT", "LOCK_STALE_TERMINAL",
+                   "LOCK_MALFORMED", "LOCK_UNKNOWN_PROVENANCE", "RUN_ACTIVE", "retry_of", "attempt", "FAILED", "CRASHED",
+                   "ORPHANED_FINALIZATION", "LEDGER_COMMITTED_CHECKPOINT_STALE", "STATUS_STALE", "PARTIAL_PRESENT", ".crashed",
+                   "repair-checkpoint", "regenerate-status", "recover-orphan", "recover-crashed", "recover-partial", "release-lock",
+                   "retry", "cancel", "協調", "Windows", "tasklist", "fsync", "A5 に残すこと", "SUCCEEDED には変えない",
+                   "Phase 12 の凍結ではない", "P12-A5", "run_transaction", "run_cli", "認証ではない"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
+    for name in ("cancel_authority", "injection", "ledger_commit", "operational_lock", "process_probe", "recovery", "retry"):
         assert name in text, name

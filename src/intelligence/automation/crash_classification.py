@@ -4,7 +4,7 @@ run_id ごとに、ledger の状態 ・run の directory（final ／ .partial）
 - `NOT_STARTED`                ledger に無く ・directory も無い
 - `IN_FLIGHT`                  ledger の最後が PLANNED ／ RUNNING で、final も .partial も無い（crash か実行中）
 - `PARTIAL_PRESENT`            `.partial` が在る（finalize の途中で止まった。A4 の分類に予約）
-- `ORPHANED_FINALIZATION`      final の directory が在るのに ledger に SUCCEEDED の record が無い（窓 A）
+- `ORPHANED_FINALIZATION`      final の directory が在るのに ledger に SUCCEEDED ／ ORPHANED_FINALIZATION の終端が無い（窓 A。A4 で回復済みを除外）
 - `LEDGER_COMMITTED_CHECKPOINT_STALE`  ledger に正しい新しい尾があり checkpoint が追いついていない（窓 B）
 - `STATUS_STALE`               ledger と checkpoint は一致し、status が無い ・古い（窓 C）
 - `COMMITTED`                  終端の record ・checkpoint ・status が全て一致（SUCCEEDED の時は final が在る）
@@ -50,8 +50,8 @@ def classify_run(p12_root: Any, run_id: str, state: LedgerState) -> RunEvidence:
     status_class = classify_status(p12_root, state)
     if partial_present:
         classification = "PARTIAL_PRESENT"
-    elif final_present and run_state is not RunState.SUCCEEDED:
-        classification = "ORPHANED_FINALIZATION"
+    elif final_present and run_state not in (RunState.SUCCEEDED, RunState.ORPHANED_FINALIZATION):
+        classification = "ORPHANED_FINALIZATION"                                       # A4: 回復済み（終端 ORPHANED_FINALIZATION）は孤児ではない
     elif run_state is None:
         classification = "NOT_STARTED"
     elif not is_terminal(run_state):
