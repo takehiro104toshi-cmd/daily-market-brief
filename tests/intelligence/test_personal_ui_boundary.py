@@ -33,6 +33,7 @@ from tests.intelligence.phase11_runtime_registry import (FORBIDDEN_P11_IMPORT_PA
                                                          SANCTIONED_P11_MODULES, SANCTIONED_P11_P10_IMPORTERS,
                                                          SANCTIONED_P11_P10_IMPORTS, SANCTIONED_P11_SERVER_STDLIB,
                                                          only_phase11_registration)
+from tests.intelligence.phase12_runtime_registry import P12_BASE, PHASE12_DOCS, PHASE12_RUNTIME, PHASE12_TESTS   # P12 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -140,11 +141,13 @@ def test_p11_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
 
 
 def test_p11_a1_since_the_base_only_registered_phase11_files_and_declared_registration_changed() -> None:
-    assert _changes("--cached", "--name-status", P11_BASE, "--", "src") == {("A", p) for p in PHASE11_RUNTIME}
+    assert _changes("--cached", "--name-status", P11_BASE, "--", "src") == {("A", p) for p in PHASE11_RUNTIME
+                                                                            + PHASE12_RUNTIME}
     assert _git("diff", "--cached", "--name-status", P11_BASE, "--", *FROZEN_SURFACE) == ""
-    assert _changes("--cached", "--name-status", P11_BASE, "--", "docs") <= {("A", p) for p in PHASE11_DOCS}
+    assert _changes("--cached", "--name-status", P11_BASE, "--", "docs") <= {("A", p) for p in PHASE11_DOCS
+                                                                             + PHASE12_DOCS}
     assert _changes("--cached", "--name-status", P11_BASE, "--", "tests") <= {
-        ("A", p) for p in PHASE11_TESTS} | {("M", p) for p in PHASE11_TEST_REGISTRATION}
+        ("A", p) for p in PHASE11_TESTS + PHASE12_TESTS} | {("M", p) for p in PHASE11_TEST_REGISTRATION}
     assert set(PHASE11_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
                                               "tests/intelligence/test_narrative_intelligence_boundary.py",
                                               "tests/intelligence/test_screener_intelligence_boundary.py",
@@ -152,7 +155,7 @@ def test_p11_a1_since_the_base_only_registered_phase11_files_and_declared_regist
                                               "tests/intelligence/test_personal_intelligence_boundary.py"}
     for path in PHASE11_TEST_REGISTRATION:                                            # 凍結の P7 〜 P10 の test の狭い再開
         anchored = _git("show", f"{P11_BASE}:{path}")
-        current = (REPO_ROOT / path).read_text(encoding="utf-8")
+        current = _git("show", f"{P12_BASE}:{path}")             # P11 の登録は P11 の終わりまで（以後の差は P12 の guard が pin）
         assert only_phase11_registration(path, anchored, current), path
         assert not only_phase11_registration(path, anchored, current + "assert True\n")
         assert not only_phase11_registration(path, anchored, anchored)

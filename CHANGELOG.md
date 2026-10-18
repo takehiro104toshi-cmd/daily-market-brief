@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.13 (2026-10-18) — Phase 12 P12-A1 schedule authority ／ run identity ／ state model（純粋な domain の層）
+
+Phase 12（自動化）の最初の gate。`src/intelligence/automation/` に純粋な model と関数だけを足す: schedule の authority（運用の authority ・
+市場の authority ではない。timezone は Asia/Tokyo 固定）・休日 calendar ・時計を読まない計画（`selection_clock_at` は caller が渡し、
+`scheduled_for` だけが日付 ・時点を決める）・決定論の run identity（domain 付き digest）・状態機械（終端は不変 ・retry は新しい run ・
+`ORPHANED_FINALIZATION`）・安全な失敗 code ・順序付きの step の結果 ・hash 鎖の ledger の record と鎖の検証（改変の検出。認証ではない）・
+status の projection（authority ではない）。scheduler ・subprocess ・server ・socket ・network ・資格情報 ・file の書き込みは無い。
+凍結の Phase 4 〜 11 の runtime ・anchor ・凍結の記録は不変。
+
+追加
+・`src/intelligence/automation/`（`__init__` ・`canonical` ・`failure_codes` ・`schedule_model` ・`holiday_calendar` ・`run_planning` ・
+　`run_identity` ・`run_state` ・`step_result` ・`ledger_model` ・`status_projection`）
+・`tests/intelligence/phase12_runtime_registry.py` ・`test_automation_models.py` ・`test_automation_ledger.py` ・`test_automation_boundary.py`
+・`docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md`
+改善
+・凍結の P7 ／ P8 ／ P9 ／ P10 ／ P11 の guard の "since base" の集合に Phase 12 の登録を加えた（test だけ ・行は
+　`PHASE12_TEST_REGISTRATION` に pin。P11 の guard の pin の対象は `P12_BASE` の時点へ）
+修正
+・なし
+
 ## v6.12 (2026-10-17) — Phase 11 final freeze record（P11-A6。文書 ・registry ・guard だけ）
 
 Phase 11 v1（private local PWA）を COMPLETE / CLOSED / FROZEN とする。意味 ／ runtime の凍結 anchor は `43c0b856d41efed397de213a1a06178c5e97ab10`

@@ -36,6 +36,7 @@ from tests.intelligence.phase10_runtime_registry import (P10_A4, P10_ADMIN_INIT,
                                                          only_phase10_registration)
 from tests.intelligence.phase11_runtime_registry import (P11_BASE, PHASE11_DOCS, PHASE11_RUNTIME, PHASE11_TESTS,
                                                          SANCTIONED_P11_P10_IMPORTERS)   # P11 の登録
+from tests.intelligence.phase12_runtime_registry import PHASE12_DOCS, PHASE12_RUNTIME, PHASE12_TESTS   # P12 の登録
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -140,12 +141,12 @@ def test_p10_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
 
 def test_p10_a1_since_the_base_only_registered_phase10_files_and_declared_registration_changed() -> None:
     assert _changes("--cached", "--name-status", P10_BASE, "--", "src") == {("A", p) for p in PHASE10_RUNTIME
-                                                                            + PHASE11_RUNTIME}
+                                                                            + PHASE11_RUNTIME + PHASE12_RUNTIME}
     assert _git("diff", "--cached", "--name-status", P10_BASE, "--", *FROZEN_SURFACE) == ""
     assert _changes("--cached", "--name-status", P10_BASE, "--", "docs") <= {("A", p) for p in PHASE10_DOCS
-                                                                             + PHASE11_DOCS}
+                                                                             + PHASE11_DOCS + PHASE12_DOCS}
     assert _changes("--cached", "--name-status", P10_BASE, "--", "tests") <= {
-        ("A", p) for p in PHASE10_TESTS + PHASE11_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}
+        ("A", p) for p in PHASE10_TESTS + PHASE11_TESTS + PHASE12_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}
     assert set(PHASE10_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
                                               "tests/intelligence/test_narrative_intelligence_boundary.py",
                                               "tests/intelligence/test_screener_intelligence_boundary.py",
