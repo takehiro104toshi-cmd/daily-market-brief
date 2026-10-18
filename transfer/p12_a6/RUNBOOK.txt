@@ -28,9 +28,9 @@ from the screen or from D:\p12_a6_work or D:\p12_a6_private.
     Test-Path D:\p10_a5_private    # must print True  (real P10 root; READ ONLY)
     Test-Path D:\p12_a6_private    # must print False (fresh validation root; the helper creates it)
 
-Retrieve helper v4 from the temporary transfer branch (nothing is merged; the branch holds only these two files). v4 pins the
+Retrieve helper v6 from the temporary transfer branch (nothing is merged; the branch holds only these two files). v6 pins the
 runtime HEAD after the lock-writer fix and the Windows test-portability fix; earlier helper versions refuse it with REPO_HEAD_MISMATCH.
-    git fetch origin transfer/p12-a6-helper-v4
+    git fetch origin transfer/p12-a6-helper-v6
     git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/a6.py      > D:\p12_a6_work\a6.py
     git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/RUNBOOK.txt > D:\p12_a6_work\RUNBOOK.txt
     certutil -hashfile D:\p12_a6_work\a6.py SHA256                  # must equal the SHA256 in the preparation report
@@ -66,6 +66,19 @@ Paste the REPORT lines. Expected last lines: PROBE_TASK_DONE RESULT=PASS, PROBE_
 -------------------------------------------------------------
     <venv python.exe> D:\p12_a6_work\a6.py validate
 
+After a previous attempt that reached the authority stage (D:\p12_a6_private holds real evidence), the sanctioned fresh start is one
+chain (sanctioned by the supervisor for the A6 rerun; it moves the previous root, state, report and logs into D:\p12_a6_work\archive\
+<stamp>\ and deletes nothing; never use --resume for that case):
+    <venv python.exe> D:\p12_a6_work\a6.py archive-previous && <venv python.exe> D:\p12_a6_work\a6.py validate
+
+Windows round-trip clarification (v6 verifier; the A5 contract is unchanged): Task Scheduler re-serializes a registered task and omits
+elements that hold their default value (RunLevel LeastPrivilege, WakeToRun false, RunOnlyIfNetworkAvailable false) and injects the current
+interactive user's SID as the Principal UserId. The installed-task check therefore accepts an explicit value in the queried XML, or an
+omitted element whose effective value is proven through the Task Scheduler COM definition (RunLevel 0, WakeToRun False,
+RunOnlyIfNetworkAvailable False); conflicting or missing evidence fails. The generated authority must still carry no UserId, no Password
+and no account name outside the interpreter / working-directory paths; an installed UserId must be the current interactive user and never
+SYSTEM or a service identity. MultipleInstancesPolicy=IgnoreNew is still required verbatim in the queried XML.
+
 Stay logged on at this desktop until it finishes (the tasks run with your interactive token; a console window may appear briefly
 when Task Scheduler starts the run — do not close it). Expect roughly 10 minutes: the pytest preflight (P12 suites + frozen boundary
 suites) is the longest part. Do not start between 23:40 and 00:20 (the helper refuses: REFUSED_NEAR_MIDNIGHT_RETRY_LATER).
@@ -98,7 +111,8 @@ preflight: PYTHON_OK 3.x  WINDOWS_OK  CREDENTIAL_ENV_CLEAN_OK REMOVED=<n>  (v2 a
            O_EXCL_ATOMIC_OK ROUNDS=10  LOCK_PORTABILITY_OK  PREFLIGHT_TESTS_OK <n> passed  REPO_CLEAN_AFTER_TESTS_OK  ROOTS_UNCHANGED_OK preflight
 authority: SCHEDULE_AUTHORITY_OK SLOTS=12 DIGEST=<d>  CALENDAR_AUTHORITY_OK HOLIDAYS=1  RUNTIME_PIN_OK  AUTHORITY_OK
 manual:    MANUAL_RUN_OK ENTRIES=<n> FOCUS=<n> MUTE=<n> EXCLUDED=<n> UNMATCHED=<n>  LEDGER_OK RECORDS=3  STATUS_OK  IN_PROCESS_NETWORK_TRAPS=0
-install:   TASK_NAMESPACE_FREE_OK  SCHEDULER_PLAN_OK TASKS=12  SCHEDULER_INSTALL_OK TASKS=12  TASK_XML_CLAUSES_OK TASKS=12 CLAUSES=15
+install:   TASK_NAMESPACE_FREE_OK  SCHEDULER_PLAN_OK TASKS=12  SCHEDULER_INSTALL_OK TASKS=12  TASK_XML_CLAUSES_OK TASKS=12 CLAUSES=17 COM_UNAVAILABLE=0
+           DEFAULT_OMISSION_EVIDENCE RUNLEVEL=COM:12 WAKE_TO_RUN=COM:12 RUN_ONLY_IF_NETWORK=COM:12 (or XML:12 where Windows keeps the elements)
            SCHTASKS_CSV_LOCALE=EN|NON_EN  SCHEDULER_STATUS_OK INSTALLED=12 ENABLED_TASKS=<n> ENABLED_SLOTS=11
 taskrun:   TASK_RUN_STARTED  TASK_RUN_OK LAST_RESULT=0|UNKNOWN  SCHED_VS_MANUAL_COUNTS_MATCH=YES  LEDGER_OK RECORDS=6  CHECKPOINT_OK  STATUS_OK
 duplicate: DUP_CHILD ... x2  DUPLICATE_PROCESS_LAYER_OK COMMITS=1  DUPLICATE_SCHEDULER_LAYER_OK LEDGER_UNCHANGED=YES LAST_RESULT=0|UNKNOWN  DUPLICATE_POLICY_OK

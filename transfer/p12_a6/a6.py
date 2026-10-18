@@ -942,36 +942,114 @@ def stage_manual(state: dict) -> None:
 # ------------------------------------------------------------------ stage 3: scheduler install (real schtasks; XML validation)
 
 
-def xml_clauses(xml_text: str, slot_id: str) -> dict:
-    ns = {"t": XML_NAMESPACE}
-    root = ET.fromstring(xml_text.lstrip("\ufeff"))
+SERVICE_SID_PREFIXES = ("S-1-5-80-", "S-1-5-82-", "S-1-5-83-", "S-1-5-90-", "S-1-5-96-")
+SERVICE_ACCOUNT_PREFIXES = ("nt authority\\", "nt service\\", "iis apppool\\", "window manager\\")
+EXEC_CHILDREN = ("Command", "Arguments", "WorkingDirectory")
+INSTALLED_TASK_CLAUSES = ("LOGON_INTERACTIVE", "LEAST_PRIVILEGE", "PRINCIPAL_IDENTITY", "GENERATED_PRINCIPAL_CLEAN", "NO_PASSWORD",
+                          "NO_BAKED_USERNAME", "NO_SECRET", "IGNORE_NEW", "START_WHEN_AVAILABLE", "WAKE_TO_RUN_FALSE", "NETWORK_NOT_REQUIRED",
+                          "EXECUTION_TIME_LIMIT", "INTERPRETER", "WORKING_DIR", "SLOT_ARGUMENT", "OWNER_MARKER", "URI")
+_IDENTITY_FORMS = {}
+
+
+def cached_identity_forms() -> set:
+    if "forms" not in _IDENTITY_FORMS:
+        _IDENTITY_FORMS["forms"] = user_identity_forms()
+    return _IDENTITY_FORMS["forms"]
+
+
+def parse_task_xml(xml_text: str):
+    root = ET.fromstring(xml_text.lstrip("﻿"))
     if root.tag != f"{{{XML_NAMESPACE}}}Task":
         raise Fail("TASK_XML_NAMESPACE")
+    return root
 
-    def text(path: str):
-        node = root.find(path, ns)
-        return None if node is None else (node.text or "").strip()
 
-    exec_args = text("t:Actions/t:Exec/t:Arguments") or ""
-    user_name = os.environ.get("USERNAME", "")
+def _text(root, path: str):
+    node = root.find(path, {"t": XML_NAMESPACE})
+    return None if node is None else (node.text or "").strip()
+
+
+def _username_outside_allowed(root, forms: set, allow_user_id: bool) -> bool:
+    """True when an account-name form (never the SID) occurs in an element text other than the Exec paths (and, for an installed
+    task, the Windows-managed Principal UserId)."""
+    ns = {"t": XML_NAMESPACE}
+    names = {f for f in forms if f and not _SID.match(f)}
+    if not names:
+        return False
+    allowed = set()
+    exec_node = root.find("t:Actions/t:Exec", ns)
+    if exec_node is not None:
+        allowed.update(c for c in exec_node if c.tag.split("}")[-1] in EXEC_CHILDREN)
+    user_node = root.find("t:Principals/t:Principal/t:UserId", ns)
+    if allow_user_id and user_node is not None:
+        allowed.add(user_node)
+    for element in root.iter():
+        if element in allowed or not element.text:
+            continue
+        lowered = element.text.lower()
+        if any(name in lowered for name in names):
+            return True
+    return False
+
+
+def principal_identity_ok(user_id, forms: set) -> bool:
+    """Absent UserId (as generated) or a Windows-managed identity that is the current interactive user and not SYSTEM / a service."""
+    if user_id is None:
+        return True
+    text = user_id.strip()
+    if not text or text in SYSTEM_SIDS or text.startswith(SERVICE_SID_PREFIXES) or text.lower().startswith(SERVICE_ACCOUNT_PREFIXES):
+        return False
+    return text.lower() in forms
+
+
+def _explicit_or_default(xml_value, expected_xml: str, com_value, expected_com: str):
+    """Rule A: the queried XML states the value (COM, when available, must not contradict). Rule B: the XML omits the element
+    (Windows default omission) and the COM effective value proves it. Anything else, including missing or conflicting evidence, fails."""
+    com_norm = None if com_value is None else str(com_value).strip().lower()
+    if xml_value is not None:
+        return xml_value == expected_xml and com_norm in (None, expected_com.lower()), "XML"
+    return com_norm == expected_com.lower(), ("COM" if com_norm == expected_com.lower() else "NONE")
+
+
+def installed_task_clauses(generated_xml: str, queried_xml: str, com, slot_id: str, forms: set):
+    """v6 verifier for one installed task: (clause -> bool, evidence mode per default-omittable clause)."""
+    generated, queried = parse_task_xml(generated_xml), parse_task_xml(queried_xml)
+    com = com or {}
+    modes = {}
+    least, modes["RUNLEVEL"] = _explicit_or_default(_text(queried, "t:Principals/t:Principal/t:RunLevel"), "LeastPrivilege", com.get("RUNLEVEL"), "0")
+    wake, modes["WAKE_TO_RUN"] = _explicit_or_default(_text(queried, "t:Settings/t:WakeToRun"), "false", com.get("WAKE_TO_RUN"), "false")
+    network, modes["RUN_ONLY_IF_NETWORK"] = _explicit_or_default(_text(queried, "t:Settings/t:RunOnlyIfNetworkAvailable"), "false",
+                                                                  com.get("RUN_ONLY_IF_NETWORK"), "false")
+    logon, _ = _explicit_or_default(_text(queried, "t:Principals/t:Principal/t:LogonType"), "InteractiveToken", com.get("LOGONTYPE"), "3")
+    swa, _ = _explicit_or_default(_text(queried, "t:Settings/t:StartWhenAvailable"), "true", com.get("START_WHEN_AVAILABLE"), "true")
+    limit, _ = _explicit_or_default(_text(queried, "t:Settings/t:ExecutionTimeLimit"), "PT30M", com.get("EXECUTION_TIME_LIMIT"), "PT30M")
+    multi_xml = _text(queried, "t:Settings/t:MultipleInstancesPolicy")
+    multi_com = None if com.get("MULTIPLE_INSTANCES") is None else str(com.get("MULTIPLE_INSTANCES")).strip()
+    ignore_new = multi_xml == "IgnoreNew" and multi_com in (None, "2", "EMPTY")           # queried XML is the requirement; COM only cross-checks
+    exec_args = _text(queried, "t:Actions/t:Exec/t:Arguments") or ""
+    ns = {"t": XML_NAMESPACE}
     checks = {
-        "LOGON_INTERACTIVE": text("t:Principals/t:Principal/t:LogonType") == "InteractiveToken",
-        "LEAST_PRIVILEGE": text("t:Principals/t:Principal/t:RunLevel") == "LeastPrivilege",
-        "NOT_SYSTEM": (text("t:Principals/t:Principal/t:UserId") or "") not in SYSTEM_SIDS,
-        "IGNORE_NEW": text("t:Settings/t:MultipleInstancesPolicy") == "IgnoreNew",
-        "START_WHEN_AVAILABLE": text("t:Settings/t:StartWhenAvailable") == "true",
-        "WAKE_TO_RUN_FALSE": text("t:Settings/t:WakeToRun") == "false",
-        "EXECUTION_TIME_LIMIT": text("t:Settings/t:ExecutionTimeLimit") == "PT30M",
-        "NETWORK_NOT_REQUIRED": text("t:Settings/t:RunOnlyIfNetworkAvailable") == "false",
-        "INTERPRETER": text("t:Actions/t:Exec/t:Command") == CFG.interpreter,
-        "WORKING_DIR": text("t:Actions/t:Exec/t:WorkingDirectory") == str(CFG.repo),
+        "LOGON_INTERACTIVE": logon and _text(queried, "t:Principals/t:Principal/t:LogonType") == "InteractiveToken",
+        "LEAST_PRIVILEGE": least and _text(queried, "t:Principals/t:Principal/t:RunLevel") != "HighestAvailable",
+        "PRINCIPAL_IDENTITY": principal_identity_ok(_text(queried, "t:Principals/t:Principal/t:UserId"), forms),
+        "GENERATED_PRINCIPAL_CLEAN": generated.find("t:Principals/t:Principal/t:UserId", ns) is None and generated.find(".//t:Password", ns) is None
+                                     and _text(generated, "t:Principals/t:Principal/t:RunLevel") == "LeastPrivilege",
+        "NO_PASSWORD": queried.find(".//t:Password", ns) is None and generated.find(".//t:Password", ns) is None,
+        "NO_BAKED_USERNAME": not _username_outside_allowed(generated, forms, allow_user_id=False)
+                             and not _username_outside_allowed(queried, forms, allow_user_id=True),
+        "NO_SECRET": "JQUANTS" not in queried_xml.upper() and "JQUANTS" not in generated_xml.upper(),
+        "IGNORE_NEW": ignore_new,
+        "START_WHEN_AVAILABLE": swa,
+        "WAKE_TO_RUN_FALSE": wake,
+        "NETWORK_NOT_REQUIRED": network,
+        "EXECUTION_TIME_LIMIT": limit,
+        "INTERPRETER": _text(queried, "t:Actions/t:Exec/t:Command") == CFG.interpreter,
+        "WORKING_DIR": _text(queried, "t:Actions/t:Exec/t:WorkingDirectory") == str(CFG.repo),
         "SLOT_ARGUMENT": f"scheduled-run --slot-id {slot_id} " in exec_args + " ",
-        "NO_SECRET": "JQUANTS" not in xml_text.upper() and root.find(".//t:Password", ns) is None,
-        "NO_USERNAME": user_name == "" or user_name.lower() not in xml_text.lower(),
-        "OWNER_MARKER": "P12_OWNED" in xml_text and text("t:RegistrationInfo/t:Author") == "P12",
-        "URI": text("t:RegistrationInfo/t:URI") == task_name(slot_id),
+        "OWNER_MARKER": "P12_OWNED" in queried_xml and _text(queried, "t:RegistrationInfo/t:Author") == "P12",
+        "URI": _text(queried, "t:RegistrationInfo/t:URI") == task_name(slot_id),
     }
-    return checks
+    return {k: bool(v) for k, v in checks.items()}, modes
 
 
 def stage_install(state: dict) -> None:
@@ -1005,7 +1083,9 @@ def stage_install(state: dict) -> None:
         report(f"TASK_SET_DELTA ADDED={len(added)} REMOVED={len(before - after)}")
         raise Fail("SCHEDULER_INSTALL_TASK_SET_MISMATCH")
     report(f"SCHEDULER_INSTALL_OK TASKS={len(added)}")
-    clause_failures, locale_en = [], None
+    clause_failures, locale_en, com_unavailable = [], None, 0
+    evidence_modes = {"RUNLEVEL": {}, "WAKE_TO_RUN": {}, "RUN_ONLY_IF_NETWORK": {}}
+    forms = cached_identity_forms()
     for slot_id in sorted(plan["slots"]):
         on_disk = CFG.p12 / "scheduler" / f"{SCHEDULE_ID}.{slot_id}.xml"
         if not on_disk.is_file() or hashlib.sha256(on_disk.read_bytes()).hexdigest() != digests.get(slot_id):
@@ -1016,7 +1096,11 @@ def stage_install(state: dict) -> None:
         xml_text = task_xml_text(task_name(slot_id))
         if xml_text is None:
             raise Fail("TASK_XML_QUERY_FAILED")
-        checks = xml_clauses(xml_text, slot_id)
+        com = com_task_facts(f"{TASK_NAMESPACE}\\{SCHEDULE_ID}", slot_id)
+        com_unavailable += 1 if com is None else 0
+        checks, modes = installed_task_clauses(raw.decode("utf-16"), xml_text, com, slot_id, forms)
+        for key, mode in modes.items():
+            evidence_modes[key][mode] = evidence_modes[key].get(mode, 0) + 1
         clause_failures.extend(f"{slot_id}:{k}" for k, v in checks.items() if not v)
         present, columns = task_query_verbose(task_name(slot_id))
         if not present:
@@ -1027,7 +1111,8 @@ def stage_install(state: dict) -> None:
         for item in clause_failures:
             report(f"TASK_XML_CLAUSE_FAILED {item}")
         raise Fail("TASK_XML_CLAUSES_FAILED")
-    report(f"TASK_XML_CLAUSES_OK TASKS={len(plan['slots'])} CLAUSES=15")
+    report(f"TASK_XML_CLAUSES_OK TASKS={len(plan['slots'])} CLAUSES={len(INSTALLED_TASK_CLAUSES)} COM_UNAVAILABLE={com_unavailable}")
+    report("DEFAULT_OMISSION_EVIDENCE " + " ".join(f"{key}={'/'.join(f'{m}:{n}' for m, n in sorted(v.items()))}" for key, v in evidence_modes.items()))
     report(f"SCHTASKS_CSV_LOCALE={'EN' if locale_en else 'NON_EN'}")
     state["csv_locale_en"] = bool(locale_en)
     code, lines = cli_scheduler("scheduler-status", "--private-root", str(CFG.p12))
@@ -1614,7 +1699,7 @@ PROBE_FOLDERS = ("\\Compass", "\\Compass\\P12", f"{TASK_NAMESPACE}\\{PROBE_SCHED
 XML_BOOL_ELEMENTS = ("WakeToRun", "RunOnlyIfNetworkAvailable", "StartWhenAvailable", "Hidden", "RunOnlyIfIdle", "DisallowStartIfOnBatteries",
                      "StopIfGoingOnBatteries", "AllowHardTerminate", "AllowStartOnDemand", "Enabled")
 XML_ENUM_ELEMENTS = {"MultipleInstancesPolicy": ("IgnoreNew", "Parallel", "Queue", "StopExisting"), "ExecutionTimeLimit": None, "Priority": None}
-_SID = re.compile(r"\AS-1-(\d+-)+\d+\Z")
+_SID = re.compile(r"\AS-1-(\d+-)+\d+\Z", re.IGNORECASE)
 _SAFE_VALUE = re.compile(r"\A[A-Za-z0-9+:.\-]{0,32}\Z")
 
 
@@ -1695,7 +1780,7 @@ def com_task_facts(folder: str, name: str):
               "'RUNLEVEL=' + $d.Principal.RunLevel; 'LOGONTYPE=' + $d.Principal.LogonType; "
               "'USERID_PRESENT=' + (-not [string]::IsNullOrEmpty($d.Principal.UserId)); "
               "'WAKE_TO_RUN=' + $d.Settings.WakeToRun; 'RUN_ONLY_IF_NETWORK=' + $d.Settings.RunOnlyIfNetworkAvailable; "
-              "'MULTIPLE_INSTANCES=' + $d.Settings.MultipleInstancesPolicy; 'START_WHEN_AVAILABLE=' + $d.Settings.StartWhenAvailable; "
+              "'MULTIPLE_INSTANCES=' + $d.Settings.MultipleInstances; 'START_WHEN_AVAILABLE=' + $d.Settings.StartWhenAvailable; "
               "'EXECUTION_TIME_LIMIT=' + $d.Settings.ExecutionTimeLimit; 'HIDDEN=' + $d.Settings.Hidden; "
               "'ENABLED=' + $d.Settings.Enabled; 'XML_HAS_RUNLEVEL=' + $d.XmlText.Contains('<RunLevel>'); "
               "'XML_HAS_WAKE=' + $d.XmlText.Contains('<WakeToRun>'); 'XML_HAS_NETWORK=' + $d.XmlText.Contains('<RunOnlyIfNetworkAvailable>')")
@@ -1768,7 +1853,7 @@ def run_probe_task(_args) -> int:
         else:
             report("COM_FACTS " + " ".join(f"{k}={v}" for k, v in sorted(com.items())))
             # Task Scheduler enums: RunLevel 0 = TASK_RUNLEVEL_LUA (least privilege), 1 = HIGHEST; LogonType 3 = INTERACTIVE_TOKEN;
-            # MultipleInstancesPolicy 2 = IGNORE_NEW
+            # MultipleInstances (TASK_INSTANCES_POLICY) 2 = IGNORE_NEW
             verdicts = {"LEAST_PRIVILEGE": com.get("RUNLEVEL") == "0", "LOGON_INTERACTIVE": com.get("LOGONTYPE") == "3",
                         "WAKE_TO_RUN_FALSE": com.get("WAKE_TO_RUN", "").lower() == "false",
                         "NETWORK_NOT_REQUIRED": com.get("RUN_ONLY_IF_NETWORK", "").lower() == "false",
