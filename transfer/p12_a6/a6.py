@@ -12,6 +12,7 @@ skips (MISSED / NON_BUSINESS_DAY / NOT_DUE / DISABLED), removal of only the A6-o
     python D:\\p12_a6_work\\a6.py status                   # which stages are done
     python D:\\p12_a6_work\\a6.py archive-previous         # move a previous D:\\p12_a6_private (and state) into the archive
     python D:\\p12_a6_work\\a6.py diagnose                 # preflight-only process-probe / lock-classification diagnostics (v2)
+    python D:\\p12_a6_work\\a6.py probe-task               # one disposable A6-owned task: register, query XML + COM facts, remove (v5)
 
 Everything written to the screen starts with "REPORT: " and contains only codes, counts, digests, slot ids and task
 names. No path, pid, date, time, user name, private value or exception text is printed. Private details stay in
@@ -1606,6 +1607,200 @@ def run_diagnose(_args) -> int:
         return 1
 
 
+PROBE_SCHEDULE_ID = "a6-probe"
+PROBE_SLOT_ID = "probe"
+PROBE_TASK_NAME = f"{TASK_NAMESPACE}\\{PROBE_SCHEDULE_ID}\\{PROBE_SLOT_ID}"
+PROBE_FOLDERS = ("\\Compass", "\\Compass\\P12", f"{TASK_NAMESPACE}\\{PROBE_SCHEDULE_ID}")
+XML_BOOL_ELEMENTS = ("WakeToRun", "RunOnlyIfNetworkAvailable", "StartWhenAvailable", "Hidden", "RunOnlyIfIdle", "DisallowStartIfOnBatteries",
+                     "StopIfGoingOnBatteries", "AllowHardTerminate", "AllowStartOnDemand", "Enabled")
+XML_ENUM_ELEMENTS = {"MultipleInstancesPolicy": ("IgnoreNew", "Parallel", "Queue", "StopExisting"), "ExecutionTimeLimit": None, "Priority": None}
+_SID = re.compile(r"\AS-1-(\d+-)+\d+\Z")
+_SAFE_VALUE = re.compile(r"\A[A-Za-z0-9+:.\-]{0,32}\Z")
+
+
+def safe_value(text) -> str:
+    if text is None:
+        return "ABSENT"
+    text = text.strip()
+    return text if text and _SAFE_VALUE.match(text) else ("EMPTY" if not text else "OTHER")
+
+
+def current_user_sid():
+    code, out, _ = run_command(["whoami", "/user", "/fo", "csv", "/nh"], timeout=60)
+    if code != 0:
+        return None
+    for row in csv.reader(io.StringIO(decode_console(out))):
+        if len(row) >= 2 and _SID.match(row[1].strip()):
+            return row[1].strip()
+    return None
+
+
+def user_identity_forms():
+    forms = set()
+    name = os.environ.get("USERNAME", "")
+    domain = os.environ.get("USERDOMAIN", "")
+    if name:
+        forms.add(name.lower())
+        if domain:
+            forms.add(f"{domain}\\{name}".lower())
+            forms.add(f"{name}@{domain}".lower())
+    sid = current_user_sid()
+    if sid:
+        forms.add(sid.lower())
+    return forms
+
+
+def xml_facts(xml_text: str, label: str) -> dict:
+    """Safe facts about one Task Scheduler XML document: element presence and enumerated / boolean values only."""
+    ns = {"t": XML_NAMESPACE}
+    try:
+        root = ET.fromstring(xml_text.lstrip("\ufeff"))
+    except ET.ParseError:
+        report(f"{label}_XML_PARSE=FAILED")
+        return {}
+    has_crlf, has_bom = "\r\n" in xml_text, xml_text.startswith("\ufeff")
+    report(f"{label}_XML_PARSE=OK NAMESPACE={'PRESENT' if root.tag == f'{{{XML_NAMESPACE}}}Task' else 'OTHER'} "
+           f"CRLF={'YES' if has_crlf else 'NO'} BOM={'YES' if has_bom else 'NO'}")
+    principal = root.find("t:Principals/t:Principal", ns)
+    children = [] if principal is None else [c.tag.split('}')[-1] for c in principal]
+    user_id = None if principal is None else principal.findtext("t:UserId", default=None, namespaces=ns)
+    run_level = None if principal is None else principal.findtext("t:RunLevel", default=None, namespaces=ns)
+    logon = None if principal is None else principal.findtext("t:LogonType", default=None, namespaces=ns)
+    forms = user_identity_forms()
+    user_text = (user_id or "").strip()
+    report(f"{label}_PRINCIPAL CHILDREN={','.join(children) or 'NONE'} LOGON_TYPE={safe_value(logon)} RUNLEVEL={safe_value(run_level)} "
+           f"USERID={'ABSENT' if user_id is None else 'PRESENT'} USERID_IS_SID={'YES' if _SID.match(user_text) else 'NO'} "
+           f"USERID_IS_SYSTEM={'YES' if user_text in SYSTEM_SIDS else 'NO'} "
+           f"USERID_IS_CURRENT_USER={'NA' if not user_text else ('YES' if user_text.lower() in forms else 'NO')}")
+    settings = root.find("t:Settings", ns)
+    present = {} if settings is None else {c.tag.split('}')[-1]: (c.text or "").strip() for c in settings}
+    bools = " ".join(f"{name}={safe_value(present.get(name))}" for name in XML_BOOL_ELEMENTS)
+    enums = " ".join(f"{name}={safe_value(present.get(name))}" for name in XML_ENUM_ELEMENTS)
+    report(f"{label}_SETTINGS {bools}")
+    report(f"{label}_SETTINGS_ENUMS {enums} CHILD_COUNT={len(present)}")
+    exec_node = root.find("t:Actions/t:Exec", ns)
+    exec_texts = {} if exec_node is None else {c.tag.split('}')[-1]: (c.text or "") for c in exec_node}
+    exec_has_user = any(form in value.lower() for form in forms for value in exec_texts.values() if form and not _SID.match(form))
+    other_texts = [(e.text or "") for e in root.iter() if e is not exec_node and e not in (list(exec_node) if exec_node is not None else [])]
+    other_has_user = any(form in value.lower() for form in forms for value in other_texts if form and value and value.strip() != user_text)
+    report(f"{label}_USERNAME_OCCURRENCE EXEC_PATHS={'YES' if exec_has_user else 'NO'} ELSEWHERE={'YES' if other_has_user else 'NO'} "
+           f"PASSWORD_ELEMENT={'PRESENT' if root.find('.//t:Password', ns) is not None else 'ABSENT'}")
+    return {"run_level": run_level, "logon": logon, "user_id_present": user_id is not None, "settings": present}
+
+
+def com_task_facts(folder: str, name: str):
+    """Effective task definition through the Task Scheduler COM API (enums and booleans only)."""
+    script = ("$s = New-Object -ComObject Schedule.Service; $s.Connect(); "
+              f"$t = $s.GetFolder('{folder}').GetTask('{name}'); $d = $t.Definition; "
+              "'RUNLEVEL=' + $d.Principal.RunLevel; 'LOGONTYPE=' + $d.Principal.LogonType; "
+              "'USERID_PRESENT=' + (-not [string]::IsNullOrEmpty($d.Principal.UserId)); "
+              "'WAKE_TO_RUN=' + $d.Settings.WakeToRun; 'RUN_ONLY_IF_NETWORK=' + $d.Settings.RunOnlyIfNetworkAvailable; "
+              "'MULTIPLE_INSTANCES=' + $d.Settings.MultipleInstancesPolicy; 'START_WHEN_AVAILABLE=' + $d.Settings.StartWhenAvailable; "
+              "'EXECUTION_TIME_LIMIT=' + $d.Settings.ExecutionTimeLimit; 'HIDDEN=' + $d.Settings.Hidden; "
+              "'ENABLED=' + $d.Settings.Enabled; 'XML_HAS_RUNLEVEL=' + $d.XmlText.Contains('<RunLevel>'); "
+              "'XML_HAS_WAKE=' + $d.XmlText.Contains('<WakeToRun>'); 'XML_HAS_NETWORK=' + $d.XmlText.Contains('<RunOnlyIfNetworkAvailable>')")
+    code, out = powershell(script)
+    if code != 0:
+        return None
+    facts = {}
+    for line in out.splitlines():
+        if "=" in line:
+            key, _, value = line.strip().partition("=")
+            if key.isidentifier():
+                facts[key] = safe_value(value)
+    return facts or None
+
+
+def run_probe_task(_args) -> int:
+    """One disposable A6-owned task: generate with the runtime's task_xml, register, query (XML + COM), report safe facts, remove."""
+    report.attach(CFG.work)
+    if not CFG.work.is_dir():
+        report("FAIL WORK_DIR_MISSING")
+        return 1
+    CFG.private_dir.mkdir(parents=True, exist_ok=True)
+    created_folders = []
+    registered = False
+    try:
+        report(f"PYTHON_OK {sys.version_info.major}.{sys.version_info.minor}")
+        report("WINDOWS_OK" if IS_WINDOWS else "WINDOWS_OK PLATFORM=SELFTEST")
+        check_repo()
+        report("REPO_HEAD_OK")
+        rt = runtime()
+        if system_timezone() != REQUIRED_TIMEZONE:
+            raise Fail("TIMEZONE_NOT_TOKYO")
+        sm, hc, td = rt.schedule_model, rt.holiday_calendar, rt.task_definition
+        calendar = hc.HolidayCalendar(calendar_id="a6-probe-cal", version=1, dates=())
+        slot = sm.ScheduleSlot(slot_id=PROBE_SLOT_ID, local_time="23:59", weekday_mask=("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"),
+                               late_window_seconds=0, readiness_on_non_business_day=True, enabled=True)
+        schedule = sm.AutomationSchedule(schedule_id=PROBE_SCHEDULE_ID, version=1, timezone=sm.TIMEZONE_V1, enabled=True, slots=(slot,),
+                                         holiday_calendar_ref=calendar.reference(), created_at="2026-01-01T00:00:00Z", supersedes=None)
+        paths = td.SchedulerPaths(interpreter=CFG.interpreter, repo_root=str(CFG.repo), runtime_root=str(CFG.repo), private_root=str(CFG.p12),
+                                  p9_root=str(CFG.p9), p10_root=str(CFG.p10))
+        definition = td.task_definitions(schedule, paths)[0]
+        if definition.task_name != PROBE_TASK_NAME:
+            raise Fail("PROBE_TASK_NAME_UNEXPECTED")
+        xml_file = CFG.private_dir / "probe_task.xml"
+        xml_file.write_bytes(definition.xml)
+        generated = definition.xml.decode("utf-16")
+        xml_facts(generated, "GENERATED")
+        if PROBE_TASK_NAME in all_task_names():
+            raise Fail("PROBE_TASK_ALREADY_PRESENT")
+        for folder in PROBE_FOLDERS:
+            if task_folder_present(folder) is False:
+                created_folders.append(folder)
+        code, _ = schtasks("/Create", "/TN", PROBE_TASK_NAME, "/XML", str(xml_file), "/F")
+        if code != 0:
+            raise Fail("PROBE_TASK_CREATE_FAILED")
+        registered = True
+        report("PROBE_TASK_REGISTERED")
+        names = all_task_names()
+        report(f"TASK_QUERY_MATCH={'YES' if PROBE_TASK_NAME in names else 'NO'} A6_VALIDATION_TASKS_PRESENT={sum(1 for n in names if n.startswith(TASK_PREFIX))}")
+        queried = task_xml_text(PROBE_TASK_NAME)
+        if queried is None:
+            raise Fail("PROBE_TASK_XML_QUERY_FAILED")
+        q = xml_facts(queried, "QUERIED")
+        if q:
+            report(f"QUERIED_URI_MATCH={'YES' if f'<URI>{PROBE_TASK_NAME}</URI>' in queried else 'NO'} "
+                   f"OWNER_MARKER={'PRESENT' if 'P12_OWNED' in queried else 'ABSENT'}")
+        com = com_task_facts(f"{TASK_NAMESPACE}\\{PROBE_SCHEDULE_ID}", PROBE_SLOT_ID)
+        if com is None:
+            report("COM_FACTS=UNAVAILABLE")
+        else:
+            report("COM_FACTS " + " ".join(f"{k}={v}" for k, v in sorted(com.items())))
+            # Task Scheduler enums: RunLevel 0 = TASK_RUNLEVEL_LUA (least privilege), 1 = HIGHEST; LogonType 3 = INTERACTIVE_TOKEN;
+            # MultipleInstancesPolicy 2 = IGNORE_NEW
+            verdicts = {"LEAST_PRIVILEGE": com.get("RUNLEVEL") == "0", "LOGON_INTERACTIVE": com.get("LOGONTYPE") == "3",
+                        "WAKE_TO_RUN_FALSE": com.get("WAKE_TO_RUN", "").lower() == "false",
+                        "NETWORK_NOT_REQUIRED": com.get("RUN_ONLY_IF_NETWORK", "").lower() == "false",
+                        "IGNORE_NEW": com.get("MULTIPLE_INSTANCES") == "2", "START_WHEN_AVAILABLE": com.get("START_WHEN_AVAILABLE", "").lower() == "true",
+                        "EXECUTION_TIME_LIMIT": com.get("EXECUTION_TIME_LIMIT") == "PT30M"}
+            report("EFFECTIVE_CONTRACT " + " ".join(f"{k}={'OK' if v else 'FAILED'}" for k, v in verdicts.items()))
+        present, columns = task_query_verbose(PROBE_TASK_NAME)
+        report(f"VERBOSE_QUERY={'OK' if present else 'FAILED'} CSV_LOCALE={'EN' if columns and 'Last Result' in columns else 'NON_EN'}")
+        report("PROBE_TASK_DONE RESULT=PASS")
+        return 0
+    except Fail as exc:
+        report(f"FAIL {exc}")
+        report("PROBE_TASK_DONE RESULT=FAIL")
+        return 1
+    except Exception as exc:  # noqa: BLE001
+        import traceback
+        private_log(traceback.format_exc())
+        report(f"FAIL UNEXPECTED {type(exc).__name__}")
+        report("PROBE_TASK_DONE RESULT=FAIL")
+        return 1
+    finally:
+        if registered:
+            code, _ = schtasks("/Delete", "/TN", PROBE_TASK_NAME, "/F")
+            gone = PROBE_TASK_NAME not in all_task_names() if code == 0 else False
+            report(f"PROBE_TASK_REMOVED={'YES' if gone else 'NO'}")
+            removed = 0
+            for folder in reversed(created_folders):
+                if delete_empty_task_folder(folder):
+                    removed += 1
+            report(f"PROBE_FOLDERS_REMOVED={removed} CREATED={len(created_folders)}")
+
+
 def run_status(_args) -> int:
     report.attach(CFG.work)
     state = load_state()
@@ -1650,7 +1845,8 @@ def main(argv=None) -> int:
     sub.add_parser("status")
     sub.add_parser("archive-previous")
     sub.add_parser("diagnose")
-    for p in (validate, *[sub.choices[k] for k in ("status", "archive-previous", "diagnose")]):
+    sub.add_parser("probe-task")
+    for p in (validate, *[sub.choices[k] for k in ("status", "archive-previous", "diagnose", "probe-task")]):
         for name in ("--repo", "--p9-root", "--p10-root", "--p12-root", "--work"):       # self-test overrides only (not for operators)
             p.add_argument(name, default=None, help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
@@ -1659,7 +1855,8 @@ def main(argv=None) -> int:
         if value is not None:
             setattr(CFG, attribute, Path(value))
     install_network_trap()
-    return {"validate": run_validate, "status": run_status, "archive-previous": run_archive_previous, "diagnose": run_diagnose}[args.command](args)
+    return {"validate": run_validate, "status": run_status, "archive-previous": run_archive_previous, "diagnose": run_diagnose,
+            "probe-task": run_probe_task}[args.command](args)
 
 
 if __name__ == "__main__":

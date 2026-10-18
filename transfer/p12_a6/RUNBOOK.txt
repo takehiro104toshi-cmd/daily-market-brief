@@ -53,6 +53,15 @@ O_EXCL_ATOMIC_OK ROUNDS=10  LOCK_PORTABILITY_OK  PROBE_TIMING_MS preflight ...  
 On failure it prints LOCK_LIVE_ACTUAL=<class>, LOCK_LIVE_FACTS ..., LOCK_LIVE_RETRY ..., PROBE_TIMING_MS at_failure ... then FAIL <code>
 and DIAGNOSE_DONE RESULT=FAIL. Paste the REPORT lines; the supervisor decides whether `validate` may run.
 
+1b. v5 Task Scheduler probe (one command; one disposable task \Compass\P12\a6-probe\probe; nothing under D:\p12_a6_private is touched)
+--------------------------------------------------------------------------------------------------------------------------------
+    <venv python.exe> D:\p12_a6_work\a6.py probe-task
+
+It generates one task with the runtime's own task_xml, registers it, re-reads it with `schtasks /Query /XML` and with the Task Scheduler
+COM API, prints element presence / enumerated values only (GENERATED_* vs QUERIED_* lines, COM_FACTS, EFFECTIVE_CONTRACT), then removes the
+task (PROBE_TASK_REMOVED=YES) and any folder it created. No user name, SID, path, raw XML or command line is printed; the task never runs.
+Paste the REPORT lines. Expected last lines: PROBE_TASK_DONE RESULT=PASS, PROBE_TASK_REMOVED=YES.
+
 1. Run (one command; stages 0..9; stops on the first failure)
 -------------------------------------------------------------
     <venv python.exe> D:\p12_a6_work\a6.py validate
