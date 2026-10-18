@@ -24,6 +24,7 @@ from tests.intelligence.phase9_runtime_registry import PHASE9_RUNTIME   # P9-A1:
 from tests.intelligence.phase10_runtime_registry import PHASE10_RUNTIME   # P10-A1: Phase 10 の登録済み runtime（完全一致）
 from tests.intelligence.phase11_runtime_registry import PHASE11_RUNTIME, is_phase11_addition   # P11-A1 ／ A3: Phase 11
 from tests.intelligence.phase12_runtime_registry import PHASE12_RUNTIME, is_phase12_addition   # P12-A1: Phase 12
+from tests.intelligence.phase13_runtime_registry import PHASE13_RUNTIME, is_phase13_addition   # P13-A0: Phase 13（登録だけ）
 
 PHASE7_PACKAGE = "src/intelligence/narrative_intelligence"
 #: 登録済みの Phase 7 runtime（P7-A1: __init__ / synthesis_model、P7-A2: input_model / pit_assembler、
@@ -34,7 +35,8 @@ PHASE7_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE7_PACKAGE}/{name}.py" for name i
     "render_templates_ja", "rendered_model", "synthesis_engine", "synthesis_model", "text_renderer"))
 ADDITION_STATUSES = ("A", "??")
 PHASE7_EXCLUDED_PATHSPECS: Tuple[str, ...] = tuple(f":(exclude,literal){path}" for path in PHASE7_RUNTIME + PHASE8_RUNTIME
-                                                   + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME + PHASE12_RUNTIME)
+                                                   + PHASE9_RUNTIME + PHASE10_RUNTIME + PHASE11_RUNTIME + PHASE12_RUNTIME
+                                                   + PHASE13_RUNTIME)
 #: Phase 6 の read-only API を import してよい Phase 7 の module（P7-A2 の監督判断。完全な path だけ）
 PHASE7_SANCTIONED_IMPORTERS: Tuple[str, ...] = (f"{PHASE7_PACKAGE}/pit_assembler.py",)
 
@@ -85,9 +87,10 @@ PHASE6_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]] 
 
 def is_phase7_addition(status: str, path: str) -> bool:
     return (status in ADDITION_STATUSES and path in (PHASE7_RUNTIME + PHASE8_RUNTIME + PHASE9_RUNTIME + PHASE10_RUNTIME
-                                                    + PHASE11_RUNTIME + PHASE12_RUNTIME)
+                                                    + PHASE11_RUNTIME + PHASE12_RUNTIME + PHASE13_RUNTIME)
             or is_phase11_addition(status, path)                  # P11-A3: 凍結していない Phase 11 の runtime の修正（M）も
-            or is_phase12_addition(status, path))                 # P12-A1: 凍結していない Phase 12 の runtime も
+            or is_phase12_addition(status, path)                  # P12-A1: 凍結していない Phase 12 の runtime も
+            or is_phase13_addition(status, path))                 # P13-A0: 登録済みの Phase 13 の追加だけ（A0 では空）
 
 
 def is_sanctioned_importer(path: str) -> bool:

@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.27 (2026-10-18) — Phase 13 P13-A0 runtime surface registration（test ・文書だけ ・runtime は無い）
+
+Phase 13（Market Memory ／ Review State Memory）の最初の gate。**P13 の `src/` の file は足さない**（package も `__init__` も無い ・
+`PHASE13_RUNTIME = ()`）。凍結の P7 〜 P12 の boundary test が `src/` の面の完全一致を要するため、P12-A1 と同じ様式で test だけの登録の仕組みを
+置く: `phase13_runtime_registry.py`（固定の `P13_BASE` ＝ `aded7ee…` ・空の `PHASE13_RUNTIME` ・`PHASE13_RUNTIME_AUTHORIZATION` ・
+`is_phase13_addition` は登録済みの追加だけ ・`PHASE13_TEST_REGISTRATION` の行の完全一致）、凍結の 7 file への登録の行（src ／ tests ／ docs の面の
+集合に `PHASE13_*` を足す ・P12 の登録の検査を `P13_BASE` の snapshot に pin し直す ・P12 の凍結と P12.5 の closeout の「src 不変」を「登録した
+P13 の追加だけ」に狭める。importer の test には触れない）、guard `test_market_memory_boundary.py`（registry の digest で drift を止める ・
+認可の束縛 ・blob ・package の不在は今 ・base ・設計の anchor で pin ・negative control）。importer の許可は無い（P13-A2a は別の gate）。
+P8 〜 P12 の runtime ・P12.5 の設計の契約は object 一致。P13-A1 以後 ・B-track ・P14 は未着手。
+
+追加
+・`tests/intelligence/phase13_runtime_registry.py`
+・`tests/intelligence/test_market_memory_boundary.py`
+・`docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md`
+改善
+・`tests/intelligence/phase7_runtime_registry.py` ・`test_narrative_intelligence_boundary.py` ・`test_screener_intelligence_boundary.py` ・
+　`test_watchlist_thesis_boundary.py` ・`test_personal_intelligence_boundary.py` ・`test_personal_ui_boundary.py` ・`test_automation_boundary.py`
+　（P13-A0 の登録の行だけ。`PHASE13_TEST_REGISTRATION` が完全一致で pin）
+修正
+・なし
+
 ## v6.26 (2026-10-18) — Phase 12.5 design closeout record（P12.5-A5。文書 ・registry ・guard だけ ・runtime は無い）
 
 Phase 12.5（Market Memory ／ Obsidian の設計）の architecture の設計を DESIGN COMPLETE / CLOSED / FROZEN とする記録。設計の anchor は
