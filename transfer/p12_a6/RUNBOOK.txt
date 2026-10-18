@@ -1,0 +1,120 @@
+P12-A6  WINDOWS REAL-MACHINE AUTOMATION VALIDATION  (repo-external helper; do not commit a6.py or this file to the runtime branch)
+=====================================================================================================================================
+
+What this validates: the Phase 12 automation runtime at HEAD 23e1cf5efe95c5f54f845aae3fed84982b3eb7cb on a real Windows machine with
+the real Task Scheduler: authority written through the real CLI, one manual scheduled-run, task install (XML clauses checked), one run
+started by Task Scheduler, duplicate invocations (two processes; the scheduler starting an already-succeeded instance again), the
+unattended RECOVERY_REQUIRED policy against synthetic evidence (stale lock, unknown-provenance lock, orphaned finalization, stale
+checkpoint, partial directory) and the human recovery commands afterwards, the semantic skips (MISSED / NON_BUSINESS_DAY weekend and
+holiday / NOT_DUE / DISABLED), removal of only the A6-owned tasks, and a final verification. The real P9 / P10 roots stay READ ONLY
+(manifested before and after every stage). Zero network, zero credentials, zero J-Quants, zero publication. The repository is never
+pulled, fetched, checked out, reset, cleaned or stashed.
+
+Paste back ONLY the lines that start with "REPORT:" (they are also saved in D:\p12_a6_work\a6_report.txt). Never paste anything else
+from the screen or from D:\p12_a6_work or D:\p12_a6_private.
+
+0. One-time setup (one PowerShell window; keep it for everything)
+------------------------------------------------------------------
+    cd D:\daily-market-brief\daily-market-brief
+    git fetch origin claude/investment-intelligence-phase6
+    git checkout claude/investment-intelligence-phase6
+    git merge --ff-only origin/claude/investment-intelligence-phase6
+    git rev-parse HEAD             # must print 23e1cf5efe95c5f54f845aae3fed84982b3eb7cb
+    git status --porcelain         # must print nothing
+    tzutil /g                      # must print Tokyo Standard Time
+    Remove-Item Env:JQUANTS_API_KEY -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force D:\p12_a6_work | Out-Null
+    Test-Path D:\p9_a5_private     # must print True  (real P9 root; READ ONLY)
+    Test-Path D:\p10_a5_private    # must print True  (real P10 root; READ ONLY)
+    Test-Path D:\p12_a6_private    # must print False (fresh validation root; the helper creates it)
+
+Retrieve the helper from the temporary transfer branch (nothing is merged; the branch holds only these two files):
+    git fetch origin transfer/p12-a6-helper-v1
+    git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/a6.py      > D:\p12_a6_work\a6.py
+    git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/RUNBOOK.txt > D:\p12_a6_work\RUNBOOK.txt
+    certutil -hashfile D:\p12_a6_work\a6.py SHA256                  # must equal the SHA256 in the preparation report
+    git status --porcelain                                          # still nothing (the files are outside the checkout)
+Note: PowerShell's ">" redirection re-encodes text. If certutil does not match, retrieve with cmd.exe instead:
+    cmd /c "git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/a6.py > D:\p12_a6_work\a6.py"
+    cmd /c "git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/RUNBOOK.txt > D:\p12_a6_work\RUNBOOK.txt"
+
+Use the repository's virtual-environment Python (the one pytest runs with). The same python.exe becomes the Command of the Task
+Scheduler tasks, so it must stay in place while the validation runs. Set UTF-8 for this window:
+    $env:PYTHONUTF8 = "1"; $env:PYTHONIOENCODING = "utf-8"
+
+1. Run (one command; stages 0..9; stops on the first failure)
+-------------------------------------------------------------
+    <venv python.exe> D:\p12_a6_work\a6.py validate
+
+Stay logged on at this desktop until it finishes (the tasks run with your interactive token; a console window may appear briefly
+when Task Scheduler starts the run — do not close it). Expect roughly 10 minutes: the pytest preflight (P12 suites + frozen boundary
+suites) is the longest part. Do not start between 23:40 and 00:20 (the helper refuses: REFUSED_NEAR_MIDNIGHT_RETRY_LATER).
+
+Stage | Name       | Final line        | What happens
+  0   | preflight  | STAGE_PASS preflight | Windows, Tokyo time zone, roots, HEAD/clean, P11 anchor, P12 pins, process-probe and lock checks with
+      |            |                      | helper-owned child processes, P12 + frozen boundary pytest, roots manifested
+  1   | authority  | STAGE_PASS authority | synthetic schedule "a6-validation" (12 slots), calendar (1 synthetic holiday), runtime pin — all via the real CLI
+  2   | manual     | STAGE_PASS manual    | scheduled-run of slot "manual" (real clock) → SUCCEEDED; ledger / artifacts / status checked
+  3   | install    | STAGE_PASS install   | scheduler-install plan → --apply; every task XML re-read from Windows and 15 clauses checked; scheduler-status
+  4   | taskrun    | STAGE_PASS taskrun   | schtasks /Run of \Compass\P12\a6-validation\sched; ledger polled (≤ 5 min); Last Result read
+  5   | duplicate  | STAGE_PASS duplicate | two processes for slot "dup" → exactly one commit; the scheduler starts "sched" again → ledger unchanged
+  6   | recovery   | STAGE_PASS recovery  | rec1..rec5 synthetic evidence → unattended refusal (exit 5, evidence byte-identical) → human recovery → run
+  7   | skips      | STAGE_PASS skips     | MISSED (+repeat), NON_BUSINESS_DAY weekend + holiday (+repeats), NOT_DUE, DISABLED
+  8   | remove     | STAGE_PASS remove    | scheduler-remove plan → --apply; the task list equals the one before install; idempotent re-remove
+  9   | verify     | A6_PASS then STAGE_PASS verify | roots unchanged, HEAD/clean, ledger 30 records (7 SUCCEEDED / 3 SKIPPED / 1 ORPHANED_FINALIZATION),
+      |            |                      | checkpoint, status, run directories, zero network; D:\p12_a6_private is MOVED into D:\p12_a6_work\archive\
+
+Optional (only if the supervisor asks): `validate --full-suite` additionally runs the whole pytest suite after A6_PASS and reports
+FULL_SUITE and REPO_DIRTY_AFTER_FULL_SUITE FILES=<n>. The full suite is known to rewrite one tracked file
+(data\investment_journal\journal.json); the helper never touches the checkout, so after that report run exactly:
+    git restore --staged --worktree -- data/investment_journal/journal.json
+and paste the output of `git status --porcelain` (must be empty).
+
+2. Expected REPORT lines (safe aggregates only; <n> = a count, <d> = a digest prefix)
+--------------------------------------------------------------------------------------
+preflight: PYTHON_OK 3.x  WINDOWS_OK  CREDENTIAL_ENV_CLEAN_OK REMOVED=<n>  TIMEZONE_OK  WORK_DIR_OK  P12_ROOT_FRESH_OK  REPO_HEAD_OK  REPO_CLEAN_OK
+           INTERPRETER_VENV=YES  P11_ANCHOR_OK FILES=12  P12_PINS_OK FILES=<n>  P9_MANIFEST_CAPTURED FILES=<n>  P10_MANIFEST_CAPTURED FILES=<n>
+           ROOTS_UNCHANGED_OK before  BOOT_MARKER=ABSENT (expected on Windows)  PROCESS_PROBE_OK  OPEN_FILE_UNLINK=REFUSED (expected on Windows)
+           O_EXCL_ATOMIC_OK ROUNDS=10  LOCK_PORTABILITY_OK  PREFLIGHT_TESTS_OK <n> passed  REPO_CLEAN_AFTER_TESTS_OK  ROOTS_UNCHANGED_OK preflight
+authority: SCHEDULE_AUTHORITY_OK SLOTS=12 DIGEST=<d>  CALENDAR_AUTHORITY_OK HOLIDAYS=1  RUNTIME_PIN_OK  AUTHORITY_OK
+manual:    MANUAL_RUN_OK ENTRIES=<n> FOCUS=<n> MUTE=<n> EXCLUDED=<n> UNMATCHED=<n>  LEDGER_OK RECORDS=3  STATUS_OK  IN_PROCESS_NETWORK_TRAPS=0
+install:   TASK_NAMESPACE_FREE_OK  SCHEDULER_PLAN_OK TASKS=12  SCHEDULER_INSTALL_OK TASKS=12  TASK_XML_CLAUSES_OK TASKS=12 CLAUSES=15
+           SCHTASKS_CSV_LOCALE=EN|NON_EN  SCHEDULER_STATUS_OK INSTALLED=12 ENABLED_TASKS=<n> ENABLED_SLOTS=11
+taskrun:   TASK_RUN_STARTED  TASK_RUN_OK LAST_RESULT=0|UNKNOWN  SCHED_VS_MANUAL_COUNTS_MATCH=YES  LEDGER_OK RECORDS=6  CHECKPOINT_OK  STATUS_OK
+duplicate: DUP_CHILD ... x2  DUPLICATE_PROCESS_LAYER_OK COMMITS=1  DUPLICATE_SCHEDULER_LAYER_OK LEDGER_UNCHANGED=YES LAST_RESULT=0|UNKNOWN  DUPLICATE_POLICY_OK
+recovery:  STALE_LOCK_REFUSAL_OK ... STALE_LOCK_HUMAN_RELEASE_OK  STALE_LOCK_AFTER_RELEASE_RUN_OK  UNKNOWN_LOCK_REFUSAL_OK ...
+           UNKNOWN_LOCK_RELEASE_REFUSED_OK LOCK_PRESERVED=YES  ORPHAN_CRASH_SIMULATED_OK  ORPHAN_REFUSAL_OK ...  ORPHAN_HUMAN_RECOVERY_OK
+           UNATTENDED_NO_RETRY_OK ...  HUMAN_RETRY_OK ATTEMPT=2  RETRIED_INSTANCE_ALREADY_SUCCEEDED_OK  STALE_CHECKPOINT_REFUSAL_OK ...
+           CHECKPOINT_REPAIR_EXACT_OK  STALE_CHECKPOINT_AFTER_REPAIR_RUN_OK  PARTIAL_REFUSAL_OK ...  PARTIAL_HUMAN_RECOVERY_OK PRESERVED=YES
+           PARTIAL_AFTER_RECOVERY_RUN_OK  RECOVERY_REQUIRED_POLICY_OK  HUMAN_RECOVERY_OK  LEDGER_OK RECORDS=24
+skips:     MISSED_SKIP_OK LEDGER_RECORDS=2 REPEAT=ALREADY_SKIPPED  NON_BUSINESS_SKIP_OK WEEKEND=1 HOLIDAY=1 REPEAT=ALREADY_SKIPPED
+           NOT_DUE_NO_LEDGER_OK  DISABLED_NO_LEDGER_OK  LEDGER_OK RECORDS=30
+remove:    SCHEDULER_REMOVE_PLAN_OK TASKS=12  SCHEDULER_REMOVE_OK REMOVED=12 FOREIGN_TASKS_UNTOUCHED=<n>  SCHEDULER_REMOVE_IDEMPOTENT_OK
+           TASK_FOLDER_CLEANUP=DONE|PARTIAL|UNAVAILABLE REMOVED=<n>  SCHEDULER_STATUS_AFTER_REMOVE_OK
+verify:    REPO_HEAD_OK  REPO_CLEAN_OK  P11_ANCHOR_OK FILES=12  LEDGER_OK RECORDS=30 SUCCEEDED=7 SKIPPED=3 ORPHANED_FINALIZATION=1  CHECKPOINT_OK
+           STATUS_OK HEALTH=<code>  RUN_DIRECTORIES_OK FINAL=8 CRASHED=1 PARTIAL=0  LOCKS_REMAINING=1 EXPECTED=1 KIND=UNKNOWN_PROVENANCE_PRESERVED
+           SCHEDULER_REMOVE_OK VERIFIED=YES  IN_PROCESS_NETWORK_TRAPS=0  ZERO_NETWORK_OK ...  ROOTS_UNCHANGED_OK after  VALIDATION_ROOT_ARCHIVED=YES
+           A6_PASS  STAGE_PASS verify
+every stage also prints ROOTS_UNCHANGED_OK <stage> before / after, and STAGE_START / STAGE_PASS <stage>.
+
+3. If a stage fails
+-------------------
+- The helper prints FAIL <code> and STAGE_FAIL <stage>, then (if tasks were installed) FAILSAFE_REMOVE ... which removes ONLY the
+  A6-owned tasks (\Compass\P12\a6-validation\*). Nothing else is removed; no evidence is deleted. Paste the REPORT lines and STOP.
+- FAIL P9_MUTATED / P10_MUTATED: a root changed since preflight. STOP and report; the helper never repairs anything.
+- FAIL REFUSED_NEAR_MIDNIGHT_RETRY_LATER: start again after 00:20.
+- FAIL P12_ROOT_NOT_EMPTY_USE_ARCHIVE_PREVIOUS or STATE_PRESENT_USE_RESUME_OR_ARCHIVE_PREVIOUS: a previous attempt left its
+  evidence. Do not delete it. Only after the supervisor says so: `<venv python.exe> D:\p12_a6_work\a6.py archive-previous` moves
+  D:\p12_a6_private and the previous state / report / logs into D:\p12_a6_work\archive\<stamp>\ (nothing is deleted); then re-run
+  `validate`. `validate --resume` instead continues after the last completed stage (use only when the supervisor asks).
+- `<venv python.exe> D:\p12_a6_work\a6.py status` prints the completed stages and whether A6 tasks are still installed.
+- If the process was killed mid-way and `status` says TASKS_INSTALLED=YES, run `validate --resume` or paste the status and wait for
+  instructions. Until the tasks are removed they would start the networkless CLI daily at the synthetic times; each such start can
+  only end in ALREADY_SUCCEEDED / MISSED / RECOVERY_REQUIRED against D:\p12_a6_private (never the production roots).
+
+4. Private files (stay on the machine; never sent)
+--------------------------------------------------
+D:\p12_a6_work\a6_state.json (stage progress, slot plan) · a6_report.txt (the REPORT lines, pasteable) · a6_private.log (child stdout /
+stderr with paths) · private\ (manifests, schedule / calendar JSON, pytest logs, probe root) · evidence\<stage>.json · archive\<stamp>\
+(the whole validation root after A6_PASS, or a previous attempt after archive-previous). D:\p12_a6_private exists only while the
+validation runs. You may delete D:\p12_a6_work\archive after the supervisor closes A6.
