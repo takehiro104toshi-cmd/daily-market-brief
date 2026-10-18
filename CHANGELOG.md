@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.18 (2026-10-18) — Phase 12 P12-A5 Windows Task Scheduler integration ＋ unattended hardening
+
+Task Scheduler → `run_cli scheduled-run` → A1 の計画（selection_clock_at は入口で 1 回 ・意味は scheduled_for から）→ A3 ／ A4 の transaction。
+決定論の task の XML（名前空間 `\Compass\P12\<schedule_id>\<slot_id>` ・所有の印 ・InteractiveToken ・LeastPrivilege ・IgnoreNew ・
+StartWhenAvailable ・WakeToRun=false）・schtasks ／ tzutil の狭い adapter と test double ・install ／ remove（P12 所有だけ）／ status ・無人の
+実行が受け入れる runtime の pin（HEAD ≠ pin は拒む ・pull ／ checkout はしない）・無人の方針（回復が要る状態は RECOVERY_REQUIRED で止まる ・
+自動の回復 ・retry は無い）・exit code の契約。network ・資格情報 ・daemon は無い。凍結の Phase 4 〜 11 ・A1 〜 A3 ・A4 の runtime は不変
+（A4 の `run_cli` だけを登録して再開）。
+
+追加
+・`src/intelligence/automation/`（`runtime_pin` ・`scheduled_run` ・`task_definition` ・`task_scheduler_adapter` ・`scheduler_install`）
+・`tests/intelligence/test_automation_scheduler.py`
+・`docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md`
+改善
+・`src/intelligence/automation/run_cli.py`（scheduled-run ・pin-runtime ・scheduler-install ／ -remove ／ -status）
+・`tests/intelligence/phase12_runtime_registry.py` ・`test_automation_boundary.py`（A5 の登録 ・A4 の pin と再開の登録）
+修正
+・なし
+
 ## v6.17 (2026-10-18) — Phase 12 P12-A4 lock ／ retry ／ crash recovery ／ idempotency
 
 運用の transaction を同時実行 ・中断 ・stale な lock ・retry ・重複 ・孤児 ・遅れた checkpoint ・古い status に対して安全にした。run ごとの lock ＋

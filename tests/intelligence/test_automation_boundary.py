@@ -1,4 +1,4 @@
-"""P12-A1 〜 A4 — Phase 12（自動化）の境界の guard。
+"""P12-A1 〜 A5 — Phase 12（自動化）の境界の guard。
 
 - registry の完全一致 ・P12_BASE 以後の面は登録した P12 の追加だけ ・凍結の P7 〜 P11 の test の差分は宣言した登録の行だけ。
 - A1 の 11 file は `P12_A1` の commit と、A2 の 10 file は `P12_A2` の commit と object 一致。A2 ／ A3 の file が足して使う stdlib（git の読み取り ・private root の file ・loopback の
@@ -18,9 +18,10 @@ from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
-from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_A3, P12_BASE,
+from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_A3, P12_A4, P12_BASE,
                                                          PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_REOPENED_IN_A4,
-                                                         PHASE12_A3_RUNTIME, PHASE12_A4_RUNTIME,
+                                                         PHASE12_A3_RUNTIME, PHASE12_A4_REOPENED_IN_A5, PHASE12_A4_RUNTIME,
+                                                         PHASE12_A5_RUNTIME,
                                                          PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
                                                          PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
                                                          SANCTIONED_P12_EXTRA_STDLIB, SANCTIONED_P12_MODULES,
@@ -34,6 +35,7 @@ CONTRACT_DOC = "docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md"
 A2_CONTRACT_DOC = "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md"
 A3_CONTRACT_DOC = "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md"
 A4_CONTRACT_DOC = "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md"
+A5_CONTRACT_DOC = "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md"
 P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
                   "pyproject.toml", "cloudflare", "notifiers", "src/report")
@@ -59,7 +61,11 @@ _P12 = PHASE12_PACKAGE
 STRING_ALLOWANCES = {f"{_P12}/network_deny.py": {"127.0.0.1"},                       # loopback の allowlist（bind ・接続先ではない）
                      f"{_P12}/preconditions.py": {"JQUANTS"},                         # 予約した資格情報の変数の名前（値は見ない）
                      f"{_P12}/server_readiness.py": {"://"},                          # 自分の loopback の origin の形だけ
-                     f"{_P12}/run_cli.py": {"__main__", "argparse", "os.environ", "datetime.now"}}   # 人の手の CLI（telemetry の時計だけ）
+                     f"{_P12}/run_cli.py": {"__main__", "argparse", "os.environ", "datetime.now", "Task Scheduler"},   # CLI（telemetry の時計だけ）
+                     f"{_P12}/scheduled_run.py": {"Task Scheduler"}, f"{_P12}/scheduler_install.py": {"Task Scheduler"},
+                     f"{_P12}/runtime_pin.py": {"Task Scheduler"},
+                     f"{_P12}/task_definition.py": {"Task Scheduler", "://"},            # A5: XML の名前空間の URI だけ
+                     f"{_P12}/task_scheduler_adapter.py": {"Task Scheduler", "schtasks"}}   # A5: 狭い adapter だけが schtasks を呼ぶ
 NAME_ALLOWANCES = {f"{_P12}/finalization.py": {"open", "write", "read_bytes", "mkdir", "rename", "exists"},   # .partial の中だけ
                    f"{_P12}/network_deny.py": {"socket", "connect", "setattr"},      # 拒否の guard の差し替え（出る時に戻す）
                    f"{_P12}/preconditions.py": {"exists", "iterdir", "read_bytes"},  # root が在って読めるか ・P11 の blob の再計算
@@ -71,7 +77,9 @@ NAME_ALLOWANCES = {f"{_P12}/finalization.py": {"open", "write", "read_bytes", "m
                    f"{_P12}/operational_lock.py": {"open", "write", "unlink", "exists", "mkdir"},   # O_CREAT|O_EXCL の lock ・解放 ・stale/
                    f"{_P12}/process_probe.py": {"open", "system", "run"},            # /proc の読み ・tasklist ／ CIM の問い合わせ
                    f"{_P12}/ledger_commit.py": {"sleep"},                             # 短い ledger lock の有界の待ち
-                   f"{_P12}/recovery.py": {"exists", "rename", "read_bytes", "read_text", "iterdir"}}   # .partial → .crashed ・artifact の照合
+                   f"{_P12}/recovery.py": {"exists", "rename", "read_bytes", "read_text", "iterdir"},   # .partial → .crashed ・artifact の照合
+                   f"{_P12}/scheduler_install.py": {"open", "write"},                 # private な scheduler/ の XML
+                   f"{_P12}/task_scheduler_adapter.py": {"read_bytes"}}               # test double が XML を読む
 WORD_ALLOWANCES = {f"{_P12}/finalization.py": {"path"}, f"{_P12}/network_deny.py": {"socket"},
                    f"{_P12}/preconditions.py": {"path", "subprocess", "credential"}, f"{_P12}/server_readiness.py": {"thread"},
                    f"{_P12}/source_manifests.py": {"path"}, f"{_P12}/atomic_files.py": {"path"},
@@ -79,7 +87,10 @@ WORD_ALLOWANCES = {f"{_P12}/finalization.py": {"path"}, f"{_P12}/network_deny.py
                    f"{_P12}/ledger_store.py": {"path"}, f"{_P12}/schedule_authority.py": {"path"}, f"{_P12}/status_store.py": {"path"},
                    f"{_P12}/run_transaction.py": {"credential"}, f"{_P12}/run_cli.py": {"credential", "now"},
                    f"{_P12}/operational_lock.py": {"path"}, f"{_P12}/process_probe.py": {"subprocess"},
-                   f"{_P12}/recovery.py": {"path"}, f"{_P12}/cancel_authority.py": {"path"}}
+                   f"{_P12}/recovery.py": {"path"}, f"{_P12}/cancel_authority.py": {"path"},
+                   f"{_P12}/runtime_pin.py": {"path", "subprocess"}, f"{_P12}/scheduled_run.py": {"credential"},
+                   f"{_P12}/scheduler_install.py": {"path"}, f"{_P12}/task_definition.py": {"path"},
+                   f"{_P12}/task_scheduler_adapter.py": {"path", "subprocess"}}
 BROAD_EXCEPT_ALLOWED = {f"{_P12}/run_executor.py": 1}                                # 想定外 → STEP_FAILED:UNEXPECTED だけ
 MAIN_ENTRY_ALLOWED = {f"{_P12}/run_cli.py"}                                           # `python -m` の入口だけ
 
@@ -117,21 +128,27 @@ def _imports(path: Path):
 def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
     assert P12_BASE == "080d42aa3dad8bfc5ef82400beb6e2c62a873126"
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME + PHASE12_A4_RUNTIME))
-    assert len(PHASE12_RUNTIME) == 37 and len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10
-    assert len(PHASE12_A3_RUNTIME) == 9 and len(PHASE12_A4_RUNTIME) == 7
-    assert len(set(PHASE12_A1_RUNTIME) | set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)) == 37
+    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME + PHASE12_A4_RUNTIME
+                                           + PHASE12_A5_RUNTIME))
+    assert len(PHASE12_RUNTIME) == 42 and len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10
+    assert len(PHASE12_A3_RUNTIME) == 9 and len(PHASE12_A4_RUNTIME) == 7 and len(PHASE12_A5_RUNTIME) == 5
+    assert len(set(PHASE12_A1_RUNTIME) | set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)
+               | set(PHASE12_A5_RUNTIME)) == 42
     assert P12_A1 == "dd922c3eebd67de2ac273ba66e82e493d814e701" and P12_A2 == "bd0007d3b6684a1e4640a723010e197432939f95"
     assert P12_A3 == "66139db86e06130d7504a279b3d5ee820fd76b24" and set(PHASE12_A3_REOPENED_IN_A4) <= set(PHASE12_A3_RUNTIME)
+    assert P12_A4 == "dcad07351201ecab44d91acc98740b8833bc3996" and set(PHASE12_A4_REOPENED_IN_A5) <= set(PHASE12_A3_REOPENED_IN_A4)
     a3_pinned = tuple(p for p in PHASE12_A3_RUNTIME if p not in PHASE12_A3_REOPENED_IN_A4)
-    for commit, pinned in ((P12_A1, PHASE12_A1_RUNTIME), (P12_A2, PHASE12_A2_RUNTIME), (P12_A3, a3_pinned)):
+    a4_pinned = tuple(p for p in PHASE12_A4_RUNTIME + PHASE12_A3_REOPENED_IN_A4 if p not in PHASE12_A4_REOPENED_IN_A5)
+    for commit, pinned in ((P12_A1, PHASE12_A1_RUNTIME), (P12_A2, PHASE12_A2_RUNTIME), (P12_A3, a3_pinned), (P12_A4, a4_pinned)):
         assert subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=REPO_ROOT).returncode == 0
         assert _git("diff", "--name-status", commit, "HEAD", "--", *pinned) == ""          # A1 ／ A2 ／ A3 の runtime はその commit のまま
         assert _git("diff", "--cached", "--name-status", commit, "--", *pinned) == ""
         assert _git("status", "--porcelain", "--", *pinned) == ""
     assert set(SANCTIONED_P12_P11_IMPORTERS) <= set(PHASE12_A2_RUNTIME)
-    assert set(SANCTIONED_P12_EXTRA_STDLIB) <= set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)
+    assert set(SANCTIONED_P12_EXTRA_STDLIB) <= (set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)
+                                                | set(PHASE12_A5_RUNTIME))
     assert _git("diff", "--cached", "--name-status", P12_A3, "--", *PHASE12_A3_REOPENED_IN_A4) != ""   # 再開は実在する（登録どおり）
+    assert _git("diff", "--cached", "--name-status", P12_A4, "--", *PHASE12_A4_REOPENED_IN_A5) != ""
     assert all(p.startswith(PHASE12_PACKAGE + "/") and p.endswith(".py") for p in PHASE12_RUNTIME)
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
     for path in (*PHASE12_RUNTIME, *PHASE12_TESTS, *PHASE12_DOCS):
@@ -214,8 +231,8 @@ def test_p12_a1_imports_are_stdlib_only_and_never_reach_frozen_phases_os_clock_n
             assert token not in source, (path, token)
         if path in PHASE12_A1_RUNTIME:
             assert not cross and path not in SANCTIONED_P12_EXTRA_STDLIB and path not in NAME_ALLOWANCES
-        if path in PHASE12_A3_RUNTIME or path in PHASE12_A4_RUNTIME:
-            assert not cross, path                                                    # A3 ／ A4 は凍結の phase を直接 import しない（A2 経由）
+        if path in PHASE12_A3_RUNTIME or path in PHASE12_A4_RUNTIME or path in PHASE12_A5_RUNTIME:
+            assert not cross, path                                                    # A3 〜 A5 は凍結の phase を直接 import しない（A2 経由）
         assert "personal_intelligence" not in source and "watchlist_thesis" not in source and "screener" not in source
         assert "ZoneInfo" not in source and "zoneinfo" not in source                     # 固定 +09:00 だけ（tzdata に依らない）
 
@@ -369,4 +386,21 @@ def test_p12_a4_the_contract_records_the_required_clauses_and_no_private_values(
     for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
         assert banned not in text, banned
     for name in ("cancel_authority", "injection", "ledger_commit", "operational_lock", "process_probe", "recovery", "retry"):
+        assert name in text, name
+
+
+def test_p12_a5_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A5_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A4, "43c0b856d41efed397de213a1a06178c5e97ab10", "Task Scheduler", "scheduled-run", "selection_clock_at",
+                   "scheduled_for", "NOT_DUE", "MISSED", "late window", "Compass", "P12_OWNED", "InteractiveToken", "LeastPrivilege",
+                   "StartWhenAvailable", "IgnoreNew", "WakeToRun", "Tokyo Standard Time", "RECOVERY_REQUIRED", "pin-runtime",
+                   "scheduler-install", "scheduler-remove", "scheduler-status", "exit code", "schtasks", "tzutil", "A6", "runbook",
+                   "pull", "fetch", "checkout", "daemon", "Phase 12 の凍結ではない", "P12-A6", "run_cli", "認証ではない",
+                   "release-lock", "retry しない"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0", "C:\\Users"):
+        assert banned not in text, banned
+    for name in ("runtime_pin", "scheduled_run", "scheduler_install", "task_definition", "task_scheduler_adapter"):
         assert name in text, name

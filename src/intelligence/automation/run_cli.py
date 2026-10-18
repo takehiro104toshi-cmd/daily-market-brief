@@ -1,4 +1,12 @@
-"""P12-A3 ／ A4 — 人が手で使う P12 の CLI（`python -m src.intelligence.automation.run_cli`）。scheduler ・background ・network ・資格情報は無い。
+"""P12-A3 〜 A5 — P12 の CLI（`python -m src.intelligence.automation.run_cli`）。network ・資格情報は無い。A5 で Task Scheduler が起こす
+`scheduled-run` と、人の手の `pin-runtime` ・`scheduler-install` ／ `-remove` ／ `-status` を足した（daemon ・service は無い）。
+
+    scheduled-run  --slot-id <slot_id> --private-root --p9-root --p10-root --repo-root --runtime-root
+                   （Task Scheduler が起こす。selection_clock_at は入口で 1 回観測。exit code は scheduled_run を見よ。
+                    `--selection-clock-at <UTC ISO>` は人の診断だけの明示の上書き: task の定義は渡さない）
+    pin-runtime    --private-root --repo-root                            （人: clean な HEAD を無人の実行の pin に）
+    scheduler-install --private-root --p9-root --p10-root --repo-root --runtime-root --interpreter <python> [--apply]
+    scheduler-remove  --private-root [--apply]      scheduler-status --private-root
 
     run            --request-file <正準な実行の要求の JSON> --private-root --p9-root --p10-root --repo-root --runtime-root
     retry          --run-id <前の run_id> --private-root --p9-root --p10-root --repo-root --runtime-root   （A4: attempt ＋ 1 ・retry_of）
@@ -37,8 +45,13 @@ from .recovery import (recover_crashed, recover_orphan, recover_partial, regener
                        repair_checkpoint)
 from .retry import build_retry_request, retry_summary
 from .run_transaction import TransactionResult, classify_after_crash, commit_run
+from .runtime_pin import pin_clean_head
 from .schedule_authority import HUMAN_OPERATOR, write_schedule_authority
 from .schedule_model import AutomationSchedule
+from .scheduled_run import run_scheduled
+from .scheduler_install import install_tasks, plan_install, remove_tasks, scheduler_status
+from .task_definition import SchedulerPaths
+from .task_scheduler_adapter import SchtasksAdapter, TaskSchedulerAdapter
 
 REPORT_PREFIX = "REPORT: "
 EXIT_SUCCEEDED, EXIT_FAILED, EXIT_USAGE = 0, 1, 2
@@ -89,6 +102,22 @@ def _parser() -> argparse.ArgumentParser:
     release = commands.add_parser("release-lock", help="release a lock proven stale (evidence kept under locks/stale)")
     release.add_argument("--private-root", required=True)
     release.add_argument("--run-id", required=False, default=None)
+    scheduled = commands.add_parser("scheduled-run", help="unattended entry invoked by Task Scheduler (one slot)")
+    for name in ("--slot-id", "--private-root", "--p9-root", "--p10-root", "--repo-root", "--runtime-root"):
+        scheduled.add_argument(name, required=True)
+    scheduled.add_argument("--selection-clock-at", required=False, default=None)
+    pin = commands.add_parser("pin-runtime", help="pin the current clean HEAD as the unattended runtime anchor (human only)")
+    pin.add_argument("--private-root", required=True)
+    pin.add_argument("--repo-root", required=True)
+    sched_install = commands.add_parser("scheduler-install", help="plan (and with --apply register) the P12 Task Scheduler tasks")
+    for name in ("--private-root", "--p9-root", "--p10-root", "--repo-root", "--runtime-root", "--interpreter"):
+        sched_install.add_argument(name, required=True)
+    sched_install.add_argument("--apply", action="store_true")
+    sched_remove = commands.add_parser("scheduler-remove", help="remove only P12-owned tasks (plan unless --apply)")
+    sched_remove.add_argument("--private-root", required=True)
+    sched_remove.add_argument("--apply", action="store_true")
+    sched_status = commands.add_parser("scheduler-status", help="safe scheduler status projection (non-authority)")
+    sched_status.add_argument("--private-root", required=True)
     for command, help_text in (("write-schedule", "write the schedule authority (human only)"),
                                ("write-calendar", "write the holiday calendar authority (human only)")):
         sub = commands.add_parser(command, help=help_text)
@@ -179,6 +208,53 @@ def _command_recovery(args: argparse.Namespace, stdout: Any) -> int:
     return EXIT_SUCCEEDED
 
 
+def _command_scheduled_run(args: argparse.Namespace, stdout: Any, environment: Mapping[str, str]) -> int:
+    if args.selection_clock_at is None:
+        selection_clock_at = datetime.now(timezone.utc).replace(microsecond=0)         # 入口で 1 回だけ: slot の選択にだけ使う
+    else:
+        from .canonical import parse_utc_iso
+        selection_clock_at = parse_utc_iso(args.selection_clock_at)                    # 人の診断の明示の上書き
+    roots = PrivateRoots(args.p9_root, args.p10_root, args.private_root)
+    outcome = run_scheduled(args.slot_id, roots, repo_root=args.repo_root, runtime_root=args.runtime_root,
+                            environment=_presence_environment(environment), selection_clock_at=selection_clock_at,
+                            clock=_telemetry_clock)
+    _report(stdout, f"SCHEDULED_RUN SLOT={args.slot_id} OUTCOME={outcome.kind} CODE={outcome.code}")
+    if outcome.run_id is not None:
+        _report(stdout, f"RUN_ID={outcome.run_id}")
+    if outcome.transaction is not None:
+        _report_transaction(outcome.transaction, stdout)
+    _report(stdout, f"EXIT={outcome.exit_code}")
+    return outcome.exit_code
+
+
+def _command_scheduler(args: argparse.Namespace, stdout: Any, adapter: TaskSchedulerAdapter) -> int:
+    if args.command == "pin-runtime":
+        head = pin_clean_head(args.private_root, args.repo_root, operator=HUMAN_OPERATOR, pinned_at=_telemetry_clock())
+        _report(stdout, f"RUNTIME_PINNED ANCHOR={head}")
+        return EXIT_SUCCEEDED
+    if args.command == "scheduler-install":
+        paths = SchedulerPaths(interpreter=args.interpreter, repo_root=args.repo_root, runtime_root=args.runtime_root,
+                               private_root=args.private_root, p9_root=args.p9_root, p10_root=args.p10_root)
+        plan = plan_install(args.private_root, paths, adapter)
+        for task in plan.to_safe_dict()["tasks"]:
+            _report(stdout, f"SCHEDULER_TASK NAME={task['task_name']} SLOT={task['slot_id']} ENABLED={'YES' if task['enabled'] else 'NO'} "
+                            f"XML_DIGEST={task['xml_digest']}")
+        if not args.apply:
+            _report(stdout, f"SCHEDULER_PLAN TASKS={len(plan.definitions)} APPLIED=NO")
+            return EXIT_SUCCEEDED
+        outcome = install_tasks(args.private_root, plan, adapter, operator=HUMAN_OPERATOR)
+        _report(stdout, f"SCHEDULER_INSTALLED TASKS={outcome['task_count']}")
+        return EXIT_SUCCEEDED
+    if args.command == "scheduler-remove":
+        outcome = remove_tasks(args.private_root, adapter, operator=HUMAN_OPERATOR, apply=args.apply)
+        _report(stdout, f"SCHEDULER_REMOVE APPLIED={'YES' if outcome['applied'] else 'NO'} REMOVED={len(outcome['removed'])} "
+                        f"ABSENT={len(outcome['absent'])} NOT_OWNED={len(outcome['not_owned'])}")
+        return EXIT_SUCCEEDED
+    projection = scheduler_status(args.private_root, adapter)
+    _report(stdout, "SCHEDULER_STATUS " + " ".join(f"{key.upper()}={value}" for key, value in sorted(projection.items())))
+    return EXIT_SUCCEEDED
+
+
 def _command_write_schedule(args: argparse.Namespace, stdout: Any) -> int:
     schedule = AutomationSchedule.from_dict(_load_json(args.file))
     digest = write_schedule_authority(args.private_root, schedule, operator=HUMAN_OPERATOR)
@@ -200,9 +276,10 @@ def _command_classify(args: argparse.Namespace, stdout: Any) -> int:
 
 
 def main(argv: Optional[Sequence[str]] = None, stdout: Optional[Any] = None,
-         environment: Optional[Mapping[str, str]] = None) -> int:
+         environment: Optional[Mapping[str, str]] = None, scheduler: Optional[TaskSchedulerAdapter] = None) -> int:
     out = sys.stdout if stdout is None else stdout
     env = os.environ if environment is None else environment                           # 値は有無の比較だけ ・保持しない
+    adapter = SchtasksAdapter() if scheduler is None else scheduler
     try:
         args = _parser().parse_args(argv)
     except SystemExit as exc:                                                          # argparse の使い方の誤り（文は argparse が stderr へ）
@@ -212,6 +289,10 @@ def main(argv: Optional[Sequence[str]] = None, stdout: Optional[Any] = None,
             return _command_run(args, out, env)
         if args.command == "retry":
             return _command_retry(args, out, env)
+        if args.command == "scheduled-run":
+            return _command_scheduled_run(args, out, env)
+        if args.command in ("pin-runtime", "scheduler-install", "scheduler-remove", "scheduler-status"):
+            return _command_scheduler(args, out, adapter)
         if args.command in ("cancel", "recover-orphan", "recover-crashed", "recover-partial", "repair-checkpoint", "regenerate-status",
                             "release-lock"):
             return _command_recovery(args, out)
