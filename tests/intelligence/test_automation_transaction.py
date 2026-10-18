@@ -139,10 +139,12 @@ def test_an_invalid_ledger_fails_closed_before_any_orchestration_and_is_never_re
         "CHECKPOINT_MISMATCH": (None, HeadCheckpoint(3, "f" * 64).to_bytes()),
         "CHECKPOINT_MALFORMED": (None, b'{"x":1}\n'),
         "CHECKPOINT_STALE": (None, HeadCheckpoint.of(store.open_verified().records[:2]).to_bytes()),
+        "LEDGER_NOT_LF": (good_text.decode("utf-8").replace("\n", "\r\n"), None),              # CRLF ledger stays refused
     }
     for detail, (ledger_text, head_bytes) in cases.items():
         if ledger_text is not None:
-            store.ledger_file.write_text(ledger_text, encoding="utf-8")
+            store.ledger_file.write_bytes(ledger_text.encode("utf-8"))                    # explicit bytes (A6: Windows text mode writes CRLF)
+            assert (b"\r" in store.ledger_file.read_bytes()) == (detail == "LEDGER_NOT_LF")
         if head_bytes is not None:
             store.checkpoint_file.write_bytes(head_bytes)
         before = (store.ledger_file.read_bytes(), store.checkpoint_file.read_bytes())
@@ -159,7 +161,7 @@ def test_an_invalid_ledger_fails_closed_before_any_orchestration_and_is_never_re
     store.checkpoint_file.write_bytes(good_head)
     assert classify(world) == "COMMITTED" and first.status == "SUCCEEDED"
     status_file(world["roots"].p12_root).write_text(json.dumps({"projection": {"health_code": "OK"}}) + "\n")   # status は authority でない
-    store.ledger_file.write_text("\n".join([lines[0], lines[2]]) + "\n", encoding="utf-8")
+    store.ledger_file.write_bytes(("\n".join([lines[0], lines[2]]) + "\n").encode("utf-8"))      # explicit LF bytes
     assert commit_run(retry, world["roots"], repo_root=world["repo"], runtime_root=REPO_ROOT, environment={},
                       clock=ticking_clock()).failure_code == "LEDGER_INVALID:SEQUENCE_BREAK"
     assert classify_after_crash(world["roots"], retry.run_id)["classification"] == "LEDGER_INVALID:SEQUENCE_BREAK"

@@ -128,13 +128,17 @@ def test_ledger_store_fails_closed_on_malformed_mutated_deleted_reordered_trunca
     p, state, q = planned_running(store, r)
     store.append(make_record(q, r, transition_from=RunState.RUNNING, transition_to=RunState.FAILED, recorded_at=T[3],
                              failure_code="SOURCE_STALE"))
-    lines = store.ledger_file.read_text(encoding="utf-8").split("\n")[:-1]
     good_text = store.ledger_file.read_bytes()
     good_head = store.checkpoint_file.read_bytes()
+    lines = good_text.decode("utf-8").split("\n")[:-1]
 
     def restore() -> None:
         store.ledger_file.write_bytes(good_text)
         store.checkpoint_file.write_bytes(good_head)
+
+    def mutate(text: str) -> None:
+        store.ledger_file.write_bytes(text.encode("utf-8"))                               # explicit LF bytes (A6: Windows text mode writes CRLF)
+        assert b"\r" not in store.ledger_file.read_bytes()
 
     def expect(detail: str) -> None:
         with pytest.raises(LedgerError) as e:
@@ -142,18 +146,17 @@ def test_ledger_store_fails_closed_on_malformed_mutated_deleted_reordered_trunca
         assert e.value.public_code == f"LEDGER_INVALID:{detail}", detail
         restore()
 
-    store.ledger_file.write_text("\n".join(lines[:1] + ["{not json"] + lines[2:]) + "\n", encoding="utf-8")
+    mutate("\n".join(lines[:1] + ["{not json"] + lines[2:]) + "\n")
     expect("RECORD_NOT_JSON")
-    store.ledger_file.write_text("\n".join(lines[:1] + [lines[1].replace('"operator":"scheduler"', '"operator":"human"')]
-                                           + lines[2:]) + "\n", encoding="utf-8")
+    mutate("\n".join(lines[:1] + [lines[1].replace('"operator":"scheduler"', '"operator":"human"')] + lines[2:]) + "\n")
     expect("RECORD_DIGEST_MISMATCH")
-    store.ledger_file.write_text("\n".join([lines[0], lines[2]]) + "\n", encoding="utf-8")        # 真ん中の削除
+    mutate("\n".join([lines[0], lines[2]]) + "\n")                                                # 真ん中の削除
     expect("SEQUENCE_BREAK")
-    store.ledger_file.write_text("\n".join([lines[0], lines[2], lines[1]]) + "\n", encoding="utf-8")   # 並べ替え
+    mutate("\n".join([lines[0], lines[2], lines[1]]) + "\n")                                      # 並べ替え
     expect("SEQUENCE_BREAK")
-    store.ledger_file.write_text("\n".join(lines[:2]) + "\n", encoding="utf-8")                    # 尾の切り捨て（checkpoint は 3）
+    mutate("\n".join(lines[:2]) + "\n")                                                           # 尾の切り捨て（checkpoint は 3）
     expect("TAIL_TRUNCATED")
-    store.ledger_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    mutate("\n".join(lines) + "\n")
     store.checkpoint_file.write_bytes(HeadCheckpoint(3, "f" * 64).to_bytes())
     expect("CHECKPOINT_MISMATCH")
     store.checkpoint_file.write_bytes(b"{broken\n")
@@ -162,9 +165,11 @@ def test_ledger_store_fails_closed_on_malformed_mutated_deleted_reordered_trunca
     expect("CHECKPOINT_MALFORMED")
     store.checkpoint_file.write_bytes(json.dumps(HeadCheckpoint.of(state.records).to_dict(), indent=1).encode() + b"\n")
     expect("CHECKPOINT_NOT_CANONICAL")                                                     # 内容が合っても正準でなければ拒む
-    store.ledger_file.write_text(store.ledger_file.read_text(encoding="utf-8")[:-1], encoding="utf-8")   # 末尾の改行なし
+    store.ledger_file.write_bytes(store.ledger_file.read_bytes()[:-1])                                 # 末尾の改行なし（byte のまま）
     expect("LEDGER_NOT_LF")
-    store.ledger_file.write_text("\n".join(lines[:2]) + "\n" + json.dumps(json.loads(lines[2]), indent=1).replace("\n", "") + "\n")
+    store.ledger_file.write_bytes(good_text.replace(b"\n", b"\r\n"))                                  # CRLF の ledger は拒む（Windows でも）
+    expect("LEDGER_NOT_LF")
+    mutate("\n".join(lines[:2]) + "\n" + json.dumps(json.loads(lines[2]), indent=1).replace("\n", "") + "\n")
     expect("RECORD_NOT_CANONICAL")                                                         # 行は正準の byte だけ
     store.checkpoint_file.write_bytes(HeadCheckpoint.of(state.records[:2]).to_bytes())           # 遅れた checkpoint
     with pytest.raises(LedgerError) as e:

@@ -206,7 +206,20 @@ def test_root_manifests_are_deterministic_order_independent_path_free_and_mutati
     assert e.value.public_code == "ROOT_MISSING:P9"
     with pytest.raises(AutomationError):
         build_root_manifest(root, "P8")
-    (root / "link.jsonl").symlink_to(root / "a.jsonl")
+
+
+def test_a_symlink_inside_a_source_root_is_refused_as_unreadable(tmp_path: Path) -> None:
+    """A6 (Windows): symlink creation needs a privilege or Developer Mode there; the refusal contract is only exercisable where the
+    account can create one. Skipping is explicit and narrow (the manifest test above stays platform-neutral)."""
+    root = tmp_path / "p9"
+    root.mkdir()
+    (root / "a.jsonl").write_bytes(b"AAA\n")
+    assert build_root_manifest(root, "P9").file_count == 1
+    try:
+        (root / "link.jsonl").symlink_to(root / "a.jsonl")
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"this OS or account cannot create a symlink ({type(exc).__name__})")
+    assert (root / "link.jsonl").is_symlink()                                              # never treat an unsupported symlink as accepted
     with pytest.raises(AutomationError) as e:
         build_root_manifest(root, "P9")
     assert e.value.public_code == "ROOT_MISSING:P9_UNREADABLE"

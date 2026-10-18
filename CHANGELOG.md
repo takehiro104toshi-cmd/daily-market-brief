@@ -4,6 +4,22 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.21 (2026-10-18) — Phase 12 P12-A6 Windows test portability stabilization
+
+A6 の Windows 実機の preflight（P12 ・凍結 guard の pytest）で 5 件の test が落ちた。全て test 側の移植性の問題で、runtime の不具合ではない:
+ledger の fixture が `write_text` で書き Windows では CRLF になって `LEDGER_NOT_LF` が先に出る（意図した不正の理由に届かない）・symlink の
+作成に権限が要る ・lock の Windows 風の模擬が本物の descriptor を text mode にしていた ・boot_marker が無い platform では再起動の検出ではなく
+identity の不一致で stale になる（契約どおり）。fixture は byte で書き、symlink は専用の test で作れない時だけ明示に skip、模擬は fake の層だけ、
+期待は platform の契約に従う。runtime（`src/`）は不変。CRLF の ledger ・lock は引き続き拒む（明示の case を足した）。
+
+追加
+・`tests/intelligence/test_automation_preconditions.py`（symlink の拒否の専用 test）
+改善
+・`tests/intelligence/test_automation_ledger_store.py` ・`test_automation_transaction.py`（byte の fixture ・CRLF の拒否の case）
+・`tests/intelligence/test_automation_locks.py`（Windows 風の模擬の修正 ・boot_marker の契約に従う期待）
+修正
+・なし（runtime は不変）
+
 ## v6.20 (2026-10-18) — Phase 12 P12-A6 Windows lock format remediation
 
 A6 の Windows 実機の検証（repo の外の helper）で、運用の lock の writer が Windows では text mode の descriptor で書き、正準な LF が CRLF に

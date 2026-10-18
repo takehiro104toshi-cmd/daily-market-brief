@@ -52,12 +52,15 @@ def test_lock_bytes_on_disk_are_canonical_and_the_writer_asks_for_binary_mode_wh
         LockRecord.from_text(canonical.decode("utf-8")[:-1] + "\r\n")
     assert e.value.public_code == "SCHEMA_INVALID:LOCK_MALFORMED"
     target.unlink()
-    # a Windows-like C runtime: descriptors opened without the binary flag translate LF to CRLF on write
+    # a Windows-like C runtime, simulated entirely in the fake layer: the real backing descriptor is always opened binary-safe
+    # (adding the platform's own binary flag where it has one); only the fake write translates LF to CRLF when the caller
+    # did not ask for binary mode
     binary_flag = 0x8000
+    real_binary = getattr(os, "O_BINARY", 0)
     real_open, real_write, modes, seen = os.open, os.write, {}, []
 
     def windows_like_open(path, flags, *args):
-        fd = real_open(path, flags & ~binary_flag, *args)
+        fd = real_open(path, (flags & ~binary_flag) | real_binary, *args)
         modes[fd] = bool(flags & binary_flag)
         seen.append((str(path), flags))                                                     # the directory fsync opens too (read only)
         return fd
@@ -78,9 +81,10 @@ def test_lock_bytes_on_disk_are_canonical_and_the_writer_asks_for_binary_mode_wh
     assert target.read_bytes() == held.record.to_bytes()[:-1] + b"\r\n"
     assert classify_lock(target, probe=ALIVE)["lock_class"] == "LOCK_MALFORMED"              # exactly the A6 Windows symptom
     target.unlink()
-    monkeypatch.delattr(ol.os, "O_BINARY")                                                  # platform without the flag: unchanged behavior
+    monkeypatch.delattr(ol.os, "O_BINARY")                                                  # platform without the flag: unchanged flags
     captured = []
-    monkeypatch.setattr(ol.os, "open", lambda path, flags, *args: captured.append((str(path), flags)) or real_open(path, flags, *args))
+    monkeypatch.setattr(ol.os, "open",                                                      # recording fake; backing descriptor stays binary
+                        lambda path, flags, *args: captured.append((str(path), flags)) or real_open(path, flags | real_binary, *args))
     monkeypatch.setattr(ol.os, "write", real_write)
     held = acquire_lock(root, "RUN", RUN_ID, probe=ALIVE, clock_instant=T0)
     assert [f for p, f in captured if p == str(target)] == [os.O_CREAT | os.O_EXCL | os.O_WRONLY]
@@ -155,7 +159,10 @@ def test_lock_classification_distinguishes_live_dead_reused_rebooted_terminal_ma
     real_target = run_lock_file(root, "d" * 64)
     acquire_lock(root, "RUN", "d" * 64, probe=ProcessProbe(), clock_instant=T0)             # 本物の probe で取った lock は本物で LIVE
     assert classify_lock(real_target, probe=ProcessProbe())["lock_class"] in ("LOCK_LIVE", "LOCK_UNKNOWN_PROVENANCE")
-    assert classify_lock(target, probe=ProcessProbe())["lock_class"] == "LOCK_STALE_REBOOT"   # 偽の起動 token の lock は本物から見れば再起動後
+    # the fixture lock carries a fake boot marker and a fake identity: where the real probe has a boot marker (Linux) the reboot is
+    # detected first; where it has none (Windows) the identity mismatch still proves the lock stale (fail closed either way)
+    expected_stale = "LOCK_STALE_REBOOT" if ProcessProbe().boot_marker() is not None else "LOCK_STALE_PID_REUSED"
+    assert classify_lock(target, probe=ProcessProbe())["lock_class"] == expected_stale
     dead = StaticProbe({me: False}, {}, boot="b" * 64)
     assert classify_lock(target, probe=dead)["lock_class"] == "LOCK_STALE_DEAD"
     reused = StaticProbe({me: True}, {me: "2" * 64}, boot="b" * 64)
