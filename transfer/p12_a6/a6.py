@@ -48,7 +48,7 @@ for _name in _CREDENTIAL_VARIABLES_REMOVED:
 
 # ------------------------------------------------------------------ fixed contract (A6 gate)
 
-EXPECTED_HEAD = "e390cddff9101541d16ba308a15d9ad1df3ca7b7"
+EXPECTED_HEAD = "3056e25586767fd7b5d8095f016a4d254de5c360"
 P11_FROZEN_ANCHOR = "43c0b856d41efed397de213a1a06178c5e97ab10"
 DEFAULT_REPO = Path(r"D:\daily-market-brief\daily-market-brief")
 DEFAULT_P9_ROOT = Path(r"D:\p9_a5_private")
@@ -283,9 +283,11 @@ def child_environment() -> dict:
     return env
 
 
-def run_command(argv, *, cwd=None, timeout=CHILD_TIMEOUT_SECONDS, input_bytes=None):
+def run_command(argv, *, cwd=None, timeout=CHILD_TIMEOUT_SECONDS, input_bytes=None, extra_env=None):
+    env = child_environment()
+    env.update(extra_env or {})
     try:
-        completed = subprocess.run(list(argv), cwd=None if cwd is None else str(cwd), env=child_environment(), capture_output=True,
+        completed = subprocess.run(list(argv), cwd=None if cwd is None else str(cwd), env=env, capture_output=True,
                                    check=False, timeout=timeout, input=input_bytes)
     except (OSError, subprocess.SubprocessError):
         return None, b"", b""
@@ -820,15 +822,28 @@ def probe_checks(rt: Runtime, evidence: dict) -> None:
     evidence.update(boot_marker_present=bool(boot), unlink_while_open=unlink_while_open)
 
 
+_EXCEPTION_TYPE = re.compile(r"\A[A-Za-z_][A-Za-z0-9_.]*\Z")
+
+
+def failure_type(summary_line: str) -> str:
+    """The exception type token from a pytest short-summary line ("FAILED id - Type: message"). Never the message (it may hold paths)."""
+    if " - " not in summary_line:
+        return "UNKNOWN"
+    token = summary_line.split(" - ", 1)[1].strip().split(":", 1)[0].split(" ", 1)[0].split("(", 1)[0]
+    if token == "assert":                                                                   # pytest shows a bare assertion as its expression
+        return "AssertionError"
+    return token if _EXCEPTION_TYPE.match(token) else "UNKNOWN"
+
+
 def run_preflight_tests() -> dict:
-    code, out, err = run_command([CFG.interpreter, "-m", "pytest", "-q", "-p", "no:cacheprovider", *PREFLIGHT_TESTS], cwd=CFG.repo,
-                                 timeout=3600)
+    code, out, err = run_command([CFG.interpreter, "-m", "pytest", "-q", "-rfE", "-p", "no:cacheprovider", *PREFLIGHT_TESTS], cwd=CFG.repo,
+                                 timeout=3600, extra_env={"COLUMNS": "400"})                # -rfE + wide console: summary lines keep the exception type
     text = out.decode("utf-8", "replace") + err.decode("utf-8", "replace")
     (CFG.private_dir / "a6_preflight_pytest.log").write_bytes(text.encode("utf-8", "replace"))
     if code != 0:
         for line in text.splitlines():
             if line.startswith("FAILED ") or line.startswith("ERROR "):
-                report("FAILED_TEST " + line.split(" ")[1].split("::")[-1])                   # test ids only (synthetic data)
+                report(f"FAILED_TEST {line.split(' ')[1].split('::')[-1]} ERROR={failure_type(line)}")   # test id + exception type only
         raise Fail("PREFLIGHT_TESTS_FAILED")
     summary = [line for line in text.splitlines() if " passed" in line]
     tail = summary[-1].strip("= ").split(" in ")[0] if summary else "?"

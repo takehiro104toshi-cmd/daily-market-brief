@@ -1,7 +1,7 @@
 P12-A6  WINDOWS REAL-MACHINE AUTOMATION VALIDATION  (repo-external helper; do not commit a6.py or this file to the runtime branch)
 =====================================================================================================================================
 
-What this validates: the Phase 12 automation runtime at HEAD e390cddff9101541d16ba308a15d9ad1df3ca7b7 on a real Windows machine with
+What this validates: the Phase 12 automation runtime at HEAD 3056e25586767fd7b5d8095f016a4d254de5c360 on a real Windows machine with
 the real Task Scheduler: authority written through the real CLI, one manual scheduled-run, task install (XML clauses checked), one run
 started by Task Scheduler, duplicate invocations (two processes; the scheduler starting an already-succeeded instance again), the
 unattended RECOVERY_REQUIRED policy against synthetic evidence (stale lock, unknown-provenance lock, orphaned finalization, stale
@@ -19,7 +19,7 @@ from the screen or from D:\p12_a6_work or D:\p12_a6_private.
     git fetch origin claude/investment-intelligence-phase6
     git checkout claude/investment-intelligence-phase6
     git merge --ff-only origin/claude/investment-intelligence-phase6
-    git rev-parse HEAD             # must print e390cddff9101541d16ba308a15d9ad1df3ca7b7
+    git rev-parse HEAD             # must print 3056e25586767fd7b5d8095f016a4d254de5c360
     git status --porcelain         # must print nothing
     tzutil /g                      # must print Tokyo Standard Time
     Remove-Item Env:JQUANTS_API_KEY -ErrorAction SilentlyContinue
@@ -28,9 +28,9 @@ from the screen or from D:\p12_a6_work or D:\p12_a6_private.
     Test-Path D:\p10_a5_private    # must print True  (real P10 root; READ ONLY)
     Test-Path D:\p12_a6_private    # must print False (fresh validation root; the helper creates it)
 
-Retrieve helper v3 from the temporary transfer branch (nothing is merged; the branch holds only these two files). v3 pins the
-remediated runtime HEAD (lock writer O_BINARY fix); earlier helper versions refuse the new HEAD with REPO_HEAD_MISMATCH.
-    git fetch origin transfer/p12-a6-helper-v3
+Retrieve helper v4 from the temporary transfer branch (nothing is merged; the branch holds only these two files). v4 pins the
+runtime HEAD after the lock-writer fix and the Windows test-portability fix; earlier helper versions refuse it with REPO_HEAD_MISMATCH.
+    git fetch origin transfer/p12-a6-helper-v4
     git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/a6.py      > D:\p12_a6_work\a6.py
     git cat-file blob <TRANSFER_COMMIT>:transfer/p12_a6/RUNBOOK.txt > D:\p12_a6_work\RUNBOOK.txt
     certutil -hashfile D:\p12_a6_work\a6.py SHA256                  # must equal the SHA256 in the preparation report
@@ -110,6 +110,8 @@ every stage also prints ROOTS_UNCHANGED_OK <stage> before / after, and STAGE_STA
 
 3. If a stage fails
 -------------------
+- FAIL PREFLIGHT_TESTS_FAILED is preceded by one FAILED_TEST <name> ERROR=<ExceptionType> line per failed test (v4: the test id and
+  the exception type only; the full pytest output stays in D:\p12_a6_work\private\a6_preflight_pytest.log and is never pasted).
 - The helper prints FAIL <code> and STAGE_FAIL <stage>, then (if tasks were installed) FAILSAFE_REMOVE ... which removes ONLY the
   A6-owned tasks (\Compass\P12\a6-validation\*). Nothing else is removed; no evidence is deleted. Paste the REPORT lines and STOP.
 - FAIL P9_MUTATED / P10_MUTATED: a root changed since preflight. STOP and report; the helper never repairs anything.
