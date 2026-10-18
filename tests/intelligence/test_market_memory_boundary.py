@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import re
@@ -24,17 +25,25 @@ from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
 from tests.intelligence.phase12_runtime_registry import (P12_5_DESIGN_ANCHOR, P12_A6, P12_VALIDATED_TREE, PHASE12_5_FROZEN_CONTRACTS,
                                                          PHASE12_RUNTIME)
-from tests.intelligence.phase13_runtime_registry import (ADDITION_STATUSES, FORBIDDEN_P13_TOKENS, P13_BASE, PHASE13_DOCS,
+from tests.intelligence.phase13_runtime_registry import (ADDITION_STATUSES, FORBIDDEN_P13_TOKENS, P13_BASE, PHASE13_A1_RUNTIME, PHASE13_DOCS,
                                                          PHASE13_PACKAGE, PHASE13_RUNTIME, PHASE13_RUNTIME_AUTHORIZATION,
                                                          PHASE13_TESTS, PHASE13_TEST_REGISTRATION, is_phase13_addition,
                                                          only_phase13_registration, registration_diff)
+from tests.intelligence.test_automation_boundary import FORBIDDEN_NAMES, FORBIDDEN_WORDS
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE13_PACKAGE
 A0_DOC = "docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md"
+A1_DOC = "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md"
+P13_A0 = "4d464c30e4598d2ad5a0cee5a34ac366414fbde3"   # P13-A0 の commit ＝ A1 の認可の anchor
+#: P13 の runtime が import してよい stdlib（file ごと ・完全一致）。file ・OS ・時計 ・環境 ・process ・socket ・乱数は無い
+SANCTIONED_P13_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "hashlib", "json", "re", "typing"}
+SANCTIONED_P13_MODULES = {"src/intelligence/market_memory/__init__.py": set(), "src/intelligence/market_memory/canonical.py": set(),
+                          "src/intelligence/market_memory/review_state_sample.py": {".canonical"},
+                          "src/intelligence/market_memory/review_state_change.py": {".canonical", ".review_state_sample"}}
 #: registry の正準 digest（P13-A0 で確定。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "6d90b233fc85d1151e2b9a1c7fbac9a7a90dc62db59cf78f9e836f6dbd48ec80"
+P13_REGISTRY_DIGEST = "e2975c2b05a58a49afc2910c1080146457bd91d8293f92c16e3575cb4f7dd6d8"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -80,10 +89,13 @@ def _forbidden_tokens_in(text: str):
 def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_empty() -> None:
     assert P13_BASE == "aded7ee8621e9abac18d313009444675ab771ae6"                                  # 固定の base（A0 の commit ではない）
     assert _git("merge-base", "--is-ancestor", P13_BASE, "HEAD") == ""
-    assert PHASE13_RUNTIME == () and PHASE13_RUNTIME_AUTHORIZATION == ()                           # P13-A0: runtime は空 ・認可も空
+    assert PHASE13_RUNTIME == tuple(sorted(PHASE13_A1_RUNTIME)) and len(PHASE13_RUNTIME) == 4        # P13-A1: 純粋な model の 4 file
+    assert PHASE13_RUNTIME_AUTHORIZATION == (("P13-A1", P13_A0, PHASE13_A1_RUNTIME, A1_DOC),)
+    assert set(SANCTIONED_P13_MODULES) == set(PHASE13_RUNTIME)
     assert PHASE13_PACKAGE == "src/intelligence/market_memory" and ADDITION_STATUSES == ("A", "??")
-    assert PHASE13_TESTS == ("tests/intelligence/phase13_runtime_registry.py", "tests/intelligence/test_market_memory_boundary.py")
-    assert PHASE13_DOCS == (A0_DOC,)
+    assert PHASE13_TESTS == ("tests/intelligence/phase13_runtime_registry.py", "tests/intelligence/test_market_memory_boundary.py",
+                             "tests/intelligence/test_market_memory_model.py")
+    assert PHASE13_DOCS == (A0_DOC, A1_DOC)
     assert _registry_digest() == P13_REGISTRY_DIGEST                                               # drift は digest で止まる
     for path in (*PHASE13_TESTS, *PHASE13_DOCS):
         assert (REPO_ROOT / path).is_file(), path
@@ -117,8 +129,12 @@ def test_p13_a0_every_future_runtime_path_must_be_bound_to_a_reviewed_gate_and_a
 
 
 def test_p13_a0_since_the_base_only_registered_phase13_files_and_declared_registration_changed() -> None:
-    assert _changes("--cached", "--name-status", P13_BASE, "--", "src") == {("A", p) for p in PHASE13_RUNTIME}   # A0: 空
-    assert _changes("--name-status", P13_BASE, "HEAD", "--", "src") == {("A", p) for p in PHASE13_RUNTIME}
+    registered = {("A", p) for p in PHASE13_RUNTIME}
+    assert _changes("--name-status", P13_BASE, "HEAD", "--", "src") <= registered                    # commit 済みの差は登録の追加だけ
+    staged = _changes("--cached", "--name-status", P13_BASE, "--", "src")
+    pending = {("A", line[3:]) for line in _git("status", "--porcelain", "--", "src").splitlines() if line[:2].strip() in ADDITION_STATUSES}
+    assert staged <= registered and pending <= registered
+    assert staged | pending == registered                                                           # 登録した file は全て在る（index か作業木）
     assert _git("diff", "--cached", "--name-status", P13_BASE, "--", *FROZEN_SURFACE) == ""
     assert _changes("--cached", "--name-status", P13_BASE, "--", "docs") <= {("A", p) for p in PHASE13_DOCS}
     assert _changes("--cached", "--name-status", P13_BASE, "--", "tests") <= {
@@ -139,13 +155,15 @@ def test_p13_a0_since_the_base_only_registered_phase13_files_and_declared_regist
     assert pending == []
 
 
-def test_p13_a0_the_package_is_absent_now_at_the_base_and_at_the_design_closeout_anchor() -> None:
-    assert not PACKAGE_DIR.exists()                                                                 # A0: package も __init__ も無い
-    for revision in (P13_BASE, P12_5_DESIGN_ANCHOR, P12_A6, P12_VALIDATED_TREE, "HEAD"):
+def test_p13_the_package_holds_exactly_the_registered_files_and_was_absent_at_the_historical_anchors() -> None:
+    for revision in (P13_BASE, P13_A0, P12_5_DESIGN_ANCHOR, P12_A6, P12_VALIDATED_TREE):            # 歴史の事実: 登録の前に P13 は無かった
         assert not _git("ls-tree", revision, "--", PHASE13_PACKAGE).strip(), revision
+    assert PACKAGE_DIR.is_dir()
+    assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE13_RUNTIME}
+    assert all(p.startswith(PHASE13_PACKAGE + "/") and p.endswith(".py") for p in PHASE13_RUNTIME)
     tracked_now = set(_git("ls-tree", "-r", "--name-only", "HEAD", "src").splitlines())
     tracked_base = set(_git("ls-tree", "-r", "--name-only", P13_BASE, "src").splitlines())
-    assert tracked_now == tracked_base                                                              # A0: src の file の集合は base と同じ
+    assert tracked_base <= tracked_now and tracked_now - tracked_base <= set(PHASE13_RUNTIME)       # 以後は登録した P13 の追加だけ
     assert not any("market_memory" in module for module in runtime_closure())                      # 本番の閉包の外
 
 
@@ -159,7 +177,7 @@ def test_p13_a0_frozen_runtime_and_design_contracts_are_object_identical_to_thei
         assert len(anchored) == len(runtime) and anchored == head, anchor
     anchored, head = _blobs(P12_5_DESIGN_ANCHOR, PHASE12_5_FROZEN_CONTRACTS), _blobs("HEAD", PHASE12_5_FROZEN_CONTRACTS)
     assert len(anchored) == len(PHASE12_5_FROZEN_CONTRACTS) and anchored == head
-    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", "src") == ""                        # A0: src は P12 の anchor 以後不変
+    assert _changes("--name-status", P12_A6, "HEAD", "--", "src") <= {("A", p) for p in PHASE13_RUNTIME}   # 登録した P13 の追加だけ
 
 
 # ================================================ 文書 ・negative control
@@ -180,10 +198,79 @@ def test_p13_a0_the_registration_record_is_design_only_and_holds_no_private_valu
         assert not re.search(pattern, text), pattern
 
 
+def _imports(path: Path):
+    relative, absolute = {}, set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.ImportFrom) and node.level:
+            relative.setdefault("." * node.level + (node.module or ""), set()).update(a.name for a in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            absolute.add(node.module)
+        elif isinstance(node, ast.Import):
+            absolute.update(a.name for a in node.names)
+    return relative, absolute
+
+
+def test_p13_a1_runtime_imports_are_stdlib_only_and_never_reach_frozen_phases() -> None:
+    for path in PHASE13_RUNTIME:
+        relative, absolute = _imports(REPO_ROOT / path)
+        assert absolute <= SANCTIONED_P13_STDLIB, (path, absolute - SANCTIONED_P13_STDLIB)
+        assert set(relative) == SANCTIONED_P13_MODULES[path], (path, set(relative))
+        assert not any(m.startswith("..") for m in relative), path                                  # 凍結の phase への import は無い
+        text = (REPO_ROOT / path).read_text(encoding="utf-8")
+        assert _forbidden_tokens_in(text) == [], path
+        for pattern in PRIVATE_PATTERNS:
+            assert not re.search(pattern, text), (path, pattern)
+        assert "__main__" not in text and "import os" not in text and "import sys" not in text, path
+
+
+def test_p13_a1_runtime_never_touches_files_env_clock_process_or_network_and_has_no_investment_vocabulary() -> None:
+    for path in PHASE13_RUNTIME:
+        tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+        identifiers = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name):
+                assert node.id not in FORBIDDEN_NAMES, (path, node.id)
+                identifiers.add(node.id)
+            elif isinstance(node, ast.Attribute):
+                assert node.attr not in FORBIDDEN_NAMES, (path, node.attr)
+                identifiers.add(node.attr)
+            elif isinstance(node, ast.arg):
+                identifiers.add(node.arg)
+            elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                identifiers.add(node.name)
+            elif isinstance(node, ast.ExceptHandler):
+                assert node.type is not None, (path, "bare except")
+                names = {node.type.id} if isinstance(node.type, ast.Name) else {e.id for e in getattr(node.type, "elts", ()) if isinstance(e, ast.Name)}
+                assert not names & {"Exception", "BaseException"}, (path, "broad except")
+        words = set()
+        for name in identifiers:
+            words |= {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name)}
+        assert not words & FORBIDDEN_WORDS, (path, words & FORBIDDEN_WORDS)
+
+
+def test_p13_a1_the_model_record_is_design_and_runtime_consistent_and_holds_no_private_values() -> None:
+    text = (REPO_ROOT / A1_DOC).read_text(encoding="utf-8")
+    for needle in ("P13-A1", "Review State Memory", "p13smp_", "p13chg_", "SampleCutoff", "SourceViewIdentity", "ReviewStateEntry",
+                   "ReviewStateCounts", "ReviewStateSample", "ReviewStateChange", "SampleEvidence", "SampleOutcome", "StalenessLabel",
+                   "PitState", "known_at", "reviewed_at", "捏造しない", "端点の差", "変化の不在", "MISSING", "INTEGRITY_FAILURE",
+                   "空の標本", "telemetry", "SHORT_ID_COLLISION", "合成の入力", "凍結の package を import しない", "P13-A2a",
+                   "importer の許可は無い", "store ・永続化 ・manifest は無い", P13_A0, *[Path(p).name for p in PHASE13_RUNTIME]):
+        assert needle in text, needle
+    for banned in ("P13 は完了", "Phase 13 は完了", "import を許可した", "署名済み", "最新の", "推奨する銘柄", "D:\\", "0.0.0.0", "http://", "https://"):
+        assert banned not in text, banned
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    from src.intelligence.market_memory.review_state_change import CHANGE_ID_PREFIX, CHANGE_SCHEMA_VERSION
+    from src.intelligence.market_memory.review_state_sample import SAMPLE_ID_PREFIX, SAMPLE_SCHEMA_VERSION
+    assert SAMPLE_ID_PREFIX == "p13smp_" and CHANGE_ID_PREFIX == "p13chg_"
+    assert SAMPLE_SCHEMA_VERSION in text and CHANGE_SCHEMA_VERSION in text
+
+
 def test_p13_a0_negative_controls_reject_unregistered_paths_modifications_near_misses_and_drift() -> None:
     for status in ("A", "??", "M", "D", "R"):
-        assert not is_phase13_addition(status, f"{PHASE13_PACKAGE}/__init__.py")                  # 未登録（A0 では全て）
-        assert not is_phase13_addition(status, f"{PHASE13_PACKAGE}/review_state_model.py")
+        assert not is_phase13_addition(status, f"{PHASE13_PACKAGE}/review_state_store.py")         # 未登録
+        assert not is_phase13_addition(status, f"{PHASE13_PACKAGE}/p10_read_adapter.py")           # A2a の adapter はまだ無い
         assert not is_phase13_addition(status, "src/intelligence/market_memory2/model.py")           # 近い名前
         assert not is_phase13_addition(status, "src/intelligence/market_memory_model.py")
         assert not is_phase13_addition(status, PHASE12_RUNTIME[0])                                   # 凍結の runtime

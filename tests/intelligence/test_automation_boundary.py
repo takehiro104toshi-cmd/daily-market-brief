@@ -221,7 +221,7 @@ def test_p12_a1_frozen_phase4_to_11_runtime_is_object_identical_to_its_anchor_an
         assert [p for p, a, c in zip(runtime, anchored, current) if a != c] == []
     assert len(PHASE11_RUNTIME) == 12 and len(PHASE10_RUNTIME) == 17 and len(PHASE9_RUNTIME) == 18 and len(PHASE8_RUNTIME) == 54
     assert P11_A5 == "43c0b856d41efed397de213a1a06178c5e97ab10"
-    excluded = [f":(exclude,literal){p}" for p in PHASE12_RUNTIME]
+    excluded = [f":(exclude,literal){p}" for p in PHASE12_RUNTIME + PHASE13_RUNTIME]   # P13-A1: 登録した P13 の追加だけを除く（凍結の runtime の修正は不可）
     assert _git("diff", "--name-status", P12_BASE, "--", "src", *excluded) == ""           # Phase 4 〜 11 の src 全体
     assert _git("diff", "--cached", "--name-status", P12_BASE, "--", "src", *excluded) == ""
     assert _git("status", "--porcelain", "--", *PHASE7_RUNTIME, *PHASE8_RUNTIME, *PHASE9_RUNTIME, *PHASE10_RUNTIME,
@@ -320,7 +320,9 @@ def test_p12_5_a2_the_source_capability_contract_is_design_only_and_holds_no_pri
     for registry in ("tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/phase9_runtime_registry.py",
                      "tests/intelligence/phase10_runtime_registry.py", "tests/intelligence/phase11_runtime_registry.py"):
         assert _git("diff", "--name-status", P12_A6, "HEAD", "--", registry) == "", registry   # importer の登録はまだ無い
-    assert not (REPO_ROOT / "src/intelligence/market_memory").exists()                       # P13 の runtime は存在しない
+    for revision in (P12_A6, P12_5_DESIGN_ANCHOR, P13_BASE):                                 # A2 の時点に P13 の runtime は無かった（歴史の事実）
+        assert not _git("ls-tree", revision, "--", PHASE13_PACKAGE).strip(), revision
+    assert PHASE13_RUNTIME or not P13_PACKAGE_DIR.exists()                                   # 現在: 登録が空の間は package も無い
     text = (REPO_ROOT / P12_5_A2_CONTRACT_DOC).read_text(encoding="utf-8")
     for needle in ("DESIGN ONLY", "設計だけ", "本 gate は実装を一切承認しない", "本 gate では実装しない", "Review State Memory",
                    "市場の観測の記憶ではない", "AVAILABLE", "LIMITED", "GATED", "UNAVAILABLE", "read_personal_review", "read_p9_safe_view",

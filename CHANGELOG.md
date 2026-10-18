@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.28 (2026-10-18) — Phase 13 P13-A1 Review State Memory pure model（stdlib だけ ・凍結の package を import しない）
+
+Phase 13 の最初の runtime。P12.5 の契約（A0 ・A2 ・closeout）の意味を純粋な決定論の model にする: `SampleCutoff`（明示の aware な `at` ・明示の
+`as_of_date`）・`SourceViewIdentity` ・`ReviewStateEntry`（view の形の規則を検査）・`ReviewStateCounts`（P9 の安全な投影 ・個人の投影の件数を
+実際の意味で検算）・`ReviewStateSample`（`p13smp_` ・完全な sha256 ・telemetry は identity の外）・`SampleEvidence` ・`SampleOutcome`
+（SAMPLED ／ MISSING ／ INTEGRITY_FAILURE ・空の標本と区別 ・部分の標本は無い）・`StalenessLabel`（label だけ）・`PitState`（予約 ・出さない）・
+`build_digest`（順序つきの cutoff ・view の identity ・規則 ・任意の記述子。永続化 ・manifest は無い）・`ReviewStateChange`（`p13chg_` ・端点の差
+だけ ・区間 ・変化の不在は主張しない）・略記 id の衝突の fail closed。入力は合成だけ ・importer の許可は無い（P13-A2a は別の gate）。
+registry: `PHASE13_RUNTIME` に 4 file ・認可 `P13-A1`（anchor ＝ P13-A0 の commit）・A1 の文書 ・test を登録し digest を更新。凍結の
+test の登録の行（A0）は不変。P8 〜 P12 の runtime ・P12.5 の設計の契約は object 一致。B-track ・P14 は未着手。
+
+追加
+・`src/intelligence/market_memory/__init__.py` ・`canonical.py` ・`review_state_sample.py` ・`review_state_change.py`
+・`tests/intelligence/test_market_memory_model.py`
+・`docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（runtime 4 file ・認可 ・文書 ・test の登録）
+・`tests/intelligence/test_market_memory_boundary.py`（digest ・package の内容 ・import ／ 語彙 ／ private の guard ・A1 の文書の guard ・negative control）
+修正
+・なし
+
 ## v6.27 (2026-10-18) — Phase 13 P13-A0 runtime surface registration（test ・文書だけ ・runtime は無い）
 
 Phase 13（Market Memory ／ Review State Memory）の最初の gate。**P13 の `src/` の file は足さない**（package も `__init__` も無い ・

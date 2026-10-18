@@ -1,7 +1,7 @@
 """Phase 13（Market Memory ／ Review State Memory）の runtime の面の登録（test helper。P13-A0 で導入）。
 
 - `P13_BASE` ＝ P12.5 の設計の closeout の記録の commit（P13-A0 の登録はここから足す。A0 の commit 自身ではない ・固定）。
-- `PHASE13_RUNTIME` は **P13-A0 では空**。P13 の `src/` の file は 1 つも無い（package も `__init__` も無い）。将来の追加は、監督が承認した
+- `PHASE13_RUNTIME` は P13-A0 では空だった。P13-A1 で純粋な model の 4 file を `PHASE13_RUNTIME_AUTHORIZATION` と共に登録した。以後の追加は、監督が承認した
   gate（P13-A1 以後）で `PHASE13_RUNTIME_AUTHORIZATION` に gate ・anchor ・path を登録し、その gate の契約文書に path を書き、
   `test_market_memory_boundary.py` の registry の digest を更新して初めて認められる（registry の tuple に path を足すだけでは guard が落ちる）。
 - `is_phase13_addition` が認めるのは登録済みの path の追加（`A` ／ `??`）だけ。修正（M）・未登録の path ・近い名前は認めない。
@@ -19,14 +19,25 @@ from typing import Mapping, Sequence, Tuple
 P13_BASE = "aded7ee8621e9abac18d313009444675ab771ae6"
 PHASE13_PACKAGE = "src/intelligence/market_memory"
 ADDITION_STATUSES = ("A", "??")
-#: 登録済みの Phase 13 の runtime（P13-A0: **空**。追加は監督の gate と `PHASE13_RUNTIME_AUTHORIZATION` の登録を要する）
-PHASE13_RUNTIME: Tuple[str, ...] = ()
+#: 登録済みの Phase 13 の runtime（P13-A1: 純粋な Review State Memory の model 4 file。追加は監督の gate と `PHASE13_RUNTIME_AUTHORIZATION` の登録を要する）
+PHASE13_A1_RUNTIME: Tuple[str, ...] = (
+    'src/intelligence/market_memory/__init__.py',
+    'src/intelligence/market_memory/canonical.py',
+    'src/intelligence/market_memory/review_state_change.py',
+    'src/intelligence/market_memory/review_state_sample.py',
+)
+PHASE13_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE13_A1_RUNTIME))
 #: runtime の追加の認可（gate の id, その gate が始まる anchor の commit, 認めた path の tuple, 契約文書）。P13-A0 では空。
 #: guard: `PHASE13_RUNTIME` の全ての path はちょうど 1 つの認可に現れ、anchor は HEAD の祖先で、path は anchor に存在せず、文書に path が在る
-PHASE13_RUNTIME_AUTHORIZATION: Tuple[Tuple[str, str, Tuple[str, ...], str], ...] = ()
+PHASE13_RUNTIME_AUTHORIZATION: Tuple[Tuple[str, str, Tuple[str, ...], str], ...] = (
+    ("P13-A1", "4d464c30e4598d2ad5a0cee5a34ac366414fbde3", PHASE13_A1_RUNTIME,   # anchor ＝ P13-A0 の commit（直前に受理した HEAD）
+     "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md"),
+)
 PHASE13_TESTS: Tuple[str, ...] = ("tests/intelligence/phase13_runtime_registry.py",
-                                  "tests/intelligence/test_market_memory_boundary.py")
-PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md",)
+                                  "tests/intelligence/test_market_memory_boundary.py",
+                                  "tests/intelligence/test_market_memory_model.py")
+PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md",
+                                 "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md")
 #: P13 の code（将来）に文字としても在ってはならない凍結の package ・module の名前（textual な import の禁止は全て不変）
 FORBIDDEN_P13_TOKENS: Tuple[str, ...] = ("screener_intelligence", "watchlist_thesis_intelligence", "personal_intelligence",
                                          "personal_ui", "intelligence.automation", "narrative_intelligence", "synthesis_model",
@@ -139,11 +150,13 @@ PHASE13_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
         '        ("A", p) for p in PHASE12_TESTS} | {("M", p) for p in PHASE12_TEST_REGISTRATION}',
         '        current = (REPO_ROOT / path).read_text(encoding="utf-8")',
         '               if not is_phase12_addition(line[:2].strip(), line[3:])]',
+        '    excluded = [f":(exclude,literal){p}" for p in PHASE12_RUNTIME]',
         '    assert _git("diff", "--name-status", P12_VALIDATED_TREE, "HEAD", "--", "src") == ""         # validated tree 以後に src は不変',
         '    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", "src") == ""                 # 設計の gate は src を変えない',
         '    assert _git("status", "--porcelain", "--", "src") == ""',
         '    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", "src") == ""                 # 設計の gate は src を変えない',
         '    assert _git("status", "--porcelain", "--", "src") == ""',
+        '    assert not (REPO_ROOT / "src/intelligence/market_memory").exists()                       # P13 の runtime は存在しない',
         '    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", "src") == ""                      # P12.5 の全 gate で src は不変',
         '    assert _git("status", "--porcelain", "--", "src") == ""',
         '    assert not P13_PACKAGE_DIR.exists()                                                            # P13 の runtime は存在しない',
@@ -166,9 +179,13 @@ PHASE13_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
         '        ("A", p) for p in PHASE12_TESTS + PHASE13_TESTS} | {("M", p) for p in PHASE12_TEST_REGISTRATION}',
         '        current = _git("show", f"{P13_BASE}:{path}")             # P12 の登録は P12 の終わりまで（以後の差は P13 の guard が pin）',
         '               if not (is_phase12_addition(line[:2].strip(), line[3:]) or is_phase13_addition(line[:2].strip(), line[3:]))]',
+        '    excluded = [f":(exclude,literal){p}" for p in PHASE12_RUNTIME + PHASE13_RUNTIME]   # P13-A1: 登録した P13 の追加だけを除く（凍結の runtime の修正は不可）',
         '    assert _changes("--name-status", P12_VALIDATED_TREE, "HEAD", "--", "src") <= {("A", p) for p in PHASE13_RUNTIME}   # 以後は登録した P13 の追加だけ',
         '    _assert_src_unchanged_except_registered_p13_additions()                                # 設計の gate は src を変えない',
         '    _assert_src_unchanged_except_registered_p13_additions()                                # 設計の gate は src を変えない',
+        '    for revision in (P12_A6, P12_5_DESIGN_ANCHOR, P13_BASE):                                 # A2 の時点に P13 の runtime は無かった（歴史の事実）',
+        '        assert not _git("ls-tree", revision, "--", PHASE13_PACKAGE).strip(), revision',
+        '    assert PHASE13_RUNTIME or not P13_PACKAGE_DIR.exists()                                   # 現在: 登録が空の間は package も無い',
         '    _assert_src_unchanged_except_registered_p13_additions()                                     # P12.5 の全 gate で src は不変',
         '    assert not _git("ls-tree", P12_5_DESIGN_ANCHOR, "--", PHASE13_PACKAGE).strip()                 # 設計の closeout の anchor に P13 の runtime は無かった（歴史の事実）',
         '    assert not _git("ls-tree", P13_BASE, "--", PHASE13_PACKAGE).strip()                           # P13 の登録の base にも無い',
@@ -186,6 +203,6 @@ def only_phase13_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_BASE", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_BASE", "PHASE13_A1_RUNTIME", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
            "PHASE13_RUNTIME_AUTHORIZATION", "PHASE13_TESTS", "PHASE13_TEST_REGISTRATION", "is_phase13_addition",
            "only_phase13_registration", "registration_diff"]
