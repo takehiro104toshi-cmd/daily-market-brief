@@ -20,7 +20,7 @@ from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
 from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_A3, P12_A4, P12_BASE,
                                                          PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_REOPENED_IN_A4,
-                                                         PHASE12_A3_RUNTIME, PHASE12_A4_REOPENED_IN_A5, PHASE12_A4_RUNTIME,
+                                                         PHASE12_A3_RUNTIME, PHASE12_A4_REOPENED_IN_A5, PHASE12_A4_REOPENED_IN_A6, PHASE12_A4_RUNTIME,
                                                          PHASE12_A5_RUNTIME,
                                                          PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
                                                          PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
@@ -138,7 +138,9 @@ def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
     assert P12_A3 == "66139db86e06130d7504a279b3d5ee820fd76b24" and set(PHASE12_A3_REOPENED_IN_A4) <= set(PHASE12_A3_RUNTIME)
     assert P12_A4 == "dcad07351201ecab44d91acc98740b8833bc3996" and set(PHASE12_A4_REOPENED_IN_A5) <= set(PHASE12_A3_REOPENED_IN_A4)
     a3_pinned = tuple(p for p in PHASE12_A3_RUNTIME if p not in PHASE12_A3_REOPENED_IN_A4)
-    a4_pinned = tuple(p for p in PHASE12_A4_RUNTIME + PHASE12_A3_REOPENED_IN_A4 if p not in PHASE12_A4_REOPENED_IN_A5)
+    assert set(PHASE12_A4_REOPENED_IN_A6) <= set(PHASE12_A4_RUNTIME) and not set(PHASE12_A4_REOPENED_IN_A6) & set(PHASE12_A4_REOPENED_IN_A5)
+    a4_pinned = tuple(p for p in PHASE12_A4_RUNTIME + PHASE12_A3_REOPENED_IN_A4
+                      if p not in PHASE12_A4_REOPENED_IN_A5 and p not in PHASE12_A4_REOPENED_IN_A6)
     for commit, pinned in ((P12_A1, PHASE12_A1_RUNTIME), (P12_A2, PHASE12_A2_RUNTIME), (P12_A3, a3_pinned), (P12_A4, a4_pinned)):
         assert subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=REPO_ROOT).returncode == 0
         assert _git("diff", "--name-status", commit, "HEAD", "--", *pinned) == ""          # A1 ／ A2 ／ A3 の runtime はその commit のまま
@@ -149,6 +151,7 @@ def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None
                                                 | set(PHASE12_A5_RUNTIME))
     assert _git("diff", "--cached", "--name-status", P12_A3, "--", *PHASE12_A3_REOPENED_IN_A4) != ""   # 再開は実在する（登録どおり）
     assert _git("diff", "--cached", "--name-status", P12_A4, "--", *PHASE12_A4_REOPENED_IN_A5) != ""
+    assert _git("diff", "--cached", "--name-status", P12_A4, "--", *PHASE12_A4_REOPENED_IN_A6) != ""   # A6: lock の writer の O_BINARY
     assert all(p.startswith(PHASE12_PACKAGE + "/") and p.endswith(".py") for p in PHASE12_RUNTIME)
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
     for path in (*PHASE12_RUNTIME, *PHASE12_TESTS, *PHASE12_DOCS):

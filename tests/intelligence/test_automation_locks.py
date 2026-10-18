@@ -32,6 +32,64 @@ def clock() -> datetime:
 # ================================================================ acquisition
 
 
+def test_lock_bytes_on_disk_are_canonical_and_the_writer_asks_for_binary_mode_where_the_platform_has_one(tmp_path: Path, monkeypatch) -> None:
+    """A6 (Windows): text-mode descriptors turned the canonical LF into CRLF and the strict parser rightly refused the file. The
+    writer now asks for O_BINARY wherever the platform defines it; the parser stays strict (CRLF stays LOCK_MALFORMED)."""
+    import src.intelligence.automation.operational_lock as ol
+    root = tmp_path / "p12"
+    for i in range(20):                                                                     # repeated real roundtrip
+        run_id = f"{i:064x}"
+        held = acquire_lock(root, "RUN", run_id, probe=ALIVE, clock_instant=T0, scheduled_for="2026-07-01T06:00:00Z", attempt=1)
+        raw = run_lock_file(root, run_id).read_bytes()
+        assert raw == held.record.to_bytes() and raw.endswith(b"}\n") and b"\r" not in raw
+        assert classify_lock(run_lock_file(root, run_id), probe=ALIVE)["lock_class"] == "LOCK_LIVE"
+        held.release()
+    canonical = acquire_lock(root, "RUN", RUN_ID, probe=ALIVE, clock_instant=T0).record.to_bytes()
+    target = run_lock_file(root, RUN_ID)
+    target.write_bytes(canonical[:-1] + b"\r\n")                                           # identical except CRLF termination
+    assert classify_lock(target, probe=ALIVE)["lock_class"] == "LOCK_MALFORMED"
+    with pytest.raises(AutomationError) as e:
+        LockRecord.from_text(canonical.decode("utf-8")[:-1] + "\r\n")
+    assert e.value.public_code == "SCHEMA_INVALID:LOCK_MALFORMED"
+    target.unlink()
+    # a Windows-like C runtime: descriptors opened without the binary flag translate LF to CRLF on write
+    binary_flag = 0x8000
+    real_open, real_write, modes, seen = os.open, os.write, {}, []
+
+    def windows_like_open(path, flags, *args):
+        fd = real_open(path, flags & ~binary_flag, *args)
+        modes[fd] = bool(flags & binary_flag)
+        seen.append((str(path), flags))                                                     # the directory fsync opens too (read only)
+        return fd
+
+    def windows_like_write(fd, data):
+        return real_write(fd, data if modes.get(fd, True) else data.replace(b"\n", b"\r\n"))
+
+    monkeypatch.setattr(ol.os, "O_BINARY", binary_flag, raising=False)
+    monkeypatch.setattr(ol.os, "open", windows_like_open)
+    monkeypatch.setattr(ol.os, "write", windows_like_write)
+    held = acquire_lock(root, "RUN", RUN_ID, probe=ALIVE, clock_instant=T0)                 # fixed writer: binary flag requested
+    assert [f for p, f in seen if p == str(target)] == [os.O_CREAT | os.O_EXCL | os.O_WRONLY | binary_flag]
+    assert target.read_bytes() == held.record.to_bytes() and classify_lock(target, probe=ALIVE)["lock_class"] == "LOCK_LIVE"
+    held.release()
+    fd = windows_like_open(str(target), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)        # the pre-fix writer (no binary flag)
+    windows_like_write(fd, held.record.to_bytes())
+    os.close(fd)
+    assert target.read_bytes() == held.record.to_bytes()[:-1] + b"\r\n"
+    assert classify_lock(target, probe=ALIVE)["lock_class"] == "LOCK_MALFORMED"              # exactly the A6 Windows symptom
+    target.unlink()
+    monkeypatch.delattr(ol.os, "O_BINARY")                                                  # platform without the flag: unchanged behavior
+    captured = []
+    monkeypatch.setattr(ol.os, "open", lambda path, flags, *args: captured.append((str(path), flags)) or real_open(path, flags, *args))
+    monkeypatch.setattr(ol.os, "write", real_write)
+    held = acquire_lock(root, "RUN", RUN_ID, probe=ALIVE, clock_instant=T0)
+    assert [f for p, f in captured if p == str(target)] == [os.O_CREAT | os.O_EXCL | os.O_WRONLY]
+    assert target.read_bytes() == held.record.to_bytes()
+    assert classify_lock(target, probe=ALIVE)["lock_class"] == "LOCK_LIVE"
+    held.release()
+
+
+
 def test_lock_acquisition_is_atomic_exclusive_canonical_and_released_by_the_owner(tmp_path: Path) -> None:
     root = tmp_path / "p12"
     held = acquire_lock(root, "RUN", RUN_ID, probe=ALIVE, clock_instant=T0, scheduled_for="2026-07-01T06:00:00Z", attempt=1)

@@ -102,6 +102,8 @@ AFTER_FINALIZATION ・AFTER_TERMINAL_APPEND ・AFTER_CHECKPOINT ・BEFORE_STATUS
 ## 10. Windows の注意（A6 の実機で確かめる）
 
 - 取得は O_EXCL（CREATE_NEW）で原子的。解放は閉じてから unlink（開いたままの file は消せない ・他 process の生存の信号にもなる）。
+- lock の descriptor は O_BINARY も付けて開く（A6 の実機で判明: text mode の descriptor は正準な LF を CRLF に変え、自身の strict な
+  parser が `LOCK_MALFORMED` と判定した。直すのは writer だけ。parser は CRLF を許さない）。
 - `.partial` → `.crashed` ・lock → `locks/stale/` の rename は同じ volume の中。開いている file を含む directory の rename は失敗し得る
   （`STEP_FAILED:PARTIAL_RENAME_IO` で fail closed）。
 - directory の fsync は無い（黙って飛ばす）。
@@ -119,4 +121,7 @@ scheduler が無人で run を作るのは、この commit ・回復の層の上
 - P12-OBS-011: 同じ process の中で複数の run を thread で同時に走らせることは支援しない（A2 の network guard は process 全体）。
 - P12-OBS-012: ledger の lock の待ちは 30 秒で諦める（`DUPLICATE_INVOCATION:LEDGER_LOCKED`）。無人の運用での値は A5 で決める。
 - P12-OBS-013: Windows の生存 ／ identity の問い合わせは実機で未検証（A6）。
+- P12-OBS-019（A6 の実機 ・解消）: Windows の `os.open` は O_BINARY が無ければ text mode。lock の writer だけがその経路で、全ての lock が
+  `LOCK_MALFORMED`（重複は RECOVERY_REQUIRED ・release-lock ／ recover-* は拒む）になっていた。writer に O_BINARY を足し、
+  `operational_lock` を A4 の pin から登録して再開（`PHASE12_A4_REOPENED_IN_A6`）。生存 ／ identity の問い合わせは実機で健全を確認。
 - 次は **P12-A5**（監督の GO の後）。

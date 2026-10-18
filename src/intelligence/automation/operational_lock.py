@@ -1,6 +1,7 @@
 """P12-A4 — P12 の運用の排他 lock（`<p12_root>/locks/`。run ごとの lock と短い ledger の commit lock）。
 
-- 取得は `os.open(O_CREAT | O_EXCL)`（Windows ・POSIX で原子的。存在の検査 → 作成の race は無い）。内容は正準 JSON の安全な
+- 取得は `os.open(O_CREAT | O_EXCL)`（Windows ・POSIX で原子的。存在の検査 → 作成の race は無い。Windows では O_BINARY も付け、
+  text mode の改行の変換で正準な byte が崩れないようにする）。内容は正準 JSON の安全な
   metadata だけ: lock_version ・kind（RUN ／ LEDGER）・run_id ・pid ・process_identity ・boot_marker ・acquired_at ・scheduled_for ・attempt。
   path ・payload ・資格情報 ・command line ・user 名は無い。
 - 解放は所有者が fd を閉じてから unlink（Windows は開いたままの file を消せないので、他 process の生存の信号にもなる）。
@@ -127,8 +128,11 @@ def acquire_lock(p12_root: Any, kind: str, run_id: str, *, probe: ProcessProbe, 
     me = this_process(probe)
     record = LockRecord(kind=kind, run_id=run_id, pid=me["pid"], process_identity=me["process_identity"], boot_marker=me["boot_marker"],
                         acquired_at=utc_iso(clock_instant), scheduled_for=scheduled_for, attempt=attempt)
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY                                                           # Windows: text mode would turn the LF into CRLF
     try:
-        fd = os.open(str(target), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        fd = os.open(str(target), flags, 0o600)
     except FileExistsError:
         raise LockHeld(kind) from None
     except OSError:

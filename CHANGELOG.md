@@ -4,6 +4,22 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.20 (2026-10-18) — Phase 12 P12-A6 Windows lock format remediation
+
+A6 の Windows 実機の検証（repo の外の helper）で、運用の lock の writer が Windows では text mode の descriptor で書き、正準な LF が CRLF に
+変わって自身の strict な parser が全ての lock を `LOCK_MALFORMED` と判定することが判明した（重複の起動は RECOVERY_REQUIRED ・release-lock ／
+recover-* は拒む）。writer に O_BINARY を足す（platform に無ければ従来どおり）。parser ・分類 ・解放 ・ledger ・scheduler ・回復の意味は不変。
+凍結の Phase 4 〜 11 ・A1 〜 A3 ・A5 の runtime は不変（A4 の `operational_lock` だけを登録して再開）。
+
+追加
+・`tests/intelligence/test_automation_locks.py`（実 file の反復 roundtrip ・O_BINARY の要求 ・CRLF は MALFORMED のまま ・Windows 風の text mode の再現）
+改善
+・`src/intelligence/automation/operational_lock.py`（lock の descriptor に O_BINARY）
+・`tests/intelligence/phase12_runtime_registry.py` ・`test_automation_boundary.py`（`PHASE12_A4_REOPENED_IN_A6` の登録）
+・`docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md`（Windows の注意 ・P12-OBS-019）
+修正
+・Windows で全ての運用の lock が LOCK_MALFORMED になる writer の不具合
+
 ## v6.19 (2026-10-18) — Phase 12 P12-A5.1 scheduler skip evidence remediation
 
 A5 の MISSED ・NON_BUSINESS_DAY は ledger に何も残さなかった（Task Scheduler の履歴だけ）。A0 の「ledger が運用の実行の authority」と矛盾する

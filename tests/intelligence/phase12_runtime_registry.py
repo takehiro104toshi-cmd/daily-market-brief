@@ -13,7 +13,8 @@
   A3 の file は `P12_A3` の commit と object 一致。ただし A4 が登録して再開した 2 file（`PHASE12_A3_REOPENED_IN_A4`: transaction に
   lock ・直列化 ・cancel ・注入点を入れ、CLI に retry ・回復の命令を足す）だけは A4 の commit が新しい基準。
 - P12-A4 の runtime は lock ・process の探り ・ledger の commit の直列化 ・注入点 ・cancel ・回復 ・retry。network ・資格情報 ・scheduler は無い。
-  A4 の file は `P12_A4` の commit と object 一致。A5 が登録して再開した `run_cli` だけが新しい基準。
+  A4 の file は `P12_A4` の commit と object 一致。A5 が登録して再開した `run_cli` と、A6 の Windows 実機の検証が登録して再開した
+  `operational_lock`（lock の writer の O_BINARY）だけが新しい基準。
 - P12-A5 の runtime は Task Scheduler の統合: runtime の pin ・scheduled-run の解決 ・決定論の task の定義 ・schtasks の adapter ・
   install ／ remove ／ status ・意味の skip の transaction（A5.1: MISSED ・NON_BUSINESS_DAY を ledger に PLANNED → SKIPPED で記録）。
   daemon ・service ・network ・資格情報は無い。
@@ -58,6 +59,9 @@ PHASE12_A4_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for n
     "cancel_authority", "injection", "ledger_commit", "operational_lock", "process_probe", "recovery", "retry"))
 #: A5 が明示に再開した file（CLI に scheduled-run ・pin-runtime ・scheduler-install ／ -remove ／ -status を足す。他は不変）
 PHASE12_A4_REOPENED_IN_A5: Tuple[str, ...] = (f"{PHASE12_PACKAGE}/run_cli.py", f"{PHASE12_PACKAGE}/run_transaction.py")   # A5.1: preflight ・record_request の公開
+#: A6 の Windows 実機の検証が明示に再開した A4 の file（lock の writer に O_BINARY: text mode の CRLF 変換で正準な byte が崩れ、自身の
+#: parser が LOCK_MALFORMED と判定していた。parser ・分類 ・解放の意味は不変）
+PHASE12_A4_REOPENED_IN_A6: Tuple[str, ...] = (f"{PHASE12_PACKAGE}/operational_lock.py",)
 #: P12-A5 で足した runtime（runtime の pin ・scheduled-run の解決 ・task の定義 ・Task Scheduler の adapter ・install ／ remove ／ status）
 PHASE12_A5_RUNTIME: Tuple[str, ...] = tuple(f"{PHASE12_PACKAGE}/{name}.py" for name in (
     "runtime_pin", "scheduled_run", "scheduler_install", "skip_transaction", "task_definition", "task_scheduler_adapter"))
@@ -339,7 +343,7 @@ def only_phase12_registration(path: str, anchored: str, current: str) -> bool:
 
 
 __all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_A2", "P12_A3", "P12_A4", "P12_BASE", "PHASE12_A1_RUNTIME",
-           "PHASE12_A2_RUNTIME", "PHASE12_A3_REOPENED_IN_A4", "PHASE12_A3_RUNTIME", "PHASE12_A4_REOPENED_IN_A5", "PHASE12_A4_RUNTIME",
+           "PHASE12_A2_RUNTIME", "PHASE12_A3_REOPENED_IN_A4", "PHASE12_A3_RUNTIME", "PHASE12_A4_REOPENED_IN_A5", "PHASE12_A4_REOPENED_IN_A6", "PHASE12_A4_RUNTIME",
            "PHASE12_A5_RUNTIME",
            "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",
            "SANCTIONED_P12_EXTRA_STDLIB", "SANCTIONED_P12_MODULES", "SANCTIONED_P12_P11_IMPORTERS", "SANCTIONED_P12_STDLIB",
