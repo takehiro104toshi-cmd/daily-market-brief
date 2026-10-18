@@ -40,6 +40,7 @@ A5_CONTRACT_DOC = "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md"
 P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
 FREEZE_DOC = "docs/databank/PHASE12_FINAL_FREEZE.md"
 P12_5_CONTRACT_DOC = "docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md"   # P12.5-A0: 設計だけの契約
+P12_5_A2_CONTRACT_DOC = "docs/databank/PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md"   # P12.5-A2: 能力の契約（設計だけ）
 #: 凍結の記録に在ってはならない private な値の形（A1 の形 ＋ Windows の SID ・user profile の path ・validation の slot の時刻）
 FREEZE_DOC_PRIVATE_PATTERNS = (r"S-1-5-\d", r"C:\\Users", r"\\Users\\", r"\b[0-2]\d:[0-5]\d\b", r"JQUANTS_", r"human:")
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
@@ -266,7 +267,7 @@ def test_p12_5_a0_the_architecture_contract_is_design_only_and_holds_no_private_
     """P12.5-A0: Market Memory ／ Obsidian の architecture の契約は設計だけ（runtime ・adapter ・store ・root ・vault は無い）。guard は
     規範の境界（DERIVED ・PIT の歴史 ・状態の区別 ・export の安全 ・authority 不変）と private の形だけを見る。設計の散文に runtime の
     語彙の禁止は掛けない（NON-GOAL は名指しで書く）。"""
-    assert PHASE12_5_DOCS == (P12_5_CONTRACT_DOC,) and set(PHASE12_5_DOCS) <= set(PHASE12_DOCS)
+    assert PHASE12_5_DOCS == (P12_5_CONTRACT_DOC, P12_5_A2_CONTRACT_DOC) and set(PHASE12_5_DOCS) <= set(PHASE12_DOCS)
     assert not set(PHASE12_5_DOCS) & {CONTRACT_DOC, A2_CONTRACT_DOC, A3_CONTRACT_DOC, A4_CONTRACT_DOC, A5_CONTRACT_DOC, FREEZE_DOC}
     assert not _git("ls-tree", P12_A6, "--", P12_5_CONTRACT_DOC).strip()                     # 契約は A-track v1 の凍結の後に足した
     assert not _git("ls-tree", P12_VALIDATED_TREE, "--", P12_5_CONTRACT_DOC).strip()
@@ -287,6 +288,43 @@ def test_p12_5_a0_the_architecture_contract_is_design_only_and_holds_no_private_
         assert banned not in text, banned
     # 実装された署名の仕組みが在ると主張する文だけを禁じる（「signed」の部分文字列の一律の禁止ではない。将来の署名 ・整合性検証の
     # 設計の説明は許す。memory の整合性は canonical ／ hash-addressed ／ hash-chained で語る）
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    assert not re.search(r"署名(?:済み|している|されている)", text)
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants", "http://", "https://"):
+        assert banned not in text, banned
+
+
+def test_p12_5_a2_the_source_capability_contract_is_design_only_and_holds_no_private_values() -> None:
+    """P12.5-A2: 凍結の read の面の目録 ・AVAILABLE ／ LIMITED ／ GATED ／ UNAVAILABLE ・P13 Review State Memory の MVP ・標本の PIT ／
+    provenance の限界 ・P13-A2a の登録の提案。設計だけ（P13 の runtime ・importer の登録は無い）。guard は規範の節と private の形だけ。"""
+    assert P12_5_A2_CONTRACT_DOC in PHASE12_5_DOCS and P12_5_A2_CONTRACT_DOC in PHASE12_DOCS
+    assert not _git("ls-tree", P12_A6, "--", P12_5_A2_CONTRACT_DOC).strip()
+    assert not _git("ls-tree", P12_VALIDATED_TREE, "--", P12_5_A2_CONTRACT_DOC).strip()
+    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", "src") == ""                 # 設計の gate は src を変えない
+    assert _git("status", "--porcelain", "--", "src") == ""
+    for registry in ("tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/phase9_runtime_registry.py",
+                     "tests/intelligence/phase10_runtime_registry.py", "tests/intelligence/phase11_runtime_registry.py"):
+        assert _git("diff", "--name-status", P12_A6, "HEAD", "--", registry) == "", registry   # importer の登録はまだ無い
+    assert not (REPO_ROOT / "src/intelligence/market_memory").exists()                       # P13 の runtime は存在しない
+    text = (REPO_ROOT / P12_5_A2_CONTRACT_DOC).read_text(encoding="utf-8")
+    for needle in ("DESIGN ONLY", "設計だけ", "本 gate は実装を一切承認しない", "本 gate では実装しない", "Review State Memory",
+                   "市場の観測の記憶ではない", "AVAILABLE", "LIMITED", "GATED", "UNAVAILABLE", "read_personal_review", "read_p9_safe_view",
+                   "personal_safe_projection", "ReviewViewError", "P9ViewError", "read_p9_private_snapshot", "使わない",
+                   "aware", "as_of_date", "reviewed_at", "許された view に出ない", "cutoff で区切った", "正確な transition ではない",
+                   "同じ端点の状態は「間に変化が無かった」ことを証明しない", "sampled_at", "telemetry", "known_at を作らない",
+                   "KNOWN ／ UNKNOWN ／ UNCERTAIN", "NOT_YET_KNOWN", "INSUFFICIENT_TIME_PRECISION", "畳み込まない",
+                   "MISSING", "STALE", "AMBIGUOUS", "INTEGRITY_FAILURE", "private な DERIVED の store の中だけ",
+                   "export で用いる id", "本 gate では承認しない", "provenance の限界", "P10（profile ・attention）の revision の id ・digest は **無い**",
+                   "ReviewStateSample", "ReviewStateChange", "弱めない", "SANCTIONED_P13_P10_IMPORTERS", "PHASE13_TEST_REGISTRATION",
+                   "negative test", "合成の世界", "P12 の ledger", "取得の証拠", "revision の鎖", "B-track は HOLD のまま",
+                   "P13 の runtime は存在しない", "Phase 4 〜 11", "A-track v1", "P12.5 全体 ・P13 ・P14 は閉じない",
+                   "test_bo_no_other_package_imports_phase8", "test_p10_a1_is_outside_production_and_no_other_code_imports_it"):
+        assert needle in text, needle
+    for banned in ("P12.5 は完了", "P13 は完了", "Phase 12 は完了", "署名済み", "最新の", "推奨する銘柄", "P13 の runtime は在る",
+                   "登録済み", "import を許可した"):
+        assert banned not in text, banned
     assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
     assert not re.search(r"署名(?:済み|している|されている)", text)
     for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:

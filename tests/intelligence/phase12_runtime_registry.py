@@ -87,7 +87,8 @@ PHASE12_TESTS: Tuple[str, ...] = ("tests/intelligence/phase12_runtime_registry.p
                                   "tests/intelligence/test_automation_transaction.py")
 #: Phase 12.5 の設計だけの文書（P12.5-A0 の architecture の契約。runtime ・adapter ・store ・root ・vault は無い）。A-track v1 の凍結の
 #: 範囲 ・anchor は変えない。docs の面の guard（P7 〜 P12 の boundary）は `PHASE12_DOCS` の追加だけを受けるので、同じ登録に載せる
-PHASE12_5_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md",)
+PHASE12_5_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md",
+                                   "docs/databank/PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md")   # P12.5-A2: 能力の契約（設計だけ）
 PHASE12_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md",
                                  "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md",
                                  "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md",

@@ -4,6 +4,27 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.24 (2026-10-18) — Phase 12.5 P12.5-A2 source capability contract ／ P13 Review State Memory MVP（設計だけ ・runtime は無い）
+
+P12.5-A1 の source capability investigation（PASS）を正式な契約にする。凍結の Phase 8 〜 12 の実在する read-only の面を file ・symbol ・
+行で目録にし、「呼べる」と「下流の消費が承認されている」を分け（凍結の boundary test が import の面を文字列 ・完全一致で固定する）、
+Market Memory の各能力を AVAILABLE ／ LIMITED ／ GATED ／ UNAVAILABLE に分類する。P13 の最初の MVP を **Review State Memory**（市場の観測の
+記憶ではない）と定め、入力を P10 の governed な `read_personal_review` ・`read_p9_safe_view` ・`personal_safe_projection`（＋既存の error 型）
+だけに限る。許された view は `reviewed_at` ・状態の変化の瞬間 ・P10 の revision の id ／ digest を出さないので、標本は「cutoff で有効だった
+状態」、変化は「cutoff で区切った区間の観測」とし、同じ端点は変化の不在を証明せず、`sampled_at` は telemetry で known_at を作らない。
+A0 の `MemoryItem`（source の known_at と digest を要する）は弱めず、別の DERIVED の型 `ReviewStateSample` ／ `ReviewStateChange` を提案する。
+P8 の `KnowledgeTime` の KNOWN ／ UNKNOWN ／ UNCERTAIN と resolver の status（NOT_YET_KNOWN ・INSUFFICIENT_TIME_PRECISION ・AMBIGUOUS …）は
+別の層として保つ。P13-A2a の登録 gate（import の集合 ・negative test）は提案だけで **実装しない**。P8 の観測 ・取得の履歴 ・P9 ／ P10 の
+revision の鎖 ・P12 の ledger は MVP の外（GATED）。`src/` ・凍結の anchor ・importer の登録は不変。P13 の runtime は存在しない。B-track は HOLD。
+
+追加
+・`docs/databank/PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md`
+・`tests/intelligence/test_automation_boundary.py`（A2 の契約の guard: 設計だけ ・src 不変 ・P8 〜 P11 の registry 不変 ・P13 の package 不在 ・規範の節 ・private の形）
+改善
+・`tests/intelligence/phase12_runtime_registry.py`（`PHASE12_5_DOCS` に A2 の文書を登録）
+修正
+・なし
+
 ## v6.23 (2026-10-18) — Phase 12.5 P12.5-A0 Market Memory ／ Obsidian architecture contract（設計だけ ・runtime は無い）
 
 Phase 12.5 の最初の正式な設計契約。監督が条件つきで承認した hybrid の architecture（統治された read-only の source adapter ＋ 構造化 ・
