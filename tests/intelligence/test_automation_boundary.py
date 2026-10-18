@@ -13,17 +13,19 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
 from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
-from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_A3, P12_A4, P12_A6, P12_BASE,
-                                                         P12_VALIDATED_TREE,
+from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_5_DESIGN_ANCHOR, P12_A1, P12_A2, P12_A3, P12_A4,
+                                                         P12_A6, P12_BASE, P12_VALIDATED_TREE,
                                                          PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_REOPENED_IN_A4,
                                                          PHASE12_A3_RUNTIME, PHASE12_A4_REOPENED_IN_A5, PHASE12_A4_REOPENED_IN_A6, PHASE12_A4_RUNTIME,
                                                          PHASE12_A5_RUNTIME,
-                                                         PHASE12_5_DOCS, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
+                                                         PHASE12_5_DOCS, PHASE12_5_FROZEN_CONTRACTS, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
                                                          PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
                                                          SANCTIONED_P12_EXTRA_STDLIB, SANCTIONED_P12_MODULES,
                                                          SANCTIONED_P12_P11_IMPORTERS, SANCTIONED_P12_STDLIB,
@@ -41,6 +43,8 @@ P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
 FREEZE_DOC = "docs/databank/PHASE12_FINAL_FREEZE.md"
 P12_5_CONTRACT_DOC = "docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md"   # P12.5-A0: 設計だけの契約
 P12_5_A2_CONTRACT_DOC = "docs/databank/PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md"   # P12.5-A2: 能力の契約（設計だけ）
+P12_5_CLOSEOUT_DOC = "docs/databank/PHASE12_5_DESIGN_CLOSEOUT.md"                    # P12.5-A5: 設計の closeout の記録
+P13_PACKAGE_DIR = REPO_ROOT / "src/intelligence/market_memory"                        # 存在してはならない（P13 は未着手）
 #: 凍結の記録に在ってはならない private な値の形（A1 の形 ＋ Windows の SID ・user profile の path ・validation の slot の時刻）
 FREEZE_DOC_PRIVATE_PATTERNS = (r"S-1-5-\d", r"C:\\Users", r"\\Users\\", r"\b[0-2]\d:[0-5]\d\b", r"JQUANTS_", r"human:")
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
@@ -267,7 +271,7 @@ def test_p12_5_a0_the_architecture_contract_is_design_only_and_holds_no_private_
     """P12.5-A0: Market Memory ／ Obsidian の architecture の契約は設計だけ（runtime ・adapter ・store ・root ・vault は無い）。guard は
     規範の境界（DERIVED ・PIT の歴史 ・状態の区別 ・export の安全 ・authority 不変）と private の形だけを見る。設計の散文に runtime の
     語彙の禁止は掛けない（NON-GOAL は名指しで書く）。"""
-    assert PHASE12_5_DOCS == (P12_5_CONTRACT_DOC, P12_5_A2_CONTRACT_DOC) and set(PHASE12_5_DOCS) <= set(PHASE12_DOCS)
+    assert PHASE12_5_DOCS == (P12_5_CONTRACT_DOC, P12_5_A2_CONTRACT_DOC, P12_5_CLOSEOUT_DOC) and set(PHASE12_5_DOCS) <= set(PHASE12_DOCS)
     assert not set(PHASE12_5_DOCS) & {CONTRACT_DOC, A2_CONTRACT_DOC, A3_CONTRACT_DOC, A4_CONTRACT_DOC, A5_CONTRACT_DOC, FREEZE_DOC}
     assert not _git("ls-tree", P12_A6, "--", P12_5_CONTRACT_DOC).strip()                     # 契約は A-track v1 の凍結の後に足した
     assert not _git("ls-tree", P12_VALIDATED_TREE, "--", P12_5_CONTRACT_DOC).strip()
@@ -331,6 +335,85 @@ def test_p12_5_a2_the_source_capability_contract_is_design_only_and_holds_no_pri
         assert not re.search(pattern, text), pattern
     for banned in ("D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants", "http://", "https://"):
         assert banned not in text, banned
+
+
+#: closeout の記録に無ければならない主張（設計だけ ・anchor ・P13 ／ P14 ／ B-track は閉じない ・不変量 ・gate の順序 ・先送り）
+P12_5_CLOSEOUT_NEEDLES = ("DESIGN COMPLETE / CLOSED / FROZEN", P12_5_DESIGN_ANCHOR, "P12_5_DESIGN_ANCHOR", "新しい設計の anchor ではない",
+                          "P13 の runtime（Market Memory の実装）は存在しない", "P14（継続学習）は未着手", "B-track", "HOLD のまま",
+                          "本記録はそれらの実装 ・importer の登録 ・private root ・vault ・資格情報のいずれも承認しない",
+                          "PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md", "PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md", "A4 の是正",
+                          "hybrid", "DERIVED", "read-only", "明示の PIT", "MemoryItem", "ReviewStateSample", "ReviewStateChange", "捏造しない",
+                          "決定論の identity と replay", "staged → verified → published", "LLM", "自律の決定", "B-track が無い状態は支持する条件",
+                          "P13-A0", "P13-A1", "P13-A2a", "P13-A3", "P13-A4", "P13-A5", "P13-A6", "先送りの決定", "root の file の byte の manifest",
+                          "id の接頭辞", "file 名の規則", "STALE の方針", "G2", "G5", "資格情報の custody", "e390cddff9101541d16ba308a15d9ad1df3ca7b7",
+                          "3056e25586767fd7b5d8095f016a4d254de5c360", "object 一致", "P13 ・P14 ・B-track は閉じない", "本記録は実装を承認しない")
+P12_5_CLOSEOUT_BANNED = ("P13 は完了", "Phase 12 は完了", "P14 は完了", "B-track は完了", "P12.5 は完了", "P13 の runtime は在る", "最新の",
+                         "推奨する銘柄", "署名済み", "D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants", "http://", "https://")
+
+
+def _check_p12_5_closeout_text(text: str) -> None:
+    """closeout の記録の text の検査（必須の主張 ・誤った完了 ／ 署名の主張 ・private の形）。negative control が同じ関数を使う。"""
+    for needle in P12_5_CLOSEOUT_NEEDLES:
+        assert needle in text, needle
+    for banned in P12_5_CLOSEOUT_BANNED:
+        assert banned not in text, banned
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    assert not re.search(r"署名(?:済み|している|されている)", text)
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+
+
+def _blobs(revision: str, paths) -> dict:
+    out = _git("ls-tree", revision, "--", *paths)
+    return {line.split("\t", 1)[1]: line.split()[2] for line in out.splitlines()}
+
+
+def _p12_5_contracts_frozen_at(anchor: str) -> bool:
+    """A0 ・A2 の blob が HEAD ・index ・anchor で一致し、anchor に全て存在する。"""
+    anchored = _blobs(anchor, PHASE12_5_FROZEN_CONTRACTS)
+    return (set(anchored) == set(PHASE12_5_FROZEN_CONTRACTS) and anchored == _blobs("HEAD", PHASE12_5_FROZEN_CONTRACTS)
+            and _git("diff", "--cached", "--name-status", anchor, "--", *PHASE12_5_FROZEN_CONTRACTS) == ""
+            and _git("status", "--porcelain", "--", *PHASE12_5_FROZEN_CONTRACTS) == "")
+
+
+def test_p12_5_closeout_the_design_contracts_are_frozen_at_the_anchor_and_the_record_is_design_only() -> None:
+    """P12.5-A5: 設計の anchor（A4 の commit）で A0 ・A2 の blob が凍結 ・記録は anchor の後 ・src ／ P8 〜 P11 の registry 不変 ・P13 の
+    package 不在 ・記録の規範の主張と private の形。runtime は無いので runtime の anchor は変えない。"""
+    assert PHASE12_5_FROZEN_CONTRACTS == (P12_5_CONTRACT_DOC, P12_5_A2_CONTRACT_DOC)
+    assert P12_5_CLOSEOUT_DOC in PHASE12_5_DOCS and P12_5_CLOSEOUT_DOC in PHASE12_DOCS and P12_5_CLOSEOUT_DOC not in PHASE12_5_FROZEN_CONTRACTS
+    assert _git("merge-base", "--is-ancestor", P12_5_DESIGN_ANCHOR, "HEAD") == ""                 # anchor は HEAD の祖先（か HEAD）
+    assert _p12_5_contracts_frozen_at(P12_5_DESIGN_ANCHOR)                                        # A0 ・A2 の blob は anchor と一致
+    assert not _git("ls-tree", P12_5_DESIGN_ANCHOR, "--", P12_5_CLOSEOUT_DOC).strip()             # 記録は anchor の後に足した
+    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", "src") == ""                      # P12.5 の全 gate で src は不変
+    assert _git("status", "--porcelain", "--", "src") == ""
+    for registry in ("tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/phase9_runtime_registry.py",
+                     "tests/intelligence/phase10_runtime_registry.py", "tests/intelligence/phase11_runtime_registry.py"):
+        assert _git("diff", "--name-status", P12_A6, "HEAD", "--", registry) == "", registry        # importer の登録はまだ無い
+    assert not P13_PACKAGE_DIR.exists()                                                            # P13 の runtime は存在しない
+    tracked_now = set(_git("ls-tree", "-r", "--name-only", "HEAD", "src").splitlines())
+    assert tracked_now == set(_git("ls-tree", "-r", "--name-only", P12_A6, "src").splitlines())    # src の file の集合は anchor と同じ
+    _check_p12_5_closeout_text((REPO_ROOT / P12_5_CLOSEOUT_DOC).read_text(encoding="utf-8"))
+
+
+def test_p12_5_closeout_guard_rejects_mutated_records_and_foreign_anchors() -> None:
+    """negative control: guard は意味を持つ。必須の句を消す ・private の形を足す ・誤った完了の主張を足す ・署名の実装を主張する text は
+    失敗し、A0 の無い commit（P12_BASE）を anchor にすると blob の一致は成り立たない。"""
+    text = (REPO_ROOT / P12_5_CLOSEOUT_DOC).read_text(encoding="utf-8")
+    _check_p12_5_closeout_text(text)                                                               # 本物は通る
+    for mutated in (text.replace("新しい設計の anchor ではない", "新しい設計の anchor である"),
+                    text.replace(P12_5_DESIGN_ANCHOR, "0" * 40),
+                    text + "\nP13 は完了。\n",
+                    text + "\nThe ledger is cryptographically signed.\n",
+                    text + "\nS-1-5-21-1\n",
+                    text + "\nC:\\Users\\x\n",
+                    text + "\n2026-01-01T09:00\n",
+                    text + "\nhuman:reviewer\n",
+                    text + "\n12345\n",
+                    text + "\nhttps://example.invalid\n"):
+        with pytest.raises(AssertionError):
+            _check_p12_5_closeout_text(mutated)
+    assert not _p12_5_contracts_frozen_at(P12_BASE)                                                # A0 ・A2 の無い anchor では成り立たない
+    assert not _p12_5_contracts_frozen_at(P12_A6)
 
 
 # ================================================ import ・名前 ・語彙 ・直列化

@@ -41,6 +41,9 @@ P12_A4 = "dcad07351201ecab44d91acc98740b8833bc3996"
 P12_A6 = "e390cddff9101541d16ba308a15d9ad1df3ca7b7"
 #: Windows の P12-A6 real-machine validation を走らせた commit（test の移植性の修正だけ。runtime 43 file の blob は P12_A6 と同じ）
 P12_VALIDATED_TREE = "3056e25586767fd7b5d8095f016a4d254de5c360"
+#: Phase 12.5（Market Memory ／ Obsidian の設計）の設計の anchor ＝ P12.5-A4（A0 の整合の是正）の commit。A0 ・A2 の契約の blob は
+#: この commit で確定（設計だけ ・runtime は無い）。P12.5-A5 の closeout の記録の commit は anchor ではない
+P12_5_DESIGN_ANCHOR = "2d18133fdde8306c7b260b3e94669eefd448b188"
 PHASE12_PACKAGE = "src/intelligence/automation"
 #: P12-A1 で足した runtime（schedule の authority ・計画 ・run の identity ・状態機械 ・失敗 code ・step の結果 ・ledger の record ・
 #: status の projection。純粋な model と関数だけ）
@@ -88,7 +91,10 @@ PHASE12_TESTS: Tuple[str, ...] = ("tests/intelligence/phase12_runtime_registry.p
 #: Phase 12.5 の設計だけの文書（P12.5-A0 の architecture の契約。runtime ・adapter ・store ・root ・vault は無い）。A-track v1 の凍結の
 #: 範囲 ・anchor は変えない。docs の面の guard（P7 〜 P12 の boundary）は `PHASE12_DOCS` の追加だけを受けるので、同じ登録に載せる
 PHASE12_5_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md",
-                                   "docs/databank/PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md")   # P12.5-A2: 能力の契約（設計だけ）
+                                   "docs/databank/PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md",   # P12.5-A2: 能力の契約（設計だけ）
+                                   "docs/databank/PHASE12_5_DESIGN_CLOSEOUT.md")                 # P12.5-A5: 設計の closeout の記録
+#: 設計の anchor で blob が凍結する P12.5 の契約（closeout の記録は anchor の後に在るので含まない）
+PHASE12_5_FROZEN_CONTRACTS: Tuple[str, ...] = PHASE12_5_DOCS[:2]
 PHASE12_DOCS: Tuple[str, ...] = ("docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md",
                                  "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md",
                                  "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md",
@@ -353,10 +359,10 @@ def only_phase12_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_A1", "P12_A2", "P12_A3", "P12_A4", "P12_A6", "P12_BASE",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P12_IMPORT_PARTS", "P12_5_DESIGN_ANCHOR", "P12_A1", "P12_A2", "P12_A3", "P12_A4", "P12_A6", "P12_BASE",
            "P12_VALIDATED_TREE", "PHASE12_A1_RUNTIME",
            "PHASE12_A2_RUNTIME", "PHASE12_A3_REOPENED_IN_A4", "PHASE12_A3_RUNTIME", "PHASE12_A4_REOPENED_IN_A5", "PHASE12_A4_REOPENED_IN_A6", "PHASE12_A4_RUNTIME",
            "PHASE12_A5_RUNTIME",
-           "PHASE12_5_DOCS", "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",
+           "PHASE12_5_DOCS", "PHASE12_5_FROZEN_CONTRACTS", "PHASE12_DOCS", "PHASE12_PACKAGE", "PHASE12_RUNTIME", "PHASE12_TESTS", "PHASE12_TEST_REGISTRATION",
            "SANCTIONED_P12_EXTRA_STDLIB", "SANCTIONED_P12_MODULES", "SANCTIONED_P12_P11_IMPORTERS", "SANCTIONED_P12_STDLIB",
            "is_phase12_addition", "only_phase12_registration", "registration_diff"]

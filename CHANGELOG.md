@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.26 (2026-10-18) — Phase 12.5 design closeout record（P12.5-A5。文書 ・registry ・guard だけ ・runtime は無い）
+
+Phase 12.5（Market Memory ／ Obsidian の設計）の architecture の設計を DESIGN COMPLETE / CLOSED / FROZEN とする記録。設計の anchor は
+`2d18133fdde8306c7b260b3e94669eefd448b188`（registry の `P12_5_DESIGN_ANCHOR`。P12.5-A4 の是正の commit。A0 ・A2 の契約の blob はこの commit で
+確定）。本記録の commit は anchor ではない。閉じるのは設計だけ: **P13 の runtime は存在しない ・P14 は未着手 ・B-track は HOLD** であり、本記録は
+実装 ・importer の登録 ・private root ・vault ・資格情報のいずれも承認しない。承認した不変量（hybrid の構造化 DERIVED memory ＋ Markdown の投影 ・
+統治された read-only の境界 ・明示の PIT と真実の provenance ・`MemoryItem` と `ReviewStateSample` ／ `ReviewStateChange` の 2 族 ・known_at ／
+digest ／ transition の瞬間を捏造しない ・決定論の identity と replay ・staged の安全な export ・v1 に authority の書き込み ／ 取得 ／ LLM ／ 自律の
+決定は無い ・B-track が無い状態を支持）・将来の gate の公式の順序（P13-A0 → A1 → A2a → A3 → A4 → A5 → A6）・先送りの決定を記録する。
+`src/` ・Phase 4 〜 12 A-track の anchor ・P8 〜 P11 の registry は不変。
+
+追加
+・`docs/databank/PHASE12_5_DESIGN_CLOSEOUT.md`
+・`tests/intelligence/test_automation_boundary.py`（closeout の guard: A0 ・A2 の blob が anchor と一致 ・記録は anchor の後 ・src 不変 ・P13 の package 不在 ・規範の主張 ・private の形 ＋ negative control（改変した記録 ・A0 の無い anchor は失敗））
+改善
+・`tests/intelligence/phase12_runtime_registry.py`（`P12_5_DESIGN_ANCHOR` ・`PHASE12_5_FROZEN_CONTRACTS` ・closeout の記録の登録）
+修正
+・なし
+
 ## v6.25 (2026-10-18) — Phase 12.5 P12.5-A4 A0 architecture contract remediation（文書だけ ・runtime は無い）
 
 P12.5-A3 の closeout investigation が見つけた A0 ／ A2 の不整合を A0 の文書だけで解消する（A2 の定義は不変 ・architecture は不変）。
