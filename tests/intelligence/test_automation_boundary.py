@@ -1,7 +1,7 @@
-"""P12-A1 ／ A2 — Phase 12（自動化）の境界の guard。
+"""P12-A1 ／ A2 ／ A3 — Phase 12（自動化）の境界の guard。
 
 - registry の完全一致 ・P12_BASE 以後の面は登録した P12 の追加だけ ・凍結の P7 〜 P11 の test の差分は宣言した登録の行だけ。
-- A1 の 11 file は `P12_A1` の commit と object 一致。A2 の file が足して使う stdlib（git の読み取り ・private root の file ・loopback の
+- A1 の 11 file は `P12_A1` の commit と、A2 の 10 file は `P12_A2` の commit と object 一致。A2 ／ A3 の file が足して使う stdlib（git の読み取り ・private root の file ・loopback の
   probe ・network の拒否の guard）と凍結の P11 の read の面の import は、file ごとの完全一致で pin する。他は A1 と同じ純粋さ:
   時計 ・環境変数の値 ・乱数 ・network ・資格情報 ・free-form な payload ・投資の語彙は無い。CLI ・`__main__` も無い。
 - 凍結の Phase 4 〜 11 の runtime は anchor と object 一致（P8 ・P9 ・P10 ・P11）・P12_BASE から不変（src 全体）。
@@ -18,8 +18,9 @@ from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
 from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
 from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
-from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_BASE, PHASE12_A1_RUNTIME,
-                                                         PHASE12_A2_RUNTIME, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
+from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_A1, P12_A2, P12_BASE,
+                                                         PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_RUNTIME,
+                                                         PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
                                                          PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
                                                          SANCTIONED_P12_EXTRA_STDLIB, SANCTIONED_P12_MODULES,
                                                          SANCTIONED_P12_P11_IMPORTERS, SANCTIONED_P12_STDLIB,
@@ -30,6 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE12_PACKAGE
 CONTRACT_DOC = "docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md"
 A2_CONTRACT_DOC = "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md"
+A3_CONTRACT_DOC = "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md"
 P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
 FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
                   "pyproject.toml", "cloudflare", "notifiers", "src/report")
@@ -54,15 +56,24 @@ _P12 = PHASE12_PACKAGE
 #: A2 の file ごとの許し（理由を伴う完全一致。A1 の file には無い）
 STRING_ALLOWANCES = {f"{_P12}/network_deny.py": {"127.0.0.1"},                       # loopback の allowlist（bind ・接続先ではない）
                      f"{_P12}/preconditions.py": {"JQUANTS"},                         # 予約した資格情報の変数の名前（値は見ない）
-                     f"{_P12}/server_readiness.py": {"://"}}                           # 自分の loopback の origin の形だけ
+                     f"{_P12}/server_readiness.py": {"://"},                          # 自分の loopback の origin の形だけ
+                     f"{_P12}/run_cli.py": {"__main__", "argparse", "os.environ", "datetime.now"}}   # 人の手の CLI（telemetry の時計だけ）
 NAME_ALLOWANCES = {f"{_P12}/finalization.py": {"open", "write", "read_bytes", "mkdir", "rename", "exists"},   # .partial の中だけ
                    f"{_P12}/network_deny.py": {"socket", "connect", "setattr"},      # 拒否の guard の差し替え（出る時に戻す）
                    f"{_P12}/preconditions.py": {"exists", "iterdir", "read_bytes"},  # root が在って読めるか ・P11 の blob の再計算
-                   f"{_P12}/source_manifests.py": {"read_bytes", "rglob"}}            # 読み取り専用の manifest
+                   f"{_P12}/source_manifests.py": {"read_bytes", "rglob"},            # 読み取り専用の manifest
+                   f"{_P12}/atomic_files.py": {"open", "write", "read_bytes", "mkdir", "exists", "unlink"},   # 原子的な置換 ・追記
+                   f"{_P12}/crash_classification.py": {"exists"},                     # 証拠を読むだけ
+                   f"{_P12}/run_transaction.py": {"exists"},                          # final ／ .partial の有無
+                   f"{_P12}/run_cli.py": {"open", "write", "now", "environ"}}         # 入力 file ・REPORT の出力 ・telemetry の時計 ・環境の有無の写し
 WORD_ALLOWANCES = {f"{_P12}/finalization.py": {"path"}, f"{_P12}/network_deny.py": {"socket"},
                    f"{_P12}/preconditions.py": {"path", "subprocess", "credential"}, f"{_P12}/server_readiness.py": {"thread"},
-                   f"{_P12}/source_manifests.py": {"path"}}
+                   f"{_P12}/source_manifests.py": {"path"}, f"{_P12}/atomic_files.py": {"path"},
+                   f"{_P12}/calendar_authority.py": {"path"}, f"{_P12}/crash_classification.py": {"path"},
+                   f"{_P12}/ledger_store.py": {"path"}, f"{_P12}/schedule_authority.py": {"path"}, f"{_P12}/status_store.py": {"path"},
+                   f"{_P12}/run_transaction.py": {"credential"}, f"{_P12}/run_cli.py": {"credential", "now"}}
 BROAD_EXCEPT_ALLOWED = {f"{_P12}/run_executor.py": 1}                                # 想定外 → STEP_FAILED:UNEXPECTED だけ
+MAIN_ENTRY_ALLOWED = {f"{_P12}/run_cli.py"}                                           # `python -m` の入口だけ
 
 
 def _git(*args: str) -> str:
@@ -98,14 +109,17 @@ def _imports(path: Path):
 def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
     assert P12_BASE == "080d42aa3dad8bfc5ef82400beb6e2c62a873126"
     assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME)) and len(PHASE12_RUNTIME) == 21
-    assert len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10 and not set(PHASE12_A1_RUNTIME) & set(PHASE12_A2_RUNTIME)
-    assert P12_A1 == "dd922c3eebd67de2ac273ba66e82e493d814e701"
-    assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_A1, "HEAD"], cwd=REPO_ROOT).returncode == 0
-    assert _git("diff", "--name-status", P12_A1, "HEAD", "--", *PHASE12_A1_RUNTIME) == ""   # A1 の runtime は A1 の commit のまま
-    assert _git("diff", "--cached", "--name-status", P12_A1, "--", *PHASE12_A1_RUNTIME) == ""
-    assert _git("status", "--porcelain", "--", *PHASE12_A1_RUNTIME) == ""
-    assert set(SANCTIONED_P12_P11_IMPORTERS) <= set(PHASE12_A2_RUNTIME) and set(SANCTIONED_P12_EXTRA_STDLIB) <= set(PHASE12_A2_RUNTIME)
+    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME)) and len(PHASE12_RUNTIME) == 30
+    assert len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10 and len(PHASE12_A3_RUNTIME) == 9
+    assert len(set(PHASE12_A1_RUNTIME) | set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME)) == 30
+    assert P12_A1 == "dd922c3eebd67de2ac273ba66e82e493d814e701" and P12_A2 == "bd0007d3b6684a1e4640a723010e197432939f95"
+    for commit, pinned in ((P12_A1, PHASE12_A1_RUNTIME), (P12_A2, PHASE12_A2_RUNTIME)):
+        assert subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=REPO_ROOT).returncode == 0
+        assert _git("diff", "--name-status", commit, "HEAD", "--", *pinned) == ""          # A1 ／ A2 の runtime はその commit のまま
+        assert _git("diff", "--cached", "--name-status", commit, "--", *pinned) == ""
+        assert _git("status", "--porcelain", "--", *pinned) == ""
+    assert set(SANCTIONED_P12_P11_IMPORTERS) <= set(PHASE12_A2_RUNTIME)
+    assert set(SANCTIONED_P12_EXTRA_STDLIB) <= set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME)
     assert all(p.startswith(PHASE12_PACKAGE + "/") and p.endswith(".py") for p in PHASE12_RUNTIME)
     assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
     for path in (*PHASE12_RUNTIME, *PHASE12_TESTS, *PHASE12_DOCS):
@@ -188,6 +202,8 @@ def test_p12_a1_imports_are_stdlib_only_and_never_reach_frozen_phases_os_clock_n
             assert token not in source, (path, token)
         if path in PHASE12_A1_RUNTIME:
             assert not cross and path not in SANCTIONED_P12_EXTRA_STDLIB and path not in NAME_ALLOWANCES
+        if path in PHASE12_A3_RUNTIME:
+            assert not cross, path                                                    # A3 は凍結の phase を直接 import しない（A2 経由）
         assert "personal_intelligence" not in source and "watchlist_thesis" not in source and "screener" not in source
         assert "ZoneInfo" not in source and "zoneinfo" not in source                     # 固定 +09:00 だけ（tzdata に依らない）
 
@@ -216,7 +232,7 @@ def test_p12_a1_the_runtime_never_touches_files_env_clock_process_or_network_and
                 broad += bool(names & {"Exception", "BaseException"})
             elif isinstance(node, ast.If) and isinstance(node.test, ast.Compare):
                 left = node.test.left
-                assert not (isinstance(left, ast.Name) and left.id == "__name__"), (path, "__main__")
+                assert path in MAIN_ENTRY_ALLOWED or not (isinstance(left, ast.Name) and left.id == "__name__"), (path, "__main__")
         assert broad == BROAD_EXCEPT_ALLOWED.get(path, 0), (path, "broad except")
         words = set()
         for name in identifiers:
@@ -305,4 +321,22 @@ def test_p12_a2_the_contract_records_the_required_clauses_and_no_private_values(
         assert banned not in text, banned
     for name in ("execution_request", "execution_result", "finalization", "frozen_anchors", "network_deny", "preconditions",
                  "run_executor", "server_readiness", "snapshot_orchestrator", "source_manifests"):
+        assert name in text, name
+
+
+def test_p12_a3_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A3_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A2, "43c0b856d41efed397de213a1a06178c5e97ab10", "ledger が commit の authority", "SUCCEEDED", "head.json",
+                   "LEDGER_INVALID", "CHECKPOINT_STALE", "ORPHANED_FINALIZATION", "LEDGER_COMMITTED_CHECKPOINT_STALE", "STATUS_STALE",
+                   "status.json は authority ではない", "run の directory は authority ではない", "PLANNED_RECORDED", "RUNNING_RECORDED",
+                   "TERMINAL_RECORDED", "LEDGER_REVERIFIED", "STATUS_PROJECTED", "ALREADY_SUCCEEDED", "DUPLICATE_INVOCATION",
+                   "run_cli", "REPORT:", "RUN_FAILED CODE=", "write-schedule", "write-calendar", "classify", "human", "telemetry",
+                   "datetime.now", "A4 に残すこと", "scheduler が無い理由", "認証ではない", "Phase 12 の凍結ではない", "P12-A4"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
+    for name in ("atomic_files", "calendar_authority", "crash_classification", "head_checkpoint", "ledger_store", "run_cli",
+                 "run_transaction", "schedule_authority", "status_store"):
         assert name in text, name

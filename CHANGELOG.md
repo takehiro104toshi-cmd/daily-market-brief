@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.16 (2026-10-18) — Phase 12 P12-A3 operational commit layer ＋ manual CLI（ledger が commit の authority）
+
+A2 の決定論の実行を運用の transaction に結ぶ: live の追記専用 ledger（A1 の record ・鎖の検証 ・head で追記 ・fsync）・独立な head
+checkpoint（`ledger/head.json`。尾の切り捨ての検出 ・P12-OBS-002 の解消）・検証済みの ledger から再生成する status.json（authority では
+ない）・schedule ／ 休日 calendar の authority の正準な file I/O（人だけが書く）・crash の窓の分類（ORPHANED_FINALIZATION ・
+LEDGER_COMMITTED_CHECKPOINT_STALE ・STATUS_STALE）・人の手の CLI（`python -m src.intelligence.automation.run_cli`。REPORT 行だけ）。
+run が SUCCEEDED なのは検証に通る commit 済みの ledger の record が言う時だけ。scheduler ・background ・network ・資格情報 ・J-Quants は無い。
+凍結の Phase 4 〜 11 ・A1 ・A2 の runtime は不変。
+
+追加
+・`src/intelligence/automation/`（`atomic_files` ・`head_checkpoint` ・`ledger_store` ・`status_store` ・`schedule_authority` ・
+　`calendar_authority` ・`crash_classification` ・`run_transaction` ・`run_cli`）
+・`tests/intelligence/test_automation_ledger_store.py` ・`test_automation_transaction.py`
+・`docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md`
+改善
+・`tests/intelligence/phase12_runtime_registry.py` ・`test_automation_boundary.py`（A3 の登録 ・file ごとの許し ・A2 の object 一致の pin）
+修正
+・なし
+
 ## v6.15 (2026-10-18) — Phase 12 P12-A2 deterministic local orchestrator（networkless ・派生だけ）
 
 A1 の model を凍結の P11 の read-only の面（adapter ・UI model ・loopback server）に結ぶ決定論の orchestrator。完全に明示の実行の要求 →
