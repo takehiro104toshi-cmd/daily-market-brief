@@ -4,6 +4,30 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.29 (2026-10-18) — Phase 13 P13-A2a governed P10 safe view adapter（read-only ・P10 の 5 つの名前だけ）
+
+Review State Memory の標本を、凍結の P10 の governed な safe view だけから作る read-only の adapter
+`src/intelligence/market_memory/governed_review_source.py`（`sample_review_state`）。import は `read_personal_review` ・`read_p9_safe_view` ・
+`personal_safe_projection` ・`ReviewViewError` ・`P9ViewError` だけ（P11 と同じ面 ・完全一致）。手順は P9 の safe view → 見直しの view →
+P9 の safe view の再読 ・2 回の一致の確認 → 固定の literal との版 ／ class ／ 形 ／ `as_of_date` の照合（返った値から期待を導かない）→
+個人の安全な投影 → 承認した欄だけを A1 の model に写す。失敗の分類は adapter が行い（P10 の生の code は破損も含むため A1 の
+`outcome_for_source_failure` に渡さない）、最初の不在だけを MISSING、破損 ・世界の不正 ・並行の変更 ・読みの不一致 ・最初の成功の後の失敗 ・
+root の拒否 ・未知の code ／ 版 ／ class を INTEGRITY_FAILURE（固定の code ・detail ／ root は出さない）とする。2 回の P9 の読みの一致は不可分な
+snapshot の証明ではなく ABA を除外できないことを文書 ・test で固定する。`SampleEvidence` ・`sampled_at` は作らない。A1 の runtime 4 file の
+blob を `P13_A1`（`ccfc8e5…`）に pin（HEAD ・index ・作業木）。凍結の P10 の importer の guard に 5 行だけ足し `PHASE13_TEST_REGISTRATION` で
+pin。P8 〜 P12 の runtime ・P12.5 の設計の契約 ・A1 の runtime は不変。P13-A3 以後 ・B-track ・P14 は未着手。
+
+追加
+・`src/intelligence/market_memory/governed_review_source.py`
+・`tests/intelligence/test_market_memory_governed_source.py`
+・`docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（A2a の runtime ・認可 ・`P13_A1` ・`SANCTIONED_P13_P10_IMPORTS` ／ `IMPORTERS` ・登録の行 ・文書 ・test）
+・`tests/intelligence/test_market_memory_boundary.py`（A1 の blob の pin ・adapter だけの importer の面 ・負の control ・A2a の文書の guard ・digest）
+・`tests/intelligence/test_personal_intelligence_boundary.py`（P13-A2a の importer の完全一致の分岐の 5 行だけ）
+修正
+・なし
+
 ## v6.28 (2026-10-18) — Phase 13 P13-A1 Review State Memory pure model（stdlib だけ ・凍結の package を import しない）
 
 Phase 13 の最初の runtime。P12.5 の契約（A0 ・A2 ・closeout）の意味を純粋な決定論の model にする: `SampleCutoff`（明示の aware な `at` ・明示の

@@ -7,7 +7,8 @@
 - `is_phase13_addition` が認めるのは登録済みの path の追加（`A` ／ `??`）だけ。修正（M）・未登録の path ・近い名前は認めない。
 - 凍結の P7 〜 P12 の test に入れた登録の行は `PHASE13_TEST_REGISTRATION` に完全に列挙し、`only_phase13_registration` で `P13_BASE` との
   差分がそれと完全に一致することを確かめる（P12-A1 の `PHASE12_TEST_REGISTRATION` と同じ様式）。
-- **importer の許可は無い**: P13 が凍結の package（personal_intelligence ほか）を import する許可は別の gate（P13-A2a）で、ここには無い。
+- **importer の許可は P13-A2a の 1 file だけ**: `SANCTIONED_P13_P10_IMPORTERS` の adapter が P10 の governed な 5 つの名前だけを import する
+  （P11 と同じ面 ・完全一致）。他の P13 の file ・他の凍結の package の import は無い。A1 の runtime の blob は `P13_A1` に pin する。
 記録: `docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md`。
 """
 from __future__ import annotations
@@ -26,19 +27,44 @@ PHASE13_A1_RUNTIME: Tuple[str, ...] = (
     'src/intelligence/market_memory/review_state_change.py',
     'src/intelligence/market_memory/review_state_sample.py',
 )
-PHASE13_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE13_A1_RUNTIME))
+#: P13-A1 の受理した anchor（A1 の runtime 4 file の blob はこの commit のまま ・A2a 以後の修正は認めない）
+P13_A1 = "ccfc8e57885fabc5936a39034a9e816c66b2fbbc"
+#: P13-A2a: P10 の governed な safe view の adapter（1 file）
+PHASE13_A2A_RUNTIME: Tuple[str, ...] = ('src/intelligence/market_memory/governed_review_source.py',)
+PHASE13_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE13_A1_RUNTIME + PHASE13_A2A_RUNTIME))
 #: runtime の追加の認可（gate の id, その gate が始まる anchor の commit, 認めた path の tuple, 契約文書）。P13-A0 では空。
 #: guard: `PHASE13_RUNTIME` の全ての path はちょうど 1 つの認可に現れ、anchor は HEAD の祖先で、path は anchor に存在せず、文書に path が在る
 PHASE13_RUNTIME_AUTHORIZATION: Tuple[Tuple[str, str, Tuple[str, ...], str], ...] = (
     ("P13-A1", "4d464c30e4598d2ad5a0cee5a34ac366414fbde3", PHASE13_A1_RUNTIME,   # anchor ＝ P13-A0 の commit（直前に受理した HEAD）
      "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md"),
+    ("P13-A2a", P13_A1, PHASE13_A2A_RUNTIME,   # anchor ＝ P13-A1 の commit（直前に受理した HEAD）
+     "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md"),
 )
 PHASE13_TESTS: Tuple[str, ...] = ("tests/intelligence/phase13_runtime_registry.py",
                                   "tests/intelligence/test_market_memory_boundary.py",
-                                  "tests/intelligence/test_market_memory_model.py")
+                                  "tests/intelligence/test_market_memory_model.py",
+                                  "tests/intelligence/test_market_memory_governed_source.py")
 PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md",
-                                 "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md")
-#: P13 の code（将来）に文字としても在ってはならない凍結の package ・module の名前（textual な import の禁止は全て不変）
+                                 "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md",
+                                 "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md")
+#: P13-A2a: P10 の governed な read の面（P11 の `SANCTIONED_P11_P10_IMPORTS` と同じ 5 つの名前 ・完全一致）。store の class ・private な
+#: snapshot ・executor は含まない。importer は adapter の 1 file だけ
+SANCTIONED_P13_P10_IMPORTS: Mapping[str, frozenset] = {
+    "..personal_intelligence.p9_view": frozenset({"P9ViewError", "read_p9_safe_view"}),
+    "..personal_intelligence.personal_projection": frozenset({"personal_safe_projection"}),
+    "..personal_intelligence.review_view": frozenset({"ReviewViewError", "read_personal_review"}),
+}
+SANCTIONED_P13_P10_IMPORTERS: Mapping[str, Mapping[str, frozenset]] = {'src/intelligence/market_memory/governed_review_source.py': SANCTIONED_P13_P10_IMPORTS}
+#: 凍結の P10 の importer の guard（`test_personal_intelligence_boundary.py`）に P13-A2a が足した行（完全一致 ・この file だけ）
+PHASE13_A2A_IMPORTER_LINES: Tuple[str, ...] = (
+    'from tests.intelligence.phase13_runtime_registry import SANCTIONED_P13_P10_IMPORTERS   # P13-A2a: governed な read の importer だけ',
+    '        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P13_P10_IMPORTERS:  # P13-A2a: governed な read の importer だけ',
+    '            cross = {m: n for m, n in _imports(path)[0].items() if m.startswith("..")}',
+    '            assert cross == SANCTIONED_P13_P10_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]   # 面は完全一致',
+    '            continue',
+)
+#: P13 の code（将来）に文字としても在ってはならない凍結の package ・module の名前（textual な import の禁止は全て不変。A2a の adapter だけ
+#: `personal_intelligence` を含む）
 FORBIDDEN_P13_TOKENS: Tuple[str, ...] = ("screener_intelligence", "watchlist_thesis_intelligence", "personal_intelligence",
                                          "personal_ui", "intelligence.automation", "narrative_intelligence", "synthesis_model",
                                          "theme_intelligence", "jquants", "anthropic", "openai")
@@ -128,10 +154,15 @@ PHASE13_TEST_REGISTRATION: Mapping[str, Tuple[Tuple[str, ...], Tuple[str, ...]]]
         '        ("A", p) for p in PHASE10_TESTS + PHASE11_TESTS + PHASE12_TESTS} | {("M", p) for p in PHASE10_TEST_REGISTRATION}',
     ), (
         'from tests.intelligence.phase13_runtime_registry import PHASE13_DOCS, PHASE13_RUNTIME, PHASE13_TESTS   # P13-A0 の登録（空の runtime）',
+        'from tests.intelligence.phase13_runtime_registry import SANCTIONED_P13_P10_IMPORTERS   # P13-A2a: governed な read の importer だけ',
         '                                                                            + PHASE11_RUNTIME + PHASE12_RUNTIME + PHASE13_RUNTIME}',
         '                                                                             + PHASE11_DOCS + PHASE12_DOCS + PHASE13_DOCS}',
         '        ("A", p) for p in PHASE10_TESTS + PHASE11_TESTS + PHASE12_TESTS + PHASE13_TESTS} | {',
         '            ("M", p) for p in PHASE10_TEST_REGISTRATION}',
+        '            continue',
+        '        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P13_P10_IMPORTERS:  # P13-A2a: governed な read の importer だけ',
+        '            cross = {m: n for m, n in _imports(path)[0].items() if m.startswith("..")}',
+        '            assert cross == SANCTIONED_P13_P10_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]   # 面は完全一致',
     )),
     'tests/intelligence/test_personal_ui_boundary.py': ((
         '                                                                            + PHASE12_RUNTIME}',
@@ -203,6 +234,8 @@ def only_phase13_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_BASE", "PHASE13_A1_RUNTIME", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
-           "PHASE13_RUNTIME_AUTHORIZATION", "PHASE13_TESTS", "PHASE13_TEST_REGISTRATION", "is_phase13_addition",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_A1", "P13_BASE", "PHASE13_A1_RUNTIME", "PHASE13_A2A_IMPORTER_LINES",
+           "PHASE13_A2A_RUNTIME", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
+           "PHASE13_RUNTIME_AUTHORIZATION", "PHASE13_TESTS", "PHASE13_TEST_REGISTRATION", "SANCTIONED_P13_P10_IMPORTERS",
+           "SANCTIONED_P13_P10_IMPORTS", "is_phase13_addition",
            "only_phase13_registration", "registration_diff"]

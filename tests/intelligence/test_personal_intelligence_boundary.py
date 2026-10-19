@@ -38,6 +38,7 @@ from tests.intelligence.phase11_runtime_registry import (P11_BASE, PHASE11_DOCS,
                                                          SANCTIONED_P11_P10_IMPORTERS)   # P11 の登録
 from tests.intelligence.phase12_runtime_registry import PHASE12_DOCS, PHASE12_RUNTIME, PHASE12_TESTS   # P12 の登録
 from tests.intelligence.phase13_runtime_registry import PHASE13_DOCS, PHASE13_RUNTIME, PHASE13_TESTS   # P13-A0 の登録（空の runtime）
+from tests.intelligence.phase13_runtime_registry import SANCTIONED_P13_P10_IMPORTERS   # P13-A2a: governed な read の importer だけ
 from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -245,6 +246,10 @@ def test_p10_a1_is_outside_production_and_no_other_code_imports_it() -> None:
         if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P11_P10_IMPORTERS:  # P11: governed な read の importer だけ
             cross = {m: n for m, n in _imports(path)[0].items() if m.startswith("..")}
             assert cross == SANCTIONED_P11_P10_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]   # 面は完全一致
+            continue
+        if path.relative_to(REPO_ROOT).as_posix() in SANCTIONED_P13_P10_IMPORTERS:  # P13-A2a: governed な read の importer だけ
+            cross = {m: n for m, n in _imports(path)[0].items() if m.startswith("..")}
+            assert cross == SANCTIONED_P13_P10_IMPORTERS[path.relative_to(REPO_ROOT).as_posix()]   # 面は完全一致
             continue
         assert "personal_intelligence" not in path.read_text(encoding="utf-8", errors="replace"), path
 

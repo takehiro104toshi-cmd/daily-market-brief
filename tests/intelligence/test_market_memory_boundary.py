@@ -5,7 +5,8 @@
 - 凍結の P8 〜 P12 の runtime の blob ・P12.5 の設計の契約の blob は anchor と object 一致。
 - registry の drift は digest で止める: `PHASE13_RUNTIME` ・認可 ・test ・文書の集合の正準 digest が本 file の定数と一致しなければ落ちる
   （runtime の追加は registry と本 file と gate の文書の 3 つを同時に ・監督の gate で変える）。
-- importer の許可は無い: textual な import の禁止（P8 〜 P12 の package 名）は不変で、本 file はそれを緩めない。
+- importer の許可は P13-A2a の adapter の 1 file だけ（P10 の governed な 5 つの名前 ・完全一致）。他の textual な import の禁止は不変。
+- P13-A1 の runtime 4 file の blob は `P13_A1` の commit に pin（HEAD ・index ・作業木）。
 - negative control: 未登録の path ・修正 ・近い名前 ・未宣言の登録の行 ・禁止の token は落ちる。
 """
 from __future__ import annotations
@@ -25,7 +26,9 @@ from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
 from tests.intelligence.phase12_runtime_registry import (P12_5_DESIGN_ANCHOR, P12_A6, P12_VALIDATED_TREE, PHASE12_5_FROZEN_CONTRACTS,
                                                          PHASE12_RUNTIME)
-from tests.intelligence.phase13_runtime_registry import (ADDITION_STATUSES, FORBIDDEN_P13_TOKENS, P13_BASE, PHASE13_A1_RUNTIME, PHASE13_DOCS,
+from tests.intelligence.phase13_runtime_registry import (ADDITION_STATUSES, FORBIDDEN_P13_TOKENS, P13_A1, P13_BASE, PHASE13_A1_RUNTIME,
+                                                         PHASE13_A2A_IMPORTER_LINES, PHASE13_A2A_RUNTIME, PHASE13_DOCS,
+                                                         SANCTIONED_P13_P10_IMPORTERS, SANCTIONED_P13_P10_IMPORTS,
                                                          PHASE13_PACKAGE, PHASE13_RUNTIME, PHASE13_RUNTIME_AUTHORIZATION,
                                                          PHASE13_TESTS, PHASE13_TEST_REGISTRATION, is_phase13_addition,
                                                          only_phase13_registration, registration_diff)
@@ -36,14 +39,18 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_DIR = REPO_ROOT / PHASE13_PACKAGE
 A0_DOC = "docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md"
 A1_DOC = "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md"
+A2A_DOC = "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md"
+ADAPTER = "src/intelligence/market_memory/governed_review_source.py"
+P10_IMPORTER_GUARD = "tests/intelligence/test_personal_intelligence_boundary.py"
 P13_A0 = "4d464c30e4598d2ad5a0cee5a34ac366414fbde3"   # P13-A0 の commit ＝ A1 の認可の anchor
 #: P13 の runtime が import してよい stdlib（file ごと ・完全一致）。file ・OS ・時計 ・環境 ・process ・socket ・乱数は無い
 SANCTIONED_P13_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "hashlib", "json", "re", "typing"}
 SANCTIONED_P13_MODULES = {"src/intelligence/market_memory/__init__.py": set(), "src/intelligence/market_memory/canonical.py": set(),
                           "src/intelligence/market_memory/review_state_sample.py": {".canonical"},
-                          "src/intelligence/market_memory/review_state_change.py": {".canonical", ".review_state_sample"}}
+                          "src/intelligence/market_memory/review_state_change.py": {".canonical", ".review_state_sample"},
+                          ADAPTER: {".canonical", ".review_state_sample", *SANCTIONED_P13_P10_IMPORTS}}
 #: registry の正準 digest（P13-A0 で確定。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "e2975c2b05a58a49afc2910c1080146457bd91d8293f92c16e3575cb4f7dd6d8"
+P13_REGISTRY_DIGEST = "a8b68b5b656aa521bb9895909bea2dde8255ab0b7af7458a37b6e8e5ff8e1d13"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -83,19 +90,37 @@ def _forbidden_tokens_in(text: str):
     return [token for token in FORBIDDEN_P13_TOKENS if token in text]
 
 
+def _allowed_tokens(path: str):
+    """P13 の file が含んでよい凍結の package 名（P13-A2a の adapter の `personal_intelligence` だけ）。"""
+    return ["personal_intelligence"] if path in SANCTIONED_P13_P10_IMPORTERS else []
+
+
+def _git_blob_of(data: bytes) -> str:
+    """作業木の byte の git の blob の id（`git hash-object` と同じ ・書き込みは無い）。"""
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+
+
 # ================================================ registry ・drift ・認可
 
 
 def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_empty() -> None:
     assert P13_BASE == "aded7ee8621e9abac18d313009444675ab771ae6"                                  # 固定の base（A0 の commit ではない）
     assert _git("merge-base", "--is-ancestor", P13_BASE, "HEAD") == ""
-    assert PHASE13_RUNTIME == tuple(sorted(PHASE13_A1_RUNTIME)) and len(PHASE13_RUNTIME) == 4        # P13-A1: 純粋な model の 4 file
-    assert PHASE13_RUNTIME_AUTHORIZATION == (("P13-A1", P13_A0, PHASE13_A1_RUNTIME, A1_DOC),)
+    assert len(PHASE13_A1_RUNTIME) == 4 and PHASE13_A2A_RUNTIME == (ADAPTER,)                       # A1: model 4 file ・A2a: adapter 1 file
+    assert PHASE13_RUNTIME == tuple(sorted(PHASE13_A1_RUNTIME + PHASE13_A2A_RUNTIME)) and len(PHASE13_RUNTIME) == 5
+    assert P13_A1 == "ccfc8e57885fabc5936a39034a9e816c66b2fbbc"
+    assert PHASE13_RUNTIME_AUTHORIZATION == (("P13-A1", P13_A0, PHASE13_A1_RUNTIME, A1_DOC),
+                                             ("P13-A2a", P13_A1, PHASE13_A2A_RUNTIME, A2A_DOC))
+    assert dict(SANCTIONED_P13_P10_IMPORTERS) == {ADAPTER: SANCTIONED_P13_P10_IMPORTS}                # importer は adapter だけ
+    assert {m: set(n) for m, n in SANCTIONED_P13_P10_IMPORTS.items()} == {
+        "..personal_intelligence.p9_view": {"P9ViewError", "read_p9_safe_view"},
+        "..personal_intelligence.personal_projection": {"personal_safe_projection"},
+        "..personal_intelligence.review_view": {"ReviewViewError", "read_personal_review"}}               # P11 と同じ 5 つの名前
     assert set(SANCTIONED_P13_MODULES) == set(PHASE13_RUNTIME)
     assert PHASE13_PACKAGE == "src/intelligence/market_memory" and ADDITION_STATUSES == ("A", "??")
     assert PHASE13_TESTS == ("tests/intelligence/phase13_runtime_registry.py", "tests/intelligence/test_market_memory_boundary.py",
-                             "tests/intelligence/test_market_memory_model.py")
-    assert PHASE13_DOCS == (A0_DOC, A1_DOC)
+                             "tests/intelligence/test_market_memory_model.py", "tests/intelligence/test_market_memory_governed_source.py")
+    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC)
     assert _registry_digest() == P13_REGISTRY_DIGEST                                               # drift は digest で止まる
     for path in (*PHASE13_TESTS, *PHASE13_DOCS):
         assert (REPO_ROOT / path).is_file(), path
@@ -147,7 +172,12 @@ def test_p13_a0_since_the_base_only_registered_phase13_files_and_declared_regist
         assert not only_phase13_registration(path, anchored, anchored), path                         # 登録の欠落
         removed, added = PHASE13_TEST_REGISTRATION[path]
         assert added and all("is_outside_production" not in line and "no_other_code_imports" not in line for line in added), path
-        assert all("SANCTIONED_P13" not in line for line in added), path                            # importer の許可は無い（P13-A2a）
+        importer_lines = [line for line in added if "SANCTIONED_P13" in line]
+        if path == P10_IMPORTER_GUARD:                                                               # P13-A2a: P10 の guard の 5 行だけ
+            assert set(PHASE13_A2A_IMPORTER_LINES) <= set(added), path
+            assert set(importer_lines) <= set(PHASE13_A2A_IMPORTER_LINES), path
+        else:
+            assert importer_lines == [], path                                                        # 他の凍結の test に importer の許可は無い
     for registry in UNTOUCHED_REGISTRIES:
         assert _git("diff", "--name-status", P13_BASE, "--", registry) == "", registry               # 前の phase の registry は不変
     pending = [line for line in _git("status", "--porcelain", "--", "src").splitlines()
@@ -215,9 +245,10 @@ def test_p13_a1_runtime_imports_are_stdlib_only_and_never_reach_frozen_phases() 
         relative, absolute = _imports(REPO_ROOT / path)
         assert absolute <= SANCTIONED_P13_STDLIB, (path, absolute - SANCTIONED_P13_STDLIB)
         assert set(relative) == SANCTIONED_P13_MODULES[path], (path, set(relative))
-        assert not any(m.startswith("..") for m in relative), path                                  # 凍結の phase への import は無い
+        cross = {m: n for m, n in relative.items() if m.startswith("..")}
+        assert cross == {m: set(n) for m, n in SANCTIONED_P13_P10_IMPORTERS.get(path, {}).items()}, (path, cross)   # adapter だけ ・完全一致
         text = (REPO_ROOT / path).read_text(encoding="utf-8")
-        assert _forbidden_tokens_in(text) == [], path
+        assert _forbidden_tokens_in(text) == _allowed_tokens(path), path
         for pattern in PRIVATE_PATTERNS:
             assert not re.search(pattern, text), (path, pattern)
         assert "__main__" not in text and "import os" not in text and "import sys" not in text, path
@@ -254,7 +285,7 @@ def test_p13_a1_the_model_record_is_design_and_runtime_consistent_and_holds_no_p
                    "ReviewStateCounts", "ReviewStateSample", "ReviewStateChange", "SampleEvidence", "SampleOutcome", "StalenessLabel",
                    "PitState", "known_at", "reviewed_at", "捏造しない", "端点の差", "変化の不在", "MISSING", "INTEGRITY_FAILURE",
                    "空の標本", "telemetry", "SHORT_ID_COLLISION", "合成の入力", "凍結の package を import しない", "P13-A2a",
-                   "importer の許可は無い", "store ・永続化 ・manifest は無い", P13_A0, *[Path(p).name for p in PHASE13_RUNTIME]):
+                   "importer の許可は無い", "store ・永続化 ・manifest は無い", P13_A0, *[Path(p).name for p in PHASE13_A1_RUNTIME]):
         assert needle in text, needle
     for banned in ("P13 は完了", "Phase 13 は完了", "import を許可した", "署名済み", "最新の", "推奨する銘柄", "D:\\", "0.0.0.0", "http://", "https://"):
         assert banned not in text, banned
@@ -296,8 +327,68 @@ def test_p13_a0_negative_controls_reject_unregistered_paths_modifications_near_m
     for token in FORBIDDEN_P13_TOKENS:
         assert _forbidden_tokens_in(f"from ..{token} import x") == [token] or token in _forbidden_tokens_in(f"import {token}")
     assert _forbidden_tokens_in("from dataclasses import dataclass") == []
-    for path in PHASE13_RUNTIME:                                                                     # A0 では空（将来の P13 の code の走査）
+    for path in PHASE13_RUNTIME:                                                                     # P13 の code の走査（adapter だけ P10 の名前）
         text = (REPO_ROOT / path).read_text(encoding="utf-8")
-        assert _forbidden_tokens_in(text) == [], path
+        assert _forbidden_tokens_in(text) == _allowed_tokens(path), path
     with pytest.raises(AssertionError):
         assert _forbidden_tokens_in("from ..personal_intelligence.review_view import read_personal_review") == []
+
+
+# ================================================ P13-A2a: A1 の blob の pin ・importer の負の control ・文書
+
+
+def test_p13_a2a_the_accepted_a1_runtime_is_object_identical_to_the_a1_anchor_in_head_index_and_worktree() -> None:
+    assert _git("merge-base", "--is-ancestor", P13_A1, "HEAD") == ""
+    anchored = _blobs(P13_A1, PHASE13_A1_RUNTIME)
+    assert set(anchored) == set(PHASE13_A1_RUNTIME)                                                 # 4 file 全てが anchor に在る
+    assert _blobs("HEAD", PHASE13_A1_RUNTIME) == anchored                                           # commit 済みの修正は無い
+    index = {line.split("\t", 1)[1]: line.split()[1] for line in _git("ls-files", "-s", "--", *PHASE13_A1_RUNTIME).splitlines()}
+    assert index == anchored                                                                        # index の修正は無い
+    worktree = {path: _git_blob_of((REPO_ROOT / path).read_bytes()) for path in PHASE13_A1_RUNTIME}
+    assert worktree == anchored                                                                     # 作業木の修正は無い
+    for path in PHASE13_A1_RUNTIME:                                                                 # negative control: 1 byte の変化で一致しない
+        assert _git_blob_of((REPO_ROOT / path).read_bytes() + b"#") != anchored[path], path
+    assert _git_blob_of(b"") == "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"                          # git の空 blob と同じ計算
+
+
+def test_p13_a2a_only_the_adapter_reaches_p10_and_any_other_import_surface_is_rejected() -> None:
+    relative, _ = _imports(REPO_ROOT / ADAPTER)
+    sanctioned = {m: set(n) for m, n in SANCTIONED_P13_P10_IMPORTS.items()}
+    cross = {m: n for m, n in relative.items() if m.startswith("..")}
+    assert cross == sanctioned
+    for path in PHASE13_A1_RUNTIME:
+        assert not any(m.startswith("..") for m in _imports(REPO_ROOT / path)[0]), path            # A1 は凍結の phase に届かない
+    variants = (
+        {**sanctioned, "..personal_intelligence.p9_view": sanctioned["..personal_intelligence.p9_view"] | {"read_p9_private_snapshot"}},
+        {**sanctioned, "..personal_intelligence.profile_store": {"ProfileStore"}},
+        {**sanctioned, "..watchlist_thesis_intelligence.watch_store": {"WatchlistStore"}},
+        {**sanctioned, "..personal_ui.p10_read_adapter": {"read_ui_model"}},
+        {m: n for m, n in sanctioned.items() if m != "..personal_intelligence.personal_projection"},
+    )
+    for variant in variants:
+        assert variant != sanctioned                                                                  # 名前 ・module の追加 ／ 欠落は一致しない
+    assert set(SANCTIONED_P13_P10_IMPORTERS) == {ADAPTER}
+    assert "src/intelligence/market_memory/review_state_sample.py" not in SANCTIONED_P13_P10_IMPORTERS   # 別の importer は無い
+    text = (REPO_ROOT / ADAPTER).read_text(encoding="utf-8")
+    assert "outcome_for_source_failure" not in text.split('"""', 2)[2]                              # 生の P10 の code を A1 の写像に渡さない
+    assert "SampleEvidence" not in text.split('"""', 2)[2] and "sampled_at" not in text.split('"""', 2)[2]   # telemetry を作らない
+    init = REPO_ROOT / PHASE13_PACKAGE / "__init__.py"
+    assert _imports(init) == ({}, set()) and "governed_review_source" not in init.read_text(encoding="utf-8")   # __init__ は adapter を出さない
+    assert not any("market_memory" in module for module in runtime_closure())
+
+
+def test_p13_a2a_the_adapter_record_states_the_contract_limits_and_holds_no_private_values() -> None:
+    text = (REPO_ROOT / A2A_DOC).read_text(encoding="utf-8")
+    for needle in ("P13-A2a", ADAPTER, "sample_review_state", "read_personal_review", "read_p9_safe_view", "personal_safe_projection",
+                   "ReviewViewError", "P9ViewError", "SANCTIONED_P13_P10_IMPORTERS", "P13_A1", P13_A1, "MISSING", "INTEGRITY_FAILURE",
+                   "P9_STORE_MISSING", "P10_STORE_MISSING", "P9_STORE_CORRUPTION", "P10_STORE_CORRUPTION", "SOURCE_CHANGED_DURING_READ",
+                   "SOURCE_INPUT_REJECTED", "SOURCE_READ_UNCLASSIFIED", "VIEW_SCHEMA_UNSUPPORTED", "VIEW_CLASS_UNSUPPORTED",
+                   "VIEW_AS_OF_MISMATCH", "ADAPTER_INPUT_INVALID", "outcome_for_source_failure", "ABA", "不可分", "SampleEvidence",
+                   "known_at", "reviewed_at", "捏造しない", "合成の一時 root", "importer", "P13-A3", "B-track は HOLD"):
+        assert needle in text, needle
+    for banned in ("P13 は完了", "Phase 13 は完了", "atomic な snapshot を保証", "署名済み", "最新の", "推奨する銘柄", "D:\\", "0.0.0.0",
+                   "http://", "https://"):
+        assert banned not in text, banned
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
