@@ -62,7 +62,8 @@ PHASE13_TESTS: Tuple[str, ...] = ("tests/intelligence/phase13_runtime_registry.p
 PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md",
                                  "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md",
                                  "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md",
-                                 "docs/databank/PHASE13_A3_MEMORY_STORE.md")
+                                 "docs/databank/PHASE13_A3_MEMORY_STORE.md",
+                                 "docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md")   # 長期の roadmap の記録（文書だけ ・実装の承認ではない）
 #: P13-A2a: P10 の governed な read の面（P11 の `SANCTIONED_P11_P10_IMPORTS` と同じ 5 つの名前 ・完全一致）。store の class ・private な
 #: snapshot ・executor は含まない。importer は adapter の 1 file だけ
 SANCTIONED_P13_P10_IMPORTS: Mapping[str, frozenset] = {

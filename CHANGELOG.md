@@ -4,6 +4,25 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.31 (2026-10-19) — Market Brain roadmap record（文書だけ ・runtime の実装を承認しない）
+
+利用者が承認した長期の vision（自動で育つ ・証拠に根ざした Market Brain）と repository の実際の能力の目録を突き合わせた設計の記録
+`docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md`。実行の 4 つの領域（public の legacy production ・parked な vNext ・隔離された governed な
+P5 〜 P13 ・将来の private な Market Brain）を分け、8 つの層（SOURCE EVIDENCE ・MEMORY ・KNOWLEDGE GRAPH ・RETRIEVAL ・ANALYSIS ・EVALUATION ・
+CONTROLLED IMPROVEMENT ・OBSIDIAN PROJECTION）の authority の一方向の流れ ・Knowledge Graph ／ Retrieval ／ 日々の分析への統合 ／ 評価 ／
+統制した改善 ／ Obsidian の要件 ・証拠の統治（取得の権利 ・licensing ・保持 ・known_at と取得の時刻 ・全文の再現の禁止 ・資格情報の隔離）・
+roadmap の track（P13-A4 〜 A6 ・P12-B0 ・L0 ・P13-E ・P13-K ・P13-R ・P14-I ・P14-V ・P14-L）の依存 ・前提 ・成果物 ・受け入れ試験 ・暫定の工数の幅 ・
+保留の決定を記録する。既存の legacy の学習（`theme_learning` ・journal の再採点）は運用中だが governed な PIT-safe の学習ではないと記録し、
+変更 ・無効化はしない。全ての track は設計の track であり、完了した機能 ・実装の承認を主張しない。凍結の anchor ・契約は不変。
+
+追加
+・`docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`PHASE13_DOCS` に記録を登録 ・凍結の文書の面の guard が要する）
+・`tests/intelligence/test_market_memory_boundary.py`（文書の tuple ・registry の digest ・記録の guard（必須の記述 ・禁止の主張 ・private の形））
+修正
+・なし
+
 ## v6.30 (2026-10-19) — Phase 13 P13-A3 private Memory Store ／ Rebuild（決定論 ・fail closed ・明示の回復だけ）
 
 Review State Memory の標本と端点の差を、明示の private な memory root に不変の generation として保存する store。純粋な model

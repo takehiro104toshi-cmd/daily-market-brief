@@ -46,6 +46,7 @@ A0_DOC = "docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md"
 A1_DOC = "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md"
 A2A_DOC = "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md"
 A3_DOC = "docs/databank/PHASE13_A3_MEMORY_STORE.md"
+ROADMAP_DOC = "docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md"
 ADAPTER = "src/intelligence/market_memory/governed_review_source.py"
 GENERATION_MODULE = "src/intelligence/market_memory/memory_generation.py"
 STORE_MODULE = "src/intelligence/market_memory/memory_store.py"
@@ -88,8 +89,8 @@ P13_STORE_PUBLIC_METHODS = {"acquire_writer_lock", "check_disjoint", "check_writ
                             "protected_labels", "publish_generation", "read_attempt", "read_generation", "read_publication",
                             "record_attempt", "staging_present"}
 P13_PRESERVE_CALLERS = {"preserve_interrupted_staging", "preserve_publication_pointer"}
-#: registry の正準 digest（P13-A0 で確定 ・A3 で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "e76f22cf514202afc9b28da680d8ca7a161942a3414d03a5b63a3a3324b03b75"
+#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
+P13_REGISTRY_DIGEST = "21537739248ab4bb2a8b8d7cd31dee5ed2c35a1d3aec4158745b4935e57807f8"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -164,7 +165,7 @@ def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_emp
                              "tests/intelligence/test_market_memory_model.py", "tests/intelligence/test_market_memory_governed_source.py",
                              "tests/intelligence/test_market_memory_generation.py", "tests/intelligence/test_market_memory_store.py",
                              "tests/intelligence/test_market_memory_build.py")
-    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC)
+    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC)
     assert set(SANCTIONED_P13_EXTRA_STDLIB) == set(P13_NAME_ALLOWANCES) == set(P13_WORD_ALLOWANCES) == {STORE_MODULE}   # 許しは store だけ
     assert _registry_digest() == P13_REGISTRY_DIGEST                                               # drift は digest で止まる
     for path in (*PHASE13_TESTS, *PHASE13_DOCS):
@@ -653,3 +654,31 @@ def test_p13_a3_the_store_record_states_the_contract_limits_and_holds_no_private
     for version in (STORE_SCHEMA_VERSION, MEMORY_RULES_VERSION, GENERATION_SCHEMA_VERSION, MANIFEST_SCHEMA_VERSION,
                     PUBLICATION_SCHEMA_VERSION, ATTEMPT_SCHEMA_VERSION):
         assert version in text, version
+
+
+# ================================================ Market Brain の roadmap の記録（文書だけ ・実装を承認しない）
+
+
+def test_the_market_brain_roadmap_record_is_design_only_preserves_the_anchors_and_holds_no_private_values() -> None:
+    text = (REPO_ROOT / ROADMAP_DOC).read_text(encoding="utf-8")
+    for needle in ("MARKET BRAIN ROADMAP RECORD", "いかなる runtime の実装も承認しない", "いかなる将来の runtime の実装も承認しない",
+                   "[VERIFIED CODE]", "[FROZEN CONTRACT]", "[APPROVED VISION]", "[PROPOSED DESIGN]", "[OPEN DECISION]",
+                   "public の legacy production", "parked な vNext", "隔離された governed な P5 〜 P13", "将来の private な Market Brain の実行",
+                   "SOURCE EVIDENCE", "MEMORY", "KNOWLEDGE GRAPH", "RETRIEVAL", "ANALYSIS", "EVALUATION", "CONTROLLED IMPROVEMENT",
+                   "OBSIDIAN PROJECTION", "P13-E", "P13-K", "P13-R", "P14-I", "P14-V", "P14-L", "P12-B0", "L0", "Context Pack",
+                   "legacy の `main.py` には自動で取り込まない", "公開の gate なしに", "凍結の P4 は承認なしに再開しない", "類似度 ・共起だけの edge は無い",
+                   "MODEL_PROPOSED", "CONTESTED", "as-of の cutoff", "引用の trace", "将来の日付の囮", "循環の自己確認の防止",
+                   "承認の無い全文の再現 ・保存はしない", "known_at", "credential custody", "過去の予測は保存する", "先読み無し",
+                   "自律の production の規則の変更は無い", "counts-only", "Markdown は system の authority ではない", "決して自動で取り込まない",
+                   "theme_learning.py", "変更しない ・無効にしない", "暫定", "期日 ・約束ではない", "P13-A4 の証拠の root",
+                   "回復の状態機械", "private ／ public の実行の分離", "P14 の評価と release の統治",
+                   P13_A1[:7], P13_A2A[:7], "12dcfb2143527ca44a3e55afa7a2daa9bab2c33d", "0a32d86", "4c19701", "1a7b9a2", "43c0b85", "e390cdd",
+                   "2d18133"):
+        assert needle in text, needle
+    for banned in ("P13 は完了", "Phase 13 は完了", "P14 は完了", "実装を承認する", "実装済みの Knowledge Graph", "推奨する銘柄", "最新の",
+                   "署名済み", "D:\\", "0.0.0.0", "http://", "https://"):
+        assert banned not in text, banned
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    assert _git("merge-base", "--is-ancestor", "12dcfb2143527ca44a3e55afa7a2daa9bab2c33d", "HEAD") == ""   # 記録の基準の HEAD は祖先
