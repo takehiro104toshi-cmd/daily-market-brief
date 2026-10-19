@@ -11,6 +11,8 @@
   （P11 と同じ面 ・完全一致）。他の P13 の file ・他の凍結の package の import は無い。A1 の runtime の blob は `P13_A1` に pin する。
 - P13-A3 は private な Memory Store ／ Rebuild の 3 file を足す（anchor ＝ `P13_A2A`）。filesystem の I/O は `memory_store.py` だけ
   （`memory_build.py` は adapter と store の面だけを使い、P10 の importer の許可は増やさない）。A2a の adapter の blob は `P13_A2A` に pin する。
+- P13-A4a は純粋な Obsidian 投影の model の 1 file を足す（anchor ＝ Market Brain の roadmap の記録の commit）。I/O は無い（filesystem ・
+  network ・process ・資格情報 ・scheduler）。A3 の runtime 3 file の blob は `P13_A3` に pin する。P10 の importer の許可は変えない。
 記録: `docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md`。
 """
 from __future__ import annotations
@@ -41,7 +43,11 @@ PHASE13_A3_RUNTIME: Tuple[str, ...] = (
     'src/intelligence/market_memory/memory_generation.py',
     'src/intelligence/market_memory/memory_store.py',
 )
-PHASE13_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE13_A1_RUNTIME + PHASE13_A2A_RUNTIME + PHASE13_A3_RUNTIME))
+#: P13-A3 の受理した anchor（Memory Store の runtime 3 file の blob はこの commit のまま ・A4a 以後の修正は認めない）
+P13_A3 = "12dcfb2143527ca44a3e55afa7a2daa9bab2c33d"
+#: P13-A4a: 純粋な Obsidian 投影の model（counts-only の Markdown ・identity ・公開の状態の分類 ・I/O は無い）
+PHASE13_A4A_RUNTIME: Tuple[str, ...] = ('src/intelligence/market_memory/memory_projection.py',)
+PHASE13_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE13_A1_RUNTIME + PHASE13_A2A_RUNTIME + PHASE13_A3_RUNTIME + PHASE13_A4A_RUNTIME))
 #: runtime の追加の認可（gate の id, その gate が始まる anchor の commit, 認めた path の tuple, 契約文書）。P13-A0 では空。
 #: guard: `PHASE13_RUNTIME` の全ての path はちょうど 1 つの認可に現れ、anchor は HEAD の祖先で、path は anchor に存在せず、文書に path が在る
 PHASE13_RUNTIME_AUTHORIZATION: Tuple[Tuple[str, str, Tuple[str, ...], str], ...] = (
@@ -51,6 +57,8 @@ PHASE13_RUNTIME_AUTHORIZATION: Tuple[Tuple[str, str, Tuple[str, ...], str], ...]
      "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md"),
     ("P13-A3", P13_A2A, PHASE13_A3_RUNTIME,   # anchor ＝ P13-A2a の commit（直前に受理した HEAD）
      "docs/databank/PHASE13_A3_MEMORY_STORE.md"),
+    ("P13-A4a", "5e5f015ecebf64116f9c1721c36d9d41fa9dc1c7", PHASE13_A4A_RUNTIME,   # anchor ＝ roadmap の記録の commit（直前に受理した HEAD）
+     "docs/databank/PHASE13_A4A_PROJECTION_MODEL.md"),
 )
 PHASE13_TESTS: Tuple[str, ...] = ("tests/intelligence/phase13_runtime_registry.py",
                                   "tests/intelligence/test_market_memory_boundary.py",
@@ -58,12 +66,14 @@ PHASE13_TESTS: Tuple[str, ...] = ("tests/intelligence/phase13_runtime_registry.p
                                   "tests/intelligence/test_market_memory_governed_source.py",
                                   "tests/intelligence/test_market_memory_generation.py",
                                   "tests/intelligence/test_market_memory_store.py",
-                                  "tests/intelligence/test_market_memory_build.py")
+                                  "tests/intelligence/test_market_memory_build.py",
+                                  "tests/intelligence/test_market_memory_projection.py")
 PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md",
                                  "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md",
                                  "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md",
                                  "docs/databank/PHASE13_A3_MEMORY_STORE.md",
-                                 "docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md")   # 長期の roadmap の記録（文書だけ ・実装の承認ではない）
+                                 "docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md",   # 長期の roadmap の記録（文書だけ ・実装の承認ではない）
+                                 "docs/databank/PHASE13_A4A_PROJECTION_MODEL.md")
 #: P13-A2a: P10 の governed な read の面（P11 の `SANCTIONED_P11_P10_IMPORTS` と同じ 5 つの名前 ・完全一致）。store の class ・private な
 #: snapshot ・executor は含まない。importer は adapter の 1 file だけ
 SANCTIONED_P13_P10_IMPORTS: Mapping[str, frozenset] = {
@@ -251,8 +261,8 @@ def only_phase13_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_A1", "P13_A2A", "P13_BASE", "PHASE13_A1_RUNTIME",
-           "PHASE13_A2A_IMPORTER_LINES", "PHASE13_A2A_RUNTIME", "PHASE13_A3_RUNTIME", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_A1", "P13_A2A", "P13_A3", "P13_BASE", "PHASE13_A1_RUNTIME",
+           "PHASE13_A2A_IMPORTER_LINES", "PHASE13_A2A_RUNTIME", "PHASE13_A3_RUNTIME", "PHASE13_A4A_RUNTIME", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
            "PHASE13_RUNTIME_AUTHORIZATION", "PHASE13_TESTS", "PHASE13_TEST_REGISTRATION", "SANCTIONED_P13_P10_IMPORTERS",
            "SANCTIONED_P13_P10_IMPORTS", "is_phase13_addition",
            "only_phase13_registration", "registration_diff"]

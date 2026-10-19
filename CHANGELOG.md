@@ -4,6 +4,32 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.32 (2026-10-19) — Phase 13 P13-A4a pure projection model（counts-only ・決定論 ・fail closed ・I/O 無し）
+
+Review State Memory の検証済みの generation から Obsidian 向けの counts-only の Markdown の版を純粋に作り、版の公開の状態を観測した byte
+だけから分類して次の 1 つの遷移を提案するだけの model `memory_projection.py`。入力は明示の完全な generation digest と source の manifest
+digest が必須（「最新」の暗黙の選択は無い）で、呼び出し側の `VerifiedGeneration` は信用せず byte を作り直して A3 の検証で純粋に再検証する
+（A3 の store から読んだことの証明ではないと `SOURCE_ATTESTATION` に記録し、A4b は `MemoryStore.read_generation` の VERIFIED の結果だけを
+渡す）。出力は件数 ・凍結の P9 の enum と一致する承認した分類 ・日だけ（瞬間 ・項目の id ・発行体 ・項目ごとの hash ・本文は出さない ・
+標本の cutoff の日は source の known_at ではないと明記）。全ての note は byte の規則 ・private の形の走査 ・厳密な行の文法を通る。
+identity は projection digest ・export digest ・record の digest（略記は label だけ ・衝突は fail closed）。公開は不変の版の folder と 1 つの
+pointer で、前の有効な版はその場に残す（archive ・削除 ・移動の action は存在しない）。状態の分類（初回 ・公開済み ・NO_CHANGE ・intent ・
+staging ・版 ・pointer の切り替え ・完了 ・中止 ・fail closed）と自動の収束の適格（検証済みの intent の続きだけ）は純粋で、検証できない ・
+曖昧な状態は HOLD（OPEN for A4b）。Option C の composition root の決定（A0 の証拠の要件は private な composition root の中 ・A3 の子の store の
+外と解釈 ・A0 ／ A3 は改めない）を記録。A1 ・A2a ・A3 の runtime の blob を pin（A3 は `P13_A3` ＝ `12dcfb2…`）。P10 の importer の許可 ・
+凍結の P8 〜 P12 の境界は不変。filesystem の実装 ・vault ・lock ・回復の実行 ・容量 ・Windows は P13-A4b（HOLD）。
+
+追加
+・`src/intelligence/market_memory/memory_projection.py`
+・`tests/intelligence/test_market_memory_projection.py`
+・`docs/databank/PHASE13_A4A_PROJECTION_MODEL.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`P13_A3` ・`PHASE13_A4A_RUNTIME` ・gate `P13-A4a` の認可 ・test ・文書の登録）
+・`tests/intelligence/test_market_memory_boundary.py`（registry の digest ・A3 の blob の pin ・投影の model の I/O ／ 動的実行 ／ import の時の
+  副作用 ／ 項目 ・瞬間の読みの guard ・負の control ・記録の guard）
+修正
+・なし
+
 ## v6.31 (2026-10-19) — Market Brain roadmap record（文書だけ ・runtime の実装を承認しない）
 
 利用者が承認した長期の vision（自動で育つ ・証拠に根ざした Market Brain）と repository の実際の能力の目録を突き合わせた設計の記録
