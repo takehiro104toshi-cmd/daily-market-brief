@@ -4,6 +4,35 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.30 (2026-10-19) — Phase 13 P13-A3 private Memory Store ／ Rebuild（決定論 ・fail closed ・明示の回復だけ）
+
+Review State Memory の標本と端点の差を、明示の private な memory root に不変の generation として保存する store。純粋な model
+`memory_generation.py`（plan digest ・generation digest ・manifest digest の 3 つの identity を分ける ・`at` が厳密に増加しない計画は拒む ・
+manifest の file の集合の完全一致 ・正準性 ・完全な digest ・変化の再生 ・未知の版は SCHEMA_UNSUPPORTED ・略記 id の衝突は fail closed）、P13 で
+唯一 filesystem の I/O を持つ `memory_store.py`（明示の初期化だけ ・絶対 path ・祖先の symlink ／ junction ／ reparse point ・渡された保護の root と
+code の repository との重なり ・既知の同期 folder ／ git ／ vault の目印を拒む（検出は網羅ではない）・root の identity と目印の再検査 ・
+O_CREAT|O_EXCL の単一の writer lock ・排他の作成 ・binary ・fsync ・読み戻し ・generation の 1 回の rename ・`publication.json` の `os.replace` と
+読み戻しの検証 ・所有を検証した lock ／ 一時 file だけの `_unlink_if_owned` ・人の明示の回復は中断の staging と確定的に壊れた pointer の
+`interrupted/` への移動だけ（検証できる pointer ・曖昧な状態は移さない ・既存の entry を置き換えない ・自動の修復 ／ 再公開は無い）・writer lock を
+動かす ／ 奪う手段は無い（残った lock は書き込みを拒み続ける））、orchestration `memory_build.py`（A2a の adapter と store の狭い面だけ ・
+不完全な計画は公開せず安全な試行の証拠だけ ・回復は呼ばない）。path の検査は競合に対して安全ではなく（not race-proof）、Windows の ACL の
+privacy は未検証。
+telemetry ・壁時計 ・host ・process は保存しない ・identity に入れない。P9 ／ P10 の authority の完全性 ・store をまたぐ不可分性は主張しない
+（A2a の ABA の限界を保つ）。A2a の adapter の blob を `P13_A2A`（`12de956…`）に pin（A1 の 4 file の pin も維持）。Windows の junction ・
+ACL ・開いた handle ・電源断 ・path の別名 ・path の長さ ・中断の回復は P13-A5 の実機の検証に残す。Obsidian への export は無い（A4）。
+P8 〜 P12 の runtime ・P12.5 の設計の契約 ・A1 ／ A2a の runtime ・凍結の test は不変。B-track ・P14 は未着手。
+
+追加
+・`src/intelligence/market_memory/memory_generation.py` ・`memory_store.py` ・`memory_build.py`
+・`tests/intelligence/test_market_memory_generation.py` ・`test_market_memory_store.py` ・`test_market_memory_build.py`
+・`docs/databank/PHASE13_A3_MEMORY_STORE.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（A3 の runtime 3 file ・認可 `P13-A3`（anchor `P13_A2A`）・`P13_A2A` ・文書 ・test の登録）
+・`tests/intelligence/test_market_memory_boundary.py`（A2a の blob の pin ・store だけの filesystem の許し ・`os` の属性の allowlist ・削除の 1 箇所の pin ・
+  `os` の危険な呼び出しの場所 ・store の公開の面 ・回復の呼び出し元の pin ・negative control ・A3 の文書の guard ・registry の digest）
+修正
+・なし
+
 ## v6.29 (2026-10-18) — Phase 13 P13-A2a governed P10 safe view adapter（read-only ・P10 の 5 つの名前だけ）
 
 Review State Memory の標本を、凍結の P10 の governed な safe view だけから作る read-only の adapter

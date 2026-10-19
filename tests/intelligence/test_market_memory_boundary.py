@@ -7,7 +7,11 @@
   （runtime の追加は registry と本 file と gate の文書の 3 つを同時に ・監督の gate で変える）。
 - importer の許可は P13-A2a の adapter の 1 file だけ（P10 の governed な 5 つの名前 ・完全一致）。他の textual な import の禁止は不変。
 - P13-A1 の runtime 4 file の blob は `P13_A1` の commit に pin（HEAD ・index ・作業木）。
-- negative control: 未登録の path ・修正 ・近い名前 ・未宣言の登録の行 ・禁止の token は落ちる。
+- P13-A3: A2a の adapter の blob は `P13_A2A` に pin。filesystem の I/O の許しは `memory_store.py` だけ（stdlib の `os` ・`stat` ・名前 ・語の
+  file ごとの許し ・`os` の属性の allowlist）。削除は `_unlink_if_owned` の 1 箇所の `unlink` だけで、呼ぶのは lock の解放と pointer の一時 file の
+  破棄だけ（一般の削除 ・rmdir ・rmtree ・truncate は P13 のどこにも無い）。
+- negative control: 未登録の path ・修正 ・近い名前 ・未宣言の登録の行 ・禁止の token ・一般の削除 ・store の外の I/O ・blob の変化 ・
+  認可の drift ・公開の面の変更は落ちる。
 """
 from __future__ import annotations
 
@@ -26,8 +30,9 @@ from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
 from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
 from tests.intelligence.phase12_runtime_registry import (P12_5_DESIGN_ANCHOR, P12_A6, P12_VALIDATED_TREE, PHASE12_5_FROZEN_CONTRACTS,
                                                          PHASE12_RUNTIME)
-from tests.intelligence.phase13_runtime_registry import (ADDITION_STATUSES, FORBIDDEN_P13_TOKENS, P13_A1, P13_BASE, PHASE13_A1_RUNTIME,
-                                                         PHASE13_A2A_IMPORTER_LINES, PHASE13_A2A_RUNTIME, PHASE13_DOCS,
+from tests.intelligence.phase13_runtime_registry import (ADDITION_STATUSES, FORBIDDEN_P13_TOKENS, P13_A1, P13_A2A, P13_BASE,
+                                                         PHASE13_A1_RUNTIME, PHASE13_A2A_IMPORTER_LINES, PHASE13_A2A_RUNTIME,
+                                                         PHASE13_A3_RUNTIME, PHASE13_DOCS,
                                                          SANCTIONED_P13_P10_IMPORTERS, SANCTIONED_P13_P10_IMPORTS,
                                                          PHASE13_PACKAGE, PHASE13_RUNTIME, PHASE13_RUNTIME_AUTHORIZATION,
                                                          PHASE13_TESTS, PHASE13_TEST_REGISTRATION, is_phase13_addition,
@@ -40,7 +45,11 @@ PACKAGE_DIR = REPO_ROOT / PHASE13_PACKAGE
 A0_DOC = "docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md"
 A1_DOC = "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md"
 A2A_DOC = "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md"
+A3_DOC = "docs/databank/PHASE13_A3_MEMORY_STORE.md"
 ADAPTER = "src/intelligence/market_memory/governed_review_source.py"
+GENERATION_MODULE = "src/intelligence/market_memory/memory_generation.py"
+STORE_MODULE = "src/intelligence/market_memory/memory_store.py"
+BUILD_MODULE = "src/intelligence/market_memory/memory_build.py"
 P10_IMPORTER_GUARD = "tests/intelligence/test_personal_intelligence_boundary.py"
 P13_A0 = "4d464c30e4598d2ad5a0cee5a34ac366414fbde3"   # P13-A0 の commit ＝ A1 の認可の anchor
 #: P13 の runtime が import してよい stdlib（file ごと ・完全一致）。file ・OS ・時計 ・環境 ・process ・socket ・乱数は無い
@@ -48,9 +57,39 @@ SANCTIONED_P13_STDLIB = {"__future__", "dataclasses", "datetime", "enum", "hashl
 SANCTIONED_P13_MODULES = {"src/intelligence/market_memory/__init__.py": set(), "src/intelligence/market_memory/canonical.py": set(),
                           "src/intelligence/market_memory/review_state_sample.py": {".canonical"},
                           "src/intelligence/market_memory/review_state_change.py": {".canonical", ".review_state_sample"},
-                          ADAPTER: {".canonical", ".review_state_sample", *SANCTIONED_P13_P10_IMPORTS}}
-#: registry の正準 digest（P13-A0 で確定。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "a8b68b5b656aa521bb9895909bea2dde8255ab0b7af7458a37b6e8e5ff8e1d13"
+                          ADAPTER: {".canonical", ".review_state_sample", *SANCTIONED_P13_P10_IMPORTS},
+                          GENERATION_MODULE: {".canonical", ".review_state_change", ".review_state_sample"},
+                          STORE_MODULE: {".canonical", ".memory_generation"},
+                          BUILD_MODULE: {".governed_review_source", ".memory_generation", ".memory_store", ".review_state_sample"}}
+#: P13-A3: filesystem の I/O を持つ唯一の module（file ごとの許し ・理由を伴う完全一致。他の P13 の file には無い）
+SANCTIONED_P13_EXTRA_STDLIB = {STORE_MODULE: {"os", "stat"}}
+P13_NAME_ALLOWANCES = {STORE_MODULE: {"open", "write", "mkdir", "rename", "unlink", "stat"}}   # os.open ・os.write ・os.mkdir ・os.rename ・所有した lock ／ 一時 file の unlink ・stat の module ／ os.stat
+P13_WORD_ALLOWANCES = {STORE_MODULE: {"path"}}                                                  # os.path だけ
+#: P13 のどこにも在ってはならない削除 ・切り詰めの名前（store の `_unlink_if_owned` の `unlink` 1 箇所だけが例外）
+P13_DELETION_NAMES = {"unlink", "remove", "removedirs", "rmdir", "rmtree", "truncate", "ftruncate", "unlinkat", "rmtree_safe"}
+P13_UNLINK_SITES = [("_unlink_if_owned", "unlink")]
+P13_UNLINK_CALLERS = {"release", "_publish_pointer"}
+SANCTIONED_P13_OS_ATTRIBUTES = {"altsep", "close", "fspath", "fstat", "fsync", "listdir", "lstat", "mkdir", "name", "open", "path",
+                                "read", "rename", "replace", "sep", "stat", "stat_result", "unlink", "write", "O_CREAT", "O_EXCL",
+                                "O_RDONLY", "O_WRONLY"}
+SANCTIONED_P13_OS_PATH_ATTRIBUTES = {"abspath", "commonpath", "dirname", "isabs", "join", "normcase", "normpath", "realpath",
+                                     "splitdrive"}
+SANCTIONED_P13_OS_GETATTR = {"O_BINARY", "O_NOFOLLOW"}
+#: store の `os` の危険な呼び出しの場所（関数の名前 ・完全一致）。unlink は所有した lock ／ 一時 file の 1 箇所 ・os.stat は重なりの identity だけ ・
+#: replace は pointer の置換だけ ・rename は generation ／ 試行の公開と置き換えない移動だけ ・mkdir は初期化 ・staging ・移動の予約だけ
+P13_OS_CALL_SITES = {"unlink": {"_unlink_if_owned"}, "stat": {"_identities"}, "replace": {"_publish_pointer"},
+                     "rename": {"_stage_generation", "record_attempt", "_move_without_replacing"},
+                     "mkdir": {"_stage_generation", "initialize_memory_root", "_move_without_replacing"},
+                     "open": {"_create_file", "_read_file", "_fsync_directory"}, "write": {"_write_all"}}
+#: store の公開の面（関数 ・method ・完全一致）。writer lock を動かす ・奪う ・消す回復は無い
+P13_STORE_PUBLIC_FUNCTIONS = {"initialize_memory_root", "open_memory_store", "read_memory", "preserve_interrupted_staging",
+                              "preserve_publication_pointer"}
+P13_STORE_PUBLIC_METHODS = {"acquire_writer_lock", "check_disjoint", "check_writable", "list_attempts", "list_generations",
+                            "protected_labels", "publish_generation", "read_attempt", "read_generation", "read_publication",
+                            "record_attempt", "staging_present"}
+P13_PRESERVE_CALLERS = {"preserve_interrupted_staging", "preserve_publication_pointer"}
+#: registry の正準 digest（P13-A0 で確定 ・A3 で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
+P13_REGISTRY_DIGEST = "e76f22cf514202afc9b28da680d8ca7a161942a3414d03a5b63a3a3324b03b75"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -107,10 +146,13 @@ def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_emp
     assert P13_BASE == "aded7ee8621e9abac18d313009444675ab771ae6"                                  # 固定の base（A0 の commit ではない）
     assert _git("merge-base", "--is-ancestor", P13_BASE, "HEAD") == ""
     assert len(PHASE13_A1_RUNTIME) == 4 and PHASE13_A2A_RUNTIME == (ADAPTER,)                       # A1: model 4 file ・A2a: adapter 1 file
-    assert PHASE13_RUNTIME == tuple(sorted(PHASE13_A1_RUNTIME + PHASE13_A2A_RUNTIME)) and len(PHASE13_RUNTIME) == 5
+    assert PHASE13_A3_RUNTIME == (BUILD_MODULE, GENERATION_MODULE, STORE_MODULE)                      # A3: store ／ rebuild の 3 file
+    assert PHASE13_RUNTIME == tuple(sorted(PHASE13_A1_RUNTIME + PHASE13_A2A_RUNTIME + PHASE13_A3_RUNTIME)) and len(PHASE13_RUNTIME) == 8
     assert P13_A1 == "ccfc8e57885fabc5936a39034a9e816c66b2fbbc"
+    assert P13_A2A == "12de956637bb1df5fcff8846ba9d7fcb606421a3"
     assert PHASE13_RUNTIME_AUTHORIZATION == (("P13-A1", P13_A0, PHASE13_A1_RUNTIME, A1_DOC),
-                                             ("P13-A2a", P13_A1, PHASE13_A2A_RUNTIME, A2A_DOC))
+                                             ("P13-A2a", P13_A1, PHASE13_A2A_RUNTIME, A2A_DOC),
+                                             ("P13-A3", P13_A2A, PHASE13_A3_RUNTIME, A3_DOC))
     assert dict(SANCTIONED_P13_P10_IMPORTERS) == {ADAPTER: SANCTIONED_P13_P10_IMPORTS}                # importer は adapter だけ
     assert {m: set(n) for m, n in SANCTIONED_P13_P10_IMPORTS.items()} == {
         "..personal_intelligence.p9_view": {"P9ViewError", "read_p9_safe_view"},
@@ -119,8 +161,11 @@ def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_emp
     assert set(SANCTIONED_P13_MODULES) == set(PHASE13_RUNTIME)
     assert PHASE13_PACKAGE == "src/intelligence/market_memory" and ADDITION_STATUSES == ("A", "??")
     assert PHASE13_TESTS == ("tests/intelligence/phase13_runtime_registry.py", "tests/intelligence/test_market_memory_boundary.py",
-                             "tests/intelligence/test_market_memory_model.py", "tests/intelligence/test_market_memory_governed_source.py")
-    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC)
+                             "tests/intelligence/test_market_memory_model.py", "tests/intelligence/test_market_memory_governed_source.py",
+                             "tests/intelligence/test_market_memory_generation.py", "tests/intelligence/test_market_memory_store.py",
+                             "tests/intelligence/test_market_memory_build.py")
+    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC)
+    assert set(SANCTIONED_P13_EXTRA_STDLIB) == set(P13_NAME_ALLOWANCES) == set(P13_WORD_ALLOWANCES) == {STORE_MODULE}   # 許しは store だけ
     assert _registry_digest() == P13_REGISTRY_DIGEST                                               # drift は digest で止まる
     for path in (*PHASE13_TESTS, *PHASE13_DOCS):
         assert (REPO_ROOT / path).is_file(), path
@@ -229,8 +274,12 @@ def test_p13_a0_the_registration_record_is_design_only_and_holds_no_private_valu
 
 
 def _imports(path: Path):
+    return _imports_text(path.read_text(encoding="utf-8"))
+
+
+def _imports_text(text: str):
     relative, absolute = {}, set()
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+    for node in ast.walk(ast.parse(text)):
         if isinstance(node, ast.ImportFrom) and node.level:
             relative.setdefault("." * node.level + (node.module or ""), set()).update(a.name for a in node.names)
         elif isinstance(node, ast.ImportFrom):
@@ -240,43 +289,57 @@ def _imports(path: Path):
     return relative, absolute
 
 
+def _import_violations(path: str, text: str) -> list:
+    """stdlib の allowlist（file ごとの追加だけ）・相対 import の完全一致 ・凍結の phase への到達 ・禁止の token ・private の形。"""
+    relative, absolute = _imports_text(text)
+    allowed = SANCTIONED_P13_STDLIB | SANCTIONED_P13_EXTRA_STDLIB.get(path, set())
+    found = [("STDLIB", m) for m in sorted(absolute - allowed)]
+    if set(relative) != SANCTIONED_P13_MODULES.get(path, set()):
+        found.append(("RELATIVE", tuple(sorted(set(relative) ^ SANCTIONED_P13_MODULES.get(path, set())))))
+    cross = {m: n for m, n in relative.items() if m.startswith("..")}
+    if cross != {m: set(n) for m, n in SANCTIONED_P13_P10_IMPORTERS.get(path, {}).items()}:   # adapter だけ ・完全一致
+        found.append(("CROSS", tuple(sorted(cross))))
+    if _forbidden_tokens_in(text) != _allowed_tokens(path):
+        found.append(("TOKEN", tuple(_forbidden_tokens_in(text))))
+    found += [("PRIVATE", pattern) for pattern in PRIVATE_PATTERNS if re.search(pattern, text)]
+    if "__main__" in text or "import sys" in text or ("import os" in text and "os" not in SANCTIONED_P13_EXTRA_STDLIB.get(path, set())):
+        found.append(("ENTRY_OR_OS", path))
+    return found
+
+
 def test_p13_a1_runtime_imports_are_stdlib_only_and_never_reach_frozen_phases() -> None:
     for path in PHASE13_RUNTIME:
-        relative, absolute = _imports(REPO_ROOT / path)
-        assert absolute <= SANCTIONED_P13_STDLIB, (path, absolute - SANCTIONED_P13_STDLIB)
-        assert set(relative) == SANCTIONED_P13_MODULES[path], (path, set(relative))
-        cross = {m: n for m, n in relative.items() if m.startswith("..")}
-        assert cross == {m: set(n) for m, n in SANCTIONED_P13_P10_IMPORTERS.get(path, {}).items()}, (path, cross)   # adapter だけ ・完全一致
-        text = (REPO_ROOT / path).read_text(encoding="utf-8")
-        assert _forbidden_tokens_in(text) == _allowed_tokens(path), path
-        for pattern in PRIVATE_PATTERNS:
-            assert not re.search(pattern, text), (path, pattern)
-        assert "__main__" not in text and "import os" not in text and "import sys" not in text, path
+        assert _import_violations(path, (REPO_ROOT / path).read_text(encoding="utf-8")) == [], path
+
+
+def _guard_violations(path: str, text: str) -> list:
+    """file ・OS ・時計 ・環境 ・process ・network の名前 ・投資 ／ 時計の相対の語彙 ・広い except（store の file ごとの許しだけを引く）。"""
+    banned = FORBIDDEN_NAMES - P13_NAME_ALLOWANCES.get(path, set())
+    found, identifiers = [], set()
+    for node in ast.walk(ast.parse(text)):
+        if isinstance(node, ast.Name):
+            found += [("NAME", node.id)] if node.id in banned else []
+            identifiers.add(node.id)
+        elif isinstance(node, ast.Attribute):
+            found += [("NAME", node.attr)] if node.attr in banned else []
+            identifiers.add(node.attr)
+        elif isinstance(node, ast.arg):
+            identifiers.add(node.arg)
+        elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+            identifiers.add(node.name)
+        elif isinstance(node, ast.ExceptHandler):
+            names = set() if node.type is None else {node.type.id} if isinstance(node.type, ast.Name) else {
+                e.id for e in getattr(node.type, "elts", ()) if isinstance(e, ast.Name)}
+            found += [("EXCEPT", "BROAD")] if node.type is None or names & {"Exception", "BaseException"} else []
+    words = set()
+    for name in identifiers:
+        words |= {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name)}
+    return found + [("WORD", w) for w in sorted(words & (FORBIDDEN_WORDS - P13_WORD_ALLOWANCES.get(path, set())))]
 
 
 def test_p13_a1_runtime_never_touches_files_env_clock_process_or_network_and_has_no_investment_vocabulary() -> None:
     for path in PHASE13_RUNTIME:
-        tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
-        identifiers = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Name):
-                assert node.id not in FORBIDDEN_NAMES, (path, node.id)
-                identifiers.add(node.id)
-            elif isinstance(node, ast.Attribute):
-                assert node.attr not in FORBIDDEN_NAMES, (path, node.attr)
-                identifiers.add(node.attr)
-            elif isinstance(node, ast.arg):
-                identifiers.add(node.arg)
-            elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                identifiers.add(node.name)
-            elif isinstance(node, ast.ExceptHandler):
-                assert node.type is not None, (path, "bare except")
-                names = {node.type.id} if isinstance(node.type, ast.Name) else {e.id for e in getattr(node.type, "elts", ()) if isinstance(e, ast.Name)}
-                assert not names & {"Exception", "BaseException"}, (path, "broad except")
-        words = set()
-        for name in identifiers:
-            words |= {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name)}
-        assert not words & FORBIDDEN_WORDS, (path, words & FORBIDDEN_WORDS)
+        assert _guard_violations(path, (REPO_ROOT / path).read_text(encoding="utf-8")) == [], path
 
 
 def test_p13_a1_the_model_record_is_design_and_runtime_consistent_and_holds_no_private_values() -> None:
@@ -392,3 +455,201 @@ def test_p13_a2a_the_adapter_record_states_the_contract_limits_and_holds_no_priv
     assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
     for pattern in PRIVATE_PATTERNS:
         assert not re.search(pattern, text), pattern
+
+
+# ================================================ P13-A3: A2a の blob の pin ・store だけの I/O ・狭い削除 ・negative control ・文書
+
+
+def _deletion_sites(text: str) -> list:
+    """削除 ・切り詰めの名前の出現を、囲む関数の名前と組で返す（module の直下は `<module>`）。"""
+    sites = []
+
+    def visit(node: ast.AST, owner: str) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                visit(child, child.name)
+                continue
+            name = child.id if isinstance(child, ast.Name) else child.attr if isinstance(child, ast.Attribute) else None
+            if name in P13_DELETION_NAMES:
+                sites.append((owner, name))
+            visit(child, owner)
+    visit(ast.parse(text), "<module>")
+    return sites
+
+
+def _callers_of(text: str, function: str) -> set:
+    callers = set()
+    for node in ast.walk(ast.parse(text)):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name != function:
+            if any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == function for n in ast.walk(node)):
+                callers.add(node.name)
+    return callers
+
+
+def _os_attribute_violations(text: str) -> list:
+    found = []
+    for node in ast.walk(ast.parse(text)):
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "os":
+            found += [] if node.attr in SANCTIONED_P13_OS_ATTRIBUTES else [node.attr]
+        elif (isinstance(node, ast.Attribute) and isinstance(node.value, ast.Attribute) and node.value.attr == "path"
+              and isinstance(node.value.value, ast.Name) and node.value.value.id == "os"):
+            found += [] if node.attr in SANCTIONED_P13_OS_PATH_ATTRIBUTES else ["path." + node.attr]
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "getattr" and node.args
+              and isinstance(node.args[0], ast.Name) and node.args[0].id == "os"):
+            literal = node.args[1].value if len(node.args) > 1 and isinstance(node.args[1], ast.Constant) else None
+            found += [] if literal in SANCTIONED_P13_OS_GETATTR else ["getattr"]
+    return found
+
+
+def _os_call_sites(text: str) -> dict:
+    """`os.<名前>` の出現を、囲む関数の名前の集合で返す（module の直下は `<module>`）。"""
+    sites: dict = {}
+
+    def visit(node: ast.AST, owner: str) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                visit(child, child.name)
+                continue
+            if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name) and child.value.id == "os":
+                sites.setdefault(child.attr, set()).add(owner)
+            visit(child, owner)
+    visit(ast.parse(text), "<module>")
+    return sites
+
+
+def _store_surface(text: str) -> tuple:
+    tree = ast.parse(text)
+    functions = {n.name for n in tree.body if isinstance(n, ast.FunctionDef) and not n.name.startswith("_")}
+    store_class = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "MemoryStore")
+    methods = {m.name for m in store_class.body if isinstance(m, ast.FunctionDef) and not m.name.startswith("_")}
+    return functions, methods
+
+
+def _public_surface_violations(name_status: str) -> list:
+    """公開 ・凍結の面（Pages ・workflow ・config ・scripts ・main ・報告 ・通知）への変更の行。"""
+    return [line for line in name_status.splitlines()
+            if any(line.split("\t")[-1] == root or line.split("\t")[-1].startswith(root + "/") for root in FROZEN_SURFACE)]
+
+
+def test_p13_a3_the_accepted_a2a_adapter_is_object_identical_to_the_a2a_anchor_in_head_index_and_worktree() -> None:
+    assert _git("merge-base", "--is-ancestor", P13_A2A, "HEAD") == ""
+    for anchor, runtime in ((P13_A2A, PHASE13_A2A_RUNTIME), (P13_A2A, PHASE13_A1_RUNTIME), (P13_A1, PHASE13_A1_RUNTIME)):
+        anchored = _blobs(anchor, runtime)
+        assert set(anchored) == set(runtime), anchor                                                 # 全てが anchor に在る
+        assert _blobs("HEAD", runtime) == anchored, anchor                                           # commit 済みの修正は無い
+        index = {line.split("\t", 1)[1]: line.split()[1] for line in _git("ls-files", "-s", "--", *runtime).splitlines()}
+        assert index == anchored, anchor                                                             # index の修正は無い
+        worktree = {path: _git_blob_of((REPO_ROOT / path).read_bytes()) for path in runtime}
+        assert worktree == anchored, anchor                                                          # 作業木の修正は無い
+    for path in PHASE13_A3_RUNTIME:
+        assert not _git("ls-tree", P13_A2A, "--", path).strip(), path                                # A3 の file は A2a の anchor に無かった
+
+
+def test_p13_a3_only_the_store_has_filesystem_capabilities_and_deletion_is_confined_to_owned_lock_and_temp_release() -> None:
+    for path in PHASE13_RUNTIME:
+        text = (REPO_ROOT / path).read_text(encoding="utf-8")
+        if path == STORE_MODULE:
+            assert _deletion_sites(text) == P13_UNLINK_SITES                                          # unlink は 1 箇所だけ
+            assert _callers_of(text, "_unlink_if_owned") == P13_UNLINK_CALLERS                       # lock の解放 ・pointer の一時 file だけ
+            body = next(n for n in ast.walk(ast.parse(text)) if isinstance(n, ast.FunctionDef) and n.name == "_unlink_if_owned")
+            calls = sorted((n.lineno, n.col_offset, n.func.id) for n in ast.walk(body) if isinstance(n, ast.Call)
+                           and isinstance(n.func, ast.Name))
+            assert calls[0][2] == "_owned"                                                           # 所有の検証が先（source の順）
+            assert _os_attribute_violations(text) == []
+            sites = _os_call_sites(text)
+            assert {name: sites.get(name, set()) for name in P13_OS_CALL_SITES} == P13_OS_CALL_SITES  # 危険な呼び出しの場所は完全一致
+            assert _store_surface(text) == (P13_STORE_PUBLIC_FUNCTIONS, P13_STORE_PUBLIC_METHODS)    # lock の回復 ・奪取の面は無い
+            assert _callers_of(text, "preserve_interrupted_staging") == _callers_of(text, "preserve_publication_pointer") == set()
+            preserve_callers = {n.name for n in ast.walk(ast.parse(text)) if isinstance(n, ast.FunctionDef) and any(
+                isinstance(c, ast.Attribute) and c.attr == "_preserve" for c in ast.walk(n))}
+            assert preserve_callers == P13_PRESERVE_CALLERS                                           # 移動は明示の回復の 2 つだけ
+            lock_users = {n.name for n in ast.walk(ast.parse(text)) if isinstance(n, ast.FunctionDef) and any(
+                isinstance(c, ast.Name) and c.id == "WRITER_LOCK_NAME" for c in ast.walk(n))}
+            assert lock_users == {"acquire_writer_lock", "_check_layout_entries"}                    # lock の場所を触るのは取得と layout だけ
+        else:
+            assert _deletion_sites(text) == [], path                                                  # 他の file に削除は無い
+            assert "os" not in _imports_text(text)[1] and "stat" not in _imports_text(text)[1], path     # store の外に filesystem は無い
+            assert path not in P13_NAME_ALLOWANCES and path not in P13_WORD_ALLOWANCES, path
+    build = (REPO_ROOT / BUILD_MODULE).read_text(encoding="utf-8")
+    assert "preserve" not in build                                                                  # build は回復を呼ばない
+    used = {n.attr for n in ast.walk(ast.parse(build)) if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name)
+            and n.value.id in ("store", "lock")}
+    assert used == {"check_disjoint", "acquire_writer_lock", "check_writable", "read_publication", "record_attempt",
+                    "publish_generation", "release"}                                                 # build は store の狭い面だけ
+    assert not any(name.startswith("_") for name in used)
+
+
+def test_p13_a3_negative_controls_reject_new_files_modifications_imports_deletion_io_blob_and_registry_drift() -> None:
+    for status in ("A", "??", "M"):                                                                   # 未登録の runtime ・既存の修正
+        assert not is_phase13_addition(status, f"{PHASE13_PACKAGE}/memory_cleanup.py")
+        assert not is_phase13_addition(status, f"{PHASE13_PACKAGE}/obsidian_export.py")
+    for path in PHASE13_RUNTIME:
+        assert not is_phase13_addition("M", path), path
+    store = (REPO_ROOT / STORE_MODULE).read_text(encoding="utf-8")
+    build = (REPO_ROOT / BUILD_MODULE).read_text(encoding="utf-8")
+    frozen_import = build + "\nfrom ..personal_intelligence.review_view import read_personal_review\n"   # 凍結の import
+    kinds = {kind for kind, _ in _import_violations(BUILD_MODULE, frozen_import)}
+    assert {"RELATIVE", "CROSS", "TOKEN"} <= kinds
+    general_delete = store + "\n\ndef delete_generation(location):\n    os.rmdir(location)\n    os.unlink(location)\n"   # 一般の削除
+    assert _deletion_sites(general_delete) != P13_UNLINK_SITES
+    assert ("delete_generation", "rmdir") in _deletion_sites(general_delete)
+    assert _deletion_sites(store.replace("_owned(location, identity, data)", "True", 1)) == P13_UNLINK_SITES
+    assert "shutil" not in SANCTIONED_P13_STDLIB | SANCTIONED_P13_EXTRA_STDLIB[STORE_MODULE]
+    assert ("STDLIB", "shutil") in _import_violations(STORE_MODULE, store + "\nimport shutil\n")
+    assert sorted(_os_attribute_violations("import os\nos.remove(x)\nos.system(x)\ngetattr(os, 'unlink')\n")) == ["getattr", "remove", "system"]
+    io_outside = build + "\nimport os\n\ndef sneak(location):\n    return os.open(location, 0)\n"     # store の外の I/O
+    assert ("NAME", "open") in _guard_violations(BUILD_MODULE, io_outside)
+    assert ("STDLIB", "os") in _import_violations(BUILD_MODULE, io_outside)
+    assert ("NAME", "open") in _guard_violations(GENERATION_MODULE, "def f(x):\n    return open(x)\n")
+    assert _guard_violations(STORE_MODULE, "def f(x):\n    return x.exists()\n") == [("NAME", "exists")]   # store の許しも完全一致
+    stat_elsewhere = store + "\n\ndef peek(location):\n    return os.stat(location)\n"              # os.stat の場所の拡大
+    assert _os_call_sites(stat_elsewhere)["stat"] != P13_OS_CALL_SITES["stat"]
+    takeover = store + "\n\ndef preserve_writer_lock(store):\n    return store\n"                  # lock の奪取の面の追加
+    assert _store_surface(takeover)[0] != P13_STORE_PUBLIC_FUNCTIONS
+    overwrite = store.replace("def _publish_pointer(", "def _publish_pointer_unused(self):\n        os.replace('a', 'b')\n\n    def _publish_pointer(", 1)
+    assert _os_call_sites(overwrite)["replace"] != P13_OS_CALL_SITES["replace"]                      # 置換の場所の拡大
+    for anchor, runtime in ((P13_A1, PHASE13_A1_RUNTIME), (P13_A2A, PHASE13_A2A_RUNTIME)):          # A1 ・A2a の blob の変化
+        anchored = _blobs(anchor, runtime)
+        for path in runtime:
+            assert _git_blob_of((REPO_ROOT / path).read_bytes() + b"\n") != anchored[path], path
+    drifted = (
+        [*PHASE13_RUNTIME_AUTHORIZATION[:2], ("P13-A3", P13_A1, PHASE13_A3_RUNTIME, A3_DOC)],         # anchor の drift
+        [*PHASE13_RUNTIME_AUTHORIZATION[:2], ("P13-A3", P13_A2A, PHASE13_A3_RUNTIME[:2], A3_DOC)],    # path の欠落
+        [*PHASE13_RUNTIME_AUTHORIZATION, ("P13-A3b", P13_A2A, (f"{PHASE13_PACKAGE}/memory_cleanup.py",), A3_DOC)],
+    )
+    for authorization in drifted:
+        payload = {"runtime": list(PHASE13_RUNTIME), "tests": list(PHASE13_TESTS), "docs": list(PHASE13_DOCS), "package": PHASE13_PACKAGE,
+                   "base": P13_BASE, "authorization": [[g, a, list(p), d] for g, a, p, d in authorization]}
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        assert hashlib.sha256(("p13.registry.v1\0" + canonical).encode("utf-8")).hexdigest() != P13_REGISTRY_DIGEST
+    assert _public_surface_violations("M\tdocs/pages/index.html\nA\tsrc/intelligence/market_memory/memory_store.py") == [
+        "M\tdocs/pages/index.html"]                                                                  # 公開の面の変更は落ちる
+    assert _public_surface_violations("M\t.github/workflows/x.yml\nM\tconfig.yaml") == ["M\t.github/workflows/x.yml", "M\tconfig.yaml"]
+    assert _public_surface_violations(_git("diff", "--cached", "--name-status", P13_BASE)) == []      # 実際の差に公開の面は無い
+    assert _public_surface_violations(_git("status", "--porcelain").replace(" ", "\t")) == []
+
+
+def test_p13_a3_the_store_record_states_the_contract_limits_and_holds_no_private_values() -> None:
+    text = (REPO_ROOT / A3_DOC).read_text(encoding="utf-8")
+    for needle in ("P13-A3", *PHASE13_A3_RUNTIME, "plan digest", "generation digest", "manifest digest", "publication.json", "REUSED",
+                   "INCOMPLETE", "attempts/", "writer lock", "O_EXCL", "_unlink_if_owned", "preserve_interrupted_staging",
+                   "preserve_publication_pointer", "POINTER_VERIFIED_NOT_PRESERVED", "PUBLICATION_STATE_UNCERTAIN",
+                   "lock の回復 ・奪取の API は無い", "置き換えない", "not race-proof", "ACL の privacy は未検証", "NTFS",
+                   "rename だけでは公開の成功ではない", "TOCTOU", "junction",
+                   "reparse point", "ACL", "P13-A5", "同期", "網羅ではない", "ABA", "不可分", "telemetry", "sampled_at",
+                   "P13_A2A", P13_A2A, "P13_A1", "Obsidian", "export は無い", "B-track は HOLD", "MISSING", "INTEGRITY_FAILURE",
+                   "SCHEMA_UNSUPPORTED", "NOT_PUBLISHED", "STAGING_PRESENT", "UNAUTHORIZED_ENTRY", "ROOT_IDENTITY_MISMATCH",
+                   "WRITER_LOCK_PRESENT", "STALE", "合成の一時 root"):
+        assert needle in text, needle
+    for banned in ("P13 は完了", "Phase 13 は完了", "完全性を保証する", "不可分を保証する", "全ての同期", "すべての同期", "署名済み",
+                   "最新の", "推奨する銘柄", "D:\\", "0.0.0.0", "http://", "https://", "preserve_writer_lock", "race-proof である"):
+        assert banned not in text, banned
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    from src.intelligence.market_memory.memory_generation import (ATTEMPT_SCHEMA_VERSION, GENERATION_SCHEMA_VERSION,
+                                                                  MANIFEST_SCHEMA_VERSION, MEMORY_RULES_VERSION,
+                                                                  PUBLICATION_SCHEMA_VERSION, STORE_SCHEMA_VERSION)
+    for version in (STORE_SCHEMA_VERSION, MEMORY_RULES_VERSION, GENERATION_SCHEMA_VERSION, MANIFEST_SCHEMA_VERSION,
+                    PUBLICATION_SCHEMA_VERSION, ATTEMPT_SCHEMA_VERSION):
+        assert version in text, version
