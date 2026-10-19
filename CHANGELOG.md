@@ -4,6 +4,31 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.33 (2026-10-19) — Phase 13 P13-A4a1 projection contract reconciliation（public ／ private の identity の分離 ・I/O 無し）
+
+A4a の 0.1.0 が公開の Markdown に出す digest は、低い entropy の private な入力（cutoff の瞬間 ・人の窓 ・少ない項目）の関数であり、候補の
+列挙で逆算できる（hash は秘匿ではない ・0.1.0 の出力が公開に安全だったとは主張しない ・実際の export は無い）。後継の純粋な契約
+`projection_contract.py` は public の identity（版 ・note ・export ・pointer の slot）を公開する欄（日付 ・承認した件数 ・分類 ・version ・
+序数）だけから導き、generation ・A3 の manifest ・計画 ・標本 ・変化の digest は private な `PrivateBinding` ・証拠だけに置く（正の hex の
+検査 ・note だけからの再計算 ・描画は public な model だけ）。防ぐのは digest を介した漏えいで、公開する値からの推論ではない。frontmatter は
+P12.5-A0 §6.1 の欄を quote した値で持つ（`generated: "true"` は文字の値 ・`item_id` は生成した note ・`build_id` は public な export の build ・
+`as_of` は日と basis ・`known_at` ／ `acquisition_time` は `NOT_AVAILABLE`）。source の参照は `PRIVATE_EVIDENCE_ONLY`（§6.1 の文字どおりの
+充足ではない限定した逸脱 ・記録に理由と範囲と将来の調整）。公開が同じ入力は NO_CHANGE ・新しい private な binding は
+`RECORD_PRIVATE_BINDING` で残す。中断した staging は検証した intent ・manifest ・対象が揃う部分集合だけ足りない file の排他の作成で続け、
+切れは明示の保存 ・改竄 ／ 未知は HOLD ・空の予約は明示の保存だけ。前の有効な版を動かす action は無い。schema ／ 規則は 0.2.0 ・0.1.0 の
+成果物は受けない。A4a の 0.1.0 の model は byte 一致で凍結し `P13_A4A` に pin（A1 ・A2a ・A3 の pin も維持）。A4b は後継だけを使う（HOLD）。
+
+追加
+・`src/intelligence/market_memory/projection_contract.py`
+・`tests/intelligence/test_market_memory_projection_contract.py`
+・`docs/databank/PHASE13_A4A1_PROJECTION_RECONCILIATION.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`P13_A4A` ・`PHASE13_A4A1_RUNTIME` ・gate `P13-A4a1` の認可 ・test ・文書の登録）
+・`tests/intelligence/test_market_memory_boundary.py`（gate の名前の狭い拡張 ・registry の digest ・A4a の blob の pin ・後継の import ／ 再利用の
+  名前 ／ 描画の private な読み ／ 公開の面の guard ・A4a の 2 つの assertion の後継への狭い拡張 ・負の control ・記録の guard）
+修正
+・なし
+
 ## v6.32 (2026-10-19) — Phase 13 P13-A4a pure projection model（counts-only ・決定論 ・fail closed ・I/O 無し）
 
 Review State Memory の検証済みの generation から Obsidian 向けの counts-only の Markdown の版を純粋に作り、版の公開の状態を観測した byte
