@@ -231,3 +231,172 @@ Obsidian の段階の拡張は P13-K と export の許可の gate の後
 
 **本記録はいかなる将来の runtime の実装も承認しない**。次の順序は提案であり、各段は監督の個別の GO を要する: P13-A4 の決定 → P13-A4 の実装 ・
 検証 → P13-A5 → P13-A6 → P13-E0 の設計（P12-B0 ・L0 の設計の調査と並行）。
+
+---
+
+## 17. Product Roadmap v2.0 の改訂（2026-10-19 ・追記だけ ・文書だけ）
+
+§1 〜 §16 は歴史の記録として **そのまま残す**（書き換えない）。本節以後は、利用者が承認した iPhone を先にする product の vision を
+追記する改訂であり、**いかなる runtime の実装も承認しない**。新しい track の名前 ・phase の細分は全て **暫定**であり、別の承認まで確定しない。
+
+| 項目 | 値 |
+|---|---|
+| 改訂の基準の HEAD | `00c2818c8d0bd9a185d42ccbe1702e25aa8275c5`（P13-A4b の受理した commit）。元の基準 `12dcfb2143527ca44a3e55afa7a2daa9bab2c33d` の行は §1 の前の表に残す |
+| 改訂の種類 | 文書だけ（`src/` ・test ・registry ・config ・workflow ・Pages ・scheduler ・pin ・資格情報 ・private root は変えない） |
+| 監督の決定 | v2.0 の設計の審査は PASS ・本文書の改訂は GO。runtime の実装 ・deploy ・P13-A5 ・P13-A6 は **HOLD** |
+| 優先 | 本改訂と凍結の契約が食い違えば **凍結の契約が優先**し、差は監督の決定に回す（§1 の前の表と同じ） |
+| 凍結の扱い | P4 〜 P12 ・P12.5 の設計の契約 ・P13-A0 〜 A4b は変更しない ・再開しない。P12 ／ P13 ／ P14 の phase の identity は保つ |
+
+## 18. 承認された product の vision v2.0 [APPROVED VISION]
+
+1. AI Rashinban は **iPhone を先にする**市場の情報の product。
+2. **Evidence Memory**（P13-E）が authority の基礎。
+3. **型付きの Knowledge Graph ／ Market Brain**（P13-K）が共有の知識の層。
+4. native の **Dashboard** と **AI Search** は同じ統治された知識を読む（別の知識の源を持たない）。
+5. Knowledge Graph の探索は AI Rashinban の中で行える。
+6. **Obsidian は任意 ・既定は無効 ・product の依存ではない**（Markdown の export だけ）。
+7. Home の優先: scenario による日々の市場の見通し ・主要な指数 ／ 金利 ／ 為替 ・3 日以内の重要な予定 ・市場を動かす news 3 件 ・
+   市場の見通しの変化 ・関連する会社と投資の theme。
+8. 市場の見通しは: 明示の対象と期間 ・base と代替の scenario ・観察できる分岐 ／ 無効化の条件 ・PIT で有効な引用 ・不変の原本と版つきの
+   改訂 ・**根拠の無い数値の確率は出さない**。
+9. 評価は: 実際の結果 ・前提の妥当性 ・方向と大きさ ・時期 ・証拠の質 ・見落とした要因 ・予測と現実の乖離のもっともらしい原因。
+10. 検証済みの事実と AI の生成した仮説は区別したまま保つ。
+11. 個人の note は任意 ・隔離 ・最初の Home MVP には入れない。
+12. 統制した学習は人の明示の承認を要する。
+
+§2 との関係: §2 の 10（蓄積した知識を Obsidian の note として見せる）は、**product の方向としては**本節の 6 が置き換える（§2 の文は歴史として
+残す）。§12 の counts-only ・export の許可の gate ・「Markdown は system の authority ではない」・人の note は決して自動で取り込まない、は
+任意の export の規則として **そのまま有効**。§3 の 4 つの領域 ・§6 の層 ・一方向の authority の流れは変えない。Home ・Dashboard ・AI Search ・
+graph の探索は ANALYSIS ／ RETRIEVAL ／ KNOWLEDGE GRAPH を **読むだけ**の product の面であり、逆向きの流れ（面から証拠 ・memory へ）は無い。
+
+## 19. Home と data の区分 [PROPOSED DESIGN]
+
+| 順 | Home の項目 | 主な依存 | 注意 |
+|---|---|---|---|
+| 1 | scenario による日々の見通し | S0 〜 S3 ・P13-E | 数値の確率 ・価格の目標を前提にしない（§20） |
+| 2 | 主要な指数 ・金利 ・為替 | P13-E ・P12-B1 ・L0 | 観察の時刻と取得の時刻を分ける ・鮮度を示す |
+| 3 | 3 日以内の重要な予定 | P13-E ・L0 | 予定の時刻 ・前回の値 ・予想 ・実際の発表 ・前回の値の改訂 ・data の鮮度を **別の欄**に保つ（混ぜない） |
+| 4 | 市場を動かす news 3 件 | P13-E ・L0 | 見出しの metadata と出所だけ ・全文の再現はしない（§7） |
+| 5 | 市場の見通しの変化 | S3 | 前の版との差だけ ・原本を書き換えない |
+| 6 | 関連する会社 ・投資の theme | P6 の semantics ・P13-K | 関係の提示だけ ・順位 ・score ・推奨 ・売買の意味を持たない |
+
+- 各項目は §8 の export の等級（PUBLIC_SAFE ／ PRIVATE_DERIVED ／ PRIVATE_AUTHORITY ／ NEVER）と as-of を持ち、MISSING ・STALE ・UNKNOWN を
+  別の状態として示す（P12.5-A0 §5.5 の区別を保つ）。
+- 個人の note は Home MVP に入れない（N0 は別の track）。
+- mobile の Home は **個人の認証つきの access を既定とする設計の仮説**であり、hosting ・認証の実装の承認ではない（§24 ・§25）。
+
+## 20. scenario による見通し（S0 〜 S3）[PROPOSED DESIGN]
+
+- 対象は **日々の市場の見通し**から始め、週の見通しは任意の拡張とする。
+- 各見通しは明示の対象（承認した一覧の市場 ／ 指標）と明示の期間を持ち、base の scenario と 1 つ以上の代替の scenario を持つ。
+- 各 scenario は仕組みの説明と、**観察できる**分岐の条件 ・無効化の条件（観察の対象 ・比較 ・期間の窓）を持つ。
+- 引用は PIT で有効であること（引用する証拠の `known_at` は見通しの発行の時刻より後ではない ・as-of の cutoff を全ての段で再び適用する）。
+- 原本は content-addressed で不変、改訂は前の版を指す別の版（supersede）であり、原本を書き換えない。全ての保存した見通しは、将来の PIT の
+  評価に原本の書き換えなしで使えること。
+- **校正された数値の確率 ・量的な価格の目標を前提にしない**。確信は列挙（§8 と同じ）。数値の確率は校正の証拠と別の承認がある場合だけの将来の
+  問い（§26）。
+- 事実（証拠で支持された主張）と AI の生成した仮説（MODEL_PROPOSED）は別の型であり、仮説は検証 ・人の決定なしに事実にならない。
+- P4 ／ P5 の概念の再利用: P4 の見通しの規律（方向 ・仕組み ・反対の材料 ・無効化の条件 ・数値の目標を持たない ・疑似の精度を作らない）と、
+  P5 の規律（不変の予測の記録と別の評価の記録 ・LIVE と REPLAY を混ぜない ・材料が揃わなければ評価を作らない DEFER）を **概念として**
+  再利用する。凍結の runtime は変更しない ・自動で import しない（import が要るなら別の登録の gate）。
+
+## 21. 評価（P14-V に scenario の評価を加える）[PROPOSED DESIGN]
+
+- P14-I ・P14-V ・P14-L の役割（§10 ・§11）は保ち、P14-V に **scenario の評価**を明示に加える。
+- 評価の観点: 実際の結果 ・前提の妥当性（分岐 ／ 無効化の条件ごとに成立 ／ 不成立 ／ 観察できない）・方向と大きさ（大きさは帯の分類 ・
+  価格の目標ではない）・時期（期間の内 ／ 早い ／ 遅い）・証拠の質（引用の有効性 ・鮮度 ・source の等級）・見落とした要因（期間の中に
+  Evidence Memory に在ったが引用しなかった事象）・乖離のもっともらしい原因（列挙 ・model の提案は仮説として区別 ・人の審査）。
+- 規則: 発行の後に知られ評価の cutoff の前に知られた観察だけを使う（**先読み無し**）・対象は発行の時点で固定 ・評価は別の record ・原本は
+  書き換えない ・**過去の見通しを今の model で作り直して評価しない**（model の事前学習による将来の情報の漏えいの防止）。
+- 改善の提案は §11 のとおり別の record ・自動で適用しない ・統制した学習（P14-L）は人の明示の承認を要する。
+
+## 22. 暫定の track（名前と細分は別の承認まで暫定）[PROPOSED DESIGN]
+
+| track | 内容 | 前提 | 状態 |
+|---|---|---|---|
+| M0 | mobile の security と access の設計（脅威 model ・認証の方式 ・端末の紛失 ・data の等級ごとの可否 ・browser の保存の方針） | — | 設計の候補 |
+| M1 | 統治された mobile の access | M0 ・privacy ・G-DEPLOY | HOLD |
+| H0 | Home の情報 ・data の区分の設計（§19） | — | 設計の候補 |
+| H1 | **合成の data だけ**の iPhone の prototype（新しい公開の endpoint 無し ・実 data への access 無し ・deploy 無し） | H0 ・M0 | HOLD |
+| H2 | private な Home MVP | H1 ・S2 ・S3 ・P13-E ・M1 ・L0 ・privacy ・第三者の data の権利 ・G-DEPLOY | HOLD |
+| S0 | scenario の契約の設計（§20） | — | 設計の候補 |
+| S1 | 純粋な scenario の model（合成の試験だけ） | S0 | HOLD |
+| S2 | 統治された scenario の engine | S1 ・P13-E | HOLD |
+| S3 | 不変の scenario の改訂（原本 ・版の鎖） | S2 | HOLD |
+| U1 | native な Market Brain の探索の UI（graph ・Dashboard） | P13-K ・P13-R ・M1 | HOLD |
+| Q1 | AI Search（引用の trace つきの答え ・仮説の区別） | P13-R ・LLM の provider の決定 ・M1 | HOLD |
+| N0 | 任意 ・隔離の個人の note | M0 ・書き込みの脅威の審査 | HOLD |
+| G-DEPLOY | production の deploy の審査（hosting ・認証 ・TLS ・資格情報の保管 ・監視 ・巻き戻し） | M0 ・L0 ・privacy | HOLD |
+
+- P13-E ・P13-K ・P13-R は完全な Market Brain の機能の **中核の前提**のまま。P13-E の最初の部分を Home の source（指標 ・経済の予定 ・
+  見出しの metadata）に絞る細分は暫定の提案であり、別の承認を要する。
+- どの track も監督の個別の GO を要する。本改訂は新しい実装の gate を開かない。
+
+## 23. 依存 ・milestone v2.0 [PROPOSED DESIGN]
+
+```
+凍結 ・CLOSED（不変）: P4 〜 P12 の A-track ・P12.5 ・P13-A0 〜 A4b
+P13-A4b → P13-A5（Windows の filesystem の安全 ・回復の検証 ・HOLD）→ P13-A6（Market Memory v1 の freeze ・HOLD）
+  ※ 完全な A5 なしに A6 へ進めるかは未決（別の scope の決定 ・§24）
+設計（文書だけ ・並行の候補）: L0 ・P12-B0 ・M0 ・H0 ・S0 ・privacy ・第三者の data の権利
+S0 → S1（純粋 ・合成）            H0 ＋ M0 → H1（合成の data だけ ・deploy 無し）
+P13-A6 ＋ P12-B0 ＋ L0 → P13-E → P12-B1 以後（local の定時の取得）
+S1 ＋ P13-E → S2 → S3            M0 → M1
+H1 ＋ S2 ＋ S3 ＋ P13-E ＋ M1 ＋ L0 ＋ privacy ＋ 第三者の data の権利 ＋ G-DEPLOY → H2（private な Home MVP）
+S3 ＋ P13-E の後の観察 → P14-V（scenario の評価を含む）→ P14-L（人の明示の承認）
+P13-E → P13-K → P13-R → U1        P13-R → P14-I（Context Pack）
+P13-R ＋ LLM の provider の決定 → Q1
+N0 は M0 と書き込みの脅威の審査の後（Home MVP の外）
+Obsidian の任意の export の拡張は P13-K と export の許可の gate の後（既定は無効）
+```
+
+| milestone（暫定） | 内容 | 前提 |
+|---|---|---|
+| V1 設計 | M0 ・H0 ・S0 ・L0 ・P12-B0 ・privacy ・第三者の data の権利の文書 | 各 gate の GO |
+| V2 合成の prototype | S1 ・H1（実 data ・公開の endpoint ・deploy は無い） | V1 |
+| V3 private な Home MVP | P13-A5 ／ A6 の scope の決定 → P13-E → P12-B1 → S2 → S3 → M1 → G-DEPLOY → H2 | V2 ・全ての独立の gate |
+| V4 scenario の評価 | P14-V（scenario の評価を含む） | V3 ・後の観察 |
+| V5 完全な Market Brain | P13-K → P13-R → U1 | P13-E |
+| V6 AI の層 | Q1 ・P14-I ・P14-L | P13-R ・LLM の provider の決定 ・人の承認の流れ |
+
+工数 ・期日は書かない（§13 と同じく暫定 ・期日 ・約束ではない）。
+
+## 24. P13-A5 ／ A6 と P11 の限界 [FROZEN CONTRACT ・VERIFIED CODE]
+
+- **P13-A5 は任意にしない**。Obsidian は product の機能としては任意だが、A5 は Windows の filesystem の安全と回復の検証を含む。A5 と A6 は
+  **HOLD のまま**。A6 が完全な A5 なしに進めるかは未決であり、別の scope の決定を要する。
+- P11 は loopback（127.0.0.1）だけの read-only な PWA であり、P9 ／ P10 の統治された個人の review の view だけを読む凍結の runtime。iPhone から
+  PC の loopback には届かず、iPhone の PWA は secure context を要するので、**凍結の P11 の transport は mobile に使えない**。
+- 再利用できるのは P11 の防御の **様式**（統治された read-only の adapter ・Host ／ Origin ／ Fetch Metadata の厳密な検査 ・CORS 無し ・cookie
+  無し ・browser に private な data を残さない ・shell だけの service worker ・CSP は self だけ ・表示の schema の検査 ・中止の時間 ・失敗の時の
+  消去 ・明示の時点）だけ。mobile の面は新しい package ・登録 ・gate を要し、P11 は変えない。書き込み（N0 ・承認の操作）は P11-OBS-073 の
+  書き込みの脅威の審査を要する。
+
+## 25. legacy の分離と独立の gate [VERIFIED CODE ・PROPOSED DESIGN]
+
+- legacy の public な `main.py` ・GitHub Pages ・workflow は **変えない**。legacy の機能は黙って終了しない（終了には別の決定が要る）。
+- legacy の数値の予測（scenario の割合）・銘柄の順位 ・注目の銘柄 ・営業の話法は、統治された product へ **自動で移さない**。legacy の学習
+  （§5）は統治された証拠ではない。
+- 既存の Cloudflare Worker ・KV の経路（private な記事の転送 ・one-tap の起動）と別の repository の分析の経路は、**承認されていない再利用の
+  候補**として記録するだけ（security ・privacy ・licensing の審査なしに使わない）。
+- 次は **互いに独立の gate**（1 つの通過は他を満たさない）: privacy（data の等級 ・端末の紛失 ・公開の面に private な data を出さない ・個人の
+  note の隔離）・証拠の licensing（保持 ・再現 ・LLM の処理の可否）・第三者の data の権利（見出し ・市場の data ・経済の予定 ・学習の source と
+  した証券会社の資料 ・product の名前の権利）・mobile の security と認証（M0 ・M1）・production の deploy（G-DEPLOY。GitHub Pages は公開の
+  面なので private な内容には使わない）・LLM の provider（P6-DEF-07）・見通しを個人の外へ共有する場合の compliance の確認（本記録は法的な
+  判断をしない）。
+
+## 26. 保留の決定 v2.0（監督）[OPEN DECISION]
+
+1. 完全な P13-A5 なしに P13-A6 へ進めるかの scope（A5 ・A6 は HOLD）。
+2. 個人の認証つきの access の hosting と認証の実装（設計の仮説だけ ・未承認）。
+3. 見通しの確信の表現（列挙が既定 ・数値の確率は校正の証拠と別の承認がある時だけ）。
+4. 対象 ・期間の一覧（日々が先 ・週は任意）と大きさの帯の定義。
+5. LLM の provider と PIT の規則（Q1 ・仮説の生成 ・評価への漏えいの防止）。
+6. legacy の機能の扱い（共存 ・終了は別の決定 ・自動の移行は無い）。
+7. 経済の予定 ・見出し ・市場の data の source の権利と、予想の値の出所。
+8. product の名前と学習の source の権利。
+9. 個人の note の置き場所（N0）。
+10. track の名前 ・phase の番号の確定（全て暫定）。
+11. Cloudflare ／ legacy の経路の再利用の可否。
+
+本改訂は §16 と同じく **いかなる将来の runtime の実装も承認しない**。各 track ・gate は監督の個別の GO を要する。

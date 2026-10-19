@@ -4,6 +4,26 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.35 (2026-10-19) — Product Roadmap v2.0 amendment（文書だけ ・runtime の実装を承認しない）
+
+`docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md` に、利用者が承認した iPhone を先にする AI Rashinban の product の vision を §17 〜 §26 として
+追記した（§1 〜 §16 は書き換えない ・改訂の基準の HEAD は P13-A4b の commit）。Evidence Memory を authority の基礎、型付きの Knowledge Graph ／
+Market Brain を共有の知識の層とし、Dashboard ・AI Search ・graph の探索は同じ統治された知識を読むだけ、Obsidian は任意 ・既定は無効 ・product の
+依存ではない。Home の優先の 6 項目と data の区分（経済の予定は予定の時刻 ・前回 ・予想 ・発表 ・改訂 ・鮮度を分ける ・個人の note は MVP の外 ・
+個人の認証つきの access は設計の仮説）、scenario による見通し（日々が先 ・明示の対象と期間 ・base と代替 ・観察できる分岐 ／ 無効化の条件 ・
+PIT で有効な引用 ・不変の原本と版つきの改訂 ・校正された数値の確率 ／ 価格の目標を前提にしない ・P4 ／ P5 は概念だけを再利用）、P14-V への
+scenario の評価の追加、暫定の track（M0 ・M1 ・H0 ・H1 ・H2 ・S0 ・S1 ・S2 ・S3 ・U1 ・Q1 ・N0 ・G-DEPLOY）と依存 ・milestone、P11 の loopback の
+transport は mobile に使えないこと（防御の様式だけ再利用）、legacy の production と Pages は不変 ・legacy の数値の予測 ／ 順位 ／ 注目の銘柄は
+自動で移さない ・Cloudflare の経路は未承認の再利用の候補、privacy ・証拠の licensing ・第三者の data の権利 ・deploy 等の独立の gate、保留の
+決定を記録する。P13-A5 は任意にせず P13-A5 ／ A6 は HOLD（A6 の scope は未決）。全ての track は暫定であり、新しい実装の gate を開かない。
+
+追加
+・なし
+改善
+・`docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md`（§17 〜 §26 の v2.0 の改訂を追記 ・既存の節 ・必須の記述は不変）
+修正
+・なし
+
 ## v6.34 (2026-10-19) — Phase 13 P13-A4b Obsidian projection export（filesystem ・2 つの writer lock ・private な証拠 ・合成の試験だけ）
 
 A3 の検証済みの generation を A4a1 の後継の契約に従って、人が用意した vault の `generated/` に counts-only の不変の版として公開する
