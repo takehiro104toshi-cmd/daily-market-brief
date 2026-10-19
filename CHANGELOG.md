@@ -4,6 +4,49 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.34 (2026-10-19) — Phase 13 P13-A4b Obsidian projection export（filesystem ・2 つの writer lock ・private な証拠 ・合成の試験だけ）
+
+A3 の検証済みの generation を A4a1 の後継の契約に従って、人が用意した vault の `generated/` に counts-only の不変の版として公開する
+filesystem の層。composition root（`.p13-private-root` ・A3 の `memory/` ・A4b の `projection/`）は明示の初期化だけで作り、vault は人が
+置いた目印 `.p13-vault-root` と人が作った `generated/` の中だけに書く（人の note ・vault の root は読まない ・一覧しない）。source は 2 つの
+writer lock の下の同じ操作で A3 の公開の API が VERIFIED を返し、明示の generation ／ manifest が A3 の検証済みの公開と一致する時だけ使う。
+公開は A4a1 の状態機械の次の 1 つの遷移だけを書き（自動は `check_recovery_proposal` ・保存は人の明示の `check_preservation_proposal`）、書く
+前に遷移の後の観測を予測して分類し、書いた後は disk から観測し直して予測と byte で一致しなければ FAILED。intent ・public な manifest ・
+private な binding ・走査（scan.json ・必須 ・走査の規則の version と digest ・承認した全ての 18 の pattern の識別子 ・pattern ごとの検出の件数 ・
+被覆した全ての出力の file の digest ・決定論の結果 ・毎回の観測で完全に再検証 ・当たった文字列は無い ・pattern の表は凍結の A4a の表の写しを
+boundary が完全一致で pin し実行の時は file ごとに承認した走査器と照らす）・source の読み（source.json）は 1 回の rename で現れる bundle、
+公開が同じ時の新しい binding は記録してからだけ NO_CHANGE（記録できなければ FAILED）。部分の staging は足りない file の排他の作成だけで続け、切れた staging ・空の予約は
+明示の保存だけ、改竄 ・未知 ・壊れた証拠 ・公開した出力の編集 ／ 削除は HOLD。前の有効な版は消さない ・移さない ・上書きしない。lock は
+private → vault の順に取り（2 つ目の失敗は所有を検証した 1 つ目だけを解放 ・奪取は無い）、全ての書き込みの前に両方の所有と root を確かめ
+直す。容量は暫定の最大（版 64 ・vault 256 MiB ・証拠 64 MiB ・object 4096 ・余白 512 MiB）を呼び出し側が狭めるだけ、`shutil.disk_usage` は
+1 箇所だけ。FAILED の証拠は lock ・root を確かめて書ける時だけ（書けなければ報告）・確定した記録は検証して保ち、今の操作が作って所有を確かめた
+一時 file だけを確定し、残った ・曖昧な FAILED の一時 file（byte が同じものも）は採らず ・消さず ・移さず公開 ・保存 ・新しい失敗の記録を止める
+（HOLD）。filesystem の I/O は `projection_store.py` だけの 2 つ目の狭い許し（A3 の許しは不変）、`projection_build.py` は orchestration だけ。A4a1 の blob は `P13_A4A1` に pin（A1 ・A2a ・A3 ・A4a も維持）。
+限界: Windows ・NTFS ・ACL ・実機の中断は P13-A5（未検証）、bare な note の名前の衝突、管理の file の作成直後の中断は記録した人の手順
+（設計だけ）、開いた intent の中止の action は無い、同期 ・plugin の検出は網羅ではない。
+回復の試験の強化（試験だけ ・A4b の runtime ・文書は変えていない）: 42 の書き込みの操作 × 6 つの故障の形（前 ／ 後 ／ 切れ × 1 つの故障 ／
+回復の中の 2 つ目の故障つき）の 252 の場合の回復の分類を 1 つずつ固定する（AUTO_RECOVERED ＝ runtime だけで収束 ・HELD_AS_DESIGNED ＝
+runtime の安全な HOLD と明示の保存、または特定できない残りで HOLD のまま ・MANUAL_INTERVENTION_REQUIRED ＝ 記録した人の手順の模擬が要った
+（その後の収束も自動の回復とは数えない）・FAILED_UNEXPECTEDLY は 0 ・違えば期待を書き換えず原因を調べる）。人の手順の模擬（試験の中だけ ・
+software には無い）は HOLD の code が名指す一意に特定できる残り（名指された 1 つの lock ・残った FAILED の一時 file ・決定論の byte と違う
+作業中の file）だけを root の外の合成の保存先へ移し、byte 一致の続きに使える record ・期待の分からない残り ・版 ・確定した証拠 ・pointer ・
+staging の label の folder には触れず何も消さない（特定できなければ何も移さず HOLD のまま）。移した残りは移す前後で identity ・byte ・SHA-256 が
+一致し、移した物以外の 2 つの root の entry が不変であることを確かめる。
+
+追加
+・`src/intelligence/market_memory/projection_store.py`
+・`src/intelligence/market_memory/projection_build.py`
+・`tests/intelligence/test_market_memory_projection_store.py`
+・`tests/intelligence/test_market_memory_projection_build.py`
+・`docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`P13_A4A1` ・`PHASE13_A4B_RUNTIME` ・gate `P13-A4b` の認可 ・test ・文書の登録）
+・`tests/intelligence/test_market_memory_boundary.py`（registry の digest ・登録した A4b の追加を認める既存の 6 つの test の狭い拡張（registry の
+  完全一致 ・A3 の filesystem の許し ・A4a の pin ・A4a1 の pin ・後継の import の許し ・A4a1 の負の control の未登録の名前）・A4b の 6 つの新しい
+  test（A4a1 の blob の pin ・2 つ目の狭い filesystem の許し ・build の orchestration ・走査の pattern の表の凍結の表との完全一致 ・負の control ・記録の guard））
+修正
+・なし
+
 ## v6.33 (2026-10-19) — Phase 13 P13-A4a1 projection contract reconciliation（public ／ private の identity の分離 ・I/O 無し）
 
 A4a の 0.1.0 が公開の Markdown に出す digest は、低い entropy の private な入力（cutoff の瞬間 ・人の窓 ・少ない項目）の関数であり、候補の

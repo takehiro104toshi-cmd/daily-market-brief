@@ -15,6 +15,9 @@
   network ・process ・資格情報 ・scheduler）。A3 の runtime 3 file の blob は `P13_A3` に pin する。P10 の importer の許可は変えない。
 - P13-A4a1 は後継の純粋な投影の契約の 1 file を足す（anchor ＝ `P13_A4A`）。public ／ private の identity の分離 ・I/O は無い。A4a の
   runtime の blob は `P13_A4A` に pin する（0.1.0 の model は変えない）。P10 の importer の許可は変えない。
+- P13-A4b は Obsidian 投影の export の 2 file を足す（anchor ＝ `P13_A4A1`）。filesystem の I/O は `projection_store.py` だけ（2 つ目の狭く pin
+  した許し ・A3 の許しは広げない）・`projection_build.py` は A3 ・A4a1 ・store の公開の面だけの orchestration。A4a1 の runtime の blob は
+  `P13_A4A1` に pin する。P10 の importer の許可は変えない。
 記録: `docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md`。
 """
 from __future__ import annotations
@@ -53,8 +56,15 @@ PHASE13_A4A_RUNTIME: Tuple[str, ...] = ('src/intelligence/market_memory/memory_p
 P13_A4A = "bc7f990df2ae8983a27a1d02b1f8a0a1738c5dd1"
 #: P13-A4a1: 後継の純粋な投影の契約（public ／ private の identity の分離 ・frontmatter ・中断の staging の継続 ・I/O は無い）
 PHASE13_A4A1_RUNTIME: Tuple[str, ...] = ('src/intelligence/market_memory/projection_contract.py',)
+#: P13-A4a1 の受理した anchor（後継の投影の契約の blob はこの commit のまま ・A4b 以後の修正は認めない）
+P13_A4A1 = "5181f59e6c639d72eeba37067fa66a4d82d27a38"
+#: P13-A4b: Obsidian 投影の export（2 つ目の filesystem の module ・orchestration）
+PHASE13_A4B_RUNTIME: Tuple[str, ...] = (
+    'src/intelligence/market_memory/projection_build.py',
+    'src/intelligence/market_memory/projection_store.py',
+)
 PHASE13_RUNTIME: Tuple[str, ...] = tuple(sorted(PHASE13_A1_RUNTIME + PHASE13_A2A_RUNTIME + PHASE13_A3_RUNTIME + PHASE13_A4A_RUNTIME
-                                                + PHASE13_A4A1_RUNTIME))
+                                                + PHASE13_A4A1_RUNTIME + PHASE13_A4B_RUNTIME))
 #: runtime の追加の認可（gate の id, その gate が始まる anchor の commit, 認めた path の tuple, 契約文書）。P13-A0 では空。
 #: guard: `PHASE13_RUNTIME` の全ての path はちょうど 1 つの認可に現れ、anchor は HEAD の祖先で、path は anchor に存在せず、文書に path が在る
 PHASE13_RUNTIME_AUTHORIZATION: Tuple[Tuple[str, str, Tuple[str, ...], str], ...] = (
@@ -68,6 +78,8 @@ PHASE13_RUNTIME_AUTHORIZATION: Tuple[Tuple[str, str, Tuple[str, ...], str], ...]
      "docs/databank/PHASE13_A4A_PROJECTION_MODEL.md"),
     ("P13-A4a1", P13_A4A, PHASE13_A4A1_RUNTIME,   # anchor ＝ P13-A4a の commit（直前に受理した HEAD）
      "docs/databank/PHASE13_A4A1_PROJECTION_RECONCILIATION.md"),
+    ("P13-A4b", P13_A4A1, PHASE13_A4B_RUNTIME,   # anchor ＝ P13-A4a1 の commit（直前に受理した HEAD）
+     "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md"),
 )
 PHASE13_TESTS: Tuple[str, ...] = ("tests/intelligence/phase13_runtime_registry.py",
                                   "tests/intelligence/test_market_memory_boundary.py",
@@ -77,14 +89,17 @@ PHASE13_TESTS: Tuple[str, ...] = ("tests/intelligence/phase13_runtime_registry.p
                                   "tests/intelligence/test_market_memory_store.py",
                                   "tests/intelligence/test_market_memory_build.py",
                                   "tests/intelligence/test_market_memory_projection.py",
-                                  "tests/intelligence/test_market_memory_projection_contract.py")
+                                  "tests/intelligence/test_market_memory_projection_contract.py",
+                                  "tests/intelligence/test_market_memory_projection_store.py",
+                                  "tests/intelligence/test_market_memory_projection_build.py")
 PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md",
                                  "docs/databank/PHASE13_A1_REVIEW_STATE_MODEL.md",
                                  "docs/databank/PHASE13_A2A_GOVERNED_P10_ADAPTER.md",
                                  "docs/databank/PHASE13_A3_MEMORY_STORE.md",
                                  "docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md",   # 長期の roadmap の記録（文書だけ ・実装の承認ではない）
                                  "docs/databank/PHASE13_A4A_PROJECTION_MODEL.md",
-                                 "docs/databank/PHASE13_A4A1_PROJECTION_RECONCILIATION.md")
+                                 "docs/databank/PHASE13_A4A1_PROJECTION_RECONCILIATION.md",
+                                 "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md")
 #: P13-A2a: P10 の governed な read の面（P11 の `SANCTIONED_P11_P10_IMPORTS` と同じ 5 つの名前 ・完全一致）。store の class ・private な
 #: snapshot ・executor は含まない。importer は adapter の 1 file だけ
 SANCTIONED_P13_P10_IMPORTS: Mapping[str, frozenset] = {
@@ -272,9 +287,9 @@ def only_phase13_registration(path: str, anchored: str, current: str) -> bool:
     return sorted(removed) == sorted(declared_removed) and sorted(added) == sorted(declared_added)
 
 
-__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_A1", "P13_A2A", "P13_A3", "P13_A4A", "P13_BASE", "PHASE13_A1_RUNTIME",
+__all__ = ["ADDITION_STATUSES", "FORBIDDEN_P13_TOKENS", "P13_A1", "P13_A2A", "P13_A3", "P13_A4A", "P13_A4A1", "P13_BASE", "PHASE13_A1_RUNTIME",
            "PHASE13_A2A_IMPORTER_LINES", "PHASE13_A2A_RUNTIME", "PHASE13_A3_RUNTIME", "PHASE13_A4A_RUNTIME",
-           "PHASE13_A4A1_RUNTIME", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
+           "PHASE13_A4A1_RUNTIME", "PHASE13_A4B_RUNTIME", "PHASE13_DOCS", "PHASE13_PACKAGE", "PHASE13_RUNTIME",
            "PHASE13_RUNTIME_AUTHORIZATION", "PHASE13_TESTS", "PHASE13_TEST_REGISTRATION", "SANCTIONED_P13_P10_IMPORTERS",
            "SANCTIONED_P13_P10_IMPORTS", "is_phase13_addition",
            "only_phase13_registration", "registration_diff"]
