@@ -19,6 +19,8 @@
   `projection_store.py` だけ（file ごとの stdlib ・名前 ・語 ・`os` の呼び出しの場所 ・`shutil.disk_usage` の 1 箇所 ・削除は所有した lock の
   解放だけ ・公開の面の完全一致 ・A3 の許しは不変）。`projection_build.py` は filesystem を持たず store ・A3 ・A4a1 の公開の面だけを使う。
   どちらも 0.1.0 の model を import しない。P10 の importer の許可は不変。
+- P13-A5-0R: Windows の検証の計画の記録（文書だけ）。必須の W-01 〜 W-20 ・A6 の条件つきの主張の状態 ・実の source の承認の要件 ・
+  人の手順の安全の規則を pin し、完了の主張 ・捏造の結果 ・実行の権限 ・拒否の規則の弱化 ・private な形を拒む。
 - negative control: 未登録の path ・修正 ・近い名前 ・未宣言の登録の行 ・禁止の token ・一般の削除 ・store の外の I/O ・blob の変化 ・
   認可の drift ・公開の面の変更は落ちる。
 """
@@ -66,6 +68,7 @@ BUILD_MODULE = "src/intelligence/market_memory/memory_build.py"
 PROJECTION_MODULE = "src/intelligence/market_memory/memory_projection.py"
 CONTRACT_MODULE = "src/intelligence/market_memory/projection_contract.py"
 A4B_DOC = "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md"
+A5_PLAN_DOC = "docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md"
 PROJECTION_STORE = "src/intelligence/market_memory/projection_store.py"
 PROJECTION_BUILD = "src/intelligence/market_memory/projection_build.py"
 P13_ROADMAP = "5e5f015ecebf64116f9c1721c36d9d41fa9dc1c7"   # roadmap の記録の commit ＝ A4a の認可の anchor
@@ -181,8 +184,8 @@ P13_EXPORT_CONTRACT_IMPORTS = {
                        "TransitionPlan", "build_projection_target", "check_preservation_proposal", "check_recovery_proposal",
                        "classify_publication", "parse_intent", "parse_private_binding", "parse_public_export_manifest", "render_pointer",
                        "scan_private_shapes", "validate_public_note"}}                      # 走査器は A4a1 が承認した再利用の名前
-#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "53426f96b384ad6b2303040f92db9255aee6b2be562c5b26522441c3de00d101"
+#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b ・A5-0R の計画の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
+P13_REGISTRY_DIGEST = "910d01ca018c12f5da0430fd795cce7b293c7a30ffd928ad686628d145c7e357"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -271,7 +274,7 @@ def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_emp
                              "tests/intelligence/test_market_memory_projection_contract.py",
                              "tests/intelligence/test_market_memory_projection_store.py",
                              "tests/intelligence/test_market_memory_projection_build.py")
-    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC, A4A_DOC, A4A1_DOC, A4B_DOC)
+    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC, A4A_DOC, A4A1_DOC, A4B_DOC, A5_PLAN_DOC)
     assert set(SANCTIONED_P13_EXTRA_STDLIB) == set(P13_NAME_ALLOWANCES) == set(P13_WORD_ALLOWANCES) == {STORE_MODULE,
                                                                                                          PROJECTION_STORE}   # 許しは 2 つの store だけ
     assert SANCTIONED_P13_EXTRA_STDLIB[STORE_MODULE] == {"os", "stat"}                              # P13-A4b: A3 の許しは広げない
@@ -1321,3 +1324,153 @@ def test_p13_a4b_the_export_record_states_the_contract_limits_and_holds_no_priva
                     build.SOURCE_READ_SCHEMA_VERSION, build.FAILURE_SCHEMA_VERSION, build.SOURCE_READ_ATTESTATION, build.SCAN_PROCEDURE,
                     build.SCAN_RULES_VERSION, build.SCAN_RULES_DOMAIN, build.SCAN_DOMAIN):
         assert version in text, version
+
+
+# ================================================ P13-A5-0R: Windows の検証の計画の記録（文書だけ ・実行を承認しない）
+
+
+A5_W_CASES = tuple(f"W-{n:02d}" for n in range(1, 21))
+A5_T_CASES = tuple(f"T-{n:02d}" for n in range(1, 7))
+A5_O_CASES = tuple(f"O-{n:02d}" for n in range(1, 7))
+#: W の A6 の分類。ここに無い W は BLOCKING のまま（弱めると落ちる）。W-20 は S2（実の source）で決定まで止める
+A5_W_NOT_BLOCKING = {"W-04": "RECORD_ONLY", "W-05": "CONDITIONAL", "W-11": "RECORD_ONLY", "W-20": "DECISION_REQUIRED"}
+#: A6 の条件つきの主張の状態（別々 ・弱めると落ちる）
+A5_A6_CLAIMS = {"C-01": "SYNTHETIC_ONLY", "C-02": "CONDITIONAL", "C-03": "UNSUPPORTED", "C-04": "CONDITIONAL", "C-05": "CONDITIONAL",
+                "C-06": "UNSUPPORTED", "C-07": "UNSUPPORTED", "C-08": "UNSUPPORTED", "C-09": "DECISION_REQUIRED", "C-10": "OUT_OF_SCOPE",
+                "C-11": "OUT_OF_SCOPE", "C-12": "OUT_OF_SCOPE", "C-13": "UNSUPPORTED", "C-14": "DECISION_REQUIRED"}
+A5_REQUIRED = ("本記録は実行を承認しない", "Windows の結果は無い", "Windows の検証は A6 の前", "P12.5 の closeout §5 の 6", "P12.5-A0 §10",
+               "f6145ac2902ab95ec20affecb11300d6176b9d5a", "A5-T ・A5-W ・A6 は HOLD", "helper の作成 ・実行は HOLD",
+               "実の source の検証の義務は残す", "S2 は所有者の別の承認と privacy の審査まで HOLD", "監督の明示の決定",
+               "提案した初期の対象であり検証済みの能力ではない", "受理した POSIX の基準は変えない", "42 の mutation の点", "252 の場合",
+               "Windows の mutation の数は UNKNOWN", "期待の数を失敗に合わせて書き換えない", "注入した例外", "実際の process の終了",
+               "process の生存は lock から証明できない", "再起動だけでは片付けを承認しない", "lock の byte が lock の record として読める",
+               "file の種類が正規の file", "`st_nlink` が 1", "before の manifest", "after の manifest", "介入ごとの明示の承認",
+               "quarantine", "（消さない）", "無期限の HOLD", "sha256", "Linux の合成の試験でだけ安全と確かめた",
+               "A3 の hard link の振る舞いは未解決の境界の懸念", "無害な例外として受け入れていない", "実の root への書き込み",
+               "lock の盲目的な除去", "stale lock の奪取", "自動の片付け", "破壊的な試験", "同期 ・plugin の拒否の規則を弱めること",
+               "同期 ・plugin の拒否の規則は弱めない", "product の提案であり既存の契約の検査の免除ではない", "監督の明示の scope の決定",
+               "実の vault への export は支持しない", "除外は凍結を自動では認めない", "Market Memory v1 は凍結していない")
+A5_BANNED = ("A5_PASS", "A5 PASS", "A5 は PASS", "A5 は完了", "A6 CLOSED", "A6 は CLOSED", "A6 は完了", "Market Memory v1 は凍結した",
+             "Market Memory v1 を凍結した", "Windows で検証済み", "実機で検証した", "実機で確認した", "Windows で確認した", "検証に合格した",
+             "helper を作成した", "helper を実行した", "実行を承認する", "S2 は承認済み", "拒否を弱める", "拒否を緩める", "拒否を無効にする",
+             "同期を許可する", "plugin を許可する", "P13 は完了", "Phase 13 は完了", "最新の", "署名済み", "http://", "https://", "D:\\",
+             "0.0.0.0")
+A5_BANNED_PATTERNS = (r"\b[A-Z][A-Z0-9_]{2,}=(?:PASS|PASSED|FAIL|FAILED|OK|TRUE|FALSE|YES|NO|\d+)\b",          # 捏造の結果の行
+                      r"\b[WTOC]-\d{2}\s*(?:=|:|は)\s*(?:PASS|PASSED|FAIL|合格|成功)",                          # 項目の結果の主張
+                      r"(?:A5-0R|A5-T|A5-W|A6|S2|helper)[^\n|]{0,8}=\s*GO\b",                                  # 実行の権限
+                      r"\b(?:jq|p\d+)_[a-z0-9]+_(?:private|work)\b", r"\\\\[A-Za-z0-9.-]+\\")                  # private な root ・UNC の host
+
+
+#: 節ごとに在るべき記述（他の節に同じ語が在っても、その節から消えれば落ちる）
+A5_SECTION_REQUIRED = {
+    "## 6. 人の回復の手順": ("process の生存は lock から証明できない", "再起動だけでは片付けを承認しない", "lock の byte が lock の record として読める",
+                        "file の種類が正規の file", "`st_nlink` が 1", "before の manifest", "after の manifest", "介入ごとの明示の承認",
+                        "quarantine", "（消さない）", "lock の盲目的な除去 ・stale lock の奪取は無い", "無期限の HOLD",
+                        "Linux の合成の試験でだけ安全と確かめた"),
+    "## 7. 実の source と合成の source": ("実の source の検証の義務は残す", "S2 は所有者の別の承認と privacy の審査まで HOLD"),
+    "## 8. 任意の Obsidian の track": ("product の提案であり既存の契約の検査の免除ではない", "監督の明示の scope の決定", "実の vault への export は支持しない",
+                                  "同期 ・plugin の拒否の規則は弱めない"),
+    "## 12. 禁止": ("実の root への書き込み", "lock の盲目的な除去", "stale lock の奪取", "自動の片付け", "破壊的な試験",
+                  "同期 ・plugin の拒否の規則を弱めること", "期待の数を失敗に合わせて書き換えること"),
+}
+
+
+def _a5_section(text: str, heading: str) -> str:
+    start = text.find("\n" + heading)
+    if start < 0:
+        return ""
+    end = text.find("\n## ", start + 1)
+    return text[start:] if end < 0 else text[start:end]
+
+
+def _a5_rows(text: str, prefix: str) -> dict:
+    rows = {}
+    for line in text.splitlines():
+        match = re.match(r"^\| (" + prefix + r"-\d{2}) \|(.*)\|$", line)
+        if match:
+            rows.setdefault(match.group(1), []).append([cell.strip() for cell in match.group(2).split("|")])
+    return rows
+
+
+def _a5_plan_violations(text: str) -> list:
+    """Windows の検証の計画の記録の違反（空なら適合）。"""
+    found = []
+    w_rows = _a5_rows(text, "W")
+    if tuple(w_rows) != A5_W_CASES or any(len(rows) != 1 for rows in w_rows.values()):
+        found.append(("W_CASES", tuple(w_rows)))
+    for case, rows in w_rows.items():
+        cells = rows[0]
+        if len(cells) != 8 or any(not cell or cell in ("—", "-") for cell in cells):
+            found.append(("W_CELLS", case))
+            continue
+        if "§" not in cells[0]:
+            found.append(("W_CONTRACT_REF", case))
+        if cells[2] != ("S2" if case == "W-20" else "S1"):
+            found.append(("W_ENVIRONMENT", case))
+        if cells[7] != A5_W_NOT_BLOCKING.get(case, "BLOCKING"):
+            found.append(("W_A6_CLASS", case))
+    for prefix, cases in (("T", A5_T_CASES), ("O", A5_O_CASES)):
+        rows = _a5_rows(text, prefix)
+        if tuple(rows) != cases or any(len(r) != 1 or any(not cell for cell in r[0]) for r in rows.values()):
+            found.append((prefix + "_CASES", tuple(rows)))
+    claims = {case: rows[0][1] if len(rows) == 1 and len(rows[0]) == 3 else None for case, rows in _a5_rows(text, "C").items()}
+    if claims != A5_A6_CLAIMS:
+        found.append(("A6_CLAIMS", tuple(sorted(set(claims.items()) ^ set(A5_A6_CLAIMS.items())))))
+    found += [("MISSING", needle) for needle in A5_REQUIRED if needle not in text]
+    for heading, needles in A5_SECTION_REQUIRED.items():
+        section = _a5_section(text, heading)
+        found += [("SECTION", heading, needle) for needle in needles if needle not in section]
+    found += [("BANNED", banned) for banned in A5_BANNED if banned in text]
+    found += [("PATTERN", pattern) for pattern in A5_BANNED_PATTERNS + PRIVATE_PATTERNS if re.search(pattern, text)]
+    if re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE):
+        found.append(("SIGNED", "claim"))
+    return found
+
+
+def test_p13_a5_0r_the_windows_validation_plan_is_a_guarded_documentation_only_record() -> None:
+    text = (REPO_ROOT / A5_PLAN_DOC).read_text(encoding="utf-8")
+    assert _a5_plan_violations(text) == []
+    assert A5_PLAN_DOC in PHASE13_DOCS and PHASE13_DOCS[-1] == A5_PLAN_DOC                          # 確立した文書の registry で登録
+    assert not any(gate.startswith("P13-A5") or gate.startswith("P13-A6") for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)   # 実行 ・runtime の認可は無い
+    assert all(doc != A5_PLAN_DOC for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)
+    assert len(PHASE13_RUNTIME) == 12 and not any("cleanup" in p or "recovery" in p or "windows" in p for p in PHASE13_RUNTIME)
+
+
+def test_p13_a5_0r_negative_controls_reject_weakened_or_fabricated_plans() -> None:
+    text = (REPO_ROOT / A5_PLAN_DOC).read_text(encoding="utf-8")
+    lines = text.splitlines(keepends=True)
+    row = {case: next(line for line in lines if line.startswith(f"| {case} |")) for case in (*A5_W_CASES, "T-03", "C-07")}
+    stop_cell = row["W-02"].rstrip("\n").split("|")[8]
+    mutated = {
+        "missing_case": text.replace(row["W-07"], ""),                                                # 必須の Windows の場合の欠落
+        "duplicated_case": text.replace(row["W-07"], row["W-07"] * 2),
+        "blocking_weakened": text.replace(row["W-06"], row["W-06"].replace("| BLOCKING |", "| RECORD_ONLY |")),
+        "stop_removed": text.replace(row["W-02"], row["W-02"].replace(stop_cell, " — ")),
+        "contract_ref_removed": text.replace(row["W-09"], row["W-09"].replace("A3 §6 ・A4b §1 ・§11", "A3 ・A4b")),
+        "real_source_downgraded": text.replace(row["W-20"], row["W-20"].replace("| S2 |", "| S1 |")),
+        "real_source_unblocked": text.replace(row["W-20"], row["W-20"].replace("| DECISION_REQUIRED |", "| BLOCKING |")),
+        "real_source_approval_omitted": text.replace("S2 は所有者の別の承認と privacy の審査まで HOLD", "S2 は後で行う"),
+        "portability_case_missing": text.replace(row["T-03"], ""),
+        "claim_weakened": text.replace(row["C-07"], row["C-07"].replace("| UNSUPPORTED |", "| CONDITIONAL |")),
+        "refusal_weakened": text.replace("同期 ・plugin の拒否の規則は弱めない", "同期 ・plugin の拒否を緩める"),
+        "a5_pass_claim": text + "\nA5_PASS\n",
+        "a6_closed_claim": text + "\nA6 は CLOSED。\n",
+        "fabricated_report_line": text + "\nINO_STABLE=TRUE\n",
+        "fabricated_case_result": text + "\nW-01: PASS\n",
+        "fabricated_windows_claim": text + "\nNTFS の挙動は Windows で検証済み。\n",
+        "execution_authority": text + "\nA5-W = GO\n",
+        "helper_authority": text + "\nhelper を実行した。\n",
+        "private_path": text + "\n" + "Z:" + "\\p99_a9_private\n",
+        "private_root_name": text + "\np99_z9_private\n",
+        "private_identifier": text + "\np9wat_0123\n",
+        "reboot_authorizes_cleanup": text.replace("再起動だけでは片付けを承認しない", "再起動の後は片付けてよい"),
+        "posix_baseline_changed": text.replace("受理した POSIX の基準は変えない", "POSIX の基準は Windows に合わせる"),
+        "obsidian_waiver": text.replace("product の提案であり既存の契約の検査の免除ではない", "既存の検査の免除"),
+        "hard_link_accepted": text.replace("A3 の hard link の振る舞いは未解決の境界の懸念", "A3 の hard link は無害"),
+        "prohibition_removed": text.replace("- lock の盲目的な除去 ・stale lock の奪取 ・自動の片付け ・証拠 ／ 版の削除 ・編集。\n", ""),
+        "runbook_lock_rule_removed": text.replace("lock の盲目的な除去 ・stale lock の奪取は無い", "lock は状況に応じて扱う"),
+        "runbook_section_missing": text.replace("## 6. 人の回復の手順", "## 6. 回復"),
+    }
+    for name, candidate in mutated.items():
+        assert candidate != text, name
+        assert _a5_plan_violations(candidate), name                                                  # どの改変も guard が落とす

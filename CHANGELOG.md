@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.36 (2026-10-19) — Phase 13 P13-A5-0R Windows validation plan record（文書だけ ・実行を承認しない）
+
+監督が審査した P13-A5 の Windows の検証の計画（refined Option B）を、守られた文書だけの契約
+`docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md` として記録した。P12.5 から継承した「Windows の検証は A6 の前」を保ち、必須の core の
+試験 W-01 〜 W-20（契約の参照 ・脅威 ・環境 ・手順と期待 ・不変量 ・証拠 ・STOP ・A6 の分類）、A5-T の移植と特性の記録（T-01 〜 T-06 ・受理した
+POSIX の 42 の点 ・252 の場合は不変 ・Windows の数は UNKNOWN ・注入した例外と実際の process の終了を分ける）、任意の Obsidian の track
+（product の提案 ・既存の検査の免除ではない ・A4b の記述の移動は監督の明示の scope の決定を要する）、A6 の条件つきの主張 C-01 〜 C-14、
+人の回復の手順（生存の不確かさ ・lock と証拠の検証 ・identity ／ 種類 ／ link の数 ／ byte ・前後の manifest ・介入ごとの承認 ・消さない
+quarantine ・曖昧なら無期限の HOLD ・再起動だけでは承認しない）、S2（読み取りだけの実の source）は所有者の別の承認と privacy の審査まで HOLD、
+local NTFS は提案した初期の対象、A3 の hard link は未解決の境界の懸念、禁止（実の root への書き込み ・lock の盲目的な除去 ・stale lock の奪取 ・
+自動の片付け ・破壊的な試験）を記録する。boundary の guard は必須の場合の欠落 ・拒否の規則の弱化 ・A5 PASS ／ A6 CLOSED の主張 ・捏造の
+Windows の結果 ・private な識別子 ／ path ・実行の権限 ・実の source の承認の要件の欠落を拒み、人の手順 ・実の source ・Obsidian の track ・禁止の節ごとの必須の記述も含めて 28 の負の control で確かめる。A5-T ・A5-W ・A6 ・
+helper ・実の source への access は HOLD。runtime ・凍結の契約 ・pin は不変。
+
+追加
+・`docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`PHASE13_DOCS` に計画の記録を登録 ・runtime ・認可 ・importer の許可は不変）
+・`tests/intelligence/test_market_memory_boundary.py`（文書の tuple ・registry の digest ・計画の記録の guard と負の control の 2 つの test）
+修正
+・なし
+
 ## v6.35 (2026-10-19) — Product Roadmap v2.0 amendment（文書だけ ・runtime の実装を承認しない）
 
 `docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md` に、利用者が承認した iPhone を先にする AI Rashinban の product の vision を §17 〜 §26 として

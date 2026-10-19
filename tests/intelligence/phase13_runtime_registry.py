@@ -18,6 +18,7 @@
 - P13-A4b は Obsidian 投影の export の 2 file を足す（anchor ＝ `P13_A4A1`）。filesystem の I/O は `projection_store.py` だけ（2 つ目の狭く pin
   した許し ・A3 の許しは広げない）・`projection_build.py` は A3 ・A4a1 ・store の公開の面だけの orchestration。A4a1 の runtime の blob は
   `P13_A4A1` に pin する。P10 の importer の許可は変えない。
+- P13-A5-0R は Windows の検証の計画の記録を `PHASE13_DOCS` に足すだけ（文書だけ ・runtime ・認可 ・importer の許可は変えない ・実行の承認ではない）。
 記録: `docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md`。
 """
 from __future__ import annotations
@@ -99,7 +100,8 @@ PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGIS
                                  "docs/databank/MARKET_BRAIN_ROADMAP_RECORD.md",   # 長期の roadmap の記録（文書だけ ・実装の承認ではない）
                                  "docs/databank/PHASE13_A4A_PROJECTION_MODEL.md",
                                  "docs/databank/PHASE13_A4A1_PROJECTION_RECONCILIATION.md",
-                                 "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md")
+                                 "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md",
+                                 "docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md")   # A5-0R: 計画の記録だけ（実行の承認ではない）
 #: P13-A2a: P10 の governed な read の面（P11 の `SANCTIONED_P11_P10_IMPORTS` と同じ 5 つの名前 ・完全一致）。store の class ・private な
 #: snapshot ・executor は含まない。importer は adapter の 1 file だけ
 SANCTIONED_P13_P10_IMPORTS: Mapping[str, frozenset] = {
