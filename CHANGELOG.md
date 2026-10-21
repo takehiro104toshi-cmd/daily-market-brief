@@ -4,6 +4,28 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.37 (2026-10-21) — Phase 13 P13-A5-T Windows characterization record（文書 ・registry ・guard だけ ・実行を承認しない）
+
+監督が受理した P13-A5 の Windows の特性の記録（T-02 ・T-03）を、守られた文書だけの記録
+`docs/databank/PHASE13_A5T_WINDOWS_CHARACTERIZATION_RECORD.md` として残した。T-02（Windows の native の mutation の点は 41 ・POSIX の
+42 との差は予約の `mkdir` の 1 つ）、T-03（246 の場合を選び ・試み ・全て VALID ・A=142 ・H=9 ・M=95 ・F=0 ・1 つ目の故障は 246 で観測 ・
+2 つ目の故障は 72 で観測し 12 は確かめた設計どおりの lock の在る拒否で届かない ・E3 の免除は 12 ・必須の manifest は 996 ・Windows と POSIX の
+分類の差は 9）、host の path を含まない証拠の identity と限界、R1 の必須の注記（B2-W38 ・A2-W38 ・T2-W38 ・A2-W40 ・A2-W41 は凍結の規則の下で
+class A のままだが writer lock を保持し、data の収束は次の公開の準備を意味しない ・`CLASS_EVIDENCE=VALID` は証拠の妥当性だけを証す）、
+状態（T-02 ・T-03 は CLOSED ・T-04 は PARTIAL ・T-01 は OPEN / NOT EVIDENCED ・T-05 ・T-06 は OPEN ・A5-W は NOT FORMALLY EXECUTED ・
+A6 は HOLD ・P13-A5 は受理していない ・Market Memory v1 は凍結していない）を記録する。boundary の guard は受理した数 ・identity ・R1 の
+5 つの場合と次の公開の注記 ・残る義務の状態を pin し、数の改変 ・R1 の欠落 ／ 再分類 ・A5 ／ A6 の受理の主張 ・凍結の主張 ・T の項目の
+誤った完了 ・A5-W の実行の主張 ・private な形を 48 の負の control で拒む。文書 ・registry ・guard の範囲だけの変更であり、product の機能 ・
+runtime の振る舞い ・計画の記録 ・roadmap ・凍結の pin は変わらない。pytest ・commit ・A5-W ・A6 は別の承認まで HOLD。
+
+追加
+・`docs/databank/PHASE13_A5T_WINDOWS_CHARACTERIZATION_RECORD.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`PHASE13_DOCS` の最後に特性の記録を登録 ・runtime ・認可 ・importer の許可は不変）
+・`tests/intelligence/test_market_memory_boundary.py`（文書の tuple ・registry の digest ・計画の記録が最後から 2 つ目 ・特性の記録の guard と負の control の 2 つの test）
+修正
+・なし
+
 ## v6.36 (2026-10-19) — Phase 13 P13-A5-0R Windows validation plan record（文書だけ ・実行を承認しない）
 
 監督が審査した P13-A5 の Windows の検証の計画（refined Option B）を、守られた文書だけの契約

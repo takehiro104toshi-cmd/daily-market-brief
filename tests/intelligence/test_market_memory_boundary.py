@@ -21,6 +21,9 @@
   どちらも 0.1.0 の model を import しない。P10 の importer の許可は不変。
 - P13-A5-0R: Windows の検証の計画の記録（文書だけ）。必須の W-01 〜 W-20 ・A6 の条件つきの主張の状態 ・実の source の承認の要件 ・
   人の手順の安全の規則を pin し、完了の主張 ・捏造の結果 ・実行の権限 ・拒否の規則の弱化 ・private な形を拒む。
+- P13-A5-T: Windows の特性の記録（文書だけ）。受理した T-02 ・T-03 の数 ・証拠の identity ・R1 の 5 つの場合と次の公開の注記 ・
+  残る義務の状態を pin し、数の改変 ・R1 の欠落 ／ 再分類 ・A5 ／ A6 の受理の主張 ・凍結の主張 ・T の項目の誤った完了 ・A5-W の実行の
+  主張 ・private な形を拒む。
 - negative control: 未登録の path ・修正 ・近い名前 ・未宣言の登録の行 ・禁止の token ・一般の削除 ・store の外の I/O ・blob の変化 ・
   認可の drift ・公開の面の変更は落ちる。
 """
@@ -69,6 +72,7 @@ PROJECTION_MODULE = "src/intelligence/market_memory/memory_projection.py"
 CONTRACT_MODULE = "src/intelligence/market_memory/projection_contract.py"
 A4B_DOC = "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md"
 A5_PLAN_DOC = "docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md"
+A5T_RECORD_DOC = "docs/databank/PHASE13_A5T_WINDOWS_CHARACTERIZATION_RECORD.md"
 PROJECTION_STORE = "src/intelligence/market_memory/projection_store.py"
 PROJECTION_BUILD = "src/intelligence/market_memory/projection_build.py"
 P13_ROADMAP = "5e5f015ecebf64116f9c1721c36d9d41fa9dc1c7"   # roadmap の記録の commit ＝ A4a の認可の anchor
@@ -184,8 +188,8 @@ P13_EXPORT_CONTRACT_IMPORTS = {
                        "TransitionPlan", "build_projection_target", "check_preservation_proposal", "check_recovery_proposal",
                        "classify_publication", "parse_intent", "parse_private_binding", "parse_public_export_manifest", "render_pointer",
                        "scan_private_shapes", "validate_public_note"}}                      # 走査器は A4a1 が承認した再利用の名前
-#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b ・A5-0R の計画の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "910d01ca018c12f5da0430fd795cce7b293c7a30ffd928ad686628d145c7e357"
+#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b ・A5-0R の計画の記録 ・A5-T の特性の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
+P13_REGISTRY_DIGEST = "0272825486618b8c076e178351e87b9ac05b8c1243cb2e82a9f5edbecf2b9748"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -274,7 +278,7 @@ def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_emp
                              "tests/intelligence/test_market_memory_projection_contract.py",
                              "tests/intelligence/test_market_memory_projection_store.py",
                              "tests/intelligence/test_market_memory_projection_build.py")
-    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC, A4A_DOC, A4A1_DOC, A4B_DOC, A5_PLAN_DOC)
+    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC, A4A_DOC, A4A1_DOC, A4B_DOC, A5_PLAN_DOC, A5T_RECORD_DOC)
     assert set(SANCTIONED_P13_EXTRA_STDLIB) == set(P13_NAME_ALLOWANCES) == set(P13_WORD_ALLOWANCES) == {STORE_MODULE,
                                                                                                          PROJECTION_STORE}   # 許しは 2 つの store だけ
     assert SANCTIONED_P13_EXTRA_STDLIB[STORE_MODULE] == {"os", "stat"}                              # P13-A4b: A3 の許しは広げない
@@ -1430,7 +1434,7 @@ def _a5_plan_violations(text: str) -> list:
 def test_p13_a5_0r_the_windows_validation_plan_is_a_guarded_documentation_only_record() -> None:
     text = (REPO_ROOT / A5_PLAN_DOC).read_text(encoding="utf-8")
     assert _a5_plan_violations(text) == []
-    assert A5_PLAN_DOC in PHASE13_DOCS and PHASE13_DOCS[-1] == A5_PLAN_DOC                          # 確立した文書の registry で登録
+    assert A5_PLAN_DOC in PHASE13_DOCS and PHASE13_DOCS[-2] == A5_PLAN_DOC                          # 確立した文書の registry で登録（A5-T の記録の直前）
     assert not any(gate.startswith("P13-A5") or gate.startswith("P13-A6") for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)   # 実行 ・runtime の認可は無い
     assert all(doc != A5_PLAN_DOC for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)
     assert len(PHASE13_RUNTIME) == 12 and not any("cleanup" in p or "recovery" in p or "windows" in p for p in PHASE13_RUNTIME)
@@ -1474,3 +1478,173 @@ def test_p13_a5_0r_negative_controls_reject_weakened_or_fabricated_plans() -> No
     for name, candidate in mutated.items():
         assert candidate != text, name
         assert _a5_plan_violations(candidate), name                                                  # どの改変も guard が落とす
+
+
+# ================================================ P13-A5-T: Windows の特性の記録（文書だけ）
+
+
+#: 受理した T-02 ・T-03 の数 ・証拠の identity ・主張しないこと（どれが消えても落ちる）
+A5T_REQUIRED = ("本記録は実行を承認しない", "P13-A5 は受理していない", "Market Memory v1 は凍結していない",
+                "f503e9280f60cce1dc7cc28cc6c39575e1721a1e", "p13a5-t2b-recorder:3", "p13a5-t2c-runner:6",
+                "bbc6880fd9524a3f39aee0a1de4f0bde3019785f198141f6dd11212cd4cf3d97",
+                "b5b0b12ceae016569a5f284ee2174174053fb83f151b738275e834843b49d398",
+                "a93a996c57823182fe8d03f1759517bd95b383479e704f8bbba01af695bdc2cd",
+                "9bd75714621bcd0b39f2effe80abd6e942bf394fa34ee73eb2a482410af186e2",
+                "d0fb5f5010aa5a211ec2dc53c48ede70977d749ba6e2a4f451897e2ab814b57e",
+                "85dab58a6004b9196ad831998abf6c7a1ed77dd52347c81678507463a6819e76",
+                "cf2af47b70ba0a50b693d8be1c463305291dab9ae5f3ca02e823311af0dd029f",
+                "9e8d408dff076061d716e824912a932bc1186fa99cdf0e4d1d9028a261b51379",
+                "593e9e53b1f3ef0817d48d7d249c8bb91334f41494acdcea7c1bcbfd0fe7d04c",
+                "Windows の native の mutation の点は 41", "POSIX の予約の `mkdir`", "選んだ場合 246 ・試みた場合 246 ・VALID 246",
+                "A=142 ・H=9 ・M=95 ・F=0", "1 つ目の故障は 246 の場合の全てで観測した", "2 つ目の故障は 72 の場合で観測した",
+                "12 の場合は確かめた設計どおりの lock の在る拒否で 2 つ目の故障に届かない", "E3 の免除は 12", "必須の manifest は 996",
+                "Windows と POSIX の分類の差は 9", "受理した POSIX の基準（42 の点 ・252 の場合）は変えない", "注入した例外だけ",
+                "process の中の audit hook は OS の水準の閉じ込めではない", "残りの片付け ・lock の削除はしていない")
+#: 監督の必須の R1 の注記（原文）
+A5T_R1_NOTE = ("B2-W38, A2-W38, T2-W38, A2-W40 and A2-W41 remain class A under frozen rules, but retain a writer lock.",
+               "Data convergence does not imply operational readiness for the next publication.",
+               "An authorized human procedure is required to resolve the lock safely.",
+               "CLASS_EVIDENCE=VALID certifies evidence validity, not next-publication readiness.",
+               "SECOND_FAULT_HANDLED and INVARIANT_AUTO_SINGLE_STEP are reporting-only.",
+               "POSIX priors are historical comparisons, not verified native Windows outcomes.")
+#: 節ごとに在るべき記述（他の節に同じ語が在っても、その節から消えれば落ちる）
+A5T_SECTION_REQUIRED = {
+    "## 5. R1 の解釈": (*A5T_R1_NOTE, "凍結の規則の下で class A のままだが、writer lock を保持する",
+                      "data の収束は次の公開の運用の準備を意味しない", "lock を安全に解くには、承認された人の手順が要る",
+                      "`CLASS_EVIDENCE=VALID` は証拠の妥当性を証し、次の公開の準備を証さない",
+                      "`SECOND_FAULT_HANDLED` と `INVARIANT_AUTO_SINGLE_STEP` は報告だけ",
+                      "POSIX の先行値は歴史の比較であり、Windows で検証した native の結果ではない",
+                      "5 つの場合で次の公開は試していない", "凍結の分類は黙って変えない", "lock は消さない"),
+    "## 7. 状態": ("P13-A5 は受理していない", "Market Memory v1 は凍結していない", "本記録は実行を承認しない"),
+    "## 9. 禁止と承認の範囲": ("product の機能 ・runtime の振る舞いは変わらない", "lock の削除", "凍結の分類の黙った変更",
+                        "監督の別の明示の承認が要る"),
+}
+#: 群ごとの（場合 ・A ・H ・M ・F）
+A5T_GROUPS = {"B1": ("41", "26", "2", "13", "0"), "A1": ("41", "26", "2", "13", "0"), "T1": ("41", "26", "2", "13", "0"),
+              "B2": ("41", "20", "0", "21", "0"), "A2": ("41", "24", "3", "14", "0"), "T2": ("41", "20", "0", "21", "0"),
+              "計": ("246", "142", "9", "95", "0")}
+A5T_R1_CASES = ("B2-W38", "A2-W38", "T2-W38", "A2-W40", "A2-W41")
+A5T_POSIX_DIFFS = {"B1-W31": "H→A", "T1-W31": "H→A", "B2-W31": "M→A", "A2-W31": "M→A", "T2-W31": "M→A", "B2-W32": "A→M",
+                   "T2-W32": "A→M", "A2-W35": "A→M", "A2-W29": "H→A"}
+A5T_STATUS = {"T-01": "OPEN / NOT EVIDENCED", "T-02": "CLOSED", "T-03": "CLOSED", "T-04": "PARTIAL", "T-05": "OPEN", "T-06": "OPEN",
+              "A5-W": "NOT FORMALLY EXECUTED", "A6": "HOLD"}
+A5T_BANNED = ("A5_PASS", "A5 PASS", "A5 は PASS", "A5 は完了", "P13-A5 を受理した", "P13-A5 は受理した", "P13-A5 は受理済み", "A6 CLOSED",
+              "A6 は CLOSED", "A6 は完了", "A6 は PASS", "Market Memory v1 は凍結した", "Market Memory v1 を凍結した",
+              "Market Memory v1 は凍結済み", "A5-W を実行した", "A5-W は実行した", "A5-W は完了", "A5-W は PASS", "次の公開の準備ができている",
+              "次の公開の準備が整った", "次の公開に支障は無い", "lock を削除した", "lock を消した", "lock を除去した", "実行を承認する",
+              "Windows で検証済み", "最新の", "署名済み", "http://", "https://", "D:\\", "0.0.0.0")
+A5T_BANNED_PATTERNS = (r"\b(?:T-0\d|A5-W|A6|W-\d{2})\s*(?:=|:|は)\s*(?:PASS|PASSED|CLOSED|ACCEPTED|EXECUTED|合格|完了|受理|実行済み)",  # 完了の主張
+                       r"(?:A5-T|A5-W|A6|T-05|T-06|helper|pytest|commit|push)[^\n|]{0,8}=\s*GO\b",                                # 実行の権限
+                       r"\b(?:jq|p\d+)_[a-z0-9]+_(?:private|work)\b", r"\\\\[A-Za-z0-9.-]+\\")                                      # private な root ・UNC の host
+
+
+def _a5t_table(text: str, heading: str, key: str) -> dict:
+    rows = {}
+    for line in _a5_section(text, heading).splitlines():
+        match = re.match(r"^\| (" + key + r") \|(.*)\|$", line)
+        if match:
+            rows.setdefault(match.group(1), []).append([cell.strip() for cell in match.group(2).split("|")])
+    return rows
+
+
+def _a5t_record_violations(text: str) -> list:
+    """Windows の特性の記録の違反（空なら適合）。"""
+    found = []
+    groups = _a5t_table(text, "## 4. T-03 の結果", r"[BAT][12]|計")
+    if {g: tuple(r[0][2:]) if len(r) == 1 and len(r[0]) == 7 else None for g, r in groups.items()} != A5T_GROUPS:
+        found.append(("GROUPS", tuple(groups)))
+    r1 = _a5t_table(text, "## 5. R1 の解釈", r"[BAT][12]-W\d{2}")
+    if tuple(r1) != A5T_R1_CASES or any(len(r) != 1 or len(r[0]) != 3 or r[0][0] != "A" or not r[0][2].endswith("writer lock を保持")
+                                         for r in r1.values()):
+        found.append(("R1", tuple(r1)))
+    diffs = _a5t_table(text, "## 6. Windows と POSIX の分類の差", r"[BAT][12]-W\d{2}")
+    if {case: r[0][0] if len(r) == 1 and len(r[0]) == 3 else None for case, r in diffs.items()} != A5T_POSIX_DIFFS:
+        found.append(("POSIX_DIFFS", tuple(diffs)))
+    status = _a5t_table(text, "## 7. 状態", r"T-0\d|A5-W|A6")
+    if {item: r[0][0] if len(r) == 1 and len(r[0]) == 2 and r[0][1] else None for item, r in status.items()} != A5T_STATUS:
+        found.append(("STATUS", tuple(status)))
+    found += [("MISSING", needle) for needle in A5T_REQUIRED if needle not in text]
+    for heading, needles in A5T_SECTION_REQUIRED.items():
+        section = _a5_section(text, heading)
+        found += [("SECTION", heading, needle) for needle in needles if needle not in section]
+    found += [("BANNED", banned) for banned in A5T_BANNED if banned in text]
+    found += [("PATTERN", pattern) for pattern in A5T_BANNED_PATTERNS + PRIVATE_PATTERNS if re.search(pattern, text)]
+    if re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE):
+        found.append(("SIGNED", "claim"))
+    return found
+
+
+def test_p13_a5t_the_windows_characterization_record_is_a_guarded_documentation_only_record() -> None:
+    text = (REPO_ROOT / A5T_RECORD_DOC).read_text(encoding="utf-8")
+    assert _a5t_record_violations(text) == []
+    assert PHASE13_DOCS[-1] == A5T_RECORD_DOC and PHASE13_DOCS[-2] == A5_PLAN_DOC                   # 計画の記録の直後に登録
+    assert not any(gate.startswith("P13-A5") or gate.startswith("P13-A6") for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)   # 実行 ・runtime の認可は無い
+    assert all(doc not in (A5_PLAN_DOC, A5T_RECORD_DOC) for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)
+    assert len(PHASE13_RUNTIME) == 12 and not any("cleanup" in p or "recovery" in p or "windows" in p for p in PHASE13_RUNTIME)
+    rows = [tuple(int(v) for v in counts) for group, counts in A5T_GROUPS.items() if group != "計"]
+    assert tuple(sum(column) for column in zip(*rows)) == tuple(int(v) for v in A5T_GROUPS["計"])   # 群の和は総数
+    assert all(cases == a + h + m + f for cases, a, h, m, f in rows)                                 # 各群は A ・H ・M ・F で尽きる
+    assert len(A5T_R1_CASES) == 5 and len(A5T_POSIX_DIFFS) == 9 and not set(A5T_R1_CASES) & set(A5T_POSIX_DIFFS)
+
+
+def test_p13_a5t_negative_controls_reject_altered_or_overclaimed_records() -> None:
+    text = (REPO_ROOT / A5T_RECORD_DOC).read_text(encoding="utf-8")
+    lines = text.splitlines(keepends=True)
+    row = {key: next(line for line in lines if line.startswith(f"| {key} |"))
+           for key in ("B2", "計", *A5T_R1_CASES, "A2-W29", "T-01", "T-04", "T-05", "T-06", "A5-W", "A6")}
+    mutated = {
+        "altered_class_totals": text.replace("A=142 ・H=9 ・M=95 ・F=0", "A=143 ・H=9 ・M=94 ・F=0"),            # 数の改変
+        "altered_group_row": text.replace(row["B2"], row["B2"].replace("| 20 | 0 | 21 |", "| 21 | 0 | 20 |")),
+        "altered_total_row": text.replace(row["計"], row["計"].replace("| 142 |", "| 141 |")),
+        "altered_valid_count": text.replace("VALID 246", "VALID 245"),
+        "altered_mutation_points": text.replace("Windows の native の mutation の点は 41", "Windows の native の mutation の点は 42"),
+        "altered_second_faults": text.replace("2 つ目の故障は 72 の場合で観測した", "2 つ目の故障は 84 の場合で観測した"),
+        "altered_e3_exemptions": text.replace("E3 の免除は 12", "E3 の免除は 0"),
+        "altered_manifests": text.replace("必須の manifest は 996", "必須の manifest は 984"),
+        "altered_difference_count": text.replace("Windows と POSIX の分類の差は 9", "Windows と POSIX の分類の差は 8"),
+        "posix_difference_removed": text.replace(row["A2-W29"], ""),
+        "posix_reservation_unnoted": text.replace("POSIX の予約の `mkdir`", "POSIX の `mkdir`"),
+        "evidence_identity_altered": text.replace("9bd75714621bcd0b", "9bd75714621bcd0c"),
+        "r1_case_removed": text.replace(row["A2-W41"], ""),                                            # R1 の欠落 ／ 再分類
+        "r1_case_reclassified": text.replace(row["B2-W38"], row["B2-W38"].replace("| A |", "| M |")),
+        "r1_lock_dropped": text.replace(row["A2-W40"], row["A2-W40"].replace("vault の writer lock を保持", "lock は無い")),
+        "r1_note_case_removed": text.replace("A2-W40 and A2-W41 remain class A", "A2-W40 remain class A"),
+        "next_publication_warning_removed": text.replace(
+            "Data convergence does not imply operational readiness for the next publication.\n", ""),
+        "next_publication_warning_removed_ja": text.replace("data の収束は次の公開の運用の準備を意味しない", "data は収束した"),
+        "class_evidence_overclaimed": text.replace("certifies evidence validity, not next-publication readiness",
+                                                   "certifies next-publication readiness"),
+        "human_procedure_removed": text.replace("An authorized human procedure is required to resolve the lock safely.\n", ""),
+        "reporting_only_removed": text.replace("SECOND_FAULT_HANDLED and INVARIANT_AUTO_SINGLE_STEP are reporting-only.\n", ""),
+        "posix_prior_promoted": text.replace("POSIX priors are historical comparisons, not verified native Windows outcomes.",
+                                             "POSIX priors are verified native Windows outcomes."),
+        "readiness_claim": text + "\n次の公開の準備ができている。\n",
+        "full_a5_accepted": text.replace("P13-A5 は受理していない", "P13-A5 は受理した"),                  # 受理 ・凍結の偽りの主張
+        "full_a5_pass_claim": text + "\nA5 PASS\n",
+        "a6_closed_claim": text + "\nA6 は CLOSED。\n",
+        "a6_status_closed": text.replace(row["A6"], row["A6"].replace("| HOLD |", "| CLOSED |")),
+        "a6_authority": text + "\nA6 = GO\n",
+        "market_memory_frozen": text + "\nMarket Memory v1 は凍結した。\n",
+        "freeze_disclaimer_removed": text.replace("Market Memory v1 は凍結していない", "Market Memory v1 の凍結は近い"),
+        "t01_closed": text.replace(row["T-01"], row["T-01"].replace("| OPEN / NOT EVIDENCED |", "| CLOSED |")),   # 残る T の項目の誤った完了
+        "t04_closed": text.replace(row["T-04"], row["T-04"].replace("| PARTIAL |", "| CLOSED |")),
+        "t05_closed": text.replace(row["T-05"], row["T-05"].replace("| OPEN |", "| CLOSED |")),
+        "t06_closed": text.replace(row["T-06"], row["T-06"].replace("| OPEN |", "| CLOSED |")),
+        "open_item_closed_claim": text + "\nT-06 は CLOSED。\n",
+        "status_row_removed": text.replace(row["T-05"], ""),
+        "a5w_status_executed": text.replace(row["A5-W"], row["A5-W"].replace("| NOT FORMALLY EXECUTED |", "| EXECUTED |")),  # A5-W の実行の主張
+        "a5w_executed_claim": text + "\nA5-W を実行した。\n",
+        "w_item_result_claim": text + "\nW-13: PASS\n",
+        "execution_authority": text + "\nA5-W = GO\n",
+        "lock_deleted_claim": text + "\nlock を削除した。\n",
+        "section_heading_changed": text.replace("## 5. R1 の解釈", "## 5. R1"),
+        "private_path": text + "\n" + "Z:" + "\\p99_a9_private\n",                                     # private な形
+        "private_root_name": text + "\np99_z9_private\n",
+        "private_identifier": text + "\np9wat_0123\n",
+        "private_timestamp": text + "\n" + "2026-10-20" + "T08:25\n",
+        "private_bare_number": text + "\n空きは " + "45362" + " MB\n",
+        "private_user_profile": text + "\n" + "C:" + "\\Users\\someone\n",
+    }
+    for name, candidate in mutated.items():
+        assert candidate != text, name
+        assert _a5t_record_violations(candidate), name                                               # どの改変も guard が落とす
