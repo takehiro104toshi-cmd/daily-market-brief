@@ -20,7 +20,8 @@
   `P13_A4A1` に pin する。P10 の importer の許可は変えない。
 - P13-A5-0R は Windows の検証の計画の記録を `PHASE13_DOCS` に足すだけ（文書だけ ・runtime ・認可 ・importer の許可は変えない ・実行の承認ではない）。
 - P13-A5-T は Windows の特性の記録を `PHASE13_DOCS` に足すだけ（文書だけ ・runtime ・認可 ・importer の許可は変えない ・実行の承認ではない）。
-- H0-D1 は Home の情報の契約の記録を `PHASE13_DOCS` の最後に足すだけ（文書だけ ・runtime ・認可 ・importer の許可は変えない ・実装の承認ではない）。
+- H0-D1 は Home の情報の契約の記録を `PHASE13_DOCS` に足すだけ（文書だけ ・runtime ・認可 ・importer の許可は変えない ・実装の承認ではない）。
+- M0-D1 は mobile の security と access の契約の記録を `PHASE13_DOCS` の最後に足すだけ（文書だけ ・runtime ・認可 ・importer の許可は変えない ・実装の承認ではない）。
 記録: `docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGISTRATION.md`。
 """
 from __future__ import annotations
@@ -105,7 +106,8 @@ PHASE13_DOCS: Tuple[str, ...] = ("docs/databank/PHASE13_A0_RUNTIME_SURFACE_REGIS
                                  "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md",
                                  "docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md",   # A5-0R: 計画の記録だけ（実行の承認ではない）
                                  "docs/databank/PHASE13_A5T_WINDOWS_CHARACTERIZATION_RECORD.md",   # A5-T: 特性の記録だけ（実行の承認ではない）
-                                 "docs/databank/H0_D1_HOME_INFORMATION_CONTRACT.md")   # H0-D1: Home の情報の契約の記録だけ（実装の承認ではない）
+                                 "docs/databank/H0_D1_HOME_INFORMATION_CONTRACT.md",   # H0-D1: Home の情報の契約の記録だけ（実装の承認ではない）
+                                 "docs/databank/M0_D1_MOBILE_SECURITY_ACCESS_CONTRACT.md")   # M0-D1: mobile の security と access の契約の記録だけ（実装の承認ではない）
 #: P13-A2a: P10 の governed な read の面（P11 の `SANCTIONED_P11_P10_IMPORTS` と同じ 5 つの名前 ・完全一致）。store の class ・private な
 #: snapshot ・executor は含まない。importer は adapter の 1 file だけ
 SANCTIONED_P13_P10_IMPORTS: Mapping[str, frozenset] = {

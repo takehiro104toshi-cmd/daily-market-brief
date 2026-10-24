@@ -4,6 +4,34 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.39 (2026-10-24) — M0-D1 Mobile security and access contract（文書 ・registry ・guard だけ ・実装を承認しない）
+
+監督が設計の水準で固定した M0 の決定を、守られた文書だけの記録 `docs/databank/M0_D1_MOBILE_SECURITY_ACCESS_CONTRACT.md` として残した
+（合成の data だけ ・実の data への接続は無い）。H1 の合成の prototype の脅威 model（10 行と受け入れた境界）、`file://` から開く単一の
+`index.html` を Edge の一時の専用の profile で検証する platform（manifest ・service worker ・認証 ・資格情報は無い ・CDP の transport は pipe を
+設計の優先とし feasibility の試験を要する）、保存の全面の禁止と memory だけの合成の data、hash だけの CSP と禁止の API ・要素、network の制御の
+明示の限界（CSP だけで隔離を証明しない ・OS の水準の隔離は無い）、等級ごとの表示（PRIVATE_AUTHORITY ・NEVER は fail closed）、H0-D1 の 5 つの
+表示の状態と後継の規則の参照、描画の前の検証と部分の描画の禁止、端末の失敗の code の閉じた集合（27 ・`AFTER_AS_OF` と `REFERENCE_UNRESOLVED` への
+2 つの改名 ・入力の拒否 25 ／ 有効な fail closed の結果 1 ／ 描画の失敗 1 の分類 ・12 段の決定論の検証の順と最初の失敗の code を 1 つだけ出す
+規則 ・FAILED_CLOSED の宣言は先の検証の失敗を覆さない）、合成の印と全ての状態での watermark、
+UTC の入力の形 `YYYY-MM-DDTHH:MM:SS+00:00` と `Date` を使わない JST の表示、端末の payload `home_client:0.2-synthetic` と digest の domain
+（`home.snapshot.v0.2` ・`home.client.v0.2`。表示の方針の識別子 `h0_render_policy:0.1` とは別）、browser の証拠 N1 〜 N5（認可の無い試みが 0。
+正確な回数は要件にしない）、静的と実行時の保証の区別と検証しない事項、H1 ／ M1 ／ deploy の境界を記録する。項目ごとの正確な key と上限は
+H0-D2 に延期する。boundary の guard は脅威 ・保存 ・CSP ・等級 ・失敗の code と意味 ・検証の順 ・N1 〜 N5 ・保証の表と節ごとの必須の記述を pin し、
+7 の正の control（限界 ・延期 ・契約の義務の文 ・有効な fail closed の結果）が受け入れられ、90 の負の control がそれぞれ該当の規則で実際に拒まれる
+ことを確かめる。H0-D1 の記録の blob を
+pin し、H0 の位置の assert は追記に安全な相対の順に置き換えた（H0 の契約は弱めない）。文書 ・registry ・guard の範囲だけの変更であり、product の
+機能 ・runtime の振る舞い ・認可 ・P13-A4b の凍結の runtime ・H0-D1 の記録は変わらない。本記録は実装を承認しない。pytest ・commit ・H1 ・M1 ・
+S0-D1 ・UI0 ・H0-D2 ・A5-W ・A6 は別の承認まで HOLD。
+
+追加
+・`docs/databank/M0_D1_MOBILE_SECURITY_ACCESS_CONTRACT.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`PHASE13_DOCS` の最後に M0-D1 の記録を登録 ・runtime ・認可 ・importer の許可は不変）
+・`tests/intelligence/test_market_memory_boundary.py`（文書の tuple ・registry の digest ・H0-D1 の位置の assert を相対の順に ・H0-D1 の blob の pin ・M0-D1 の guard と正 ／ 負の control の 2 つの test）
+修正
+・なし
+
 ## v6.38 (2026-10-21) — H0-D1 Home information contract（文書 ・registry ・guard だけ ・実装を承認しない）
 
 監督が設計の水準で固定した H0 ／ M0 ／ S0 の決定と Note A ／ B に基づき、Home の情報の契約を守られた文書だけの記録

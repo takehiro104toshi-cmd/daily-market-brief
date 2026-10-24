@@ -28,6 +28,10 @@
   主張の分類 ・等級 ・中立の digest の domain ・§14 の外の禁止の欄 ／ 語を pin し、項目 ／ 状態の改変 ・entry の状態の消去 ・fail closed の
   除去 ・仮説の昇格 ・将来の漏えい ・news の順 ／ 時間の窓の強制 ・S0 の確定 ・実装 ／ 実 data ／ deploy の主張 ・private な形を拒む。
   表示の集約は全ての状態の組で評価し（SUPERSEDED だけの項目は AVAILABLE にならない）、確信の語は表示の文（「」）の中だけで拒み、S0 の語彙の値は持たない。
+- M0-D1: mobile の security と access の契約の記録（文書だけ）。脅威 model の 10 行 ・保存の禁止 ・CSP の指令 ・等級ごとの表示 ・閉じた失敗の code ・
+  N1 〜 N5 の証拠 ・静的と実行時の保証 ・時刻の形 ・watermark を pin し、CSP の弱化 ・保存 ／ network の API の許可 ・PRIVATE_AUTHORITY ／ NEVER の表示 ・
+  認証 ／ token ・hosting ／ deploy ・OS の隔離の主張 ・browser の暗号の主張 ・`Date` の parse ・watermark の欠落 ・S0 の確定 ・実 data の権限 ・
+  private な形を拒む。H0-D1 の記録の blob は pin し、H0 の位置の assert は追記に安全な相対の順に置き換える。
 - negative control: 未登録の path ・修正 ・近い名前 ・未宣言の登録の行 ・禁止の token ・一般の削除 ・store の外の I/O ・blob の変化 ・
   認可の drift ・公開の面の変更は落ちる。
 """
@@ -78,6 +82,8 @@ A4B_DOC = "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md"
 A5_PLAN_DOC = "docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md"
 A5T_RECORD_DOC = "docs/databank/PHASE13_A5T_WINDOWS_CHARACTERIZATION_RECORD.md"
 H0_D1_DOC = "docs/databank/H0_D1_HOME_INFORMATION_CONTRACT.md"
+M0_D1_DOC = "docs/databank/M0_D1_MOBILE_SECURITY_ACCESS_CONTRACT.md"
+H0_D1_BLOB = "ce5fbce76b30b700c58b619452fbf8f1433c3c81"   # H0-D1 の記録の blob（M0-D1 以後は変えない）
 PROJECTION_STORE = "src/intelligence/market_memory/projection_store.py"
 PROJECTION_BUILD = "src/intelligence/market_memory/projection_build.py"
 P13_ROADMAP = "5e5f015ecebf64116f9c1721c36d9d41fa9dc1c7"   # roadmap の記録の commit ＝ A4a の認可の anchor
@@ -193,8 +199,8 @@ P13_EXPORT_CONTRACT_IMPORTS = {
                        "TransitionPlan", "build_projection_target", "check_preservation_proposal", "check_recovery_proposal",
                        "classify_publication", "parse_intent", "parse_private_binding", "parse_public_export_manifest", "render_pointer",
                        "scan_private_shapes", "validate_public_note"}}                      # 走査器は A4a1 が承認した再利用の名前
-#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b ・A5-0R の計画の記録 ・A5-T の特性の記録 ・H0-D1 の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "5deef6337d764dffaa611f4f86ab7b11eb812658cf941942becfe5c05fec2565"
+#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b ・A5-0R の計画の記録 ・A5-T の特性の記録 ・H0-D1 の記録 ・M0-D1 の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
+P13_REGISTRY_DIGEST = "9490f8bbfa19ef4b2c76ffdafc1483f832350d65697855a5108f864aa5347c28"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -284,7 +290,7 @@ def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_emp
                              "tests/intelligence/test_market_memory_projection_store.py",
                              "tests/intelligence/test_market_memory_projection_build.py")
     assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC, A4A_DOC, A4A1_DOC, A4B_DOC, A5_PLAN_DOC, A5T_RECORD_DOC,
-                            H0_D1_DOC)
+                            H0_D1_DOC, M0_D1_DOC)
     assert set(SANCTIONED_P13_EXTRA_STDLIB) == set(P13_NAME_ALLOWANCES) == set(P13_WORD_ALLOWANCES) == {STORE_MODULE,
                                                                                                          PROJECTION_STORE}   # 許しは 2 つの store だけ
     assert SANCTIONED_P13_EXTRA_STDLIB[STORE_MODULE] == {"os", "stat"}                              # P13-A4b: A3 の許しは広げない
@@ -1853,7 +1859,7 @@ def _h0_record_violations(text: str) -> list:
 def test_h0_d1_home_information_contract_is_a_guarded_documentation_only_record() -> None:
     text = (REPO_ROOT / H0_D1_DOC).read_text(encoding="utf-8")
     assert _h0_record_violations(text) == []
-    assert PHASE13_DOCS[-1] == H0_D1_DOC and PHASE13_DOCS.index(H0_D1_DOC) == PHASE13_DOCS.index(A5T_RECORD_DOC) + 1   # A5-T の記録の直後に登録
+    assert H0_D1_DOC in PHASE13_DOCS and PHASE13_DOCS.index(H0_D1_DOC) == PHASE13_DOCS.index(A5T_RECORD_DOC) + 1   # A5-T の記録の直後に登録（追記に安全）
     assert all(doc != H0_D1_DOC for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)                       # 実装 ・runtime の認可は無い
     assert not any(gate.startswith(("H0", "H1", "M0", "S0", "UI0")) for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)
     assert len(PHASE13_RUNTIME) == 12 and not any("home" in path for path in PHASE13_RUNTIME)
@@ -1987,3 +1993,325 @@ def test_h0_d1_negative_controls_reject_altered_or_overclaimed_contracts() -> No
     for name, (rule, candidate) in mutated.items():
         assert candidate != text, name
         assert rule in {violation[0] for violation in _h0_record_violations(candidate)}, name     # 該当の規則が実際に拒む
+
+
+#: M0-D1: mobile の security と access の契約の記録（文書だけ ・実装の承認ではない）
+M0_REQUIRED = ("本記録は実装を承認しない", "69fb4396a797566b2b70f435721892f9e096344f", H0_D1_BLOB, "`home_client:0.2-synthetic`",
+               "`home.snapshot.v0.2`", "`home.client.v0.2`", "`h0_render_policy:0.1`", "合成の data だけ", "H1 ・M1 ・deploy は HOLD",
+               "OS の水準の隔離を主張しない", "CSP だけで隔離を証明したとは主張しない", "browser は暗号の検証を行わない", "PROVISIONAL(S0)",
+               "「合成データ・投資判断に使えない」", "`YYYY-MM-DDTHH:MM:SS+00:00`")
+#: 節ごとに在るべき記述（他の節に同じ語が在っても、その節から消えれば落ちる）
+M0_SECTION_REQUIRED = {
+    "## 1. 範囲と主張しないこと": ("実装 ・browser の実行 ・CDP の client ・fixture の生成 ・hosting ・認証の実装 ・deploy を承認しない", "合成の data だけ",
+                         "OS の水準の隔離を主張しない", "CSP だけで隔離を証明したとは主張しない", "browser の中で暗号の検証を行うとは主張しない",
+                         "H0-D1 の記録の byte は変えない", "項目ごとの正確な key と上限は H0-D2 が持つ"),
+    "## 3. H1 の脅威 model": ("完全に侵害された OS ・browser ・拡張は守る範囲の外", "OS が「強制した」とは言わない"),
+    "## 4. 実行の platform": ("`file://` から開く 1 つの file `index.html`", "CSP の hash で覆う", "browser は実行しない",
+                         "画像 ・icon ・web font ・manifest ・service worker は無い。install できる PWA ではない", "新しい一時の専用の profile",
+                         "実機の iPhone ・Safari ・WebKit は検証しない", "listener ・port ・Host の検査 ・HTTP の cache は無い",
+                         "pipe（`--remote-debugging-pipe`）を H1 の設計の優先とする", "feasibility の試験を要し、本記録は検証済みとは主張しない",
+                         "debugging port の transport への fallback は監督の別の承認を要する", "native か PWA かの決定は M1 に延期する"),
+    "## 5. 認証と資格情報": ("H1 に認証は無い。account ・password ・token ・OAuth ・session は無い", "資格情報の変数が在れば起動を拒む", "M1 の範囲"),
+    "## 6. 保存": ("保存の API は静的な走査で禁じ", "空であることを確かめる", "process の memory の消去は保証しない"),
+    "## 7. network と CSP": ("`<head>` の最初の要素の `<meta>`", "hash を使う", "x-dns-prefetch-control", "禁止の API（静的な走査で 0 件）",
+                         "CSP は page だけを縛り", "flag は browser 自身の通信を失敗させるが、無いことを証明しない", "OS の水準の隔離は無い"),
+    "## 8. 等級ごとの表示": ("本記録は等級を足さない ・変えない", "合成の watermark つきの時だけ許し"),
+    "## 9. 端末の payload と識別": ("`home_client:0.2-synthetic` だけ", "完全一致で検査し、他の版は拒む", "表示の方針の識別子であり、digest の\n  domain ではない",
+                            "完全性の検査は試験の時に行う", "P13 の code を import して使い、複製しない", "browser は暗号の検証を行わない",
+                            "検出は試験と blob の pin に委ねる", "NFC であることを検査し、正規化はしない", "runtime の digest の実装を含まない"),
+    "## 10. 時刻": ("`YYYY-MM-DDTHH:MM:SS+00:00` だけ", "`Z` の接尾 ・小数の秒 ・空白の区切り ・UTC の offset の欠落 ・0 でない offset ・暦として不正な値 ・2099 年でない",
+                 "正規表現と整数の算術だけで行う", "JavaScript の `Date` による parse は使わない", "JST（UTC に 9 時間を足す算術）", "相対の表現（「○分前」）は使わない",
+                 "`as_of` の見出しは常に表示する", "報告の順は 形 → 暦 → 年", "文字列でない値は時刻の検査に届かず TYPE_MISMATCH"),
+    "## 11. 表示の状態と fail closed": ("5 つ（SUPPRESSED ・EMPTY ・UNAVAILABLE ・PARTIAL ・AVAILABLE）", "本記録は状態を足さない ・\n  方針を変えない",
+                               "後継が無ければ MISSING（`SUCCESSOR_MISSING`）", "前の版を\n  代わりに示さない", "検証は描画の前に行う",
+                               "§12 の code だけを出し、前の表示と memory の参照を消す。部分の描画は無い", "全ての項目は SUPPRESSED", "古い data を今のものとして見せない",
+                               "INTEGRITY_FAILURE の entry が在るのに `snapshot_status` が OK なら STATE_RECOMPUTE_MISMATCH（入力の拒否）",
+                               "該当する入力と整合の検証が全て通った後にだけ認める"),
+    "## 12. 失敗の code": ("閉じた集合だけ", "値 ・本文 ・path を含まない", "試験の時の失敗であり、端末の code ではない", "本記録の改訂と guard の更新を要する",
+                       "A. 入力の不正 ・検証の拒否 25 ・B. 有効な fail closed の結果 1（SNAPSHOT_FAILED_CLOSED）・C. 描画の失敗 1（RENDER_ABORTED）・計 27",
+                       "検証の段（1 〜 10）は最初に当たった失敗で止める", "端末は最初に当たった失敗の code を 1 つだけ出す",
+                       "契約が定めた欄の順と配列の順で決める（辞書の走査の順 ・browser の\n  振る舞いに依らない）", "試験は診断のために複数の違反を集めてよい",
+                       "FAILED_CLOSED の宣言は先の検証の失敗を覆さない", "参照の検査は snapshot の中で閉じる（外部の照会 ・network は無い）",
+                       "`SUCCESSOR_MISSING` は有効な MISSING の entry の理由であり、\n  本記録の失敗の code ではない"),
+    "## 13. 合成の識別と watermark": ("`syn_fx_` で始まる", "全ての id は `syn_` で始まる", "全ての日時は 2099 年", "pin した許可の一覧に在る",
+                              "全ての状態（通常 ・EMPTY ・UNAVAILABLE ・失敗の code の表示）で出す", "他の要素で覆われない"),
+    "## 14. browser の証拠": ("`about:blank` の tab に先に attach", "60 秒の idle", "正確な回数は要件にしない。要件は認可の無い試みが 0 であること",
+                          "OS の水準の隔離は無く", "profile の削除は監督の明示の承認の後だけ"),
+    "## 15. 静的と実行時の保証": ("Safari ・WebKit ・実機の iPhone", "accessibility の自動の検査は使えることを証明しない", "決定論はその browser の版についてだけ"),
+    "## 16. H1 の受け入れの契約": ("本 gate では走らせない", "WebRTC の観測は要件にしない", "44×44 CSS px 以上", "4.5:1 以上", "自動の合否ではない"),
+    "## 17. 禁止": ("売買の推奨 ・確率 ・順位 ・score ・目標株価 ・おすすめ ・注目銘柄 ・最新", "根拠の無い確信の語（確実 ・必ず）", "不確実 は使ってよい",
+                 "OS の水準の隔離の主張 ・CSP だけで隔離を証明したとの主張"),
+    "## 18. 境界（H1 ・M1 ・deploy）": ("H1 が主張しないこと", "password は無い", "Pages は使わない", "本記録は deploy を承認しない"),
+    "## 19. 延期と依存": ("H0-D2: 項目ごとの正確な key の集合と上限", "PROVISIONAL(S0) のまま", "feasibility の試験の後", "A5-W ・A6 は HOLD のまま"),
+    "## 20. 本記録の承認の範囲": ("文書 ・registry ・guard だけ", "P13-A4b の凍結の runtime ・H0-D1 の記録は変わらない", "本記録は実装を承認しない"),
+}
+#: 脅威 model の 10 行（# → 脅威 ・対処）
+M0_THREATS = {
+    "1": ("実の data が fixture ・asset に入る", "`synthetic` が true でない ・`syn_` でない id ・架空 ／ 合成 で始まらない label を拒む ・private な形の走査"),
+    "2": ("prototype を実の市場の情報と取り違える", "全ての画面に「合成データ・投資判断に使えない」の watermark ・日付は 2099 年"),
+    "3": ("誤って公開の面に載る", "公開の面が参照しない専用の path ・boundary の guard ・Pages ・Cloudflare ・artifact に出さない"),
+    "4": ("network の利用 ・第三者の読み込み", "CSP の `connect-src 'none'` ・外部の font ・CDN ・analytics は無い ・静的な走査"),
+    "5": ("browser に data が残る", "保存と cache の API を禁じる ・一時の profile"),
+    "6": ("fixture の文字列による XSS", "閉じた schema ・有界な欄の形 ・template ・`textContent` だけ"),
+    "7": ("資格情報", "存在しない ・server を使う場合は資格情報の変数が在れば起動を拒む"),
+    "8": ("LAN への露出", "LAN に配らない ・listener は無い（`file://`）"),
+    "9": ("禁止の意味が UI に入る", "H0-D1 §14 の禁止の欄 ・語を検証器が拒む"),
+    "10": ("H1 を M1 の準備と取り違える", "H1 が主張しないことの明示（§18）"),
+}
+M0_STORAGE = {"localStorage": "禁止", "sessionStorage": "禁止", "IndexedDB": "禁止", "cookie": "禁止", "Cache Storage": "禁止", "service worker": "禁止",
+              "URL ・history の state": "禁止", "memory の変数": "読み込みごとに fixture を読み直す ・失敗で参照を消す"}
+M0_CSP = {"default-src": "'none'", "script-src": "'sha256-…'（inline の script の hash だけ）", "style-src": "'sha256-…'（inline の style の hash だけ）",
+          "connect-src": "'none'", "img-src": "'none'", "font-src": "'none'", "media-src": "'none'", "object-src": "'none'", "frame-src": "'none'",
+          "worker-src": "'none'", "manifest-src": "'none'", "base-uri": "'none'", "form-action": "'none'"}
+M0_GRADES = {"PUBLIC_SAFE": "出す", "PRIVATE_DERIVED": "出す ・「非公開表示（合成）」の badge を付ける", "PRIVATE_AUTHORITY": "fixture は無効 ・snapshot 全体を fail closed",
+             "NEVER": "fixture は無効 ・snapshot 全体を fail closed"}
+#: 端末の失敗の code の閉じた集合（§12 の表と完全一致 ・code → 意味）
+M0_ERROR_CODES = {
+    "FIXTURE_BLOCK_INVALID": "fixture の block が無い ・JSON として読めない",
+    "SCHEMA_VERSION_MISMATCH": "`schema_version` が `home_client:0.2-synthetic` でない",
+    "UNKNOWN_KEY": "閉じた key の集合の外の key",
+    "MISSING_KEY": "必須の key の欠落",
+    "TYPE_MISMATCH": "値の型が契約と違う",
+    "BOUND_EXCEEDED": "大きさ ・長さ ・入れ子 ・項目ごとの entry の件数の上限の超過（6 つの項目の数 ・順 ・重複は ITEM_ORDER_INVALID）",
+    "NOT_NFC": "文字列が NFC でない",
+    "NOT_SYNTHETIC": "`synthetic` が true でない",
+    "SYNTHETIC_ID_INVALID": "id が `syn_` で始まらない ・`fixture_id` が `syn_fx_` で始まらない",
+    "SYNTHETIC_LABEL_INVALID": "label が 架空 ／ 合成 で始まらない",
+    "SYNTHETIC_YEAR_INVALID": "日時が 2099 年でない",
+    "TIME_FORMAT_INVALID": "§10 の形でない",
+    "TIME_CALENDAR_INVALID": "暦として不正",
+    "AFTER_AS_OF": "`acquired_at` または `issued_at` が `as_of` より後",
+    "ITEM_ORDER_INVALID": "6 つの項目の数 ・順 ・重複が契約と違う",
+    "FORBIDDEN_FIELD": "H0-D1 §14 の禁止の欄",
+    "FORBIDDEN_WORD": "H0-D1 §14 の禁止の語 ・表示の文の確信の語",
+    "GRADE_FORBIDDEN": "PRIVATE_AUTHORITY ・NEVER の data が在る",
+    "GRADE_CEILING_EXCEEDED": "項目の等級の上限を超える",
+    "STATE_RECOMPUTE_MISMATCH": "宣言した状態と再計算が違う ・INTEGRITY_FAILURE の entry が在るのに `snapshot_status` が OK",
+    "RENDER_STATE_MISMATCH": "宣言した表示の状態と再計算が違う",
+    "COVERAGE_MISMATCH": "coverage と再計算が違う",
+    "REFERENCE_UNRESOLVED": "後継 ・宣言した鮮度の窓 ・証拠の参照が snapshot の中で解けない",
+    "SUCCESSOR_CYCLE": "後継の鎖が循環する",
+    "CLAIM_RULE_VIOLATION": "FACT ／ HYPOTHESIS の規則の違反",
+    "SNAPSHOT_FAILED_CLOSED": "`snapshot_status` が FAILED_CLOSED（有効な fail closed の結果 ・全ての項目は SUPPRESSED ・入力の拒否ではない）",
+    "RENDER_ABORTED": "描画の途中の例外（表示を消して止める）",
+}
+#: 決定論の検証の順（§12 の番号つきの列挙と完全一致 ・段 1 〜 10 が入力の拒否 25 ・段 11 が有効な fail closed の結果 1 ・段 12 が描画の失敗 1）
+M0_VALIDATION_ORDER = (("解析", ("FIXTURE_BLOCK_INVALID",)),
+                       ("封筒と構造", ("SCHEMA_VERSION_MISMATCH", "NOT_SYNTHETIC", "UNKNOWN_KEY", "MISSING_KEY", "TYPE_MISMATCH", "BOUND_EXCEEDED", "NOT_NFC")),
+                       ("合成の識別", ("SYNTHETIC_ID_INVALID", "SYNTHETIC_LABEL_INVALID")),
+                       ("時刻", ("TIME_FORMAT_INVALID", "TIME_CALENDAR_INVALID", "SYNTHETIC_YEAR_INVALID", "AFTER_AS_OF")),
+                       ("項目", ("ITEM_ORDER_INVALID",)),
+                       ("語彙", ("FORBIDDEN_FIELD", "FORBIDDEN_WORD")),
+                       ("等級", ("GRADE_FORBIDDEN", "GRADE_CEILING_EXCEEDED")),
+                       ("主張", ("CLAIM_RULE_VIOLATION",)),
+                       ("参照", ("REFERENCE_UNRESOLVED", "SUCCESSOR_CYCLE")),
+                       ("再計算", ("STATE_RECOMPUTE_MISMATCH", "RENDER_STATE_MISMATCH", "COVERAGE_MISMATCH")),
+                       ("有効な fail closed の結果", ("SNAPSHOT_FAILED_CLOSED",)),
+                       ("描画", ("RENDER_ABORTED",)))
+M0_N_RULES = {
+    "N1": "page が始めた全ての request ・navigation ・WebSocket（CDP）は許可の集合 { pin した `file` の URL, `about:blank` } だけ。回数は問わない。他の URL は 0",
+    "N2": "失敗した読み込みは 0（失敗も試みである）・WebSocket ・EventSource の接続は 0",
+    "N3": "実行の間の CSP 違反の報告は 0。加えて正の control: hash の無い inline の script を 1 つ持つ変種が実行されないこと",
+    "N4": "承認された場合だけ NetLog: 非 loopback への成功した接続 0 ・成功した DNS の解決 0。browser 自身の失敗した試みは件数と分類を報告し、隠さない",
+    "N5": "`index.html` の静的な走査: §7 の禁止の API ・要素 ・属性 ・URL の形が 0 件",
+}
+M0_GUARANTEES = {"静的な走査": ("禁止の API ・URL が書かれた code に無い", "実行の時の振る舞い"), "CSP": ("page の中の禁止の source を browser が止める", "browser 自身の通信 ・拡張 ・navigation"),
+                 "CDP の観測": ("その browser の版 ・その実行で観測した事実", "全ての code の経路 ・browser の内部の通信"),
+                 "DNS ・proxy の flag": ("その browser の process の試みを失敗させる", "試みが無いこと"), "OS の水準の閉じ込め": ("無し", "無し")}
+M0_BANNED = ("実装を承認する", "実装を承認した", "H1 を承認する", "H1 は GO", "M1 は GO", "実の data を使う", "実の data に接続する", "本番で使う", "deploy を承認する",
+             "hosting を承認する", "公開を承認する", "Pages に出す", "LAN に配る", "認証を実装する", "token を保存する", "password を保存する", "保存を許す", "fetch を許す",
+             "network を許す", "OS の水準で隔離", "隔離を証明した。", "隔離は証明済み", "browser が digest を検証", "pipe は検証済み", "検証済みの pipe",
+             "S0 を確定した", "A6 は完了", "Market Memory v1 は凍結した", "署名済み", "http://", "https://")
+M0_BANNED_PATTERNS = (r"(?:H0-D2|H1|M1|M0-D1|S0-D1|UI0|A5-W|A6|pytest|commit|push)[^\n|]{0,8}=\s*GO\b",   # 実装 ・実行の権限
+                      r"'self'|'unsafe-(?:inline|eval)'",                                              # CSP の弱化
+                      r"Date\(",                                                                      # JavaScript の Date の parse
+                      r"--remote-debugging-port",                                                     # 認可の無い fallback の transport
+                      r"scenario の数は\s*\d", r"\d\s*[%％]", r"(?i)rashinban|compass",
+                      r"`(?!home\.(?:snapshot|client)\.v0\.2`)[a-z0-9_.]*home\.[a-z0-9_.]*`",
+                      r"`(?!home_(?:snapshot|client):0\.2-synthetic`)[a-z0-9_]*home_[a-z_]+:[^`\n]*`",
+                      r"\b(?:jq|p\d+)_[a-z0-9]+_(?:private|work)\b", r"\\\\[A-Za-z0-9.-]+\\")
+
+
+def _m0_record_violations(text: str) -> list:
+    """mobile の security と access の契約の記録の違反（空なら適合）。"""
+    found = []
+    threats = _a5t_table(text, "## 3. H1 の脅威 model", r"\d+")
+    if tuple(threats) != tuple(M0_THREATS) or any(len(r) != 1 or tuple(r[0]) != M0_THREATS[k] for k, r in threats.items()):
+        found.append(("THREATS", tuple(threats)))
+    storage = _a5t_table(text, "## 6. 保存", "|".join(re.escape(k) for k in M0_STORAGE))
+    if tuple(storage) != tuple(M0_STORAGE) or any(len(r) != 1 or r[0] != [M0_STORAGE[k]] for k, r in storage.items()):
+        found.append(("STORAGE", tuple(storage)))
+    csp = _a5t_table(text, "## 7. network と CSP", r"[a-z]+-(?:src|uri|action)")
+    if tuple(csp) != tuple(M0_CSP) or any(len(r) != 1 or r[0] != [M0_CSP[k]] for k, r in csp.items()):
+        found.append(("CSP", tuple(csp)))
+    grades = _a5t_table(text, "## 8. 等級ごとの表示", r"[A-Z_]+")
+    if tuple(grades) != tuple(M0_GRADES) or any(len(r) != 1 or r[0] != [M0_GRADES[k]] for k, r in grades.items()):
+        found.append(("GRADES", tuple(grades)))
+    codes = _a5t_table(text, "## 12. 失敗の code", r"[A-Z_]+")
+    if tuple(codes) != tuple(M0_ERROR_CODES) or any(len(r) != 1 or r[0] != [M0_ERROR_CODES[k]] for k, r in codes.items()):
+        found.append(("ERROR_CODES", tuple(codes)))
+    order = [(m.group(1), m.group(2), tuple(m.group(3).split(" ・")))
+             for m in (re.match(r"^  (\d+)\. ([^:]+): (.+)$", line) for line in _a5_section(text, "## 12. 失敗の code").splitlines()) if m]
+    if ([int(n) for n, *_ in order] != list(range(1, len(M0_VALIDATION_ORDER) + 1)) or [(label, codes) for _, label, codes in order] != list(M0_VALIDATION_ORDER)
+            or sorted(c for *_, cs in order for c in cs) != sorted(M0_ERROR_CODES)):                 # 各 code がちょうど 1 つの段に在る
+        found.append(("VALIDATION_ORDER", tuple(order)))
+    rules = _a5t_table(text, "## 14. browser の証拠", r"N[1-9]")
+    if tuple(rules) != tuple(M0_N_RULES) or any(len(r) != 1 or r[0] != [M0_N_RULES[k]] for k, r in rules.items()):
+        found.append(("N_RULES", tuple(rules)))
+    guarantees = _a5t_table(text, "## 15. 静的と実行時の保証", "|".join(re.escape(k) for k in M0_GUARANTEES))
+    if tuple(guarantees) != tuple(M0_GUARANTEES) or any(len(r) != 1 or tuple(r[0]) != M0_GUARANTEES[k] for k, r in guarantees.items()):
+        found.append(("GUARANTEES", tuple(guarantees)))
+    found += [("MISSING", needle) for needle in M0_REQUIRED if needle not in text]
+    for heading, needles in M0_SECTION_REQUIRED.items():
+        section = _a5_section(text, heading)
+        found += [("SECTION", heading, needle) for needle in needles if needle not in section]
+    prohibited = _a5_section(text, "## 17. 禁止")
+    outside = text.replace(prohibited, "") if prohibited else text                                  # 禁止の語は §17 の外に無い
+    found += [("FORBIDDEN_FIELD", field) for field in H0_FORBIDDEN_FIELDS
+              if re.search(r"(?<![A-Za-z0-9_])" + re.escape(field) + r"(?![A-Za-z0-9_])", outside)]
+    found += [("FORBIDDEN_WORD", word) for word in H0_FORBIDDEN_WORDS if word in outside]
+    found += [("CERTAINTY", span) for span in re.findall(r"「([^「」\n]*)」", text) if re.search(H0_CERTAINTY_PATTERN, span)]
+    found += [("S0_VOCABULARY", word) for word in H0_S0_VOCABULARY if re.search(r"(?<![A-Za-z0-9_])" + word + r"(?![A-Za-z0-9_])", text)]
+    found += [("BANNED", banned) for banned in M0_BANNED if banned in text]
+    found += [("PATTERN", pattern) for pattern in M0_BANNED_PATTERNS + PRIVATE_PATTERNS if re.search(pattern, text)]
+    if re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE):
+        found.append(("SIGNED", "claim"))
+    return found
+
+
+def test_m0_d1_mobile_security_access_contract_is_a_guarded_documentation_only_record() -> None:
+    text = (REPO_ROOT / M0_D1_DOC).read_text(encoding="utf-8")
+    assert _m0_record_violations(text) == []
+    assert PHASE13_DOCS[-1] == M0_D1_DOC and PHASE13_DOCS.index(M0_D1_DOC) == PHASE13_DOCS.index(H0_D1_DOC) + 1   # H0-D1 の記録の直後に登録
+    assert all(doc not in (H0_D1_DOC, M0_D1_DOC) for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)       # 実装 ・runtime の認可は無い
+    assert not any(gate.startswith(("H0", "H1", "M0", "M1", "S0", "UI0")) for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)
+    assert len(PHASE13_RUNTIME) == 12 and not any("home" in path or "mobile" in path for path in PHASE13_RUNTIME)
+    assert _git("hash-object", "--", H0_D1_DOC).strip() == H0_D1_BLOB                               # H0-D1 の記録の byte は変えない（作業木 ・HEAD）
+    assert _blobs("HEAD", [H0_D1_DOC])[H0_D1_DOC] == H0_D1_BLOB
+    assert len(M0_ERROR_CODES) == 27 and all(re.fullmatch(r"[A-Z_]+", code) and meaning for code, meaning in M0_ERROR_CODES.items())
+    ordered = [code for _, codes in M0_VALIDATION_ORDER for code in codes]
+    assert len(M0_VALIDATION_ORDER) == 12 and len(ordered) == 27 == len(set(ordered)) and set(ordered) == set(M0_ERROR_CODES)   # 各 code はちょうど 1 つの段
+    assert sum(len(codes) for _, codes in M0_VALIDATION_ORDER[:10]) == 25                                                        # 入力の拒否 25
+    assert M0_VALIDATION_ORDER[10][1] == ("SNAPSHOT_FAILED_CLOSED",) and M0_VALIDATION_ORDER[11][1] == ("RENDER_ABORTED",)       # 有効な結果 1 ・描画 1
+    stage = {code: index for index, (_, codes) in enumerate(M0_VALIDATION_ORDER) for code in codes}
+    assert stage["TYPE_MISMATCH"] < stage["TIME_FORMAT_INVALID"] and stage["STATE_RECOMPUTE_MISMATCH"] < stage["SNAPSHOT_FAILED_CLOSED"]
+    assert ordered.index("TIME_FORMAT_INVALID") < ordered.index("TIME_CALENDAR_INVALID") < ordered.index("SYNTHETIC_YEAR_INVALID")
+    assert ordered.index("GRADE_FORBIDDEN") < ordered.index("GRADE_CEILING_EXCEEDED")
+    assert set(M0_GRADES) == {"PUBLIC_SAFE", "PRIVATE_DERIVED", "PRIVATE_AUTHORITY", "NEVER"} and len(M0_THREATS) == 10 and len(M0_N_RULES) == 5
+    assert all(value == "'none'" for directive, value in M0_CSP.items() if directive not in ("script-src", "style-src"))   # hash 以外は全て none
+    accepted = {                                                                                     # 正の control: 正当な限界 ・延期の文は拒まない
+        "limitation_statement": text + "\n- 本記録は実機の iPhone での振る舞いを検証しない。\n",
+        "deferral_statement": text + "\n- 認証の方式の決定は M1 に延期する。\n",
+        "contract_obligation_must": text + "\n- 失敗の code の集合は必ず本記録と一緒に改訂する。\n",
+        "uncertainty_in_display_text": text + "\n- 表示の文の例: 「架空の見通しには不確実な点が在る」。\n",
+        "observed_not_enforced": text + "\n- 隔離は観測した事実であり、OS が強制したものではない。\n",
+        "failed_closed_valid_statement": text + "\n- FAILED_CLOSED の snapshot は有効な fail closed の結果であり、入力の不正ではない。\n",
+        "reserved_code_statement": text + "\n- GRADE_CEILING_EXCEEDED は H0-D1 の上限が全て PRIVATE_DERIVED の間は到達しない予約の code である。\n",
+    }
+    for name, candidate in accepted.items():
+        assert candidate != text and _m0_record_violations(candidate) == [], name
+
+
+def test_m0_d1_negative_controls_reject_weakened_or_overclaimed_contracts() -> None:
+    text = (REPO_ROOT / M0_D1_DOC).read_text(encoding="utf-8")
+    assert _m0_record_violations(text) == []
+    lines = text.splitlines(keepends=True)
+    row = {key: next(line for line in lines if line.startswith(f"| {key} |"))
+           for key in ("4", "5", "8", "localStorage", "service worker", "connect-src", "script-src", "PRIVATE_AUTHORITY", "NEVER", "N1", "N3",
+                       "CDP の観測", "OS の水準の閉じ込め", "NOT_SYNTHETIC", "RENDER_ABORTED", "AFTER_AS_OF", "REFERENCE_UNRESOLVED",
+                       "SNAPSHOT_FAILED_CLOSED", "BOUND_EXCEEDED")}
+    mutated = {                                                                                      # 名前 → (拒むべき規則, 改変した記録)
+        "csp_connect_self": ("CSP", text.replace(row["connect-src"], row["connect-src"].replace("'none'", "'self'"))),   # CSP の弱化 ・外への access
+        "csp_unsafe_inline": ("CSP", text.replace(row["script-src"], row["script-src"].replace("'sha256-…'（inline の script の hash だけ）", "'unsafe-inline'"))),
+        "csp_directive_removed": ("CSP", text.replace(row["connect-src"], "")),
+        "csp_self_anywhere": ("PATTERN", text + "\n- style は 'self' でもよい。\n"),
+        "external_url": ("BANNED", text + "\nhttps://example.invalid/fonts\n"),
+        "network_allowed": ("BANNED", text + "\n- 読み込みの後の fetch を許す。\n"),
+        "threat_network_removed": ("THREATS", text.replace(row["4"], "")),
+        "storage_allowed": ("STORAGE", text.replace(row["localStorage"], row["localStorage"].replace("| 禁止 |", "| 許可 |"))),   # 保存の API の許可
+        "service_worker_allowed": ("STORAGE", text.replace(row["service worker"], row["service worker"].replace("| 禁止 |", "| shell だけ許可 |"))),
+        "storage_row_removed": ("STORAGE", text.replace(row["localStorage"], "")),
+        "storage_prose_permits": ("BANNED", text + "\n- 一時の保存を許す。\n"),
+        "threat_storage_removed": ("THREATS", text.replace(row["5"], "")),
+        "private_authority_displayed": ("GRADES", text.replace(row["PRIVATE_AUTHORITY"], row["PRIVATE_AUTHORITY"].replace("fixture は無効 ・snapshot 全体を fail closed", "出す ・badge を付ける"))),
+        "never_displayed": ("GRADES", text.replace(row["NEVER"], row["NEVER"].replace("fixture は無効 ・snapshot 全体を fail closed", "出す"))),
+        "grade_row_removed": ("GRADES", text.replace(row["NEVER"], "")),
+        "grade_vocabulary_extended": ("GRADES", text.replace(row["NEVER"], row["NEVER"] + "| INTERNAL | 出す |\n")),
+        "authentication_in_h1": ("SECTION", text.replace("H1 に認証は無い。account ・password ・token ・OAuth ・session は無い。", "H1 は簡単な password の認証を持つ。")),   # 認証 ・token
+        "token_stored": ("BANNED", text + "\n- 端末に token を保存する。\n"),
+        "authentication_implemented": ("BANNED", text + "\n- H1 で認証を実装する。\n"),
+        "hosting_authorized": ("BANNED", text + "\n- 本記録は hosting を承認する。\n"),                   # hosting ・deploy
+        "deploy_authorized": ("BANNED", text + "\n- deploy を承認する。\n"),
+        "pages_exposure": ("BANNED", text + "\n- prototype は Pages に出す。\n"),
+        "lan_exposure": ("BANNED", text + "\n- 検証のため LAN に配る。\n"),
+        "deploy_disclaimer_removed": ("SECTION", text.replace("本記録は deploy を承認しない。", "")),
+        "os_isolation_claimed": ("BANNED", text + "\n- 隔離は証明済み。\n"),                             # OS の隔離の主張
+        "os_isolation_claimed_2": ("BANNED", text + "\n- browser は OS の水準で隔離される。\n"),
+        "os_guarantee_row_claims": ("GUARANTEES", text.replace(row["OS の水準の閉じ込め"], row["OS の水準の閉じ込め"].replace("| 無し | 無し |", "| 全ての通信を止める | 無し |"))),
+        "isolation_disclaimer_removed": ("MISSING", text.replace("OS の水準の隔離を主張しない", "OS の水準の隔離を提供する")),
+        "csp_proves_isolation": ("MISSING", text.replace("CSP だけで隔離を証明したとは主張しない", "CSP が隔離を証明する")),
+        "cdp_observation_overclaimed": ("GUARANTEES", text.replace(row["CDP の観測"], row["CDP の観測"].replace("全ての code の経路 ・browser の内部の通信", "無し"))),
+        "browser_crypto_claimed": ("MISSING", text.replace("browser は暗号の検証を行わない", "browser は暗号の検証を行う")),   # browser の暗号の主張
+        "browser_digest_verified": ("BANNED", text + "\n- browser が digest を検証する。\n"),
+        "date_parsing": ("PATTERN", text + "\n- 時刻は Date(text) で読む。\n"),                        # Date の parse ・時刻の形の drift
+        "date_rule_removed": ("SECTION", text.replace("JavaScript の `Date` による parse は使わない。", "")),
+        "time_format_drift": ("MISSING", text.replace("`YYYY-MM-DDTHH:MM:SS+00:00`", "`YYYY-MM-DD HH:MM:SS`")),
+        "fractional_seconds_allowed": ("SECTION", text.replace("`Z` の接尾 ・小数の秒 ・空白の区切り ・UTC の offset の欠落 ・0 でない offset ・暦として不正な値 ・2099 年でない", "`Z` の接尾 ・空白の区切り ・暦として不正な値")),
+        "relative_time_allowed": ("SECTION", text.replace("相対の表現（「○分前」）は使わない。", "相対の表現を使ってよい。")),
+        "watermark_removed": ("MISSING", text.replace("「合成データ・投資判断に使えない」", "「合成」")),   # watermark の欠落
+        "watermark_not_all_states": ("SECTION", text.replace("全ての状態（通常 ・EMPTY ・UNAVAILABLE ・失敗の code の表示）で出す", "通常の状態で出す")),
+        "synthetic_only_removed": ("MISSING", text.replace("合成の data だけ", "data")),
+        "threat_real_data_removed": ("THREATS", text.replace("| 1 | 実の data が fixture ・asset に入る |", "| 1 | 実の data を読む |")),
+        "certainty_in_display_text": ("CERTAINTY", text + "\n- 表示の文の例: 「架空の指数は確実に上がる」。\n"),   # 根拠の無い確信の語
+        "must_in_display_template": ("CERTAINTY", text + "\n- template: 「架空の theme は必ず反発する」。\n"),
+        "market_word_in_prose": ("FORBIDDEN_WORD", text + "\n- 本記録は注目銘柄を扱わない。\n"),
+        "numeric_likelihood": ("PATTERN", text + "\n- base の見込みは 60% 。\n"),
+        "s0_finalized": ("BANNED", text + "\n- S0 を確定した。\n"),                                     # S0 の確定
+        "s0_count_fixed": ("PATTERN", text + "\nscenario の数は 2 つに確定する。\n"),
+        "s0_vocabulary_defined": ("S0_VOCABULARY", text + "\n- 条件の判定は PENDING から始める。\n"),
+        "provisional_removed": ("MISSING", text.replace("PROVISIONAL(S0)", "確定")),
+        "real_data_authority": ("BANNED", text + "\n- 実の data に接続する。\n"),                        # 実 data ・実装の権限
+        "implementation_claim": ("BANNED", text + "\n本記録は実装を承認する。\n"),
+        "implementation_disclaimer_removed": ("MISSING", text.replace("本記録は実装を承認しない", "本記録は実装の始まり")),
+        "h1_authority": ("PATTERN", text + "\nH1 = GO\n"),
+        "m1_authority": ("PATTERN", text + "\nM1 = GO\n"),
+        "pipe_claimed_verified": ("BANNED", text + "\n- pipe は検証済み。\n"),                         # CDP の transport
+        "debugging_port_fallback": ("PATTERN", text + "\n- 失敗したら --remote-debugging-port=0 に戻す。\n"),
+        "fallback_rule_removed": ("SECTION", text.replace("debugging port の transport への fallback は監督の別の承認を要する。", "")),
+        "error_code_added": ("ERROR_CODES", text.replace(row["RENDER_ABORTED"], row["RENDER_ABORTED"] + "| SOFT_WARNING | 警告だけで描く |\n")),   # 閉じた code の集合
+        "error_code_removed": ("ERROR_CODES", text.replace(row["NOT_SYNTHETIC"], "")),
+        "error_code_renamed": ("ERROR_CODES", text.replace(row["NOT_SYNTHETIC"], row["NOT_SYNTHETIC"].replace("| NOT_SYNTHETIC |", "| NOT_SYNTH |"))),
+        "closed_set_statement_removed": ("SECTION", text.replace("端末の検証と描画の失敗の code は次の閉じた集合だけ。", "端末の失敗の code は次のものを含む。")),
+        "partial_render_allowed": ("SECTION", text.replace("§12 の code だけを出し、前の表示と memory の参照を消す。部分の描画は無い。", "読めた項目だけを描く。")),
+        "render_states_extended": ("SECTION", text.replace("SUPPRESSED ・EMPTY ・UNAVAILABLE ・PARTIAL ・AVAILABLE", "SUPPRESSED ・EMPTY ・UNAVAILABLE ・PARTIAL ・AVAILABLE ・CACHED")),
+        "old_version_shown": ("SECTION", text.replace("前の版を\n  代わりに示さない", "前の版を\n  代わりに示す")),
+        "n1_exact_count": ("N_RULES", text.replace(row["N1"], row["N1"].replace("回数は問わない。他の URL は 0", "文書の request はちょうど 1 回"))),   # 証拠の規則
+        "n3_positive_control_removed": ("N_RULES", text.replace(row["N3"], row["N3"].replace("。加えて正の control: hash の無い inline の script を 1 つ持つ変種が実行されないこと", ""))),
+        "n_rule_removed": ("N_RULES", text.replace(row["N3"], "")),
+        "idle_window_removed": ("SECTION", text.replace("60 秒の idle", "idle")),
+        "profile_auto_cleanup": ("SECTION", text.replace("profile の削除は監督の明示の承認の後だけ", "profile は実行の後に自動で削除する")),
+        "h0_blob_pin_removed": ("MISSING", text.replace("ce5fbce76b30b700c58b619452fbf8f1433c3c81", "ce5fbce76b30b700c58b619452fbf8f1433c3c80")),   # H0-D1 ・schema ・domain
+        "client_schema_changed": ("MISSING", text.replace("`home_client:0.2-synthetic`", "`home_client:0.3`")),
+        "domain_with_product_name": ("PATTERN", text.replace("`home.client.v0.2`（投影）", "`rashinban.home.client.v0.2`（投影）")),
+        "render_policy_as_domain": ("SECTION", text.replace("表示の方針の識別子であり、digest の\n  domain ではない", "digest の\n  domain でもある")),
+        "exact_schema_implemented": ("SECTION", text.replace("項目ごとの正確な key と上限は H0-D2 が持つ", "項目ごとの正確な key と上限は本記録が定める")),
+        "section_heading_changed": ("SECTION", text.replace("## 14. browser の証拠", "## 14. 証拠")),
+        "private_path": ("PATTERN", text + "\n" + "Z:" + "\\p99_a9_private\n"),                     # private な形
+        "private_timestamp": ("PATTERN", text + "\n" + "2099-01-05" + "T07:30\n"),
+        "private_bare_number": ("PATTERN", text + "\n値は " + "12345" + "\n"),
+        "private_identifier": ("PATTERN", text + "\np9wat_0123\n"),
+        "signed_claim": ("SIGNED", text + "\nThe fixture is signed.\n"),
+        "acquired_code_name_restored": ("ERROR_CODES", text.replace(row["AFTER_AS_OF"], row["AFTER_AS_OF"].replace("| AFTER_AS_OF |", "| ACQUIRED_AFTER_AS_OF |"))),   # E2: 改名 ・意味 ・順
+        "successor_code_name_restored": ("ERROR_CODES", text.replace(row["REFERENCE_UNRESOLVED"], row["REFERENCE_UNRESOLVED"].replace("| REFERENCE_UNRESOLVED |", "| SUCCESSOR_UNRESOLVED |"))),
+        "failed_closed_as_rejection": ("ERROR_CODES", text.replace(row["SNAPSHOT_FAILED_CLOSED"], row["SNAPSHOT_FAILED_CLOSED"].replace("有効な fail closed の結果 ・全ての項目は SUPPRESSED ・入力の拒否ではない", "入力の不正"))),
+        "bound_includes_item_count": ("ERROR_CODES", text.replace(row["BOUND_EXCEEDED"], row["BOUND_EXCEEDED"].replace("項目ごとの entry の件数の上限の超過（6 つの項目の数 ・順 ・重複は ITEM_ORDER_INVALID）", "件数の上限の超過"))),
+        "time_precedence_swapped": ("VALIDATION_ORDER", text.replace("TIME_FORMAT_INVALID ・TIME_CALENDAR_INVALID ・SYNTHETIC_YEAR_INVALID ・AFTER_AS_OF", "SYNTHETIC_YEAR_INVALID ・TIME_FORMAT_INVALID ・TIME_CALENDAR_INVALID ・AFTER_AS_OF")),
+        "grade_precedence_swapped": ("VALIDATION_ORDER", text.replace("GRADE_FORBIDDEN ・GRADE_CEILING_EXCEEDED", "GRADE_CEILING_EXCEEDED ・GRADE_FORBIDDEN")),
+        "validation_stage_removed": ("VALIDATION_ORDER", text.replace("  11. 有効な fail closed の結果: SNAPSHOT_FAILED_CLOSED\n", "")),
+        "first_failure_rule_removed": ("SECTION", text.replace("端末は最初に当たった失敗の code を 1 つだけ出す。", "端末は全ての失敗の code を出す。")),
+        "inconsistent_status_rule_removed": ("SECTION", text.replace("INTEGRITY_FAILURE の entry が在るのに `snapshot_status` が OK なら STATE_RECOMPUTE_MISMATCH（入力の拒否）。", "")),
+        "classification_count_altered": ("SECTION", text.replace("検証の拒否 25", "検証の拒否 24")),
+    }
+    for name, (rule, candidate) in mutated.items():
+        assert candidate != text, name
+        assert rule in {violation[0] for violation in _m0_record_violations(candidate)}, name     # 該当の規則が実際に拒む
