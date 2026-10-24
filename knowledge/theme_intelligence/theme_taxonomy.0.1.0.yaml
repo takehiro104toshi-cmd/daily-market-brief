@@ -1,0 +1,79 @@
+# =============================================================================
+# Theme taxonomy — versioned knowledge snapshot（Phase 6 / P6-B4B）
+# =============================================================================
+# - VERSIONED KNOWLEDGE であり authority ではない（Foundation JSONL / proposal journal / evidence / governance ではない）。
+# - 公開後は不変。変更は次 version の別 file（theme_taxonomy.<version>.yaml）で行う。
+# - slug は不変 identifier。rename は新 slug ＋ 旧 node の deprecated_in_version / superseded_by。
+# - parent_slugs は DAG（multi-parent 可）。RELATED edge は存在しない。親への自動伝播はしない。
+# - aliases は正規化面（NFKC / casefold / 空白圧縮の完全一致）であり、discovery の信号語ではない。
+# - content_digest は semantic content（この comment・key 順・書式を除く）の sha256。loader が再計算して照合する。
+# - 内容方針: 抽象的な thematic category のみ。Compass 由来の原文・named chain・号 / 頁参照・顧客 watchlist は含めない。
+schema_version: "theme_taxonomy:0.1.0"
+taxonomy_version: "0.1.0"
+published_at: "2026-09-20T00:00:00+00:00"
+content_digest: "f33aa28c5ce7ccb3650c17c85d77433c6b5cc1d130e611eaa4fe82aa93b79b60"
+nodes:
+  - slug: ai
+    label: "AI"
+    description: "Artificial intelligence as a thematic category (models, compute demand, adoption)."
+    parent_slugs: []
+    aliases: ["artificial intelligence", "人工知能"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: semiconductors
+    label: "Semiconductors"
+    description: "Semiconductor devices, manufacturing and equipment as a thematic category."
+    parent_slugs: []
+    aliases: ["semiconductor", "半導体"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: data_center
+    label: "Data center"
+    description: "Data center construction and operation as a thematic category (child of ai)."
+    parent_slugs: [ai]
+    aliases: ["data centre", "datacenter", "データセンター"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: power
+    label: "Power"
+    description: "Electric power generation and supply as a thematic category."
+    parent_slugs: []
+    aliases: ["electric power", "電力"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: energy
+    label: "Energy"
+    description: "Energy supply, demand and security as a thematic category."
+    parent_slugs: []
+    aliases: ["エネルギー"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: grid
+    label: "Grid"
+    description: "Power transmission and distribution networks as a thematic category (child of power)."
+    parent_slugs: [power]
+    aliases: ["power grid", "送電網"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: nuclear
+    label: "Nuclear"
+    description: "Nuclear power generation as a thematic category (child of both power and energy)."
+    parent_slugs: [energy, power]
+    aliases: ["nuclear power", "原子力"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; only the slug name is reused, no signal terms"}
+  - slug: supply_chain_theme
+    label: "Supply chain"
+    description: "Supply chain restructuring and resilience as a thematic category."
+    parent_slugs: []
+    aliases: ["supply chain", "サプライチェーン"]
+    since_version: "0.1.0"
+    provenance: {origin: HISTORICAL_SLUG_SEED, approver_ref: "role:supervisor",
+                 reason: "generic thematic category; historical slug spelling kept in 0.1.0 to demonstrate rename via new slug"}
