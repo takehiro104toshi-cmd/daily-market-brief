@@ -24,6 +24,10 @@
 - P13-A5-T: Windows の特性の記録（文書だけ）。受理した T-02 ・T-03 の数 ・証拠の identity ・R1 の 5 つの場合と次の公開の注記 ・
   残る義務の状態を pin し、数の改変 ・R1 の欠落 ／ 再分類 ・A5 ／ A6 の受理の主張 ・凍結の主張 ・T の項目の誤った完了 ・A5-W の実行の
   主張 ・private な形を拒む。
+- H0-D1: Home の情報の契約の記録（文書だけ）。6 つの項目の順と上限 ・8 つの状態と表示 ・優先の順 ・表示の集約の方針 ・PIT と取得の規則 ・
+  主張の分類 ・等級 ・中立の digest の domain ・§14 の外の禁止の欄 ／ 語を pin し、項目 ／ 状態の改変 ・entry の状態の消去 ・fail closed の
+  除去 ・仮説の昇格 ・将来の漏えい ・news の順 ／ 時間の窓の強制 ・S0 の確定 ・実装 ／ 実 data ／ deploy の主張 ・private な形を拒む。
+  表示の集約は全ての状態の組で評価し（SUPERSEDED だけの項目は AVAILABLE にならない）、確信の語は表示の文（「」）の中だけで拒み、S0 の語彙の値は持たない。
 - negative control: 未登録の path ・修正 ・近い名前 ・未宣言の登録の行 ・禁止の token ・一般の削除 ・store の外の I/O ・blob の変化 ・
   認可の drift ・公開の面の変更は落ちる。
 """
@@ -73,6 +77,7 @@ CONTRACT_MODULE = "src/intelligence/market_memory/projection_contract.py"
 A4B_DOC = "docs/databank/PHASE13_A4B_PROJECTION_EXPORT.md"
 A5_PLAN_DOC = "docs/databank/PHASE13_A5_WINDOWS_VALIDATION_PLAN.md"
 A5T_RECORD_DOC = "docs/databank/PHASE13_A5T_WINDOWS_CHARACTERIZATION_RECORD.md"
+H0_D1_DOC = "docs/databank/H0_D1_HOME_INFORMATION_CONTRACT.md"
 PROJECTION_STORE = "src/intelligence/market_memory/projection_store.py"
 PROJECTION_BUILD = "src/intelligence/market_memory/projection_build.py"
 P13_ROADMAP = "5e5f015ecebf64116f9c1721c36d9d41fa9dc1c7"   # roadmap の記録の commit ＝ A4a の認可の anchor
@@ -188,8 +193,8 @@ P13_EXPORT_CONTRACT_IMPORTS = {
                        "TransitionPlan", "build_projection_target", "check_preservation_proposal", "check_recovery_proposal",
                        "classify_publication", "parse_intent", "parse_private_binding", "parse_public_export_manifest", "render_pointer",
                        "scan_private_shapes", "validate_public_note"}}                      # 走査器は A4a1 が承認した再利用の名前
-#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b ・A5-0R の計画の記録 ・A5-T の特性の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
-P13_REGISTRY_DIGEST = "0272825486618b8c076e178351e87b9ac05b8c1243cb2e82a9f5edbecf2b9748"
+#: registry の正準 digest（P13-A0 で確定 ・A3 ・roadmap の記録 ・A4a ・A4a1 ・A4b ・A5-0R の計画の記録 ・A5-T の特性の記録 ・H0-D1 の記録で更新。runtime ・認可 ・test ・文書 ・package ・base の集合。drift はここで止まる）
+P13_REGISTRY_DIGEST = "5deef6337d764dffaa611f4f86ab7b11eb812658cf941942becfe5c05fec2565"
 REGISTERED_FROZEN_TESTS = ("tests/intelligence/phase7_runtime_registry.py", "tests/intelligence/test_narrative_intelligence_boundary.py",
                            "tests/intelligence/test_screener_intelligence_boundary.py", "tests/intelligence/test_watchlist_thesis_boundary.py",
                            "tests/intelligence/test_personal_intelligence_boundary.py", "tests/intelligence/test_personal_ui_boundary.py",
@@ -278,7 +283,8 @@ def test_p13_a0_registry_is_exactly_the_reviewed_registration_and_runtime_is_emp
                              "tests/intelligence/test_market_memory_projection_contract.py",
                              "tests/intelligence/test_market_memory_projection_store.py",
                              "tests/intelligence/test_market_memory_projection_build.py")
-    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC, A4A_DOC, A4A1_DOC, A4B_DOC, A5_PLAN_DOC, A5T_RECORD_DOC)
+    assert PHASE13_DOCS == (A0_DOC, A1_DOC, A2A_DOC, A3_DOC, ROADMAP_DOC, A4A_DOC, A4A1_DOC, A4B_DOC, A5_PLAN_DOC, A5T_RECORD_DOC,
+                            H0_D1_DOC)
     assert set(SANCTIONED_P13_EXTRA_STDLIB) == set(P13_NAME_ALLOWANCES) == set(P13_WORD_ALLOWANCES) == {STORE_MODULE,
                                                                                                          PROJECTION_STORE}   # 許しは 2 つの store だけ
     assert SANCTIONED_P13_EXTRA_STDLIB[STORE_MODULE] == {"os", "stat"}                              # P13-A4b: A3 の許しは広げない
@@ -1434,7 +1440,7 @@ def _a5_plan_violations(text: str) -> list:
 def test_p13_a5_0r_the_windows_validation_plan_is_a_guarded_documentation_only_record() -> None:
     text = (REPO_ROOT / A5_PLAN_DOC).read_text(encoding="utf-8")
     assert _a5_plan_violations(text) == []
-    assert A5_PLAN_DOC in PHASE13_DOCS and PHASE13_DOCS[-2] == A5_PLAN_DOC                          # 確立した文書の registry で登録（A5-T の記録の直前）
+    assert A5_PLAN_DOC in PHASE13_DOCS and PHASE13_DOCS.index(A5T_RECORD_DOC) == PHASE13_DOCS.index(A5_PLAN_DOC) + 1   # 確立した文書の registry で登録（A5-T の記録の直前）
     assert not any(gate.startswith("P13-A5") or gate.startswith("P13-A6") for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)   # 実行 ・runtime の認可は無い
     assert all(doc != A5_PLAN_DOC for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)
     assert len(PHASE13_RUNTIME) == 12 and not any("cleanup" in p or "recovery" in p or "windows" in p for p in PHASE13_RUNTIME)
@@ -1577,7 +1583,7 @@ def _a5t_record_violations(text: str) -> list:
 def test_p13_a5t_the_windows_characterization_record_is_a_guarded_documentation_only_record() -> None:
     text = (REPO_ROOT / A5T_RECORD_DOC).read_text(encoding="utf-8")
     assert _a5t_record_violations(text) == []
-    assert PHASE13_DOCS[-1] == A5T_RECORD_DOC and PHASE13_DOCS[-2] == A5_PLAN_DOC                   # 計画の記録の直後に登録
+    assert A5T_RECORD_DOC in PHASE13_DOCS and PHASE13_DOCS.index(A5T_RECORD_DOC) == PHASE13_DOCS.index(A5_PLAN_DOC) + 1   # 計画の記録の直後に登録
     assert not any(gate.startswith("P13-A5") or gate.startswith("P13-A6") for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)   # 実行 ・runtime の認可は無い
     assert all(doc not in (A5_PLAN_DOC, A5T_RECORD_DOC) for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)
     assert len(PHASE13_RUNTIME) == 12 and not any("cleanup" in p or "recovery" in p or "windows" in p for p in PHASE13_RUNTIME)
@@ -1648,3 +1654,336 @@ def test_p13_a5t_negative_controls_reject_altered_or_overclaimed_records() -> No
     for name, candidate in mutated.items():
         assert candidate != text, name
         assert _a5t_record_violations(candidate), name                                               # どの改変も guard が落とす
+
+
+#: H0-D1: Home の情報の契約の記録（文書だけ ・実装の承認ではない）
+H0_REQUIRED = ("本記録は実装を承認しない", "9d83b5f268ac4b216210733b0e277c54c6be3ee7", "`home_snapshot:0.2-synthetic`",
+               "`home_client:0.2-synthetic`", "`home.snapshot.v0.2`", "`home.client.v0.2`", "合成の data だけ", "H1 は HOLD", "PROVISIONAL(S0)")
+#: 節ごとに在るべき記述（他の節に同じ語が在っても、その節から消えれば落ちる）
+H0_SECTION_REQUIRED = {
+    "## 1. 範囲と主張しないこと": ("合成の data だけ", "実装 ・取得 ・保存 ・公開 ・deploy を承認しない", "S0-D1 が持つ", "PROVISIONAL(S0)"),
+    "## 3. 6 つの項目": ("固定の順 ・足さない ・減らさない", "scenario の数 ・条件の判定 ・確信 ・版の遷移は S0-D1 が持ち",
+                     "前回 ・予想 ・結果 ・前回の改訂はそれぞれ別の観察であり", "関係のある見出しを最大 3 件",
+                     "各 entry は選定の理由（`selection_rationale` の template）・証拠 ・`known_at` ・`acquired_at` ・", "`as_of` での適格 ・出所を持つ",
+                     "3 件に満たなければ満たないまま（埋めない）", "選定の algorithm は延期であり、本記録は新しい順 ・一律の時間の窓を",
+                     "全文 ・生成した要約は持たない", "scenario に依存する", "並びは分類の順で固定し、序列を付けない",
+                     "見通しの identity（series の id ・版の番号 ・版の digest）・`issued_at` ・`supersedes` の参照",
+                     "H0 はこれらを参照として運ぶだけで、版の遷移が正しいかを検証 ・確定しない"),
+    "## 4. 封筒と schema": ("`synthetic`（常に true）", "`items`（ちょうど 6）", "各 object の key の集合は閉じている",
+                         "schema の id と digest の domain は一緒に版を上げる", "古い版の data は古い版の規則で検証する", "版を黙って読み替えない",
+                         "build の時刻は snapshot に含めない（identity ・digest の外"),
+    "## 5. 項目と entry": ("項目は自分の状態を持たない", "各 entry は元の状態を保つ", "集約は entry の状態を消さない ・書き換えない", "8 つの状態ではない",
+                        "`h0_render_policy:0.1`（上から順に最初に当たるもの）", "各単位を 1 回だけ数える", "snapshot が FAILED_CLOSED の時は数を出さない",
+                        "entry の状態の集合と `snapshot_status` だけの関数", "時計 ・entry の並び ・端末に依らない（決定論）",
+                        "表示できる entry は §7 で値を出す状態だけ", "SUPERSEDED の entry は SUPERSEDED のまま数え、表示できる entry に数えない",
+                        "SUPERSEDED だけの項目は AVAILABLE にならない（UNAVAILABLE）", "AVAILABLE の項目の entry は CURRENT か SUPERSEDED だけで、CURRENT が 1 つ以上在る"),
+    "## 6. 時刻と PIT": ("build の時刻（telemetry だけ）", "H0 の data の規則", "合成の data の年は 2099", "P8 の `KnowledgeTime` と同じ",
+                      "TIMESTAMP は `known_at` ≤ `as_of` で KNOWN、他は UNKNOWN", "DATE は東京の暦日として扱い",
+                      "`as_of` 以前なら KNOWN、その日の始まりが `as_of` より後なら UNKNOWN、他は UNCERTAIN", "加えて `acquired_at` ≤ `as_of` を要する",
+                      "`as_of` の後に取得したものを含む data は無効",
+                      "見通しの版は `issued_at` ≤ `as_of` の時だけ snapshot に入る（時刻の適格だけ。版の遷移が正しいかは PROVISIONAL(S0)）",
+                      "後の記録 ・後の観察を過去へ適用しない（将来の観察の漏えいは無い）", "端末の解釈の規則は H1 の規則であり、本記録は定めない"),
+    "## 7. 8 つの状態": ("時刻だけから導けるのは UNKNOWN と UNCERTAIN だけ", "宣言の無い窓を参照する data は無効", "状態を畳み込まない",
+                      "SUPERSEDED は、後継が `as_of` で §6 の適格を満たす時だけ", "後で出た後継で過去の snapshot の entry を SUPERSEDED にしない（PIT の再構成を保つ）",
+                      "後継の適格が UNCERTAIN なら、前の entry も UNCERTAIN（推測しない）", "後継は同じ snapshot の同じ項目の entry として在る。後継の鎖は循環しない。",
+                      "参照が解けない ・循環する snapshot は無効",
+                      "後継の entry を MISSING（理由 `SUCCESSOR_MISSING`）として置く。後継を作らない ・推測しない ・前の版の値で埋めない",
+                      "後継の record が壊れていれば INTEGRITY_FAILURE（snapshot 全体を fail closed）", "項目 1 の現在の見通しは SUPERSEDED でない版だけ",
+                      "前の版を代わりに示さない（前の版は lineage と項目 5 でだけ辿れる）"),
+    "## 8. 主張の分類": ("`epistemic`（FACT ／ HYPOTHESIS）", "語彙は変えない", "MODEL_PROPOSED は常に HYPOTHESIS",
+                      "OUTLOOK ／ RISK ／ INTERPRETIVE は常に HYPOTHESIS", "HYPOTHESIS の入力を持つ導出は HYPOTHESIS", "仮説はその場で事実に昇格しない",
+                      "条件の判定と見通しの変化は claim ではない別の記録の型であり、`citations` に入らない"),
+    "## 9. 出所と証拠の参照": ("引用（source の鎖）と導出（規則の鎖）は別の欄", "system ・model の出力を証拠に数えない"),
+    "## 10. export の等級と privacy": ("PUBLIC_SAFE ・PRIVATE_DERIVED ・PRIVATE_AUTHORITY ・NEVER", "項目 1 〜 6 は PRIVATE_DERIVED",
+                                   "NEVER と PRIVATE_AUTHORITY の data は snapshot に在れば無効",
+                                   "公開の面（Pages ・公開の report ・Cloudflare）に Home の data を出さない",
+                                   "端末で等級ごとに何を表示するかは M0-D1 が定める", "資格情報 ・private な root の位置 ・local の path は snapshot に存在しない"),
+    "## 11. 正準化と digest": ("P13 の `canonical_json`", "`domain_digest`", "製品の名前を含めない", "同じ文字列の domain は repository に無い"),
+    "## 12. 合成の fixture": ("`synthetic` は true ・id は `syn_` で始まる ・日時は 2099 年", "本記録は fixture を作らない",
+                          "本記録の記述は検証器で確かめた fixture ではない"),
+    "## 13. 検証の不変量": ("6 つの項目がちょうど 1 回ずつ、固定の順で在る", "INTEGRITY_FAILURE が在れば `snapshot_status` は FAILED_CLOSED",
+                        "§14 の禁止の欄 ・語が無い", "SUPERSEDED の entry の後継は同じ snapshot の同じ項目に在り、後継の鎖は循環しない",
+                        "AVAILABLE の項目には CURRENT の entry が在る。SUPERSEDED だけの項目は AVAILABLE にならない"),
+    "## 14. 禁止": ("根拠の無い確信の語（市場の見通しの表示の文 ・template だけ）: 確実 ・必ず", "本記録では表示の文 ・template を「」で囲んで書く",
+                  "本記録の規則と契約の義務の記述は対象外", "否定の 不確実 ・不確かさ は使ってよい"),
+    "## 15. S0 に依存する暫定の規則": ("scenario の数と型", "条件の型 ・比較 ・窓 ・条件の判定の状態と遷移", "確信の表し方と規則", "見通しの版の遷移と改訂の理由",
+                               "上の規則は S0-D1 が定め、本記録は値を確定しない",
+                               "S0-D1 は次の権限を持つ: scenario の意味 ・版の遷移が正しいか ・条件の判定 ・確信の意味 ・基本と代替の決定",
+                               "H0 が運ぶのは見通しの identity ・`issued_at` ・`supersedes` の参照だけであり、これらの権限を持たない",
+                               "S0 の語彙の値（条件の判定の状態 ・確信の段階 ・基本と代替の印）を本記録は列挙しない"),
+    "## 16. 依存と延期": ("H1: 合成の data だけの prototype", "news の選定の algorithm"),
+    "## 17. 本記録の承認の範囲": ("本記録は文書 ・registry ・guard だけ", "product の機能 ・runtime の振る舞いは変わらない", "本記録は実装を承認しない",
+                            "監督の別の承認を要する"),
+}
+#: 6 つの項目（順 → 項目 ・kind ・entry の数）。順 ・数 ・上限の改変は落ちる
+H0_ITEMS = {"1": ("市場の見通し", "OUTLOOK", "0 〜 1"), "2": ("市場の snapshot（指数 ・金利 ・為替）", "SNAPSHOT", "1 〜 12"),
+            "3": ("72 時間以内の予定", "EVENTS", "0 〜 8"), "4": ("重要な news", "NEWS", "0 〜 3"), "5": ("前の見通しからの変化", "CHANGE", "0 〜 1"),
+            "6": ("関連する会社 ・theme", "RELATIONS", "0 〜 10")}
+#: 8 つの状態（P12.5-A0 §5.5 の順 → 値 ・扱い）
+H0_STATES = {"CURRENT": ("出す", "通常"), "SUPERSEDED": ("出さない", "後継を出す ・lineage と項目 5 で辿れる"),
+             "MISSING": ("出さない", "欠落の理由を出す ・推測しない"), "STALE": ("出す", "宣言した窓を超えた印 ・trigger にしない"),
+             "UNKNOWN": ("出さない", "件数に残す ・固定の枠では値の無い印"), "UNCERTAIN": ("出さない", "件数に残す ・推測しない"),
+             "AMBIGUOUS": ("両方の値", "矛盾の印 ・事実の根拠にしない"), "INTEGRITY_FAILURE": ("出さない", "snapshot 全体を fail closed")}
+H0_PRECEDENCE = ("INTEGRITY_FAILURE", "MISSING", "UNKNOWN", "UNCERTAIN", "AMBIGUOUS", "SUPERSEDED", "STALE", "CURRENT")
+#: 表示の集約の方針（上から順に最初に当たるもの ・entry の状態は消さない ・SUPERSEDED だけの項目は AVAILABLE にならない）
+H0_RENDER_POLICY = ("snapshot が FAILED_CLOSED なら SUPPRESSED", "entry が 0 件なら EMPTY",
+                    "表示できる entry（CURRENT ・STALE ・AMBIGUOUS）が無ければ UNAVAILABLE",
+                    "MISSING ・STALE ・UNKNOWN ・UNCERTAIN ・AMBIGUOUS の entry が 1 つでも在れば PARTIAL", "他は AVAILABLE")
+#: 方針の行の文法（文法の外の行は落ちる）と表示の状態の語彙（8 つの状態と重ならない）
+H0_RENDER_GRAMMAR = (("FAILED_CLOSED", r"snapshot が FAILED_CLOSED なら (?P<render>[A-Z_]+)"), ("NO_ENTRY", r"entry が 0 件なら (?P<render>[A-Z_]+)"),
+                     ("NONE_OF", r"表示できる entry（(?P<states>[A-Z_ ・]+)）が無ければ (?P<render>[A-Z_]+)"),
+                     ("ANY_OF", r"(?P<states>[A-Z_ ・]+) の entry が 1 つでも在れば (?P<render>[A-Z_]+)"), ("OTHERWISE", r"他は (?P<render>[A-Z_]+)"))
+H0_RENDER_STATES = ("SUPPRESSED", "EMPTY", "UNAVAILABLE", "PARTIAL", "AVAILABLE")
+H0_DISPLAYABLE = frozenset(state for state, (shown, _) in H0_STATES.items() if shown != "出さない")   # §7 で値を出す状態
+H0_DEGRADED = frozenset(H0_STATES) - {"CURRENT", "SUPERSEDED", "INTEGRITY_FAILURE"}
+#: §14 にだけ在ってよい禁止の欄の名前（小文字）と語
+H0_FORBIDDEN_FIELDS = ("probability", "odds", "likelihood_pct", "rank", "ranking", "score", "rating", "weight", "target_price", "price_target",
+                       "expected_return", "recommendation", "buy", "sell", "hold", "signal", "full_text", "body", "article_text", "llm_summary")
+H0_FORBIDDEN_WORDS = ("推奨", "買い", "売り", "目標株価", "確率", "的中率", "勝率", "期待値", "ランキング", "順位", "おすすめ", "注目銘柄", "最新")
+#: 根拠の無い確信の語（市場の見通しの表示の文 ・template ＝ 本記録では「」の中だけ。契約の義務の文は対象外 ・不確実 は許す）
+H0_CERTAINTY_WORDS = ("確実", "必ず")
+H0_CERTAINTY_PATTERN = r"(?<!不)確実|必ず"
+#: S0-D1 が持つ語彙の値（本記録は列挙しない）
+H0_S0_VOCABULARY = ("PENDING", "OBSERVED_MET", "OBSERVED_NOT_MET", "NOT_OBSERVABLE", "HIGH", "MEDIUM", "LOW", "BASE", "ALT", "ALTERNATIVE",
+                    "INITIAL", "PROGRESS", "LATE_OBSERVATION", "SOURCE_CORRECTION")
+H0_BANNED = ("実装を承認する", "実装を承認した", "H1 を承認する", "H1 は GO", "実の data を使う", "実の data に接続する", "本番で使う", "deploy を承認する",
+             "公開を承認する", "Pages に出す", "新しい順に並べ", "時間以内に限る", "時間に限る", "S0 を確定した", "A6 は完了", "Market Memory v1 は凍結した",
+             "署名済み", "http://", "https://")
+H0_BANNED_PATTERNS = (r"(?:H0-D1|H1|M0-D1|S0-D1|UI0|A5-W|A6|pytest|commit|push)[^\n|]{0,8}=\s*GO\b",          # 実装 ・実行の権限
+                      r"scenario の数は\s*\d",                                                             # S0 の値の確定
+                      r"\d\s*[%％]",                                                                      # 数値の見込み
+                      r"(?i)rashinban|compass",                                                           # 製品の名前（domain ・schema は中立）
+                      r"`(?!home\.(?:snapshot|client)\.v0\.2`)[a-z0-9_.]*home\.[a-z0-9_.]*`",             # 宣言の外の digest の domain
+                      r"`(?!home_(?:snapshot|client):0\.2-synthetic`)[a-z0-9_]*home_[a-z_]+:[^`\n]*`",     # 宣言の外の schema
+                      r"\b(?:jq|p\d+)_[a-z0-9]+_(?:private|work)\b", r"\\\\[A-Za-z0-9.-]+\\")            # private な root ・UNC の host
+
+
+def _h0_render_rules(text: str) -> list:
+    """§5 の集約の方針の行を (種類, 状態の集合, 表示の状態) に解く（文法の外の行は None）。"""
+    rules = []
+    for line in _a5_section(text, "## 5. 項目と entry").splitlines():
+        if line.startswith("  - "):
+            parsed = None
+            for kind, pattern in H0_RENDER_GRAMMAR:
+                match = re.fullmatch(pattern, line[4:])
+                if match:
+                    members = match.groupdict().get("states")
+                    parsed = (kind, frozenset(s.strip() for s in members.split("・")) if members else frozenset(), match.group("render"))
+                    break
+            rules.append(parsed)
+    return rules
+
+
+def _h0_render(rules: list, status: str, states: frozenset) -> str:
+    """方針を上から順に当て、最初に当たった表示の状態（entry の状態の集合と snapshot の状態だけの関数）。"""
+    for kind, members, render in rules:
+        if ((kind == "FAILED_CLOSED" and status == "FAILED_CLOSED") or (kind == "NO_ENTRY" and not states)
+                or (kind == "NONE_OF" and not states & members) or (kind == "ANY_OF" and states & members) or kind == "OTHERWISE"):
+            return render
+    return ""
+
+
+def _h0_render_violations(text: str) -> list:
+    """表示の集約の方針を全ての状態の組で評価した振る舞いの違反（SUPERSEDED だけの項目 ・古い版の代用 ・fail closed）。"""
+    rules = _h0_render_rules(text)
+    if not rules or None in rules or rules[-1][0] != "OTHERWISE":
+        return [("RENDER_BEHAVIOR", "grammar")]
+    found = set()
+    renders = {render for *_, render in rules}
+    if not renders <= set(H0_RENDER_STATES) or renders & set(H0_STATES):
+        found.add("vocabulary")                                                                      # 8 つの状態を表示の状態に流用しない
+    if any(members - set(H0_STATES) for _, members, _ in rules):
+        found.add("unknown_state")
+    if any(kind == "NONE_OF" and members != H0_DISPLAYABLE for kind, members, _ in rules):
+        found.add("displayable")                                                                     # 表示できる entry ＝ §7 で値を出す状態
+    ordinary = [state for state in H0_STATES if state != "INTEGRITY_FAILURE"]
+    for mask in range(1 << len(ordinary)):
+        states = frozenset(state for bit, state in enumerate(ordinary) if mask >> bit & 1)
+        if {_h0_render(rules, "FAILED_CLOSED", states), _h0_render(rules, "FAILED_CLOSED", states | {"INTEGRITY_FAILURE"})} != {"SUPPRESSED"}:
+            found.add("fail_closed")
+        render = _h0_render(rules, "OK", states)
+        if not states and render != "EMPTY":
+            found.add("empty")
+        if states and not states & H0_DISPLAYABLE and render != "UNAVAILABLE":
+            found.add("no_displayable_entry")                                                        # SUPERSEDED だけ ・古い版だけは AVAILABLE にならない
+        if render == "AVAILABLE" and ("CURRENT" not in states or not states <= {"CURRENT", "SUPERSEDED"}):
+            found.add("available_without_current")
+        if states & H0_DISPLAYABLE and states & H0_DEGRADED and render != "PARTIAL":
+            found.add("degraded_not_partial")
+        if "CURRENT" in states and states <= {"CURRENT", "SUPERSEDED"} and render != "AVAILABLE":
+            found.add("valid_lineage_not_available")                                                 # 後継の在る正しい lineage は AVAILABLE のまま
+    return [("RENDER_BEHAVIOR", reason) for reason in sorted(found)]
+
+
+def _h0_record_violations(text: str) -> list:
+    """Home の情報の契約の記録の違反（空なら適合）。"""
+    found = []
+    items = _a5t_table(text, "## 3. 6 つの項目", r"\d")
+    if tuple(items) != tuple(H0_ITEMS) or any(len(r) != 1 or tuple(r[0]) != H0_ITEMS[k] for k, r in items.items()):
+        found.append(("ITEMS", tuple(items)))
+    states = _a5t_table(text, "## 7. 8 つの状態", r"[A-Z_]+")
+    if tuple(states) != tuple(H0_STATES) or any(len(r) != 1 or tuple(r[0]) != H0_STATES[k] for k, r in states.items()):
+        found.append(("STATES", tuple(states)))
+    if "優先の順: " + " > ".join(H0_PRECEDENCE) + "。" not in _a5_section(text, "## 7. 8 つの状態"):
+        found.append(("PRECEDENCE", "order"))
+    policy = tuple(line[4:] for line in _a5_section(text, "## 5. 項目と entry").splitlines() if line.startswith("  - "))
+    if policy != H0_RENDER_POLICY:
+        found.append(("RENDER_POLICY", policy))
+    found += _h0_render_violations(text)
+    found += [("MISSING", needle) for needle in H0_REQUIRED if needle not in text]
+    for heading, needles in H0_SECTION_REQUIRED.items():
+        section = _a5_section(text, heading)
+        found += [("SECTION", heading, needle) for needle in needles if needle not in section]
+    prohibited = _a5_section(text, "## 14. 禁止")
+    found += [("PROHIBITION_LIST", term) for term in (*(f"`{field}`" for field in H0_FORBIDDEN_FIELDS), *H0_FORBIDDEN_WORDS, *H0_CERTAINTY_WORDS)
+              if term not in prohibited]
+    outside = text.replace(prohibited, "") if prohibited else text                                  # 禁止の語は §14 の外に無い
+    found += [("FORBIDDEN_FIELD", field) for field in H0_FORBIDDEN_FIELDS
+              if re.search(r"(?<![A-Za-z0-9_])" + re.escape(field) + r"(?![A-Za-z0-9_])", outside)]
+    found += [("FORBIDDEN_WORD", word) for word in H0_FORBIDDEN_WORDS if word in outside]
+    found += [("CERTAINTY", span) for span in re.findall(r"「([^「」\n]*)」", text) if re.search(H0_CERTAINTY_PATTERN, span)]   # 表示の文 ・template だけ
+    found += [("S0_VOCABULARY", word) for word in H0_S0_VOCABULARY if re.search(r"(?<![A-Za-z0-9_])" + word + r"(?![A-Za-z0-9_])", text)]
+    found += [("BANNED", banned) for banned in H0_BANNED if banned in text]
+    found += [("PATTERN", pattern) for pattern in H0_BANNED_PATTERNS + PRIVATE_PATTERNS if re.search(pattern, text)]
+    if re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE):
+        found.append(("SIGNED", "claim"))
+    return found
+
+
+def test_h0_d1_home_information_contract_is_a_guarded_documentation_only_record() -> None:
+    text = (REPO_ROOT / H0_D1_DOC).read_text(encoding="utf-8")
+    assert _h0_record_violations(text) == []
+    assert PHASE13_DOCS[-1] == H0_D1_DOC and PHASE13_DOCS.index(H0_D1_DOC) == PHASE13_DOCS.index(A5T_RECORD_DOC) + 1   # A5-T の記録の直後に登録
+    assert all(doc != H0_D1_DOC for *_, doc in PHASE13_RUNTIME_AUTHORIZATION)                       # 実装 ・runtime の認可は無い
+    assert not any(gate.startswith(("H0", "H1", "M0", "S0", "UI0")) for gate, *_ in PHASE13_RUNTIME_AUTHORIZATION)
+    assert len(PHASE13_RUNTIME) == 12 and not any("home" in path for path in PHASE13_RUNTIME)
+    for path in PHASE13_RUNTIME:                                                                     # domain ・schema は runtime に無い（先取りの実装なし）
+        source = (REPO_ROOT / path).read_text(encoding="utf-8")
+        assert not any(name in source for name in ("home.snapshot", "home.client", "home_snapshot", "home_client")), path
+    a0 = (REPO_ROOT / PHASE12_5_FROZEN_CONTRACTS[0]).read_text(encoding="utf-8")
+    assert tuple(_a5t_table(a0, "### 5.5", r"[A-Z_]+")) == tuple(H0_STATES)                         # P12.5-A0 §5.5 の 8 つの状態と同じ順
+    assert set(H0_PRECEDENCE) == set(H0_STATES) and len(H0_PRECEDENCE) == 8
+    assert len(H0_ITEMS) == 6 and len({kind for _, kind, _ in H0_ITEMS.values()}) == 6
+    assert all(re.search(H0_CERTAINTY_PATTERN, word) for word in H0_CERTAINTY_WORDS) and not re.search(H0_CERTAINTY_PATTERN, "不確実 ・不確かさ")
+    assert not set(H0_CERTAINTY_WORDS) & set(H0_FORBIDDEN_WORDS)                                   # 確信の語は表示の文だけの規則
+    accepted = {                                                                                     # 正の control: 正当な文は拒まない
+        "contract_obligation_must": text + "\n- 本記録の規則は必ず版の番号と一緒に変える。\n",
+        "contract_obligation_certain": text + "\n- fixture は確実に pin する。\n",
+        "uncertainty_in_prose": text + "\n- 不確実な点は数値にしない。\n",
+        "uncertainty_in_display_text": text + "\n- 表示の文の例: 「架空の見通しには不確実な点が在る」。\n",
+    }
+    for name, candidate in accepted.items():
+        assert candidate != text and _h0_record_violations(candidate) == [], name
+    rules = _h0_render_rules(text)
+    assert [render for *_, render in rules] == list(H0_RENDER_STATES) and H0_DISPLAYABLE == {"CURRENT", "STALE", "AMBIGUOUS"}
+    cases = {("OK", ("SUPERSEDED",)): "UNAVAILABLE", ("OK", ("SUPERSEDED", "MISSING")): "UNAVAILABLE",   # 古い版は現在の見通しの代わりにならない
+             ("OK", ("SUPERSEDED", "CURRENT")): "AVAILABLE", ("OK", ("SUPERSEDED", "STALE")): "PARTIAL", ("OK", ()): "EMPTY",
+             ("OK", ("CURRENT", "UNKNOWN")): "PARTIAL", ("FAILED_CLOSED", ("CURRENT", "INTEGRITY_FAILURE")): "SUPPRESSED"}
+    for (status, states), render in cases.items():
+        assert _h0_render(rules, status, frozenset(states)) == render, (status, states)
+
+
+def test_h0_d1_negative_controls_reject_altered_or_overclaimed_contracts() -> None:
+    text = (REPO_ROOT / H0_D1_DOC).read_text(encoding="utf-8")
+    assert _h0_record_violations(text) == []
+    lines = text.splitlines(keepends=True)
+    row = {key: next(line for line in lines if line.startswith(f"| {key} |"))
+           for key in ("1", "4", "5", "6", "SUPERSEDED", "UNKNOWN", "AMBIGUOUS", "INTEGRITY_FAILURE")}
+    mutated = {                                                                                      # 名前 → (拒むべき規則, 改変した記録)
+        "item_removed": ("ITEMS", text.replace(row["6"], "")),                                     # 項目の改変
+        "item_added": ("ITEMS", text.replace(row["6"], row["6"] + "| 7 | 個人の note | NOTES | 0 〜 5 |\n")),
+        "items_swapped": ("ITEMS", text.replace(row["4"] + row["5"], row["5"] + row["4"])),
+        "news_limit_raised": ("ITEMS", text.replace(row["4"], row["4"].replace("0 〜 3", "0 〜 5"))),
+        "item_kind_renamed": ("ITEMS", text.replace(row["1"], row["1"].replace("OUTLOOK", "FORECAST"))),
+        "state_removed": ("STATES", text.replace(row["AMBIGUOUS"], "")),                           # 状態の改変
+        "state_display_changed": ("STATES", text.replace(row["UNKNOWN"], row["UNKNOWN"].replace("| 出さない |", "| 出す |"))),
+        "integrity_failure_not_fail_closed": ("STATES", text.replace(row["INTEGRITY_FAILURE"], row["INTEGRITY_FAILURE"].replace("snapshot 全体を fail closed", "その entry だけ出さない"))),
+        "precedence_changed": ("PRECEDENCE", text.replace("AMBIGUOUS > SUPERSEDED > STALE", "SUPERSEDED > AMBIGUOUS > STALE")),
+        "states_conflated": ("SECTION", text.replace("状態を畳み込まない（別の欄 ・別の印で区別する）。", "STALE と UNKNOWN は 1 つの印にまとめる。")),
+        "fail_closed_invariant_removed": ("SECTION", text.replace("- INTEGRITY_FAILURE が在れば `snapshot_status` は FAILED_CLOSED。\n", "")),
+        "time_only_states_widened": ("SECTION", text.replace("時刻だけから導けるのは UNKNOWN と UNCERTAIN だけ", "時刻だけから STALE も導ける")),
+        "entry_state_erased": ("SECTION", text.replace("集約は entry の状態を消さない ・書き換えない。", "集約は entry の状態を項目の状態で置き換える。")),  # 集約
+        "item_state_conflated": ("SECTION", text.replace("項目は自分の状態を持たない。", "項目は entry の最悪の状態を自分の状態として持つ。")),
+        "aggregation_rule_removed": ("RENDER_POLICY", text.replace("  - MISSING ・STALE ・UNKNOWN ・UNCERTAIN ・AMBIGUOUS の entry が 1 つでも在れば PARTIAL\n", "")),
+        "aggregation_order_changed": ("RENDER_POLICY", text.replace("  - snapshot が FAILED_CLOSED なら SUPPRESSED\n  - entry が 0 件なら EMPTY\n", "  - entry が 0 件なら EMPTY\n  - snapshot が FAILED_CLOSED なら SUPPRESSED\n")),
+        "render_state_as_data_state": ("SECTION", text.replace("8 つの状態ではない", "8 つの状態の 1 つである")),
+        "coverage_double_count": ("SECTION", text.replace("各単位を 1 回だけ数える。", "event とその欄を両方とも重ねて数える。")),
+        "grade_rule_weakened": ("SECTION", text.replace("NEVER と PRIVATE_AUTHORITY の data は snapshot に在れば無効。", "NEVER の data は snapshot に在れば無効。")),  # 等級
+        "public_exposure_allowed": ("SECTION", text.replace("公開の面（Pages ・公開の report ・Cloudflare）に Home の data を出さない。", "Home の data は Pages に出す。")),
+        "grade_vocabulary_changed": ("SECTION", text.replace("PUBLIC_SAFE ・PRIVATE_DERIVED ・PRIVATE_AUTHORITY ・NEVER", "PUBLIC ・PRIVATE")),
+        "model_proposed_as_fact": ("SECTION", text.replace("MODEL_PROPOSED は常に HYPOTHESIS。", "MODEL_PROPOSED は検証の後に FACT。")),  # 主張の分類
+        "hypothesis_promoted": ("SECTION", text.replace("仮説はその場で事実に昇格しない", "仮説は確かめた時にその場で事実に昇格する")),
+        "evaluation_cited": ("SECTION", text.replace("`citations` に入らない", "`citations` に入れてよい")),
+        "epistemic_enum_extended": ("SECTION", text.replace("`epistemic`（FACT ／ HYPOTHESIS）", "`epistemic`（FACT ／ DERIVED ／ HYPOTHESIS）")),
+        "acquisition_rule_removed": ("SECTION", text.replace("- 加えて `acquired_at` ≤ `as_of` を要する。", "- `acquired_at` は表示だけに使う。")),  # 時刻 ・PIT
+        "future_leak_allowed": ("SECTION", text.replace("後の記録 ・後の観察を過去へ適用しない（将来の観察の漏えいは無い）。", "後の観察で過去の snapshot を補う。")),
+        "build_time_in_identity": ("SECTION", text.replace("build の時刻は snapshot に含めない（identity ・digest の外。", "build の時刻を snapshot の identity に含める（")),
+        "p8_date_semantics_removed": ("SECTION", text.replace("DATE は東京の暦日として扱い", "DATE は UTC の日として扱い")),
+        "h1_parsing_rule_merged": ("SECTION", text.replace("端末の解釈の規則は H1 の規則であり、本記録は定めない", "端末の解釈の規則も本記録が定める")),
+        "news_newest_first_mandated": ("BANNED", text + "\n見出しは新しい順に並べる。\n"),          # news
+        "news_time_window_mandated": ("BANNED", text + "\n見出しは 24 時間以内に限る。\n"),
+        "news_rationale_removed": ("SECTION", text.replace("各 entry は選定の理由（`selection_rationale` の template）・証拠 ・", "各 entry は証拠 ・")),
+        "news_slots_filled": ("SECTION", text.replace("3 件に満たなければ満たないまま（埋めない）。", "3 件に満たなければ他の見出しで埋める。")),
+        "news_full_text": ("FORBIDDEN_FIELD", text.replace("全文 ・生成した要約は持たない。", "`full_text` を持つ。")),
+        "s0_finalized": ("SECTION", text.replace("上の規則は S0-D1 が定め、本記録は値を確定しない。", "上の規則は本記録が確定する。")),  # S0
+        "s0_count_fixed": ("PATTERN", text + "\nscenario の数は 2 つに確定する。\n"),
+        "provisional_markers_removed": ("MISSING", text.replace("PROVISIONAL(S0)", "確定")),
+        "s0_owner_replaced": ("SECTION", text.replace("scenario の数 ・条件の判定 ・確信 ・版の遷移は S0-D1 が持ち", "条件の判定 ・確信 ・版の遷移は H0 が持ち")),
+        "probability_field": ("FORBIDDEN_FIELD", text + "\n- 項目 1 は `probability` を持つ。\n"),  # 禁止の意味
+        "recommendation_word": ("FORBIDDEN_WORD", text + "\n- 表示: 推奨の会社。\n"),
+        "price_target_word": ("FORBIDDEN_WORD", text + "\n- 項目 6 に目標株価を出す。\n"),
+        "ranking_semantics": ("FORBIDDEN_WORD", text.replace("並びは分類の順で固定し、序列を付けない。", "並びは関連の強さの順位で並べる。")),
+        "numeric_score_field": ("FORBIDDEN_FIELD", text + "\n- 各 entry は `score` を持つ。\n"),
+        "newest_word": ("FORBIDDEN_WORD", text + "\n- 最新の見出し。\n"),
+        "numeric_likelihood": ("PATTERN", text + "\n- base の見込みは 60% 。\n"),
+        "prohibition_list_shrunk": ("PROHIBITION_LIST", text.replace("`rank` ・`ranking` ・", "")),
+        "prohibition_heading_changed": ("PROHIBITION_LIST", text.replace("## 14. 禁止", "## 14. 補足")),
+        "implementation_claim": ("BANNED", text + "\n本記録は実装を承認する。\n"),                  # 権限 ・過大な主張
+        "implementation_disclaimer_removed": ("MISSING", text.replace("本記録は実装を承認しない", "本記録は実装の始まり")),
+        "h1_authority": ("PATTERN", text + "\nH1 = GO\n"),
+        "real_data_claim": ("BANNED", text + "\n実の data に接続する。\n"),
+        "deploy_claim": ("BANNED", text + "\ndeploy を承認する。\n"),
+        "synthetic_only_removed": ("MISSING", text.replace("合成の data だけ", "data")),
+        "schema_changed": ("MISSING", text.replace("`home_snapshot:0.2-synthetic`", "`home_snapshot:0.2`")),  # schema ・domain ・版
+        "domain_with_product_name": ("PATTERN", text.replace("| digest の domain | `home.snapshot.v0.2`", "| digest の domain | `rashinban.home.snapshot.v0.2`")),
+        "domain_version_changed": ("PATTERN", text.replace("`home.client.v0.2`（投影）", "`home.client.v0.3`（投影）")),
+        "silent_version_reinterpretation": ("SECTION", text.replace("版を黙って読み替えない。", "古い版は新しい版として読む。")),
+        "closed_keys_removed": ("SECTION", text.replace("各 object の key の集合は閉じている", "各 object は未知の key を持ってよい")),
+        "section_heading_changed": ("SECTION", text.replace("## 6. 時刻と PIT", "## 6. 時刻")),
+        "private_path": ("PATTERN", text + "\n" + "Z:" + "\\p99_a9_private\n"),                     # private な形
+        "private_timestamp": ("PATTERN", text + "\n" + "2099-01-05" + "T07:30\n"),
+        "private_bare_number": ("PATTERN", text + "\n値は " + "12345" + "\n"),
+        "private_identifier": ("PATTERN", text + "\np9wat_0123\n"),
+        "external_link": ("BANNED", text + "\nhttps://example.invalid/news\n"),
+        "signed_claim": ("SIGNED", text + "\nThe snapshot is signed.\n"),
+        "certainty_in_display_text": ("CERTAINTY", text + "\n- 表示の文の例: 「架空の指数は確実に上がる」。\n"),        # 根拠の無い確信（表示の文だけ）
+        "must_in_display_template": ("CERTAINTY", text + "\n- template: 「架空の theme は必ず反発する」。\n"),
+        "certainty_beside_uncertainty": ("CERTAINTY", text + "\n- 表示の文の例: 「不確実ではなく確実」。\n"),
+        "certainty_rule_removed": ("SECTION", text.replace("根拠の無い確信の語（市場の見通しの表示の文 ・template だけ）: 確実 ・必ず。", "")),
+        "uncertainty_word_banned": ("SECTION", text.replace("否定の 不確実 ・不確かさ は使ってよい。", "不確実 も使わない。")),
+        "market_word_in_prose_still_rejected": ("FORBIDDEN_WORD", text + "\n- 本記録は注目銘柄を扱わない。\n"),
+        "superseded_only_available": ("RENDER_BEHAVIOR", text.replace("  - 表示できる entry（CURRENT ・STALE ・AMBIGUOUS）が無ければ UNAVAILABLE\n", "")),  # SUPERSEDED だけの項目
+        "superseded_counted_displayable": ("RENDER_BEHAVIOR", text.replace("表示できる entry（CURRENT ・STALE ・AMBIGUOUS）", "表示できる entry（CURRENT ・STALE ・AMBIGUOUS ・SUPERSEDED）")),
+        "unavailable_after_partial": ("RENDER_BEHAVIOR", text.replace("  - 表示できる entry（CURRENT ・STALE ・AMBIGUOUS）が無ければ UNAVAILABLE\n  - MISSING ・STALE ・UNKNOWN ・UNCERTAIN ・AMBIGUOUS の entry が 1 つでも在れば PARTIAL\n", "  - MISSING ・STALE ・UNKNOWN ・UNCERTAIN ・AMBIGUOUS の entry が 1 つでも在れば PARTIAL\n  - 表示できる entry（CURRENT ・STALE ・AMBIGUOUS）が無ければ UNAVAILABLE\n")),
+        "render_uses_entry_state": ("RENDER_BEHAVIOR", text.replace("が無ければ UNAVAILABLE", "が無ければ MISSING")),
+        "render_rule_unparseable": ("RENDER_BEHAVIOR", text.replace("  - 表示できる entry（CURRENT ・STALE ・AMBIGUOUS）が無ければ UNAVAILABLE\n", "  - 表示できる entry が少なければ UNAVAILABLE\n")),
+        "stale_counted_available": ("RENDER_BEHAVIOR", text.replace("  - MISSING ・STALE ・UNKNOWN ・UNCERTAIN ・AMBIGUOUS の entry が", "  - MISSING ・UNKNOWN ・UNCERTAIN ・AMBIGUOUS の entry が")),
+        "fail_closed_not_first": ("RENDER_BEHAVIOR", text.replace("  - snapshot が FAILED_CLOSED なら SUPPRESSED\n  - entry が 0 件なら EMPTY\n", "  - entry が 0 件なら EMPTY\n  - snapshot が FAILED_CLOSED なら SUPPRESSED\n")),
+        "superseded_display_changed": ("STATES", text.replace(row["SUPERSEDED"], row["SUPERSEDED"].replace("| 出さない |", "| 出す |"))),
+        "successor_invented": ("SECTION", text.replace("後継を作らない ・推測しない ・前の版の値で埋めない。", "後継が無ければ前の版を後継として示す。")),
+        "missing_successor_not_explicit": ("SECTION", text.replace("後継の entry を MISSING（理由 `SUCCESSOR_MISSING`）として置く。", "後継の entry を省く。")),
+        "old_outlook_substitutes": ("SECTION", text.replace("前の版を代わりに示さない（前の版は lineage と項目 5 でだけ辿れる）。", "前の版を代わりに示す。")),
+        "pit_supersession_backdated": ("SECTION", text.replace("後で出た後継で過去の snapshot の entry を SUPERSEDED にしない（PIT の再構成を保つ）。", "後の版が出れば過去の snapshot の entry も SUPERSEDED にする。")),
+        "successor_cycle_allowed": ("SECTION", text.replace("後継の鎖は循環しない。\n", "後継の鎖は循環してよい。\n")),
+        "successor_integrity_not_fail_closed": ("SECTION", text.replace("後継の record が壊れていれば INTEGRITY_FAILURE（snapshot 全体を fail closed）。", "後継の record が壊れていれば前の版を出す。")),
+        "nondeterministic_render": ("SECTION", text.replace("時計 ・entry の並び ・端末に依らない（決定論）", "端末の時計で決める")),
+        "s0_authority_list_shrunk": ("SECTION", text.replace("・条件の判定 ・確信の意味 ・基本と代替の決定。", "・条件の判定。")),   # S0-D1 の権限
+        "h0_validates_transitions": ("SECTION", text.replace("H0 はこれらを参照として運ぶだけで、版の遷移が正しいかを検証 ・確定しない。", "H0 は版の遷移が正しいかを検証する。")),
+        "issued_at_rule_overreaches": ("SECTION", text.replace("（時刻の適格だけ。版の遷移が正しいかは PROVISIONAL(S0)）", "（版の遷移の正しさも H0 が決める）")),
+        "confidence_scale_defined": ("S0_VOCABULARY", text + "\n- 確信は HIGH ／ MEDIUM ／ LOW の 3 段。\n"),
+        "condition_state_defined": ("S0_VOCABULARY", text + "\n- 条件の判定は PENDING から始める。\n"),
+        "base_alternative_decided_by_h0": ("S0_VOCABULARY", text + "\n- 基本の scenario は BASE の印で H0 が選ぶ。\n"),
+    }
+    for name, (rule, candidate) in mutated.items():
+        assert candidate != text, name
+        assert rule in {violation[0] for violation in _h0_record_violations(candidate)}, name     # 該当の規則が実際に拒む

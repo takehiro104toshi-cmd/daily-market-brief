@@ -4,6 +4,33 @@
 「追加／改善／修正」を追記していく。本ファイルの記録は今回の更新から開始する
 （それ以前の機能一覧・構成は `README.md` を参照）。
 
+## v6.38 (2026-10-21) — H0-D1 Home information contract（文書 ・registry ・guard だけ ・実装を承認しない）
+
+監督が設計の水準で固定した H0 ／ M0 ／ S0 の決定と Note A ／ B に基づき、Home の情報の契約を守られた文書だけの記録
+`docs/databank/H0_D1_HOME_INFORMATION_CONTRACT.md` として残した（合成の data だけ ・実の data への接続は無い）。6 つの項目（市場の見通し ・
+市場の snapshot ・72 時間以内の予定 ・重要な news（最大 3 件）・前の見通しからの変化 ・関連する会社と theme）の固定の順と上限、製品の名前を
+含まない digest の domain（`home.snapshot.v0.2` ・`home.client.v0.2`。schema の id は `home_snapshot:0.2-synthetic` ・
+`home_client:0.2-synthetic`）と版の移行の規則、entry ごとの 8 つの状態（元の状態を保ち、項目の表示は `h0_render_policy:0.1` で別に導く ・
+INTEGRITY_FAILURE は snapshot 全体を fail closed）、表示の集約（表示できる entry の無い項目は UNAVAILABLE ・SUPERSEDED だけの項目は
+AVAILABLE にならない ・古い版は現在の見通しの代わりにならない ・後継の record が無ければ後継の entry を MISSING とし、`SUCCESSOR_MISSING` は
+理由の code であって 9 つ目の状態ではない ・後継を作らない）、P8 の時刻の精度 ・`known_at` と `acquired_at` の適格 ・将来の観察の漏えいの
+禁止 ・build の時刻を identity に含めないこと、news の選定の理由と出所（新しい順 ・一律の時間の窓は定めない ・選定の algorithm は延期）、
+Note A の主張の分類、export の等級、根拠の無い確信の語（確実 ・必ず）を市場の見通しの表示の文 ・template だけで禁じる規則（契約の義務の
+文は対象外 ・不確実 は許す）、S0-D1 の権限（scenario の意味 ・版の遷移が正しいか ・条件の判定 ・確信の意味 ・基本と代替の決定。H0 は
+見通しの identity ・`issued_at` ・`supersedes` の参照を運ぶだけ）と PROVISIONAL(S0) の印を記録する。boundary の guard は項目 ・状態 ・
+優先の順 ・表示の集約（全ての状態の組で振る舞いを評価）・節ごとの必須の記述 ・§14 の外の禁止の欄 ／ 語 ・表示の文の確信の語 ・S0 の語彙を
+pin し、4 の正の control（契約の義務の文 ・不確実）が受け入れられ、93 の負の control がそれぞれ該当の規則で実際に拒まれることを確かめる。
+文書 ・registry ・guard の範囲だけの変更であり、product の機能 ・runtime の振る舞い ・認可 ・計画の記録 ・roadmap は変わらない。本記録は
+実装を承認しない。pytest ・commit ・H1 ・M0-D1 ・S0-D1 ・UI0 は別の承認まで HOLD。
+
+追加
+・`docs/databank/H0_D1_HOME_INFORMATION_CONTRACT.md`
+改善
+・`tests/intelligence/phase13_runtime_registry.py`（`PHASE13_DOCS` の最後に H0-D1 の記録を登録 ・runtime ・認可 ・importer の許可は不変）
+・`tests/intelligence/test_market_memory_boundary.py`（文書の tuple ・registry の digest ・A5 の 2 つの記録の位置の assert を相対の順に ・H0-D1 の guard と正 ／ 負の control の 2 つの test）
+修正
+・なし
+
 ## v6.37 (2026-10-21) — Phase 13 P13-A5-T Windows characterization record（文書 ・registry ・guard だけ ・実行を承認しない）
 
 監督が受理した P13-A5 の Windows の特性の記録（T-02 ・T-03）を、守られた文書だけの記録
