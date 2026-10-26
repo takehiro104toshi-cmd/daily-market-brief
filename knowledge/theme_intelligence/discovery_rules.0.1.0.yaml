@@ -1,0 +1,155 @@
+# =============================================================================
+# Discovery ruleset — versioned knowledge snapshot（Phase 6 / P6-B4C）
+# =============================================================================
+# - VERSIONED KNOWLEDGE（B4B taxonomy / entity と同じ authority class）。Foundation authority・evidence authority・
+#   proposal authority・market rule・Compass DNA のいずれでもない。公開後は不変。変更は次 version の別 file。
+# - ruleset は taxonomy_version と catalog_version を正確に pin する（不一致は fail closed。D-B4-9 / §23）。
+# - rule は candidate generation rule。rule hit ≠ Theme ≠ 機構の証明 ≠ evidence の成立。Discovery は提案するだけで、
+#   Theme root を作らず、decision を変えず、score / rank を持たない。
+# - THEME_CANDIDATE の機構（driver → channel → domain → observable consequence）は本 file の template（人間 authoring の
+#   因果仮説）だけが供給する。keyword / alias は trigger であって機構ではない。certainty は HYPOTHESIZED_MECHANISM 固定。
+# - 内容方針: 本 file の rule はすべて本 gate で新規に authoring した generic な構造化 rule。historical rule 原文・named chain・
+#   Compass 由来の文章・顧客 watchlist・銘柄推奨・受益企業連鎖は含めない。MVP の目的は機構の証明であり coverage ではない。
+schema_version: "theme_discovery_rules:0.1.0"
+ruleset_version: "0.1.0"
+published_at: "2026-09-20T02:00:00+00:00"
+content_digest: "95f56e5b701830f7ce1efbe667b8a94df2c087e21bff5321993396ce8183e876"
+taxonomy_version: "0.2.0"
+catalog_version: "0.2.0"
+rules:
+  # ---- L1 entity-based EVIDENCE_CANDIDATE（構造化 entity ref、または限定 text 面の safe alias で成立） ----
+  - rule_id: boj_context_evidence
+    rule_version: "0.1.0"
+    status: ACTIVE
+    input_kinds: [NEWS_ITEM, SOURCE_DOCUMENT]
+    entity_refs: ["central_bank:boj"]
+    predicate: {kind: ENTITY_PRESENT, entity_id: "central_bank:boj"}
+    output_type: EVIDENCE_CANDIDATE
+    proposed_role: CONTEXT
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "generic context evidence rule for a public institution entity; no target root"}
+  # ---- L2 alias-only EVIDENCE_CANDIDATE（taxonomy alias の正規化一致だけで成立。THEME_CANDIDATE にはなれない） ----
+  - rule_id: data_center_alias_evidence
+    rule_version: "0.1.0"
+    status: ACTIVE
+    input_kinds: [NEWS_ITEM, SOURCE_DOCUMENT]
+    taxonomy_refs: [data_center]
+    predicate: {kind: TAXONOMY_SIGNAL, slug: data_center}
+    output_type: EVIDENCE_CANDIDATE
+    proposed_role: CONTEXT
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "generic taxonomy-signal context evidence rule (L2 only)"}
+  # ---- L1 structured EVIDENCE_CANDIDATE（Observation の entity と source kind の完全一致） ----
+  - rule_id: nikkei_series_observation_evidence
+    rule_version: "0.1.0"
+    status: ACTIVE
+    input_kinds: [OBSERVATION]
+    entity_refs: ["index:nikkei225"]
+    predicate:
+      kind: ALL
+      children:
+        - {kind: ENTITY_PRESENT, entity_id: "index:nikkei225"}
+        - {kind: SOURCE_KIND, source_kind: MARKET_SERIES}
+    output_type: EVIDENCE_CANDIDATE
+    proposed_role: SUPPORTS
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "generic market-series observation evidence rule for a public index"}
+  # ---- L1 FACT_TYPE EVIDENCE_CANDIDATE ----
+  - rule_id: policy_rate_fact_evidence
+    rule_version: "0.1.0"
+    status: ACTIVE
+    input_kinds: [FACT]
+    predicate: {kind: FACT_TYPE, fact_type: "policy_rate_decision"}
+    output_type: EVIDENCE_CANDIDATE
+    proposed_role: SUPPORTS
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "generic fact-type evidence rule; the fact layer declares the type"}
+  # ---- L1 structured THEME_CANDIDATE（entity ref が L1、taxonomy alias が L2。negative predicate と MIN_DISTINCT 付き） ----
+  - rule_id: jp_data_center_power_demand_theme
+    rule_version: "0.1.0"
+    status: ACTIVE
+    input_kinds: [NEWS_ITEM, SOURCE_DOCUMENT]
+    taxonomy_refs: [data_center, nuclear, power]
+    entity_refs: ["country:jp"]
+    predicate:
+      kind: ALL
+      children:
+        - {kind: ENTITY_PRESENT, entity_id: "country:jp"}
+        - {kind: TAXONOMY_SIGNAL, slug: data_center}
+        - {kind: TAXONOMY_SIGNAL, slug: power}
+    negative_predicates:
+      - {kind: TAXONOMY_SIGNAL, slug: nuclear}
+    aggregate_predicates:
+      - {kind: MIN_DISTINCT, dimension: INPUT_ID, min_count: 2}
+    output_type: THEME_CANDIDATE
+    proposed_role: SUPPORTS
+    subject_template: {normalized_subject: "japan electricity demand from data center construction", typed_reference: "${entity}"}
+    mechanism_template:
+      drivers:
+        - {category: DEMAND_SHIFT, normalized_statement: "data center construction raises electricity demand"}
+      channels:
+        - {category: VOLUME_DEMAND, normalized_statement: "higher electricity volume is demanded from generators and grid operators"}
+      domains:
+        - {category: REGION, typed_reference: "${entity}"}
+      consequences:
+        - {category: MACRO_STATISTIC, observable_target: "japan electricity demand statistics", expected_change: INCREASE,
+           normalized_statement: "electricity demand statistics rise relative to trend"}
+    scope_template:
+      - {dimension: REGION, value: "${entity}"}
+      - {dimension: PERIOD_FRAME, value: "multi_year"}
+    invalidation_template:
+      - {condition_key: dc_pipeline_contraction, normalized_statement: "announced data center construction pipeline contracts materially",
+         observable_target: "data center construction pipeline", expected_change: DECREASE}
+    limitations_template:
+      - {category: SCOPE_LIMIT, normalized_statement: "single country scope; other electricity demand drivers are not isolated"}
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "generic structured theme rule to prove template assembly, negative predicate and MIN_DISTINCT"}
+  # ---- 同じ template を持つ別 rule（別 trigger）。同じ入力集合に成立すれば同一 proposal_id に収束する ----
+  - rule_id: jp_grid_power_demand_theme
+    rule_version: "0.1.0"
+    status: ACTIVE
+    input_kinds: [NEWS_ITEM, SOURCE_DOCUMENT]
+    taxonomy_refs: [grid, power]
+    entity_refs: ["country:jp"]
+    predicate:
+      kind: ALL
+      children:
+        - {kind: ENTITY_PRESENT, entity_id: "country:jp"}
+        - {kind: TAXONOMY_SIGNAL, slug: grid}
+        - {kind: TAXONOMY_SIGNAL, slug: power}
+    aggregate_predicates:
+      - {kind: MIN_DISTINCT, dimension: INPUT_ID, min_count: 2}
+    output_type: THEME_CANDIDATE
+    proposed_role: SUPPORTS
+    subject_template: {normalized_subject: "japan electricity demand from data center construction", typed_reference: "${entity}"}
+    mechanism_template:
+      drivers:
+        - {category: DEMAND_SHIFT, normalized_statement: "data center construction raises electricity demand"}
+      channels:
+        - {category: VOLUME_DEMAND, normalized_statement: "higher electricity volume is demanded from generators and grid operators"}
+      domains:
+        - {category: REGION, typed_reference: "${entity}"}
+      consequences:
+        - {category: MACRO_STATISTIC, observable_target: "japan electricity demand statistics", expected_change: INCREASE,
+           normalized_statement: "electricity demand statistics rise relative to trend"}
+    scope_template:
+      - {dimension: REGION, value: "${entity}"}
+      - {dimension: PERIOD_FRAME, value: "multi_year"}
+    invalidation_template:
+      - {condition_key: dc_pipeline_contraction, normalized_statement: "announced data center construction pipeline contracts materially",
+         observable_target: "data center construction pipeline", expected_change: DECREASE}
+    limitations_template:
+      - {category: SCOPE_LIMIT, normalized_statement: "single country scope; other electricity demand drivers are not isolated"}
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "same causal template as jp_data_center_power_demand_theme with a grid trigger; proves convergence"}
+  # ---- DEPRECATED rule（評価されない。deprecated taxonomy slug の参照は DEPRECATED rule にのみ許される） ----
+  - rule_id: legacy_supply_chain_evidence
+    rule_version: "0.1.0"
+    status: DEPRECATED
+    input_kinds: [NEWS_ITEM]
+    taxonomy_refs: [supply_chain_theme]
+    predicate: {kind: TAXONOMY_SIGNAL, slug: supply_chain_theme}
+    output_type: EVIDENCE_CANDIDATE
+    proposed_role: CONTEXT
+    provenance: {origin: SUPERVISOR_DECISION, approver_ref: "role:supervisor",
+                 reason: "deprecated example kept loadable to prove that deprecated rules are skipped"}

@@ -1,0 +1,631 @@
+"""P12-A1 〜 A5 — Phase 12（自動化）の境界の guard。
+
+- registry の完全一致 ・P12_BASE 以後の面は登録した P12 の追加だけ ・凍結の P7 〜 P11 の test の差分は宣言した登録の行だけ。
+- A1 の 11 file は `P12_A1` の commit と、A2 の 10 file は `P12_A2` の commit と object 一致。A2 ／ A3 の file が足して使う stdlib（git の読み取り ・private root の file ・loopback の
+  probe ・network の拒否の guard）と凍結の P11 の read の面の import は、file ごとの完全一致で pin する。他は A1 と同じ純粋さ:
+  時計 ・環境変数の値 ・乱数 ・network ・資格情報 ・free-form な payload ・投資の語彙は無い。CLI ・`__main__` も無い。
+- 凍結の Phase 4 〜 11 の runtime は anchor と object 一致（P8 ・P9 ・P10 ・P11）・P12_BASE から不変（src 全体）。
+"""
+from __future__ import annotations
+
+import ast
+import re
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from tests.intelligence.phase7_runtime_registry import PHASE7_RUNTIME
+from tests.intelligence.phase8_runtime_registry import P8_B5C, PHASE8_RUNTIME
+from tests.intelligence.phase9_runtime_registry import P9_A5, PHASE9_RUNTIME
+from tests.intelligence.phase10_runtime_registry import P10_A4, PHASE10_RUNTIME
+from tests.intelligence.phase11_runtime_registry import P11_A5, PHASE11_RUNTIME
+from tests.intelligence.phase12_runtime_registry import (FORBIDDEN_P12_IMPORT_PARTS, P12_5_DESIGN_ANCHOR, P12_A1, P12_A2, P12_A3, P12_A4,
+                                                         P12_A6, P12_BASE, P12_VALIDATED_TREE,
+                                                         PHASE12_A1_RUNTIME, PHASE12_A2_RUNTIME, PHASE12_A3_REOPENED_IN_A4,
+                                                         PHASE12_A3_RUNTIME, PHASE12_A4_REOPENED_IN_A5, PHASE12_A4_REOPENED_IN_A6, PHASE12_A4_RUNTIME,
+                                                         PHASE12_A5_RUNTIME,
+                                                         PHASE12_5_DOCS, PHASE12_5_FROZEN_CONTRACTS, PHASE12_DOCS, PHASE12_PACKAGE, PHASE12_RUNTIME,
+                                                         PHASE12_TEST_REGISTRATION, PHASE12_TESTS,
+                                                         SANCTIONED_P12_EXTRA_STDLIB, SANCTIONED_P12_MODULES,
+                                                         SANCTIONED_P12_P11_IMPORTERS, SANCTIONED_P12_STDLIB,
+                                                         is_phase12_addition, only_phase12_registration)
+from tests.intelligence.phase13_runtime_registry import (P13_BASE, PHASE13_DOCS, PHASE13_PACKAGE, PHASE13_RUNTIME, PHASE13_TESTS,
+                                                         is_phase13_addition)   # P13-A0 の登録（空の runtime ・importer の許可は無い）
+from tests.intelligence.test_p43b2c_production_bundle import runtime_closure
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+PACKAGE_DIR = REPO_ROOT / PHASE12_PACKAGE
+CONTRACT_DOC = "docs/databank/PHASE12_A1_SCHEDULE_RUN_STATE_MODEL.md"
+A2_CONTRACT_DOC = "docs/databank/PHASE12_A2_DETERMINISTIC_ORCHESTRATOR.md"
+A3_CONTRACT_DOC = "docs/databank/PHASE12_A3_OPERATIONAL_COMMIT_LAYER.md"
+A4_CONTRACT_DOC = "docs/databank/PHASE12_A4_LOCK_RETRY_RECOVERY.md"
+A5_CONTRACT_DOC = "docs/databank/PHASE12_A5_WINDOWS_SCHEDULER.md"
+P11_FREEZE_DOC = "docs/databank/PHASE11_FINAL_FREEZE.md"
+FREEZE_DOC = "docs/databank/PHASE12_FINAL_FREEZE.md"
+P12_5_CONTRACT_DOC = "docs/databank/PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md"   # P12.5-A0: 設計だけの契約
+P12_5_A2_CONTRACT_DOC = "docs/databank/PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md"   # P12.5-A2: 能力の契約（設計だけ）
+P12_5_CLOSEOUT_DOC = "docs/databank/PHASE12_5_DESIGN_CLOSEOUT.md"                    # P12.5-A5: 設計の closeout の記録
+P13_PACKAGE_DIR = REPO_ROOT / PHASE13_PACKAGE                                           # P13-A0: 登録が空の間は存在してはならない
+#: 凍結の記録に在ってはならない private な値の形（A1 の形 ＋ Windows の SID ・user profile の path ・validation の slot の時刻）
+FREEZE_DOC_PRIVATE_PATTERNS = (r"S-1-5-\d", r"C:\\Users", r"\\Users\\", r"\b[0-2]\d:[0-5]\d\b", r"JQUANTS_", r"human:")
+FROZEN_SURFACE = ("knowledge", "config.yaml", ".github", "scripts", "docs/pages", "main.py", "requirements.txt",
+                  "pyproject.toml", "cloudflare", "notifiers", "src/report")
+#: runtime が呼んではならない名前（file ・OS ・時計 ・環境 ・process ・socket ・乱数 ・出力）
+FORBIDDEN_NAMES = {"open", "write", "write_text", "write_bytes", "read_text", "read_bytes", "mkdir", "unlink", "remove",
+                   "rename", "environ", "getenv", "now", "today", "utcnow", "fromtimestamp", "utcfromtimestamp", "print",
+                   "input", "sleep", "eval", "exec", "setattr", "random", "urandom", "uuid4", "system", "popen",
+                   "Popen", "check_output", "socket", "connect", "bind", "listen", "urlopen", "Thread", "Timer",
+                   "fork", "spawn", "getcwd", "chdir", "stat", "glob", "rglob", "iterdir", "exists"}
+#: identifier の語（camel ／ snake を割った小文字）で禁じる語彙（投資 ・LLM ・時計の相対語 ・scheduler の実装語）
+FORBIDDEN_WORDS = {"rank", "ranking", "score", "scoring", "recommend", "recommendation", "buy", "sell", "portfolio",
+                   "allocation", "conviction", "priority", "weight", "rating", "position", "trade", "urgency",
+                   "confidence", "return", "returns", "price", "holding", "holdings", "rebalance", "suitability", "llm",
+                   "prompt", "latest", "current", "now", "cron", "subprocess", "socket", "thread", "push", "notify",
+                   "credential", "secret", "apikey", "token", "jquants", "path", "filename", "payload", "message"}
+#: 文書 ・直列化に在ってはならない private な値の形（Windows の path ・時刻つきの瞬間 ・5 桁の code ・id の接頭辞 ・著者）
+PRIVATE_PATTERNS = (r"[A-Za-z]:\\", r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", r"\b\d{5}\b", r"p9wat_", r"p9ths_", r"p8iss_", r"p10prf_",
+                    r"p10att_", r"human:", r"x-api-key", r"api\.jquants")
+STATIC_STRING_BANS = ("x-api-key", "api.jquants.com", "JQUANTS", "config.yaml", "://", "D:\\", "0.0.0.0", "127.0.0.1",
+                      "__main__", "argparse", "sys.argv", "schtasks", "Task Scheduler", "datetime.now", "utcnow", "os.environ")
+_P12 = PHASE12_PACKAGE
+#: A2 の file ごとの許し（理由を伴う完全一致。A1 の file には無い）
+STRING_ALLOWANCES = {f"{_P12}/network_deny.py": {"127.0.0.1"},                       # loopback の allowlist（bind ・接続先ではない）
+                     f"{_P12}/preconditions.py": {"JQUANTS"},                         # 予約した資格情報の変数の名前（値は見ない）
+                     f"{_P12}/server_readiness.py": {"://"},                          # 自分の loopback の origin の形だけ
+                     f"{_P12}/run_cli.py": {"__main__", "argparse", "os.environ", "datetime.now", "Task Scheduler"},   # CLI（telemetry の時計だけ）
+                     f"{_P12}/scheduled_run.py": {"Task Scheduler"}, f"{_P12}/scheduler_install.py": {"Task Scheduler"},
+                     f"{_P12}/runtime_pin.py": {"Task Scheduler"}, f"{_P12}/skip_transaction.py": {"Task Scheduler"},
+                     f"{_P12}/task_definition.py": {"Task Scheduler", "://"},            # A5: XML の名前空間の URI だけ
+                     f"{_P12}/task_scheduler_adapter.py": {"Task Scheduler", "schtasks"}}   # A5: 狭い adapter だけが schtasks を呼ぶ
+NAME_ALLOWANCES = {f"{_P12}/finalization.py": {"open", "write", "read_bytes", "mkdir", "rename", "exists"},   # .partial の中だけ
+                   f"{_P12}/network_deny.py": {"socket", "connect", "setattr"},      # 拒否の guard の差し替え（出る時に戻す）
+                   f"{_P12}/preconditions.py": {"exists", "iterdir", "read_bytes"},  # root が在って読めるか ・P11 の blob の再計算
+                   f"{_P12}/source_manifests.py": {"read_bytes", "rglob"},            # 読み取り専用の manifest
+                   f"{_P12}/atomic_files.py": {"open", "write", "read_bytes", "mkdir", "exists", "unlink"},   # 原子的な置換 ・追記
+                   f"{_P12}/crash_classification.py": {"exists"},                     # 証拠を読むだけ
+                   f"{_P12}/run_transaction.py": {"exists"},                          # final ／ .partial の有無
+                   f"{_P12}/run_cli.py": {"open", "write", "now", "environ"},        # 入力 file ・REPORT の出力 ・telemetry の時計 ・環境の有無の写し
+                   f"{_P12}/operational_lock.py": {"open", "write", "unlink", "exists", "mkdir"},   # O_CREAT|O_EXCL の lock ・解放 ・stale/
+                   f"{_P12}/process_probe.py": {"open", "system", "run"},            # /proc の読み ・tasklist ／ CIM の問い合わせ
+                   f"{_P12}/ledger_commit.py": {"sleep"},                             # 短い ledger lock の有界の待ち
+                   f"{_P12}/recovery.py": {"exists", "rename", "read_bytes", "read_text", "iterdir"},   # .partial → .crashed ・artifact の照合
+                   f"{_P12}/scheduler_install.py": {"open", "write"},                 # private な scheduler/ の XML
+                   f"{_P12}/task_scheduler_adapter.py": {"read_bytes"}}               # test double が XML を読む
+WORD_ALLOWANCES = {f"{_P12}/finalization.py": {"path"}, f"{_P12}/network_deny.py": {"socket"},
+                   f"{_P12}/preconditions.py": {"path", "subprocess", "credential"}, f"{_P12}/server_readiness.py": {"thread"},
+                   f"{_P12}/source_manifests.py": {"path"}, f"{_P12}/atomic_files.py": {"path"},
+                   f"{_P12}/calendar_authority.py": {"path"}, f"{_P12}/crash_classification.py": {"path"},
+                   f"{_P12}/ledger_store.py": {"path"}, f"{_P12}/schedule_authority.py": {"path"}, f"{_P12}/status_store.py": {"path"},
+                   f"{_P12}/run_transaction.py": {"credential"}, f"{_P12}/run_cli.py": {"credential", "now"},
+                   f"{_P12}/operational_lock.py": {"path"}, f"{_P12}/process_probe.py": {"subprocess"},
+                   f"{_P12}/recovery.py": {"path"}, f"{_P12}/cancel_authority.py": {"path"},
+                   f"{_P12}/runtime_pin.py": {"path", "subprocess"}, f"{_P12}/scheduled_run.py": {"credential"},
+                   f"{_P12}/scheduler_install.py": {"path"}, f"{_P12}/task_definition.py": {"path"},
+                   f"{_P12}/task_scheduler_adapter.py": {"path", "subprocess"}}
+BROAD_EXCEPT_ALLOWED = {f"{_P12}/run_executor.py": 1}                                # 想定外 → STEP_FAILED:UNEXPECTED だけ
+MAIN_ENTRY_ALLOWED = {f"{_P12}/run_cli.py"}                                           # `python -m` の入口だけ
+
+
+def _git(*args: str) -> str:
+    return subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, encoding="utf-8", errors="strict",
+                          check=True).stdout
+
+
+def _changes(*args: str) -> set:
+    return {tuple(line.split("\t")) for line in _git("diff", *args).splitlines()}
+
+
+def _assert_src_unchanged_except_registered_p13_additions() -> None:
+    """P12 A-track v1 の anchor 以後、src の差は登録済みの Phase 13 の追加（A ・P13-A0 では空）だけ。修正 ・未登録の追加は失敗。"""
+    assert _changes("--name-status", P12_A6, "HEAD", "--", "src") <= {("A", p) for p in PHASE13_RUNTIME}
+    assert _changes("--cached", "--name-status", P12_A6, "--", "src") <= {("A", p) for p in PHASE13_RUNTIME}
+    pending = [line for line in _git("status", "--porcelain", "--", "src").splitlines()
+               if not is_phase13_addition(line[:2].strip(), line[3:])]
+    assert pending == []
+
+
+def _blob_ids(anchor: str, paths) -> tuple:
+    anchored = tuple(_git("rev-parse", *(f"{anchor}:{path}" for path in paths)).split())
+    current = tuple(_git("hash-object", "--", *paths).split())
+    return anchored, current
+
+
+def _imports(path: Path):
+    relative, absolute = {}, set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.ImportFrom) and node.level:
+            relative.setdefault("." * node.level + (node.module or ""), set()).update(a.name for a in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            absolute.add(node.module)
+        elif isinstance(node, ast.Import):
+            absolute.update(a.name for a in node.names)
+    return relative, absolute
+
+
+# ================================================ registry ・面 ・凍結の test の登録
+
+
+def test_p12_a1_the_registry_is_exact_and_disjoint_from_earlier_phases() -> None:
+    assert P12_BASE == "080d42aa3dad8bfc5ef82400beb6e2c62a873126"
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_BASE, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert PHASE12_RUNTIME == tuple(sorted(PHASE12_A1_RUNTIME + PHASE12_A2_RUNTIME + PHASE12_A3_RUNTIME + PHASE12_A4_RUNTIME
+                                           + PHASE12_A5_RUNTIME))
+    assert len(PHASE12_RUNTIME) == 43 and len(PHASE12_A1_RUNTIME) == 11 and len(PHASE12_A2_RUNTIME) == 10
+    assert len(PHASE12_A3_RUNTIME) == 9 and len(PHASE12_A4_RUNTIME) == 7 and len(PHASE12_A5_RUNTIME) == 6
+    assert len(set(PHASE12_A1_RUNTIME) | set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)
+               | set(PHASE12_A5_RUNTIME)) == 43
+    assert P12_A1 == "dd922c3eebd67de2ac273ba66e82e493d814e701" and P12_A2 == "bd0007d3b6684a1e4640a723010e197432939f95"
+    assert P12_A3 == "66139db86e06130d7504a279b3d5ee820fd76b24" and set(PHASE12_A3_REOPENED_IN_A4) <= set(PHASE12_A3_RUNTIME)
+    assert P12_A4 == "dcad07351201ecab44d91acc98740b8833bc3996" and set(PHASE12_A4_REOPENED_IN_A5) <= set(PHASE12_A3_REOPENED_IN_A4)
+    a3_pinned = tuple(p for p in PHASE12_A3_RUNTIME if p not in PHASE12_A3_REOPENED_IN_A4)
+    assert set(PHASE12_A4_REOPENED_IN_A6) <= set(PHASE12_A4_RUNTIME) and not set(PHASE12_A4_REOPENED_IN_A6) & set(PHASE12_A4_REOPENED_IN_A5)
+    a4_pinned = tuple(p for p in PHASE12_A4_RUNTIME + PHASE12_A3_REOPENED_IN_A4
+                      if p not in PHASE12_A4_REOPENED_IN_A5 and p not in PHASE12_A4_REOPENED_IN_A6)
+    for commit, pinned in ((P12_A1, PHASE12_A1_RUNTIME), (P12_A2, PHASE12_A2_RUNTIME), (P12_A3, a3_pinned), (P12_A4, a4_pinned)):
+        assert subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"], cwd=REPO_ROOT).returncode == 0
+        assert _git("diff", "--name-status", commit, "HEAD", "--", *pinned) == ""          # A1 ／ A2 ／ A3 の runtime はその commit のまま
+        assert _git("diff", "--cached", "--name-status", commit, "--", *pinned) == ""
+        assert _git("status", "--porcelain", "--", *pinned) == ""
+    assert set(SANCTIONED_P12_P11_IMPORTERS) <= set(PHASE12_A2_RUNTIME)
+    assert set(SANCTIONED_P12_EXTRA_STDLIB) <= (set(PHASE12_A2_RUNTIME) | set(PHASE12_A3_RUNTIME) | set(PHASE12_A4_RUNTIME)
+                                                | set(PHASE12_A5_RUNTIME))
+    assert _git("diff", "--cached", "--name-status", P12_A3, "--", *PHASE12_A3_REOPENED_IN_A4) != ""   # 再開は実在する（登録どおり）
+    assert _git("diff", "--cached", "--name-status", P12_A4, "--", *PHASE12_A4_REOPENED_IN_A5) != ""
+    assert _git("diff", "--cached", "--name-status", P12_A4, "--", *PHASE12_A4_REOPENED_IN_A6) != ""   # A6: lock の writer の O_BINARY
+    assert all(p.startswith(PHASE12_PACKAGE + "/") and p.endswith(".py") for p in PHASE12_RUNTIME)
+    assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
+    for path in (*PHASE12_RUNTIME, *PHASE12_TESTS, *PHASE12_DOCS):
+        assert (REPO_ROOT / path).is_file(), path
+    assert not set(PHASE12_RUNTIME) & (set(PHASE11_RUNTIME) | set(PHASE10_RUNTIME) | set(PHASE9_RUNTIME)
+                                       | set(PHASE8_RUNTIME) | set(PHASE7_RUNTIME))
+    assert not any(_git("ls-tree", P12_BASE, "--", p).strip() for p in (*PHASE12_RUNTIME, *PHASE12_TESTS, *PHASE12_DOCS))
+    assert set(SANCTIONED_P12_MODULES) == set(PHASE12_RUNTIME)
+    assert is_phase12_addition("A", PHASE12_RUNTIME[0]) and is_phase12_addition("??", PHASE12_RUNTIME[0])
+    assert not is_phase12_addition("M", PHASE12_RUNTIME[0])                                # A1 の runtime の修正は受けない
+    assert not is_phase12_addition("A", f"{PHASE12_PACKAGE}/other.py") and not is_phase12_addition("A", PHASE11_RUNTIME[0])
+
+
+def test_p12_a1_since_the_base_only_registered_phase12_files_and_declared_registration_changed() -> None:
+    assert _changes("--cached", "--name-status", P12_BASE, "--", "src") == {("A", p) for p in PHASE12_RUNTIME + PHASE13_RUNTIME}
+    assert _git("diff", "--cached", "--name-status", P12_BASE, "--", *FROZEN_SURFACE) == ""
+    assert _changes("--cached", "--name-status", P12_BASE, "--", "docs") <= {("A", p) for p in PHASE12_DOCS + PHASE13_DOCS}
+    assert _changes("--cached", "--name-status", P12_BASE, "--", "tests") <= {
+        ("A", p) for p in PHASE12_TESTS + PHASE13_TESTS} | {("M", p) for p in PHASE12_TEST_REGISTRATION}
+    assert set(PHASE12_TEST_REGISTRATION) == {"tests/intelligence/phase7_runtime_registry.py",
+                                              "tests/intelligence/test_narrative_intelligence_boundary.py",
+                                              "tests/intelligence/test_screener_intelligence_boundary.py",
+                                              "tests/intelligence/test_watchlist_thesis_boundary.py",
+                                              "tests/intelligence/test_personal_intelligence_boundary.py",
+                                              "tests/intelligence/test_personal_ui_boundary.py",
+                                              "tests/intelligence/test_personal_ui_browser_hardening.py"}   # harness の安定化
+    for path in PHASE12_TEST_REGISTRATION:                                            # 凍結の P7 〜 P11 の test の狭い再開
+        anchored = _git("show", f"{P12_BASE}:{path}")
+        current = _git("show", f"{P13_BASE}:{path}")             # P12 の登録は P12 の終わりまで（以後の差は P13 の guard が pin）
+        assert only_phase12_registration(path, anchored, current), path
+        assert not only_phase12_registration(path, anchored, current + "assert True\n")
+        assert not only_phase12_registration(path, anchored, anchored)
+    for registry in ("tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/phase9_runtime_registry.py",
+                     "tests/intelligence/phase10_runtime_registry.py", "tests/intelligence/phase11_runtime_registry.py"):
+        assert _git("diff", "--name-status", P12_BASE, "--", registry) == "", registry   # 前の phase の registry は不変
+    pending = [line for line in _git("status", "--porcelain", "--", "src").splitlines()
+               if not (is_phase12_addition(line[:2].strip(), line[3:]) or is_phase13_addition(line[:2].strip(), line[3:]))]
+    assert pending == []                                                                  # 作業木に未登録の src の変更なし
+
+
+def test_p12_a1_frozen_phase4_to_11_runtime_is_object_identical_to_its_anchor_and_unchanged_since_the_base() -> None:
+    for anchor, runtime in ((P11_A5, PHASE11_RUNTIME), (P10_A4, PHASE10_RUNTIME), (P9_A5, PHASE9_RUNTIME),
+                            (P8_B5C, PHASE8_RUNTIME)):
+        anchored, current = _blob_ids(anchor, runtime)
+        assert len(anchored) == len(current) == len(runtime)
+        assert [p for p, a, c in zip(runtime, anchored, current) if a != c] == []
+    assert len(PHASE11_RUNTIME) == 12 and len(PHASE10_RUNTIME) == 17 and len(PHASE9_RUNTIME) == 18 and len(PHASE8_RUNTIME) == 54
+    assert P11_A5 == "43c0b856d41efed397de213a1a06178c5e97ab10"
+    excluded = [f":(exclude,literal){p}" for p in PHASE12_RUNTIME + PHASE13_RUNTIME]   # P13-A1: 登録した P13 の追加だけを除く（凍結の runtime の修正は不可）
+    assert _git("diff", "--name-status", P12_BASE, "--", "src", *excluded) == ""           # Phase 4 〜 11 の src 全体
+    assert _git("diff", "--cached", "--name-status", P12_BASE, "--", "src", *excluded) == ""
+    assert _git("status", "--porcelain", "--", *PHASE7_RUNTIME, *PHASE8_RUNTIME, *PHASE9_RUNTIME, *PHASE10_RUNTIME,
+                *PHASE11_RUNTIME) == ""
+    assert _git("diff", "--name-status", P12_BASE, "--", P11_FREEZE_DOC, "docs/databank/PHASE10_FINAL_FREEZE.md") == ""
+    assert _git("show", f"{P12_BASE}:{P11_FREEZE_DOC}") == (REPO_ROOT / P11_FREEZE_DOC).read_text(encoding="utf-8")
+
+
+def test_p12_freeze_the_43_registered_runtime_files_are_object_identical_to_the_anchor_and_the_validated_tree() -> None:
+    """P12-A7: Phase 12 A-track v1 の runtime 43 file は anchor `P12_A6` ・Windows の検証を走らせた `P12_VALIDATED_TREE` ・index ・worktree で
+    git の object が同じ。記録の commit（本文書）は validated tree の後に足され、anchor ではない。runtime の修正 ・未登録の追加は受けない。"""
+    assert P12_A6 == "e390cddff9101541d16ba308a15d9ad1df3ca7b7" and P12_VALIDATED_TREE == "3056e25586767fd7b5d8095f016a4d254de5c360"
+    for older in (P12_BASE, P12_A1, P12_A2, P12_A3, P12_A4):
+        assert subprocess.run(["git", "merge-base", "--is-ancestor", older, P12_A6], cwd=REPO_ROOT).returncode == 0
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_A6, P12_VALIDATED_TREE], cwd=REPO_ROOT).returncode == 0
+    assert subprocess.run(["git", "merge-base", "--is-ancestor", P12_VALIDATED_TREE, "HEAD"], cwd=REPO_ROOT).returncode == 0
+    assert len(PHASE12_RUNTIME) == 43 and len(set(PHASE12_RUNTIME)) == 43
+    for commit in (P12_A6, P12_VALIDATED_TREE):
+        assert set(_git("ls-tree", "-r", "--name-only", commit, "--", PHASE12_PACKAGE).splitlines()) == set(PHASE12_RUNTIME), commit
+    at_anchor, in_worktree = _blob_ids(P12_A6, PHASE12_RUNTIME)
+    at_validated, _ = _blob_ids(P12_VALIDATED_TREE, PHASE12_RUNTIME)
+    in_index = tuple(_git("rev-parse", *(f":{path}" for path in PHASE12_RUNTIME)).split())
+    assert len(at_anchor) == len(at_validated) == len(in_index) == len(in_worktree) == 43
+    assert at_anchor == at_validated, "runtime blob differs between P12_A6 and P12_VALIDATED_TREE"
+    assert at_anchor == in_index, "runtime blob differs between P12_A6 and the index"
+    assert at_anchor == in_worktree, "runtime blob differs between P12_A6 and the worktree"
+    assert _git("diff", "--name-status", P12_A6, "HEAD", "--", PHASE12_PACKAGE) == ""           # anchor 以後に package は不変
+    assert _git("diff", "--cached", "--name-status", P12_A6, "--", PHASE12_PACKAGE) == ""
+    assert _git("status", "--porcelain", "--", PHASE12_PACKAGE) == ""
+    assert _changes("--name-status", P12_VALIDATED_TREE, "HEAD", "--", "src") <= {("A", p) for p in PHASE13_RUNTIME}   # 以後は登録した P13 の追加だけ
+    assert {p.name for p in PACKAGE_DIR.iterdir() if p.name != "__pycache__"} == {Path(p).name for p in PHASE12_RUNTIME}
+    assert all(not is_phase12_addition("M", path) for path in PHASE12_RUNTIME)                  # 凍結: 修正は受けない
+    assert not is_phase12_addition("A", f"{PHASE12_PACKAGE}/new_module.py") and not is_phase12_addition("??", f"{PHASE12_PACKAGE}/new_module.py")
+    assert FREEZE_DOC in PHASE12_DOCS and not _git("ls-tree", P12_VALIDATED_TREE, "--", FREEZE_DOC).strip()   # 記録は validated tree の後
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for needle in ("COMPLETE / CLOSED / FROZEN", P12_A6, P12_VALIDATED_TREE, "新しい anchor ではない", "43 file", "A6_PASS",
+                   "transfer/p12-a6-helper-v6", "8193c17081d2d55443e285cb9663f9dad43c416f", "a8bb4b41963328446201e11326614cad2214b56625573e18e7eba11ca771f7e8",
+                   "89ee341dfa076dbe1903d92a743cd0120f13cae56809336eb24074e7168c123b", "P12-OBS-020", "P12-OBS-027", "MultipleInstances",
+                   "InteractiveToken", "pin-runtime", "A-track", "B-track", "P12.5", "凍結しない", "利用者の Windows からの報告",
+                   "この Linux の session からは見えない", "資格情報", "O_BINARY", "IgnoreNew"):
+        assert needle in text, needle
+    for banned in ("P12.5 は完了", "P13 は完了", "Phase 12 は完了", "Phase 12 全体", "signed", "署名済み"):
+        assert banned not in text or banned == "Phase 12 全体", banned                         # 「Phase 12 全体は CLOSED ではない」だけ
+    assert "Phase 12 全体は CLOSED ではない" in text
+
+
+def test_p12_freeze_the_record_holds_no_private_validation_values() -> None:
+    text = (REPO_ROOT / FREEZE_DOC).read_text(encoding="utf-8")
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants"):
+        assert banned not in text, banned
+    for sample in ("S-1-5-21-1", "C:\\Users\\x", "09:00", "JQUANTS_API_KEY", "human:reviewer", "D:\\x", "2026-01-01T09:00", "12345"):
+        assert any(re.search(pattern, sample) for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS) or "D:\\" in sample, sample
+
+
+def test_p12_5_a0_the_architecture_contract_is_design_only_and_holds_no_private_values() -> None:
+    """P12.5-A0: Market Memory ／ Obsidian の architecture の契約は設計だけ（runtime ・adapter ・store ・root ・vault は無い）。guard は
+    規範の境界（DERIVED ・PIT の歴史 ・状態の区別 ・export の安全 ・authority 不変）と private の形だけを見る。設計の散文に runtime の
+    語彙の禁止は掛けない（NON-GOAL は名指しで書く）。"""
+    assert PHASE12_5_DOCS == (P12_5_CONTRACT_DOC, P12_5_A2_CONTRACT_DOC, P12_5_CLOSEOUT_DOC) and set(PHASE12_5_DOCS) <= set(PHASE12_DOCS)
+    assert not set(PHASE12_5_DOCS) & {CONTRACT_DOC, A2_CONTRACT_DOC, A3_CONTRACT_DOC, A4_CONTRACT_DOC, A5_CONTRACT_DOC, FREEZE_DOC}
+    assert not _git("ls-tree", P12_A6, "--", P12_5_CONTRACT_DOC).strip()                     # 契約は A-track v1 の凍結の後に足した
+    assert not _git("ls-tree", P12_VALIDATED_TREE, "--", P12_5_CONTRACT_DOC).strip()
+    _assert_src_unchanged_except_registered_p13_additions()                                # 設計の gate は src を変えない
+    text = (REPO_ROOT / P12_5_CONTRACT_DOC).read_text(encoding="utf-8")
+    for needle in ("DESIGN ONLY", "設計だけ", "本 gate では作らない", "存在しない", "p13mem_", "authority_class = DERIVED", "hybrid",
+                   "read-only", "read_p9_safe_view", "read_personal_review", "read_ui_model", "networkless", "B-track",
+                   "HOLD", "LLM", "embedding", "自己学習", "NON-GOAL", "event time", "known_at", "telemetry", "as_of",
+                   "TIMESTAMP ／ DATE", "UNCERTAIN", "UNKNOWN", "AMBIGUOUS", "MISSING", "STALE", "INTEGRITY_FAILURE",
+                   "SUPERSEDED", "supersedes", "歴史の保存", "書き換えない", "再検証", "黙って再導出しない", "replay", "byte 一致",
+                   "generated/", "notes/", "export だけ", "staged", "verified", "published", "消さない", "回復可能",
+                   "symlink ／ junction", "traversal", "外部 URL", "raw HTML", "埋め込まれた秘密", "検出は不完全", "機密性の保証ではない",
+                   "plugin", "信頼の境界の外", "safe surface", "資格情報", "受け入れ試験", "未解決の問い", "P14", "Phase 4 〜 11",
+                   "A-track v1", "P12.5 全体 ・P13 ・P14 は閉じない", "自身の gate 無しに Phase 10 の private authority を消費しない"):
+        assert needle in text, needle
+    for banned in ("P12.5 は完了", "P13 は完了", "Phase 12 は完了", "署名済み", "最新の", "推奨する銘柄"):
+        assert banned not in text, banned
+    # 実装された署名の仕組みが在ると主張する文だけを禁じる（「signed」の部分文字列の一律の禁止ではない。将来の署名 ・整合性検証の
+    # 設計の説明は許す。memory の整合性は canonical ／ hash-addressed ／ hash-chained で語る）
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    assert not re.search(r"署名(?:済み|している|されている)", text)
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants", "http://", "https://"):
+        assert banned not in text, banned
+
+
+def test_p12_5_a2_the_source_capability_contract_is_design_only_and_holds_no_private_values() -> None:
+    """P12.5-A2: 凍結の read の面の目録 ・AVAILABLE ／ LIMITED ／ GATED ／ UNAVAILABLE ・P13 Review State Memory の MVP ・標本の PIT ／
+    provenance の限界 ・P13-A2a の登録の提案。設計だけ（P13 の runtime ・importer の登録は無い）。guard は規範の節と private の形だけ。"""
+    assert P12_5_A2_CONTRACT_DOC in PHASE12_5_DOCS and P12_5_A2_CONTRACT_DOC in PHASE12_DOCS
+    assert not _git("ls-tree", P12_A6, "--", P12_5_A2_CONTRACT_DOC).strip()
+    assert not _git("ls-tree", P12_VALIDATED_TREE, "--", P12_5_A2_CONTRACT_DOC).strip()
+    _assert_src_unchanged_except_registered_p13_additions()                                # 設計の gate は src を変えない
+    for registry in ("tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/phase9_runtime_registry.py",
+                     "tests/intelligence/phase10_runtime_registry.py", "tests/intelligence/phase11_runtime_registry.py"):
+        assert _git("diff", "--name-status", P12_A6, "HEAD", "--", registry) == "", registry   # importer の登録はまだ無い
+    for revision in (P12_A6, P12_5_DESIGN_ANCHOR, P13_BASE):                                 # A2 の時点に P13 の runtime は無かった（歴史の事実）
+        assert not _git("ls-tree", revision, "--", PHASE13_PACKAGE).strip(), revision
+    assert PHASE13_RUNTIME or not P13_PACKAGE_DIR.exists()                                   # 現在: 登録が空の間は package も無い
+    text = (REPO_ROOT / P12_5_A2_CONTRACT_DOC).read_text(encoding="utf-8")
+    for needle in ("DESIGN ONLY", "設計だけ", "本 gate は実装を一切承認しない", "本 gate では実装しない", "Review State Memory",
+                   "市場の観測の記憶ではない", "AVAILABLE", "LIMITED", "GATED", "UNAVAILABLE", "read_personal_review", "read_p9_safe_view",
+                   "personal_safe_projection", "ReviewViewError", "P9ViewError", "read_p9_private_snapshot", "使わない",
+                   "aware", "as_of_date", "reviewed_at", "許された view に出ない", "cutoff で区切った", "正確な transition ではない",
+                   "同じ端点の状態は「間に変化が無かった」ことを証明しない", "sampled_at", "telemetry", "known_at を作らない",
+                   "KNOWN ／ UNKNOWN ／ UNCERTAIN", "NOT_YET_KNOWN", "INSUFFICIENT_TIME_PRECISION", "畳み込まない",
+                   "MISSING", "STALE", "AMBIGUOUS", "INTEGRITY_FAILURE", "private な DERIVED の store の中だけ",
+                   "export で用いる id", "本 gate では承認しない", "provenance の限界", "P10（profile ・attention）の revision の id ・digest は **無い**",
+                   "ReviewStateSample", "ReviewStateChange", "弱めない", "SANCTIONED_P13_P10_IMPORTERS", "PHASE13_TEST_REGISTRATION",
+                   "negative test", "合成の世界", "P12 の ledger", "取得の証拠", "revision の鎖", "B-track は HOLD のまま",
+                   "P13 の runtime は存在しない", "Phase 4 〜 11", "A-track v1", "P12.5 全体 ・P13 ・P14 は閉じない",
+                   "test_bo_no_other_package_imports_phase8", "test_p10_a1_is_outside_production_and_no_other_code_imports_it"):
+        assert needle in text, needle
+    for banned in ("P12.5 は完了", "P13 は完了", "Phase 12 は完了", "署名済み", "最新の", "推奨する銘柄", "P13 の runtime は在る",
+                   "登録済み", "import を許可した"):
+        assert banned not in text, banned
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    assert not re.search(r"署名(?:済み|している|されている)", text)
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants", "http://", "https://"):
+        assert banned not in text, banned
+
+
+#: closeout の記録に無ければならない主張（設計だけ ・anchor ・P13 ／ P14 ／ B-track は閉じない ・不変量 ・gate の順序 ・先送り）
+P12_5_CLOSEOUT_NEEDLES = ("DESIGN COMPLETE / CLOSED / FROZEN", P12_5_DESIGN_ANCHOR, "P12_5_DESIGN_ANCHOR", "新しい設計の anchor ではない",
+                          "P13 の runtime（Market Memory の実装）は存在しない", "P14（継続学習）は未着手", "B-track", "HOLD のまま",
+                          "本記録はそれらの実装 ・importer の登録 ・private root ・vault ・資格情報のいずれも承認しない",
+                          "PHASE12_5_A0_MARKET_MEMORY_ARCHITECTURE.md", "PHASE12_5_A2_SOURCE_CAPABILITY_CONTRACT.md", "A4 の是正",
+                          "hybrid", "DERIVED", "read-only", "明示の PIT", "MemoryItem", "ReviewStateSample", "ReviewStateChange", "捏造しない",
+                          "決定論の identity と replay", "staged → verified → published", "LLM", "自律の決定", "B-track が無い状態は支持する条件",
+                          "P13-A0", "P13-A1", "P13-A2a", "P13-A3", "P13-A4", "P13-A5", "P13-A6", "先送りの決定", "root の file の byte の manifest",
+                          "id の接頭辞", "file 名の規則", "STALE の方針", "G2", "G5", "資格情報の custody", "e390cddff9101541d16ba308a15d9ad1df3ca7b7",
+                          "3056e25586767fd7b5d8095f016a4d254de5c360", "object 一致", "P13 ・P14 ・B-track は閉じない", "本記録は実装を承認しない")
+P12_5_CLOSEOUT_BANNED = ("P13 は完了", "Phase 12 は完了", "P14 は完了", "B-track は完了", "P12.5 は完了", "P13 の runtime は在る", "最新の",
+                         "推奨する銘柄", "署名済み", "D:\\", "0.0.0.0", "C:\\Users", "x-api-key", "api.jquants", "http://", "https://")
+
+
+def _check_p12_5_closeout_text(text: str) -> None:
+    """closeout の記録の text の検査（必須の主張 ・誤った完了 ／ 署名の主張 ・private の形）。negative control が同じ関数を使う。"""
+    for needle in P12_5_CLOSEOUT_NEEDLES:
+        assert needle in text, needle
+    for banned in P12_5_CLOSEOUT_BANNED:
+        assert banned not in text, banned
+    assert not re.search(r"\b(?:is|are|was|were|been)\s+(?:digitally\s+|cryptographically\s+)?signed\b", text, re.IGNORECASE)
+    assert not re.search(r"署名(?:済み|している|されている)", text)
+    for pattern in PRIVATE_PATTERNS + FREEZE_DOC_PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+
+
+def _blobs(revision: str, paths) -> dict:
+    out = _git("ls-tree", revision, "--", *paths)
+    return {line.split("\t", 1)[1]: line.split()[2] for line in out.splitlines()}
+
+
+def _p12_5_contracts_frozen_at(anchor: str) -> bool:
+    """A0 ・A2 の blob が HEAD ・index ・anchor で一致し、anchor に全て存在する。"""
+    anchored = _blobs(anchor, PHASE12_5_FROZEN_CONTRACTS)
+    return (set(anchored) == set(PHASE12_5_FROZEN_CONTRACTS) and anchored == _blobs("HEAD", PHASE12_5_FROZEN_CONTRACTS)
+            and _git("diff", "--cached", "--name-status", anchor, "--", *PHASE12_5_FROZEN_CONTRACTS) == ""
+            and _git("status", "--porcelain", "--", *PHASE12_5_FROZEN_CONTRACTS) == "")
+
+
+def test_p12_5_closeout_the_design_contracts_are_frozen_at_the_anchor_and_the_record_is_design_only() -> None:
+    """P12.5-A5: 設計の anchor（A4 の commit）で A0 ・A2 の blob が凍結 ・記録は anchor の後 ・src ／ P8 〜 P11 の registry 不変 ・P13 の
+    package 不在 ・記録の規範の主張と private の形。runtime は無いので runtime の anchor は変えない。"""
+    assert PHASE12_5_FROZEN_CONTRACTS == (P12_5_CONTRACT_DOC, P12_5_A2_CONTRACT_DOC)
+    assert P12_5_CLOSEOUT_DOC in PHASE12_5_DOCS and P12_5_CLOSEOUT_DOC in PHASE12_DOCS and P12_5_CLOSEOUT_DOC not in PHASE12_5_FROZEN_CONTRACTS
+    assert _git("merge-base", "--is-ancestor", P12_5_DESIGN_ANCHOR, "HEAD") == ""                 # anchor は HEAD の祖先（か HEAD）
+    assert _p12_5_contracts_frozen_at(P12_5_DESIGN_ANCHOR)                                        # A0 ・A2 の blob は anchor と一致
+    assert not _git("ls-tree", P12_5_DESIGN_ANCHOR, "--", P12_5_CLOSEOUT_DOC).strip()             # 記録は anchor の後に足した
+    _assert_src_unchanged_except_registered_p13_additions()                                     # P12.5 の全 gate で src は不変
+    for registry in ("tests/intelligence/phase8_runtime_registry.py", "tests/intelligence/phase9_runtime_registry.py",
+                     "tests/intelligence/phase10_runtime_registry.py", "tests/intelligence/phase11_runtime_registry.py"):
+        assert _git("diff", "--name-status", P12_A6, "HEAD", "--", registry) == "", registry        # importer の登録はまだ無い
+    assert not _git("ls-tree", P12_5_DESIGN_ANCHOR, "--", PHASE13_PACKAGE).strip()                 # 設計の closeout の anchor に P13 の runtime は無かった（歴史の事実）
+    assert not _git("ls-tree", P13_BASE, "--", PHASE13_PACKAGE).strip()                           # P13 の登録の base にも無い
+    assert PHASE13_RUNTIME or not P13_PACKAGE_DIR.exists()                                        # 登録が空の間は package も無い
+    tracked_now = set(_git("ls-tree", "-r", "--name-only", "HEAD", "src").splitlines())
+    tracked_at_anchor = set(_git("ls-tree", "-r", "--name-only", P12_A6, "src").splitlines())
+    assert tracked_at_anchor <= tracked_now and tracked_now - tracked_at_anchor <= set(PHASE13_RUNTIME)   # 以後は登録した P13 の追加だけ
+    _check_p12_5_closeout_text((REPO_ROOT / P12_5_CLOSEOUT_DOC).read_text(encoding="utf-8"))
+
+
+def test_p12_5_closeout_guard_rejects_mutated_records_and_foreign_anchors() -> None:
+    """negative control: guard は意味を持つ。必須の句を消す ・private の形を足す ・誤った完了の主張を足す ・署名の実装を主張する text は
+    失敗し、A0 の無い commit（P12_BASE）を anchor にすると blob の一致は成り立たない。"""
+    text = (REPO_ROOT / P12_5_CLOSEOUT_DOC).read_text(encoding="utf-8")
+    _check_p12_5_closeout_text(text)                                                               # 本物は通る
+    for mutated in (text.replace("新しい設計の anchor ではない", "新しい設計の anchor である"),
+                    text.replace(P12_5_DESIGN_ANCHOR, "0" * 40),
+                    text + "\nP13 は完了。\n",
+                    text + "\nThe ledger is cryptographically signed.\n",
+                    text + "\nS-1-5-21-1\n",
+                    text + "\nC:\\Users\\x\n",
+                    text + "\n2026-01-01T09:00\n",
+                    text + "\nhuman:reviewer\n",
+                    text + "\n12345\n",
+                    text + "\nhttps://example.invalid\n"):
+        with pytest.raises(AssertionError):
+            _check_p12_5_closeout_text(mutated)
+    assert not _p12_5_contracts_frozen_at(P12_BASE)                                                # A0 ・A2 の無い anchor では成り立たない
+    assert not _p12_5_contracts_frozen_at(P12_A6)
+
+
+# ================================================ import ・名前 ・語彙 ・直列化
+
+
+def test_p12_a1_imports_are_stdlib_only_and_never_reach_frozen_phases_os_clock_network_or_process() -> None:
+    for path in PHASE12_RUNTIME:
+        relative, absolute = _imports(REPO_ROOT / path)
+        allowed_stdlib = SANCTIONED_P12_STDLIB | SANCTIONED_P12_EXTRA_STDLIB.get(path, set())
+        assert absolute <= allowed_stdlib, (path, absolute - allowed_stdlib)
+        assert set(relative) == SANCTIONED_P12_MODULES[path], (path, set(relative))
+        cross = {m: n for m, n in relative.items() if m.startswith("..")}
+        assert cross == SANCTIONED_P12_P11_IMPORTERS.get(path, {}), (path, cross)         # 凍結の P11 の read の面だけ ・完全一致
+        for module in (*relative, *absolute):
+            if module in cross or module in SANCTIONED_P12_EXTRA_STDLIB.get(path, set()):
+                continue
+            components = set(module.lstrip(".").split("."))
+            assert not components & set(FORBIDDEN_P12_IMPORT_PARTS), (path, module)
+        assert not any(n.startswith("_") and n != "_require_id" and n != "_require_int" for names in relative.values()
+                       for n in names), path
+        source = (REPO_ROOT / path).read_text(encoding="utf-8")
+        for token in STATIC_STRING_BANS:
+            if token in STRING_ALLOWANCES.get(path, set()):
+                continue
+            assert token not in source, (path, token)
+        if path in PHASE12_A1_RUNTIME:
+            assert not cross and path not in SANCTIONED_P12_EXTRA_STDLIB and path not in NAME_ALLOWANCES
+        if path in PHASE12_A3_RUNTIME or path in PHASE12_A4_RUNTIME or path in PHASE12_A5_RUNTIME:
+            assert not cross, path                                                    # A3 〜 A5 は凍結の phase を直接 import しない（A2 経由）
+        assert "personal_intelligence" not in source and "watchlist_thesis" not in source and "screener" not in source
+        assert "ZoneInfo" not in source and "zoneinfo" not in source                     # 固定 +09:00 だけ（tzdata に依らない）
+
+
+def test_p12_a1_the_runtime_never_touches_files_env_clock_process_or_network_and_has_no_investment_vocabulary() -> None:
+    for path in PHASE12_RUNTIME:
+        tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+        banned = FORBIDDEN_NAMES - NAME_ALLOWANCES.get(path, set())
+        identifiers = set()
+        broad = 0
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name):
+                assert node.id not in banned, (path, node.id)
+                identifiers.add(node.id)
+            elif isinstance(node, ast.Attribute):
+                assert node.attr not in banned, (path, node.attr)
+                identifiers.add(node.attr)
+            elif isinstance(node, ast.arg):
+                identifiers.add(node.arg)
+            elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                identifiers.add(node.name)
+            elif isinstance(node, ast.ExceptHandler):
+                assert node.type is not None, (path, "bare except")
+                names = {node.type.id} if isinstance(node.type, ast.Name) else {
+                    e.id for e in getattr(node.type, "elts", ()) if isinstance(e, ast.Name)}
+                broad += bool(names & {"Exception", "BaseException"})
+            elif isinstance(node, ast.If) and isinstance(node.test, ast.Compare):
+                left = node.test.left
+                assert path in MAIN_ENTRY_ALLOWED or not (isinstance(left, ast.Name) and left.id == "__name__"), (path, "__main__")
+        assert broad == BROAD_EXCEPT_ALLOWED.get(path, 0), (path, "broad except")
+        words = set()
+        for name in identifiers:
+            words |= {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name)}
+        assert not words & (FORBIDDEN_WORDS - WORD_ALLOWANCES.get(path, set())), (path, words & FORBIDDEN_WORDS)
+
+
+def test_p12_a1_serialization_of_every_model_is_canonical_and_free_of_paths_payloads_and_private_shapes() -> None:
+    from datetime import datetime, timezone
+    from src.intelligence.automation.holiday_calendar import HolidayCalendar
+    from src.intelligence.automation.ledger_model import make_record
+    from src.intelligence.automation.run_identity import AutomationRun
+    from src.intelligence.automation.run_planning import plan_run
+    from src.intelligence.automation.run_state import RunState
+    from src.intelligence.automation.schedule_model import TIMEZONE_V1, AutomationSchedule, ScheduleSlot
+    from src.intelligence.automation.status_projection import project_status
+
+    cal = HolidayCalendar(calendar_id="ops-cal", version=1, dates=())
+    slot = ScheduleSlot(slot_id="slot-a", local_time="07:30", weekday_mask=("MON", "TUE", "WED", "THU", "FRI"),
+                        late_window_seconds=3600, readiness_on_non_business_day=False, enabled=True)
+    sched = AutomationSchedule(schedule_id="ops-daily", version=1, timezone=TIMEZONE_V1, enabled=True, slots=(slot,),
+                               holiday_calendar_ref=cal.reference(), created_at="2026-01-01T00:00:00Z")
+    planned = plan_run(sched, cal, slot_id="slot-a", selection_clock_at=datetime(2026, 1, 4, 22, 45, tzinfo=timezone.utc))
+    run = AutomationRun.from_planned(planned, "a" * 40)
+    r0 = make_record(None, run, transition_to=RunState.PLANNED, recorded_at="2026-01-04T22:46:00Z")
+    status = project_status([r0], runtime_anchor="a" * 40, schedule_id="ops-daily")
+    import json
+    rendered = [sched.to_json(), cal.to_json(), json.dumps(planned.to_dict()), json.dumps(run.to_dict()), r0.to_json(),
+                json.dumps(status.to_dict())]
+    for text in rendered:
+        assert json.dumps(json.loads(text), sort_keys=True, separators=(",", ":"), ensure_ascii=False) == text or \
+            text == json.dumps(json.loads(text))                                          # 正準（to_json）か json.dumps の形
+        for pattern in (r"[A-Za-z]:\\", r"/[a-z]+/", r"\b\d{5}\b", r"p9wat_", r"p10prf_", r"human:", r"Traceback"):
+            assert not re.search(pattern, text), (pattern, text[:80])
+        assert "payload" not in text and "message" not in text and "exception" not in text.lower()
+
+
+# ================================================ 公開の面 ・文書
+
+
+def test_p12_a1_is_outside_production_and_public_code_and_nothing_else_imports_it() -> None:
+    assert not any("automation" in module for module in runtime_closure())
+    code_roots = [REPO_ROOT / "main.py", *sorted((REPO_ROOT / "src").rglob("*.py")), *sorted((REPO_ROOT / "scripts").rglob("*.py"))]
+    if (REPO_ROOT / "notifiers").is_dir():
+        code_roots += sorted((REPO_ROOT / "notifiers").rglob("*.py"))
+    for path in code_roots:
+        if PACKAGE_DIR in path.parents:
+            continue
+        assert "intelligence.automation" not in path.read_text(encoding="utf-8", errors="replace"), path
+    for root in (".github", "docs/pages", "cloudflare"):
+        if not (REPO_ROOT / root).is_dir():
+            continue
+        for path in sorted((REPO_ROOT / root).rglob("*")):
+            if path.is_file() and path.suffix in (".py", ".yml", ".yaml", ".html", ".js", ".toml", ".md"):
+                assert "intelligence/automation" not in path.read_text(encoding="utf-8", errors="replace"), path
+
+
+def test_p12_a1_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_BASE, "43c0b856d41efed397de213a1a06178c5e97ab10", "運用の authority", "市場の authority ではない",
+                   "実行の証拠", "昇格しない", "projection は authority ではない", "selection_clock_at", "scheduled_for",
+                   "started_at", "completed_at", "recorded_at", "hash 鎖", "改変の検出", "認証ではない", "署名ではない",
+                   "ORPHANED_FINALIZATION", "黙って消さない", "retry は新しい run", "p12.automation_run.v1", "retry_of",
+                   "supersedes", "Asia/Tokyo", "+09:00", "PHASE12_TEST_REGISTRATION", "Phase 12 の凍結ではない",
+                   "REPO_NOT_CLEAN", "FROZEN_DRIFT", "SOURCE_INCOMPLETE", "DUPLICATE_INVOCATION", "INTERRUPTED",
+                   "scheduler は無い", "subprocess", "P12-A2"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
+
+
+def test_p12_a2_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A2_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A1, "43c0b856d41efed397de213a1a06178c5e97ab10", "networkless", "FINALIZED_PENDING_LEDGER", "成功ではない",
+                   "PRECONDITIONS", "ROOT_MANIFESTS", "P11_MODEL_SNAPSHOT", "SERVER_READINESS", "FINALIZATION", ".partial",
+                   "DUPLICATE_INVOCATION", "FROZEN_DRIFT", "REPO_HEAD_MISMATCH", "REPO_NOT_CLEAN", "CREDENTIAL_PRESENT",
+                   "NETWORK_DENIED", "read_ui_model", "ui_model_json_bytes", "LocalServer", "昇格しない", "runs/",
+                   "digests.json", "selection_clock", "datetime.now", "Task Scheduler", "A2 がしないこと", "P12-A3",
+                   "Phase 12 の凍結ではない", "telemetry", "request.json", "snapshot.json", "manifests.json"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
+    for name in ("execution_request", "execution_result", "finalization", "frozen_anchors", "network_deny", "preconditions",
+                 "run_executor", "server_readiness", "snapshot_orchestrator", "source_manifests"):
+        assert name in text, name
+
+
+def test_p12_a3_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A3_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A2, "43c0b856d41efed397de213a1a06178c5e97ab10", "ledger が commit の authority", "SUCCEEDED", "head.json",
+                   "LEDGER_INVALID", "CHECKPOINT_STALE", "ORPHANED_FINALIZATION", "LEDGER_COMMITTED_CHECKPOINT_STALE", "STATUS_STALE",
+                   "status.json は authority ではない", "run の directory は authority ではない", "PLANNED_RECORDED", "RUNNING_RECORDED",
+                   "TERMINAL_RECORDED", "LEDGER_REVERIFIED", "STATUS_PROJECTED", "ALREADY_SUCCEEDED", "DUPLICATE_INVOCATION",
+                   "run_cli", "REPORT:", "RUN_FAILED CODE=", "write-schedule", "write-calendar", "classify", "human", "telemetry",
+                   "datetime.now", "A4 に残すこと", "scheduler が無い理由", "認証ではない", "Phase 12 の凍結ではない", "P12-A4"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
+    for name in ("atomic_files", "calendar_authority", "crash_classification", "head_checkpoint", "ledger_store", "run_cli",
+                 "run_transaction", "schedule_authority", "status_store"):
+        assert name in text, name
+
+
+def test_p12_a4_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A4_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A3, "43c0b856d41efed397de213a1a06178c5e97ab10", "O_CREAT", "O_EXCL", "run の lock", "ledger の lock",
+                   "LOCK_LIVE", "LOCK_STALE_DEAD", "LOCK_STALE_PID_REUSED", "LOCK_STALE_REBOOT", "LOCK_STALE_TERMINAL",
+                   "LOCK_MALFORMED", "LOCK_UNKNOWN_PROVENANCE", "RUN_ACTIVE", "retry_of", "attempt", "FAILED", "CRASHED",
+                   "ORPHANED_FINALIZATION", "LEDGER_COMMITTED_CHECKPOINT_STALE", "STATUS_STALE", "PARTIAL_PRESENT", ".crashed",
+                   "repair-checkpoint", "regenerate-status", "recover-orphan", "recover-crashed", "recover-partial", "release-lock",
+                   "retry", "cancel", "協調", "Windows", "tasklist", "fsync", "A5 に残すこと", "SUCCEEDED には変えない",
+                   "Phase 12 の凍結ではない", "P12-A5", "run_transaction", "run_cli", "認証ではない"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0"):
+        assert banned not in text, banned
+    for name in ("cancel_authority", "injection", "ledger_commit", "operational_lock", "process_probe", "recovery", "retry"):
+        assert name in text, name
+
+
+def test_p12_a5_the_contract_records_the_required_clauses_and_no_private_values() -> None:
+    text = (REPO_ROOT / A5_CONTRACT_DOC).read_text(encoding="utf-8")
+    for clause in (P12_A4, "43c0b856d41efed397de213a1a06178c5e97ab10", "Task Scheduler", "scheduled-run", "selection_clock_at",
+                   "scheduled_for", "NOT_DUE", "MISSED", "late window", "Compass", "P12_OWNED", "InteractiveToken", "LeastPrivilege",
+                   "StartWhenAvailable", "IgnoreNew", "WakeToRun", "Tokyo Standard Time", "RECOVERY_REQUIRED", "pin-runtime",
+                   "scheduler-install", "scheduler-remove", "scheduler-status", "exit code", "schtasks", "tzutil", "A6", "runbook",
+                   "pull", "fetch", "checkout", "daemon", "Phase 12 の凍結ではない", "P12-A6", "run_cli", "認証ではない",
+                   "release-lock", "retry しない"):
+        assert clause in text, clause
+    for pattern in PRIVATE_PATTERNS:
+        assert not re.search(pattern, text), pattern
+    for banned in ("signed", "署名済み", "D:\\", "0.0.0.0", "C:\\Users"):
+        assert banned not in text, banned
+    for name in ("runtime_pin", "scheduled_run", "scheduler_install", "skip_transaction", "task_definition", "task_scheduler_adapter"):
+        assert name in text, name
+    for clause in ("ALREADY_SKIPPED", "PLANNED → SKIPPED", "Task Scheduler の履歴"):                    # A5.1: skip の証拠の方針
+        assert clause in text, clause
