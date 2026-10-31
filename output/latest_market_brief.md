@@ -2180,7 +2180,7 @@ NYダウ下落
 | ドル指数（DXY） | 101.88 | -0.16% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 104.12 | +2.08% | ★★★ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 3,898.90 | -3.29% | ★★★ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 77,147.67 | -0.07% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 77,317.23 | +0.15% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2775,8 +2775,8 @@ NYダウ下落
 直近値: 5,894.00 / 前日比: -570.00 (-8.82%)（事実）
 
 - **今日の材料（AI分析）:** 前日比-570.00 (-8.82%)。 本日、個別の関連見出しは確認されませんでした。
-- **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-10-30）
-- **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-10-30）
+- **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2027-01-29）
+- **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2027-01-29）
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
 - **リスク（AI分析）:** 直近の値動きが大きく、短期的な過熱・反動のリスクに注意が必要な局面です。
 
@@ -2985,7 +2985,7 @@ NYダウ下落
 
 - 「中間選挙 アメリカ政治にどう影響」（Yahoo!ニュース トピックス）
 - 「日米韓外相 北極圏巡る協力覚書」（Yahoo!ニュース トピックス）
-- 「開かずの踏切廃止に住民反発 横浜」（Yahoo!ニュース トピックス）
+- 「身代金ウイルス 送金後追加要求も」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3108,7 +3108,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [決算発表予定] デンソー（6902.T）: 2026-10-29
 - [決算発表予定] 住友電工（5802.T）: 2026-10-30
 - [決算発表予定] パナソニックHD（6752.T）: 2026-10-30
-- [決算発表予定] きんでん（1944.T）: 2026-10-30
 - [決算発表予定] Tesla（TSLA）: 2026-10-21
 - [決算発表予定] Amazon（AMZN）: 2026-10-29
 - [決算発表予定] Alphabet（GOOGL）: 2026-10-28
@@ -3135,6 +3134,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [決算発表予定] リクルートホールディングス（6098.T）: 2026-11-11
 - [決算発表予定] 川崎重工業（7012.T）: 2026-11-10
 - [決算発表予定] 古河電工（5801.T）: 2026-11-09
+- [決算発表予定] きんでん（1944.T）: 2027-01-29（時期未確定を含む）
 - [決算発表予定] Microsoft（MSFT）: 2027-01-27（時期未確定を含む）
 - [決算発表予定] NVIDIA（NVDA）: 2026-11-17
 - [決算発表予定] TSMC（TSM）: 2027-01-14（時期未確定を含む）
@@ -3210,9 +3210,9 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600804?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600814?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600733?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600845?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600821?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600808?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600763?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600740?source=rss)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199771000.html)
@@ -3222,7 +3222,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-31/boj-faster-etf-sales-may-help-takaichi-spending-plan-non-tax-revenue)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-29/stock-market-today-dow-s-p-live-updates)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-30/chocolate-price-spook-families-for-halloween-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-30/crypto-hack-reignites-regulatory-debate-video)
@@ -3230,6 +3229,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-30/bloomberg-screentime-streaming-ai-creators-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-30/pacsun-ceo-brands-mean-a-lot-to-young-people-today-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-30/new-balance-ceo-joe-preston-on-nyc-marathon-partnership-video)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-30/ice-cube-on-big3-league-in-a-great-position-to-scale-video)
 - [CNBC Top News](https://www.cnbc.com/2026/10/30/amazon-intel-earnings-big-tech-ai-spending-concerns.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/30/treasury-i-bond-rate-through-april-2027.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/30/alaska-senate-election-doj-lawsuit-sullivan-peltola.html)
@@ -3270,14 +3270,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
+- [Investing.com News](https://www.investing.com/news/transcripts/earnings-call-transcript-tempsens-posts-strong-h1-2026-growth-shares-fall-93CH-4989207)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/kaltura-chief-customer-officer-natan-israeli-sells-9-in-stock-93CH-4989200)
+- [Investing.com News](https://www.investing.com/news/company-news/softbankbacked-opay-cancels-304m-us-ipo-over-regulatory-inquiry--bloomberg-4989192)
+- [Investing.com News](https://www.investing.com/news/economy-news/swiss-firms-plan-to-expand-china-investments-as-trade-deal-deepens-ties-4989188)
 - [Investing.com News](https://www.investing.com/news/economy-news/chinas-october-factory-activity-contracts-at-fastest-pace-in-3-months-pmi-survey-shows-4989032)
 - [Investing.com News](https://www.investing.com/news/insider-trading-news/group-1-automotive-director-steven-mizell-sells-143286-in-shares-93CH-4989184)
 - [Investing.com News](https://www.investing.com/news/commodities-news/coal-supply-is-struggling-to-keep-pace-with-demand-4989174)
 - [Investing.com News](https://www.investing.com/news/company-news/openai-raises-just-11bn-of-30bn-target-as-ai-investor-appetite-cools--wsj-4989165)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/moodys-ceo-michael-west-sells-485m-in-moodys-nysemco-stock-93CH-4989159)
-- [Investing.com News](https://www.investing.com/news/economy-news/china-reports-sharp-increase-in-gold-nickel-and-strategic-minerals--xinhua-4989148)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/dutch-bros-director-entity-sells-117m-in-bros-shares-93CH-4989146)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/dutch-bros-director-10-owner-sells-625-million-in-shares-93CH-4989140)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-111-sec-issues-exemptive-relief-treasury-clearing-requirements-certain-inter-affiliate-non-us-repo)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-110-two-entities-charged-130-million-fraud-scheme-used-false-sec-filings-boost-investor-confidence)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-109-sec-announces-fiscal-year-2027-examination-priorities)
@@ -3321,12 +3321,12 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600832?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600816?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600824?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600818?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600834?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600846?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600842?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600845?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600831?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600835?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600838?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600810?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600847?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
