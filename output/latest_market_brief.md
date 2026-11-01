@@ -40,8 +40,8 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気40%・普通-5%・弱気65%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／AI investors rush to hedge against potential tech market downturn - WSJ
-■注目テーマ3つ: A…
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Companies promised AI gains— here's how the payoff showed up in earnings
+■注目テーマ3つ: …
 
 ---
 ## 1. 今日の結論　★★★★★
@@ -67,7 +67,7 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「AI investors rush to hedge against potential tech market downturn - WSJ」（Investing.com News）　★★★★★
+### 3. 「Companies promised AI gains— here's how the payoff showed up in earnings」（CNBC Top News）　★★★★★
 - **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
@@ -97,8 +97,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. AI investors rush to hedge against potential tech market downturn - WSJ　★★★☆☆
-- **ニュース:** 「AI investors rush to hedge against potential tech market downturn - WSJ」（Investing.com News）
+### 3. Companies promised AI gains— here's how the payoff showed up in earnings　★★★☆☆
+- **ニュース:** 「Companies promised AI gains— here's how the payoff showed up in earnings」（CNBC Top News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -2179,7 +2179,7 @@ NYダウ下落
 | ドル指数（DXY） | 101.88 | -0.16% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 104.12 | +2.08% | ★★★ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 3,898.90 | -3.29% | ★★★ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 77,745.75 | +0.71% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 77,843.87 | +0.53% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2208,8 +2208,8 @@ NYダウ下落
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [AI investors rush to hedge against potential tech market downturn - WSJ](https://www.investing.com/news/stock-market-news/ai-investors-rush-to-hedge-against-potential-tech-market-downturn--wsj-4989371)
-- 出典（事実）: Investing.com News
+### 3位 ★★★★★ [Companies promised AI gains— here's how the payoff showed up in earnings](https://www.cnbc.com/2026/11/01/ai-investments-company-earnings.html)
+- 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
@@ -2284,10 +2284,10 @@ NYダウ下落
 
 **関連見出し（事実）:**
 - [オープンAI 開発一時中断 AIみずからサイバー攻撃実行のおそれ](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html) — NHKニュース 経済
+- [Companies promised AI gains— here's how the payoff showed up in earnings](https://www.cnbc.com/2026/11/01/ai-investments-company-earnings.html) — CNBC Top News
 - [OpenAI pares fundraising goal, now seeking up to $20 billion in latest round](https://www.cnbc.com/2026/10/31/openai-fundraising-20-billion-valuation.html) — CNBC Top News
 - [Stocks Sink in Broad AI Rout Sparked by China's DeepSeek](https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main) — WSJ Markets
 - [DeepSeek Won't Sink U.S. AI Titans](https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main) — WSJ Markets
-- [Medicare used AI to pre-approve patient care, and it immediately led to a large drop in medical services](https://www.marketwatch.com/story/medicare-used-ai-to-pre-approve-patient-care-and-it-immediately-led-to-a-large-drop-in-medical-services-dc38a210?mod=mw_rss_topstories) — MarketWatch Top Stories
 
 ### 第2位: 円高　★★★☆☆
 - **今強い理由（AI分析）:** 本日一部円高に関する報道が出ており、輸出関連企業の収益への懸念が意識されやすい状況です。
@@ -2961,9 +2961,9 @@ NYダウ下落
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「消費減税 首相の質疑出席が焦点」（Yahoo!ニュース トピックス）
-- 「個人情報は必要? 企業の漏洩対策」（Yahoo!ニュース トピックス）
-- 「英首相 奴隷貿易で正式謝罪を検討」（Yahoo!ニュース トピックス）
+- 「米中間選挙 事前投票が過去最多」（Yahoo!ニュース トピックス）
+- 「緊急事態条項の創設巡り賛否 見解」（Yahoo!ニュース トピックス）
+- 「岩手で熊出没急減 ブナ豊作影響か」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3187,8 +3187,8 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600879?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600878?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600900?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600969?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600932?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600845?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600877?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600919?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6600869?source=rss)
@@ -3200,22 +3200,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-01/macau-gaming-revenue-decline-extends-despite-golden-week-boost)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-01/australia-home-auction-clearance-rate-falls-to-six-year-low)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-01/an-asian-stock-trader-s-guide-ahead-of-the-us-midterm-elections)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-01/opec-set-to-stick-with-plan-for-steady-quotas-delegates-say)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-31/turkey-appoints-new-top-market-regulator-in-fund-crisis-response)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-31/rubio-defends-russian-g20-presence-despite-criticism-from-allies)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-10-31/senegal-lawmakers-reject-budget-again-putting-imf-deal-at-risk)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-01/macau-gaming-revenue-decline-extends-despite-golden-week-boost)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-01/an-asian-stock-trader-s-guide-ahead-of-the-us-midterm-elections)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-31/bloomberg-this-weekend-10-31-2026-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-31/pointed-bloomberg-s-weekly-news-quiz-for-risk-takers-video)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-31/stadiums-rethink-the-women-s-restroom-video)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-10-31/haunted-attractions-help-revive-neighborhoods-video)
 - [CNBC Top News](https://www.cnbc.com/2026/10/31/binance-hack-asset-coverage-withdrawals.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/31/trump-murdoch-wsj-epstein-defamation-lawsuit-dismissed.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/31/2026-midterm-election-super-pacs-donor-disclosure.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/01/ai-investments-company-earnings.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/31/automakers-3d-printing-ford-rivian-gm.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/31/xai-naacp-clean-air-act-lawsuit-dismissal.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/31/openai-fundraising-20-billion-valuation.html)
 - [CNBC Top News](https://www.cnbc.com/2026/10/31/trump-gas-diesel-price-midterm-election.html)
-- [CNBC Top News](https://www.cnbc.com/2026/10/31/anthropic-ipo-ai-spending.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/30/euro-zone-gdp-france.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/29/european-central-bank-interest-rates.html)
 - [CNBC Markets](https://www.cnbc.com/2026/10/29/pce-inflation-report-september-2026-.html)
@@ -3248,14 +3248,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/company-news/deepseek-launches-autonomous-coding-agent-to-challenge-anthropics-claude-code-4989391)
-- [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-faces-further-downside-risks-as-fear-surges-binance-hack-rattles-markets-4989389)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/binance-to-resume-withdrawals-after-recovering-bulk-of-6-billion-in-stolen-funds-4989388)
-- [Investing.com News](https://www.investing.com/news/economic-indicators/thousands-return-to-lisbon-square-press-government-to-scrap-rental-bill-4989325)
-- [Investing.com News](https://www.investing.com/news/company-news/hanwha-secures-269-million-us-navy-shipbuilding-contract-eyes-more-orders-4989385)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/shore-bancshares-director-john-lamon-buys-7753-of-common-stock-93CH-4989381)
-- [Investing.com News](https://www.investing.com/news/commodities-news/bangladesh-to-form-wage-board-after-garment-protests-shut-factories-4989374)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/ai-investors-rush-to-hedge-against-potential-tech-market-downturn--wsj-4989371)
+- [Investing.com News](https://www.investing.com/news/transcripts/earnings-call-transcript-agnico-eagle-beats-q3-2026-estimates-shares-fall-93CH-4989461)
+- [Investing.com News](https://www.investing.com/news/company-news/regeneron-q3-2026-slides-record-results-8b-sanofi-alliance-93CH-4989460)
+- [Investing.com News](https://www.investing.com/news/company-news/exxonmobil-q3-2026-slides-record-refining-drives-earnings-beat-93CH-4989459)
+- [Investing.com News](https://www.investing.com/news/company-news/bp-q3-2026-slides-net-debt-falls-below-target-portfolio-reshapes-93CH-4989458)
+- [Investing.com News](https://www.investing.com/news/company-news/general-dynamics-q3-2026-slides-backlog-doubles-on-submarine-deals-93CH-4989457)
+- [Investing.com News](https://www.investing.com/news/transcripts/earnings-call-transcript-dominion-energy-tops-q3-2026-estimates-raises-outlook-93CH-4989456)
+- [Investing.com News](https://www.investing.com/news/transcripts/earnings-call-transcript-cheniere-energy-tops-q3-2026-estimates-lifts-outlook-93CH-4989455)
+- [Investing.com News](https://www.investing.com/news/company-news/chevron-q3-2026-slides-strong-cash-flow-venezuela-growth-story-93CH-4989454)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-111-sec-issues-exemptive-relief-treasury-clearing-requirements-certain-inter-affiliate-non-us-repo)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-110-two-entities-charged-130-million-fraud-scheme-used-false-sec-filings-boost-investor-confidence)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-109-sec-announces-fiscal-year-2027-examination-priorities)
@@ -3289,6 +3289,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinDesk](https://www.coindesk.com/business/2026/10/26/institutions-embrace-crypto-staking-despite-shrinking-yields)
 - [CoinDesk](https://www.coindesk.com/business/2026/10/31/uber-tests-how-tokenization-can-put-idle-cash-to-work-with-hsbc-franklin-templeton)
 - [CoinDesk](https://www.coindesk.com/tech/2026/10/31/as-big-bitcoin-miners-chase-ai-profits-individuals-get-another-shot-at-the-rewards)
+- [CoinTelegraph](https://cointelegraph.com/news/fbi-blames-north-korea-for-record-63b-binance-hack?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/binance-hack-90-percent-replenished?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-binance-hack-strive-ceo?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
@@ -3296,15 +3297,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/news/texas-brothers-sentenced-to-15-years-in-prison-for-armed-crypto-robbery-kidnapping?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/blockchain-investigator-chainalysis-hit-by-cybersecurity-incident?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/binance-63b-record-hack-sparks-pre-election-political-chatter?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/magazine/binance-hackers-raced-to-move-billions-before-could-be-frozen?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600914?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600932?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600907?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600930?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600942?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600937?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600941?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600929?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600955?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600935?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600940?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600956?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600953?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600959?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600963?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6600962?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
