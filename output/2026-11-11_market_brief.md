@@ -40,13 +40,12 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気40%・普通20%・弱気40%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／CoreWeave stock pops 13% after outlook raise eases AI slowdown concerns
-■注目テーマ3つ: A…
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Bitcoin holds steady as CoreWeave earnings revive AI outlook, Anthropic said to rai…
 
 ---
 ## 1. 今日の結論　★★★★★
 **米国市場はNYダウが前日比-0.30%と下落。今日の相場は強気40%・弱気40%とAIは見立てています。**
-**為替は米ドル/円158.86円。金利・為替の動きが日本株の方向感を左右しそうです。**
+**為替は米ドル/円159.11円。金利・為替の動きが日本株の方向感を左右しそうです。**
 **日経平均の直近値は61,248.59円（前日比 +789.01 (+1.31%)）。**
 
 ---
@@ -67,7 +66,7 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「CoreWeave stock pops 13% after outlook raise eases AI slowdown concerns」（CNBC Top News）　★★★★★
+### 3. 「Bitcoin holds steady as CoreWeave earnings revive AI outlook, Anthropic said to raise IPO valuation」（CoinDesk）　★★★★★
 - **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
@@ -97,8 +96,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. CoreWeave stock pops 13% after outlook raise eases AI slowdown concerns　★★★☆☆
-- **ニュース:** 「CoreWeave stock pops 13% after outlook raise eases AI slowdown concerns」（CNBC Top News）
+### 3. Bitcoin holds steady as CoreWeave earnings revive AI outlook, Anthropic said to raise IPO valuation　★★★☆☆
+- **ニュース:** 「Bitcoin holds steady as CoreWeave earnings revive AI outlook, Anthropic said to raise IPO valuation」（CoinDesk）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -107,8 +106,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. CoreWeave beats on revenue and lifts guidance, easing AI slowdown concerns　★★★☆☆
-- **ニュース:** 「CoreWeave beats on revenue and lifts guidance, easing AI slowdown concerns」（CNBC Top News）
+### 4. CoreWeave stock pops 11% after outlook raise eases AI slowdown concerns　★★★☆☆
+- **ニュース:** 「CoreWeave stock pops 11% after outlook raise eases AI slowdown concerns」（CNBC Top News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -117,8 +116,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 5. AI Trade Lifts Stocks as CoreWeave Defies Skeptics: Markets Wrap　★★★☆☆
-- **ニュース:** 「AI Trade Lifts Stocks as CoreWeave Defies Skeptics: Markets Wrap」（Bloomberg Markets(見出し)）
+### 5. AI Stocks Rally as CoreWeave Earnings Offer Relief: Markets Wrap　★★★☆☆
+- **ニュース:** 「AI Stocks Rally as CoreWeave Earnings Offer Relief: Markets Wrap」（Bloomberg Markets(見出し)）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -296,14 +295,14 @@
 
 #### 世界のお金の流れ（市場シグナルベース）
 > 実際の資金流入額ではなく、公開市場データとニューステーマから見た「資金の向かいやすさ」です（機関投資家のポジションや実際の資金フローは取得していません。断定的な資金フローは表示しません）。
-参考情報: VIX指数は18.86と落ち着いた水準で、リスクオン優勢の目安です。 TOPIXがNASDAQを上回っており、バリュー優位の目安です。
+参考情報: VIX指数は18.69と落ち着いた水準で、リスクオン優勢の目安です。 TOPIXがNASDAQを上回っており、バリュー優位の目安です。
 - **AI・半導体**: 中立
   SOX指数が前日比-0.35%、NASDAQが前日比-0.74%、AI、半導体のTheme Momentum Scoreが高め、半導体がEarly Signal Detectionにも該当ことから、「AI・半導体」への資金動向は方向感に乏しく、中立的と考えられます。
   関連テーマ: AI、半導体
   関連セクター: 半導体・電子部品、電機・電線・素材、電力・インフラ、情報通信・生成AI
   営業で話すポイント: 「AI・半導体」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
 - **金融・銀行**: 流入しやすい
-  米10年金利が前日比+0.119、ドル円が前日比+0.56%、Sector Rankingでも金融が上位に確認できることから、「金融・銀行」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
+  米10年金利が前日比+0.119、ドル円が前日比+0.71%、Sector Rankingでも金融が上位に確認できることから、「金融・銀行」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
   関連セクター: 金融
   営業で話すポイント: 「金融・銀行」は市場シグナル上、物色されやすい局面とお伝えできます。
 - **防衛・電力・インフラ**: 流入しやすい
@@ -312,10 +311,10 @@
   関連セクター: 重工業・防衛
   営業で話すポイント: 「防衛・電力・インフラ」は市場シグナル上、物色されやすい局面とお伝えできます。
 - **内需・消費**: 中立
-  ドル円が前日比+0.56%（円安方向）ことから、「内需・消費」への資金動向は方向感に乏しく、中立的と考えられます。
+  ドル円が前日比+0.71%（円安方向）ことから、「内需・消費」への資金動向は方向感に乏しく、中立的と考えられます。
   営業で話すポイント: 「内需・消費」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
 - **コモディティ・資源**: 流入しやすい
-  WTI原油が前日比+1.12%、金先物が前日比+0.66%ことから、「コモディティ・資源」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
+  WTI原油が前日比+0.87%、金先物が前日比+0.78%ことから、「コモディティ・資源」は市場シグナル上は追い風で、資金が向かいやすい地合いと考えられます。
   関連テーマ: 資源
   関連セクター: 資源・エネルギー
   営業で話すポイント: 「コモディティ・資源」は市場シグナル上、物色されやすい局面とお伝えできます。
@@ -2034,7 +2033,7 @@
 | 普通（中立） | 20% | 米10年金利・為替（米ドル/円） |
 | 弱気 | 40% | VIX指数 |
 
-> **AI分析（総括）:** NYダウが前日比-0.30%と下落したこと、VIX指数が18.86と落ち着いた水準にあること、業種別ニュースで逆風（1件）が追い風（0件）を上回っていること、為替が円安方向に動いていることなどから、上記の配分が想定されます。
+> **AI分析（総括）:** NYダウが前日比-0.30%と下落したこと、VIX指数が18.69と落ち着いた水準にあること、業種別ニュースで逆風（1件）が追い風（0件）を上回っていること、為替が円安方向に動いていることなどから、上記の配分が想定されます。
 
 **強気シナリオの理由（AI分析）:** VIX指数が落ち着いていることなどが続けば、上値を試す展開もあり得ると考えられます。
 
@@ -2052,14 +2051,14 @@
 - **弱気シナリオ:** 円高進行や米国株の軟調な地合いを受け、輸出関連株を中心に下押しする可能性があります。
 
 ### ドル円
-現在は158.86円付近で推移しています。米金利が上昇方向にあり、日米金利差の観点から円安圧力が意識されやすい局面です。為替の先行きを断定することはできず、金融政策や金利動向を確認したい局面です。
+現在は159.11円付近で推移しています。米金利が上昇方向にあり、日米金利差の観点から円安圧力が意識されやすい局面です。為替の先行きを断定することはできず、金融政策や金利動向を確認したい局面です。
 - **注目材料:** 米10年金利（上昇方向）
 - **強気シナリオ:** 日米金利差の拡大観測が強まれば、円安方向（ドル高）へシフトするシナリオが意識される可能性があります。
 - **中立シナリオ:** 金利差・金融政策見通しが拮抗する場合、当面レンジ内で推移するシナリオも考えられます。
 - **弱気シナリオ:** 日銀の金融政策修正観測や米利下げ観測が強まれば、円高方向へシフトするシナリオも意識される可能性があります。
 
 ### 米国市場
-主要3指数のうち下落した指数が多く、リスク回避的な地合いが意識されやすい状況です。VIX指数は18.86と落ち着いた水準にあります。将来の値動きを保証するものではなく、あくまで参考情報としてご確認ください。
+主要3指数のうち下落した指数が多く、リスク回避的な地合いが意識されやすい状況です。VIX指数は18.69と落ち着いた水準にあります。将来の値動きを保証するものではなく、あくまで参考情報としてご確認ください。
 - **注目材料:** VIX指数（落ち着いた水準）
 - **強気シナリオ:** インフレ鈍化や良好な決算が続けば、主要指数が上値を試す展開が意識される可能性があります。
 - **中立シナリオ:** 強弱材料が拮抗する場合、方向感を欠いたレンジ内推移が意識される可能性があります。
@@ -2093,7 +2092,7 @@
 ## 9. マーケット分析　★★★★☆
 *AI分析・因果関係を矢印で整理*
 
-**米国株**: NYダウ -157.86 (-0.30%)／VIX 18.86（リスク回避の目安）
+**米国株**: NYダウ -157.86 (-0.30%)／VIX 18.69（リスク回避の目安）
 
 ↓
 
@@ -2101,7 +2100,7 @@
 
 ↓
 
-**為替**: 米ドル/円 158.86円（前日比+0.88 (+0.56%)、円安方向）
+**為替**: 米ドル/円 159.11円（前日比+1.12 (+0.71%)、円安方向）
 
 ↓
 
@@ -2175,12 +2174,12 @@ NYダウ下落
 | NYダウ | 52,231.89 | -0.30% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^DJI) |
 | S&P500 | 7,520.93 | -0.38% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^GSPC) |
 | ナスダック総合 | 25,065.87 | -0.74% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^IXIC) |
-| VIX指数（恐怖指数） | 18.86 | -3.08% | ★★★ | [🔗](https://finance.yahoo.com/quote/^VIX) |
+| VIX指数（恐怖指数） | 18.69 | -3.96% | ★★★ | [🔗](https://finance.yahoo.com/quote/^VIX) |
 | SOX指数（フィラデルフィア半導体指数） | 9,998.33 | -0.35% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/^SOX) |
-| ドル指数（DXY） | 102.48 | +0.24% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
-| WTI原油先物 | 87.00 | +1.12% | ★★☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
-| 金先物（ゴールド） | 4,056.70 | +0.66% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 73,508.03 | -0.29% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ドル指数（DXY） | 102.50 | +0.27% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
+| WTI原油先物 | 86.79 | +0.87% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
+| 金先物（ゴールド） | 4,061.50 | +0.78% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/GC=F) |
+| ビットコイン | 73,968.97 | +0.34% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2188,9 +2187,9 @@ NYダウ下落
 
 | 名称 | 値 | 前日比 | ★ | 出典 |
 |---|---|---|---|---|
-| 米ドル/円 | 158.86 | +0.56% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/JPY=X) |
-| ユーロ/円 | 176.86 | -0.25% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/EURJPY=X) |
-| ユーロ/米ドル | 1.11 | -0.77% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/EURUSD=X) |
+| 米ドル/円 | 159.11 | +0.71% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/JPY=X) |
+| ユーロ/円 | 177.22 | -0.04% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/EURJPY=X) |
+| ユーロ/米ドル | 1.11 | -0.74% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/EURUSD=X) |
 | 米10年国債利回り | 4.98 | +2.45% | ★★★ | [🔗](https://finance.yahoo.com/quote/^TNX) |
 
 ---
@@ -2209,21 +2208,21 @@ NYダウ下落
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [CoreWeave stock pops 13% after outlook raise eases AI slowdown concerns](https://www.cnbc.com/2026/11/11/coreweave-crwv-outlook-earnings-ai.html)
+### 3位 ★★★★★ [Bitcoin holds steady as CoreWeave earnings revive AI outlook, Anthropic said to raise IPO valuation](https://www.coindesk.com/markets/2026/11/11/coreweave-earnings-revive-ai-outlook-as-anthropic-weighs-higher-ipo-valuation)
+- 出典（事実）: CoinDesk
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 4位 ★★★★★ [CoreWeave stock pops 11% after outlook raise eases AI slowdown concerns](https://www.cnbc.com/2026/11/11/coreweave-crwv-outlook-earnings-ai.html)
 - 出典（事実）: CNBC Top News
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 4位 ★★★★★ [CoreWeave beats on revenue and lifts guidance, easing AI slowdown concerns](https://www.cnbc.com/2026/11/10/coreweave-crwv-q3-earnings-report-2026.html)
-- 出典（事実）: CNBC Top News
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 5位 ★★★★★ [AI Trade Lifts Stocks as CoreWeave Defies Skeptics: Markets Wrap](https://www.bloomberg.com/news/articles/2026-11-10/stock-market-today-dow-s-p-live-updates)
+### 5位 ★★★★★ [AI Stocks Rally as CoreWeave Earnings Offer Relief: Markets Wrap](https://www.bloomberg.com/news/articles/2026-11-10/stock-market-today-dow-s-p-live-updates)
 - 出典（事実）: Bloomberg Markets(見出し)
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
@@ -2269,11 +2268,11 @@ NYダウ下落
 ## 13. 今日見るべき指標　★★★★☆
 | 指標 | 現在値 | 重要ライン | 超えたら（AI分析） |
 |---|---|---|---|
-| 米ドル/円 | 158.86 | 160 | 円高方向への転換が意識されやすく、輸出関連株には逆風となりやすい水準です。 |
-| VIX指数（恐怖指数） | 18.86 | 20 | 落ち着いた相場地合いが意識されやすい水準です。 |
+| 米ドル/円 | 159.11 | 160 | 円高方向への転換が意識されやすく、輸出関連株には逆風となりやすい水準です。 |
+| VIX指数（恐怖指数） | 18.69 | 20 | 落ち着いた相場地合いが意識されやすい水準です。 |
 | 米10年国債利回り | 4.98 | 5 | 金利低下が株式には追い風として意識されやすい水準です。 |
-| WTI原油先物 | 87.00 | 90 | 資源関連株には逆風、消費関連株には追い風が意識されやすい水準です。 |
-| 金先物（ゴールド） | 4,056.70 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
+| WTI原油先物 | 86.79 | 90 | 資源関連株には逆風、消費関連株には追い風が意識されやすい水準です。 |
+| 金先物（ゴールド） | 4,061.50 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
 
 ---
 ## 14. テーマ分析　★★★★☆
@@ -2285,10 +2284,10 @@ NYダウ下落
 
 **関連見出し（事実）:**
 - [オープンAI 開発一時中断 AIみずからサイバー攻撃実行のおそれ](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html) — NHKニュース 経済
-- [AI Trade Lifts Stocks as CoreWeave Defies Skeptics: Markets Wrap](https://www.bloomberg.com/news/articles/2026-11-10/stock-market-today-dow-s-p-live-updates) — Bloomberg Markets(見出し)
-- [CoreWeave stock pops 13% after outlook raise eases AI slowdown concerns](https://www.cnbc.com/2026/11/11/coreweave-crwv-outlook-earnings-ai.html) — CNBC Top News
-- [CoreWeave beats on revenue and lifts guidance, easing AI slowdown concerns](https://www.cnbc.com/2026/11/10/coreweave-crwv-q3-earnings-report-2026.html) — CNBC Top News
+- [AI Stocks Rally as CoreWeave Earnings Offer Relief: Markets Wrap](https://www.bloomberg.com/news/articles/2026-11-10/stock-market-today-dow-s-p-live-updates) — Bloomberg Markets(見出し)
+- [CoreWeave stock pops 11% after outlook raise eases AI slowdown concerns](https://www.cnbc.com/2026/11/11/coreweave-crwv-outlook-earnings-ai.html) — CNBC Top News
 - [Stocks Sink in Broad AI Rout Sparked by China's DeepSeek](https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main) — WSJ Markets
+- [DeepSeek Won't Sink U.S. AI Titans](https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main) — WSJ Markets
 
 ### 第2位: 円高　★★★☆☆
 - **今強い理由（AI分析）:** 本日一部円高に関する報道が出ており、輸出関連企業の収益への懸念が意識されやすい状況です。
@@ -2694,8 +2693,8 @@ NYダウ下落
 直近値: 1,971.00 / 前日比: +8.00 (+0.41%)（事実）
 
 - **今日の材料（AI分析）:** 前日比+8.00 (+0.41%)。 本日、個別の関連見出しは確認されませんでした。
-- **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2026-11-10）
-- **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2026-11-10）
+- **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2027-02-08）
+- **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2027-02-08）
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
 - **リスク（AI分析）:** 現時点で突出したリスク要因は確認されていませんが、相場全体の急変には留意が必要です。
 
@@ -2921,7 +2920,7 @@ NYダウ下落
 ---
 ## 21. 今日電話すべき顧客　★★★☆☆
 ### 富裕層
-- **理由（AI分析）:** 為替（米ドル/円158.86円）と米金利（4.98%）の動きがあり、資産配分の見直し話題としてお声がけしやすいタイミングと考えられます。
+- **理由（AI分析）:** 為替（米ドル/円159.11円）と米金利（4.98%）の動きがあり、資産配分の見直し話題としてお声がけしやすいタイミングと考えられます。
 - **話題（AI分析）:** 外貨建て資産・分散投資の状況確認、『AI』関連のテーマ
 - **営業トーク例:** 「市場環境の変化を踏まえ、資産配分を確認するお時間をいただけますでしょうか。」
 
@@ -2936,7 +2935,7 @@ NYダウ下落
 - **営業トーク例:** 「退職金の運用方針について、改めて整理するお時間を頂戴できればと思います。」
 
 ### 法人
-- **理由（AI分析）:** 為替（米ドル/円158.86円）・金利（4.98%）の動きが、資金調達コストや輸出入採算に影響しうる局面として注目されています。
+- **理由（AI分析）:** 為替（米ドル/円159.11円）・金利（4.98%）の動きが、資金調達コストや輸出入採算に影響しうる局面として注目されています。
 - **話題（AI分析）:** 為替・金利ヘッジの状況、資金計画の確認
 - **営業トーク例:** 「足元の為替・金利動向を踏まえ、資金計画を確認するお時間をいただけますでしょうか。」
 
@@ -2955,12 +2954,12 @@ NYダウ下落
 ### 社長向け一言（30秒で話せる内容）
 
 - 自動車関連が注目されています
-- ドル円（158.86円）の変動が企業業績へ影響します
+- ドル円（159.11円）の変動が企業業績へ影響します
 - 金利動向が設備投資判断へ影響する可能性があります
 
 ### 富裕層向け話題
 
-- 為替（米ドル/円158.86円）の水準は、外貨建て資産の話題にもつながります。
+- 為替（米ドル/円159.11円）の水準は、外貨建て資産の話題にもつながります。
 - 「自動車」のような成長テーマは、資産形成の話題として取り上げやすい分野です。
 - NISA枠の活用状況を確認する良いタイミングかもしれません。
 - 相続・事業承継のご相談も、資産全体を棚卸しするきっかけになります。
@@ -2976,12 +2975,12 @@ NYダウ下落
 
 - 「Amazonの改善計画 公取委が認定」（Yahoo!ニュース トピックス）
 - 「米財務長官 脅迫受け軍基地に転居」（Yahoo!ニュース トピックス）
-- 「パスキー設定の証券口座 侵入疑い」（Yahoo!ニュース トピックス）
+- 「放火し保険金など1億円詐取 実刑」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
 - **Q. ドル円どうなる？**
-  A. 現在は158.86円付近です。金利差や金融政策の動向次第で変動する可能性があります（断定はできません）。
+  A. 現在は159.11円付近です。金利差や金融政策の動向次第で変動する可能性があります（断定はできません）。
 - **Q. 古河電工はまだ買える？**
   A. 古河電工の直近値は2,373.00（前日比+176.00 (+8.01%)）です。個別の売買判断はご自身の責任でご確認ください。
 - **Q. 日経平均は上がる？**
@@ -2989,13 +2988,13 @@ NYダウ下落
 - **Q. NISAって何？**
   A. 少額投資非課税制度の愛称。一定額までの投資利益が非課税になる制度です。
 - **Q. 今の相場は荒れてる？**
-  A. VIX指数（恐怖指数）は18.86です。20を超えると警戒的、20未満だと落ち着いた水準の目安とされます。
+  A. VIX指数（恐怖指数）は18.69です。20を超えると警戒的、20未満だと落ち着いた水準の目安とされます。
 
 （いずれも事実の紹介・一般的な説明にとどめ、断定的な投資助言は行わないでください。）
 ---
 ## 23. 営業トーク　★★★☆☆
 ### 法人社長向け
-- 「為替は米ドル/円158.86円付近です。輸出入コストへの影響をご確認ください」
+- 「為替は米ドル/円159.11円付近です。輸出入コストへの影響をご確認ください」
 - 「米10年金利は4.98%です。資金調達コストの動向としてご留意ください」
 - 「業界動向として自動車が話題になっています」
 
@@ -3005,12 +3004,12 @@ NYダウ下落
 - 「本日はAI関連のニュースが話題です」
 
 ### 初心者向け
-- 「VIX指数（別名：恐怖指数）は市場の不安の大きさを表す指標で、現在は18.86と落ち着いた水準です」
-- 「為替（米ドル/円）は今どれくらいの円安・円高かを示す指標で、現在は158.86円です」
+- 「VIX指数（別名：恐怖指数）は市場の不安の大きさを表す指標で、現在は18.69と落ち着いた水準です」
+- 「為替（米ドル/円）は今どれくらいの円安・円高かを示す指標で、現在は159.11円です」
 - 「これらは市場の状況を知るための参考情報であり、そのまま売買の判断材料とするものではありません」
 
 ### 富裕層向け
-- 「為替（米ドル/円158.86円）と米金利（4.98%）の組み合わせは、資産全体の通貨・金利エクスポージャーを見直す材料になります」
+- 「為替（米ドル/円159.11円）と米金利（4.98%）の組み合わせは、資産全体の通貨・金利エクスポージャーを見直す材料になります」
 - 「『AI』のような構造的テーマは、コア・サテライト戦略のサテライト部分として話題にできます」
 - 「短期の値動きよりも、資産配分・分散の観点から市場環境を俯瞰する材料としてご活用ください」
 
@@ -3018,43 +3017,43 @@ NYダウ下落
 ---
 ## 24. 営業向けコメント　★★★☆☆
 ### 法人社長向け
-為替は米ドル/円158.86円、米金利は4.98%付近で推移しており、資金調達コストや輸出入採算への影響が注目されています。『自動車』関連の話題が業界動向として意識されています。経営判断の参考として、引き続き為替・金利の水準を確認したい局面です。
+為替は米ドル/円159.11円、米金利は4.98%付近で推移しており、資金調達コストや輸出入採算への影響が注目されています。『自動車』関連の話題が業界動向として意識されています。経営判断の参考として、引き続き為替・金利の水準を確認したい局面です。
 
 ### 富裕層向け
-為替（米ドル/円158.86円）と米金利（4.98%）の組み合わせは、資産全体の通貨・金利エクスポージャーを見直すきっかけになる可能性があります。『AI』のような構造的テーマも話題になっています。短期の値動きよりも、資産配分・分散の観点から相場環境を確認したい局面です。
+為替（米ドル/円159.11円）と米金利（4.98%）の組み合わせは、資産全体の通貨・金利エクスポージャーを見直すきっかけになる可能性があります。『AI』のような構造的テーマも話題になっています。短期の値動きよりも、資産配分・分散の観点から相場環境を確認したい局面です。
 
 ### 個人投資家向け
 日経平均は61,248.59付近、NYダウは前日比-157.86 (-0.30%)で推移しています。本日はAI関連のニュースが注目されています。投資判断は最新の情報をご自身でご確認いただきたい局面です。
 
 ### NISA初心者向け
-NISA（少額投資非課税制度）は、一定額までの投資利益が非課税になる制度です。本日の市場は日経平均61,248.59、為替は米ドル/円158.86円という状況で、短期の値動きに一喜一憂せず、長期・積立・分散という基本を確認したい局面と考えられます。個別商品の選定は、ご自身の目的やリスク許容度に応じてご検討いただく話題です。
+NISA（少額投資非課税制度）は、一定額までの投資利益が非課税になる制度です。本日の市場は日経平均61,248.59、為替は米ドル/円159.11円という状況で、短期の値動きに一喜一憂せず、長期・積立・分散という基本を確認したい局面と考えられます。個別商品の選定は、ご自身の目的やリスク許容度に応じてご検討いただく話題です。
 
 ### 為替に関心がある顧客向け
-米ドル/円は158.86円で推移しており、日米の金利差（米10年金利4.98%）が変動要因の一つとして注目されています。市場のリスク許容度を示すVIX指数は落ち着いた水準との見方があり、為替の変動幅にも影響しうる局面として確認したい状況です。
+米ドル/円は159.11円で推移しており、日米の金利差（米10年金利4.98%）が変動要因の一つとして注目されています。市場のリスク許容度を示すVIX指数は落ち着いた水準との見方があり、為替の変動幅にも影響しうる局面として確認したい状況です。
 
 ### 米国株に関心がある顧客向け
 NYダウは前日比-157.86 (-0.30%)で推移しています。『AI』関連のテーマが引き続き注目されています。米金利・インフレ動向とあわせて、値動きの背景を確認したい局面です。
 
 ### 日本株に関心がある顧客向け
-日経平均は61,248.59付近で推移しており、為替（米ドル/円158.86円）の動向が輸出関連株を中心に意識されやすい状況です。業種では『自動車』が注目されています。業種ごとの追い風・逆風のバランスを確認したい局面と考えられます。
+日経平均は61,248.59付近で推移しており、為替（米ドル/円159.11円）の動向が輸出関連株を中心に意識されやすい状況です。業種では『自動車』が注目されています。業種ごとの追い風・逆風のバランスを確認したい局面と考えられます。
 
 （いずれも情報整理を目的としたトーク例であり、断定的な将来予測・投資助言ではありません。）
 ---
 ## 25. 岡三証券営業向けコメント　★★★☆☆
 ### 富裕層のお客様向け
-為替（米ドル/円158.86円）と米金利（4.98%）の水準は、外貨建て資産や資産全体の通貨・金利エクスポージャーを見直す話題につながる可能性があります。『AI』のような構造的テーマも話題になっています。短期の値動きよりも、資産配分・分散の観点から相場環境を確認したい局面です。
+為替（米ドル/円159.11円）と米金利（4.98%）の水準は、外貨建て資産や資産全体の通貨・金利エクスポージャーを見直す話題につながる可能性があります。『AI』のような構造的テーマも話題になっています。短期の値動きよりも、資産配分・分散の観点から相場環境を確認したい局面です。
 
 ### 法人のお客様向け
-為替は米ドル/円158.86円、米金利は4.98%付近で推移しており、輸出入採算や資金調達コストへの影響が注目されています。業界動向として『自動車』が話題になっています。法人のお客様には、為替・金利のヘッジや資金計画を確認したい局面としてお伝えできます。
+為替は米ドル/円159.11円、米金利は4.98%付近で推移しており、輸出入採算や資金調達コストへの影響が注目されています。業界動向として『自動車』が話題になっています。法人のお客様には、為替・金利のヘッジや資金計画を確認したい局面としてお伝えできます。
 
 ### NISAご利用のお客様向け
-本日の日経平均は61,249円付近、為替は米ドル/円158.86円という状況です。NISA（少額投資非課税制度）をご活用中のお客様には、短期の値動きに一喜一憂せず、長期・積立・分散という基本方針を確認いただきたい局面とお伝えできます。個別商品のご提案ではなく、制度活用状況の確認としてご案内ください。
+本日の日経平均は61,249円付近、為替は米ドル/円159.11円という状況です。NISA（少額投資非課税制度）をご活用中のお客様には、短期の値動きに一喜一憂せず、長期・積立・分散という基本方針を確認いただきたい局面とお伝えできます。個別商品のご提案ではなく、制度活用状況の確認としてご案内ください。
 
 ### 退職金のご相談のお客様向け
 退職金のご相談では、まとまった資金を一度に投じるのではなく、時間分散や生活資金とのバランスを確認したい局面である旨をご案内できます。市場では『AI』が話題になっていますが、退職後の資金計画は市場動向以上にお客様ご自身のライフプランに即してご確認いただくことが重要です。
 
 ### 相続・資産承継のご相談のお客様向け
-相続・資産承継のご相談では、市場動向にかかわらず、資産全体の棚卸しや承継方法の整理をするきっかけとしてお声がけできる局面です。為替（米ドル/円158.86円）や金利（4.98%）の動きは、承継時の評価額に影響しうる要素として参考情報にとどめてお伝えください。
+相続・資産承継のご相談では、市場動向にかかわらず、資産全体の棚卸しや承継方法の整理をするきっかけとしてお声がけできる局面です。為替（米ドル/円159.11円）や金利（4.98%）の動きは、承継時の評価額に影響しうる要素として参考情報にとどめてお伝えください。
 
 （いずれも情報整理を目的としたトーク例であり、断定的な将来予測・投資助言ではありません。特定商品の推奨は行いません。）
 ---
@@ -3063,14 +3062,14 @@ NYダウは前日比-157.86 (-0.30%)で推移しています。『AI』関連の
 おはようございます。本日の相場は強気40%、弱気40%と見立てています。最重要ニュースは「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI model…
 
 ### 1分バージョン
-おはようございます。本日の相場は強気40%・中立20%・弱気40%と見立てています。NYダウが前日比-0.30%と下落したこと、VIX指数が18.86と落ち着いた水準にあること、業種別ニュースで逆風（1件）が追い風（0件）を上回っていること、為替が円安方向に動いていることなどから、上記の配分が想定されます。
+おはようございます。本日の相場は強気40%・中立20%・弱気40%と見立てています。NYダウが前日比-0.30%と下落したこと、VIX指数が18.69と落ち着いた水準にあること、業種別ニュースで逆風（1件）が追い風（0件）を上回っていること、為替が円安方向に動いていることなどから、上記の配分が想定されます。
 
 ### 3分バージョン
-おはようございます。本日の朝会コメントをお伝えします。本日の相場シナリオは、強気40%・中立20%・弱気40%です。NYダウが前日比-0.30%と下落したこと、VIX指数が18.86と落ち着いた水準にあること、業種別ニュースで逆風（1件）が追い風（0件）を上回っていること、為替が円安方向に動いていることなどから、上記の配分が想定されます。強気シナリオの理由としては、VIX指数が落ち着いていることなどが続けば、上値を試す展開もあり得ると考えられます。一方で弱気シナリオの理由としては、NYダウが軟調に推移していること、業種別の逆風ニュースが優勢であることなどを踏まえると、下押しリスクも意識される可能性があります。注目ニュースとして「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」があり、テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Apple」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。注目ニュースとして「Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal」があり、テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Microsoft」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。
+おはようございます。本日の朝会コメントをお伝えします。本日の相場シナリオは、強気40%・中立20%・弱気40%です。NYダウが前日比-0.30%と下落したこと、VIX指数が18.69と落ち着いた水準にあること、業種別ニュースで逆風（1件）が追い風（0件）を上回っていること、為替が円安方向に動いていることなどから、上記の配分が想定されます。強気シナリオの理由としては、VIX指数が落ち着いていることなどが続けば、上値を試す展開もあり得ると考えられます。一方で弱気シナリオの理由としては、NYダウが軟調に推移していること、業種別の逆風ニュースが優勢であることなどを踏まえると、下押しリスクも意識される可能性があります。注目ニュースとして「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」があり、テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Apple」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。Data Tankの市場影響度スコアが高い記事です。48時間超の記事ですが、影響期間の長いイベントのため鮮度減点は適用していません。注目ニュースとして「Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal」があり、テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、ウォッチリスト銘柄「Microsoft」に言及している、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。
 
 ---
 ## 27. 今日の会話ネタ　★★★☆☆
-1. 最近の株式市場は落ち着いた雰囲気のようですね（VIX指数 18.86）。
+1. 最近の株式市場は落ち着いた雰囲気のようですね（VIX指数 18.69）。
 2. 今、「AI」の話題がニュースでよく取り上げられていますね。
 3. 今日は「障害者雇用ビジネス 登録制を検討」というニュースが話題になっています。
 
@@ -3080,7 +3079,7 @@ NYダウは前日比-157.86 (-0.30%)で推移しています。『AI』関連の
 A. AIの機械的な見立てでは強気40%・中立20%・弱気40%です。将来を断定するものではなく、あくまで情報整理としての参考値とお考えください。
 
 **Q. 円安は続きますか？**
-A. 現在は米ドル/円158.86円付近です。米10年金利（4.98%）との金利差が引き続き注目材料とされています。為替の先行きを断定することはできず、金融政策や金利動向を確認したい局面です。
+A. 現在は米ドル/円159.11円付近です。米10年金利（4.98%）との金利差が引き続き注目材料とされています。為替の先行きを断定することはできず、金融政策や金利動向を確認したい局面です。
 
 **Q. NVIDIAはまだ強いですか？**
 A. 直近値は168.89（前日比-9.78 (-5.47%)）です。半導体・AI関連の話題が注目されている局面です。個別銘柄の先行きを断定することはできず、業績や需給の動向を確認したい局面です。
@@ -3098,7 +3097,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [決算発表予定] ソフトバンクグループ（9984.T）: 2026-11-10
 - [決算発表予定] 東京エレクトロン（8035.T）: 2026-10-30
 - [決算発表予定] リクルートホールディングス（6098.T）: 2026-11-11
-- [決算発表予定] 川崎重工業（7012.T）: 2026-11-10
 - [決算発表予定] デンソー（6902.T）: 2026-10-29
 - [決算発表予定] 住友電工（5802.T）: 2026-10-30
 - [決算発表予定] パナソニックHD（6752.T）: 2026-10-30
@@ -3116,6 +3114,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [決算発表予定] トヨタ自動車（7203.T）: 2027-02-04（時期未確定を含む）
 - [決算発表予定] ソニーグループ（6758.T）: 2027-02-04（時期未確定を含む）
 - [決算発表予定] 日立製作所（6501.T）: 2027-01-28（時期未確定を含む）
+- [決算発表予定] 川崎重工業（7012.T）: 2027-02-08（時期未確定を含む）
 - [決算発表予定] 古河電工（5801.T）: 2027-02-08（時期未確定を含む）
 - [決算発表予定] 旭化成（3407.T）: 2027-02-04（時期未確定を含む）
 - [決算発表予定] きんでん（1944.T）: 2027-01-29（時期未確定を含む）
@@ -3199,8 +3198,8 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 ### ニュース見出し
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602117?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602184?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602134?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602124?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602206?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602118?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602160?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6602136?source=rss)
@@ -3213,22 +3212,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/china-s-tax-clampdown-brings-in-24-billion-from-offshore-trusts)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/unilever-mccormick-deal-facing-in-depth-review-from-uk-watchdog)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/chinese-lithium-giant-says-price-swings-have-turned-more-extreme)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/why-hedge-funds-did-so-poorly-in-october)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-11/edp-ceo-sees-opportunities-in-us-renewable-energy-video)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-11/vestas-ceo-andersen-on-third-quarter-revenue-miss-video)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-10/latest-oil-market-news-and-analysis-for-nov-11)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-10/stock-market-today-dow-s-p-live-updates)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/audio/2026-11-11/odd-lots-the-perfect-storm-that-clobbered-hedge-funds-podcast)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/taylor-wimpey-sees-lower-profit-as-mortgage-rates-squeeze-buyers)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/india-equity-fund-inflows-cool-as-stocks-sink-to-18-month-low)
-- [CNBC Top News](https://www.cnbc.com/2026/11/10/nvidia-jensen-huang-affair-office.html)
-- [CNBC Top News](https://www.cnbc.com/2026/11/11/us-iran-war-trump-hormuz-bessent-threats.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-10/gold-holds-loss-near-4-000-on-hot-us-inflation-fed-remarks)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-10/nvidia-s-bull-case-hinges-on-ceo-huang-surviving-china-spy-probe)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/csg-cuts-full-year-margin-outlook-as-revenue-misses-estimates)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-11/turkey-appliances-giant-sees-edge-over-china-with-new-eu-rules)
+- [CNBC Top News](https://www.cnbc.com/2026/11/11/nvidia-stock-jensen-huang-affair-china.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/11/coreweave-crwv-outlook-earnings-ai.html)
-- [CNBC Top News](https://www.cnbc.com/2026/11/10/anthropic-sets-price-range-of-70-to-78-in-upcoming-ipo.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/11/trump-company-equity-takes.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/11/us-army-soldier-russia-espionage-arrest.html)
-- [CNBC Top News](https://www.cnbc.com/2026/11/10/coreweave-crwv-q3-earnings-report-2026.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/10/pete-hegseth-impeachment-massie-iran.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/10/credit-card-debt-record.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/11/tech-selloff-defensive-pivot.html)
-- [CNBC Top News](https://www.cnbc.com/2026/11/11/singapore-gold-market-vault-storage.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/10/jim-jordan-congress-republicans-midterm.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/10/cpi-inflation-report-october-2026.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/10/china-trade-october-exports-imports-surplus-.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/09/october-jobs-report-hiring-by-sector.html)
@@ -3245,14 +3244,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [WSJ Markets](https://www.wsj.com/articles/safe-haven-currencies-strengthen-amid-fears-over-global-tariffs-9964e17a?mod=rss_markets_main)
 - [WSJ Markets](https://www.wsj.com/articles/u-s-natural-gas-futures-fall-on-shifting-weather-forecasts-1ef3e457?mod=rss_markets_main)
 - [WSJ Markets](https://www.wsj.com/articles/building-products-distributor-qxo-launching-hostile-bid-for-beacon-de024410?mod=rss_markets_main)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/coreweaves-stock-pops-as-new-financing-playbook-eases-debt-concerns-70241525?mod=mw_rss_topstories)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/why-goldman-sachs-is-now-changing-its-federal-reserve-interest-rate-forecast-3753f968?mod=mw_rss_topstories)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/im-63-and-want-to-spend-95-000-on-a-roof-deck-for-my-500-000-home-is-that-a-good-investment-f1a59c27?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/the-thought-of-living-to-100-terrifies-me-is-social-security-a-giant-ponzi-scheme-84a64e7e?mod=mw_rss_topstories)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/coreweaves-stock-pops-as-new-financing-playbook-eases-debt-concerns-70241525?mod=mw_rss_topstories)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/tiger-woods-has-another-private-18-hole-golf-destination-in-the-works-this-one-for-long-islands-gold-coast-7e8e669c?mod=mw_rss_topstories)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/among-full-size-suvs-the-2027-ford-expedition-is-worth-a-look-for-its-spacious-seating-and-mighty-engine-2c169852?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/one-reason-the-childrens-place-is-going-bankrupt-not-enough-children-b275eab0?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/we-had-the-worst-fight-weve-ever-had-i-want-my-husband-to-retire-at-65-but-i-dont-want-to-lose-his-280-000-salary-48511469?mod=mw_rss_topstories)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/she-can-always-change-her-mind-should-a-widow-leave-the-family-home-to-her-stepchildren-649b06af?mod=mw_rss_topstories)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/im-sick-of-flying-i-paid-for-priority-boarding-but-the-overhead-bins-were-full-was-i-duped-0badcc80?mod=mw_rss_topstories)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/amds-stock-fades-as-investors-weigh-whether-nvidias-turmoil-will-mean-lasting-wins-1ecfbc5e?mod=mw_rss_topstories)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/ignore-the-wild-swings-in-chip-stocks-until-they-reach-these-lines-in-the-sand-feb6e00f?mod=mw_rss_topstories)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/elon-musk-in-a-post-on-x-says-some-of-his-trump-posts-went-too-far-and-that-he-regrets-them-90e73a6a?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/bank-of-england-decision-on-thursday-will-be-at-12-02-p-m-local-time-instead-of-12-p-m-due-to-ve-day-two-minutes-of-silence-1f6bed66?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/swiss-national-bank-cuts-interest-rates-by-a-half-point-to-0-5-ed1fce78?mod=mw_rss_realtimeheadlines)
@@ -3261,14 +3260,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/earnings/csg-plunges-23-as-margin-warning-overshadows-2026-revenue-outlook-5018127)
-- [Investing.com News](https://www.investing.com/news/analyst-ratings/citizens-reiterates-coreweave-stock-rating-on-strong-compute-demand-93CH-5018125)
-- [Investing.com News](https://www.investing.com/news/analyst-ratings/citizens-cuts-chiron-real-estate-stock-price-target-on-leaseup-concerns-93CH-5018124)
-- [Investing.com News](https://www.investing.com/news/transcripts/earnings-call-transcript-axvik-group-posts-strong-q3-2026-growth-shares-rise-93CH-5018120)
-- [Investing.com News](https://www.investing.com/news/commodities-news/oil-rises-from-twomonth-low-as-hormuz-shipping-attacks-offset-iran-truce-hopes-5017512)
-- [Investing.com News](https://www.investing.com/news/transcripts/earnings-call-transcript-singulus-technologies-q3-2026-shares-surge-on-spacex-deal-93CH-5018119)
-- [Investing.com News](https://www.investing.com/news/economic-indicators/italy-industrial-output-rebounds-in-september-but-third-quarter-weak-5018118)
-- [Investing.com News](https://www.investing.com/news/economic-indicators/italys-industrial-output-climbs-12-in-september-93CH-5018111)
+- [Investing.com News](https://www.investing.com/news/company-news/inlif-subsidiary-signs-30m-supply-deal-with-hengsheng-toys-93CH-5018323)
+- [Investing.com News](https://www.investing.com/news/company-news/china-automotive-systems-posts-record-q3-eps-sales-okays-buyback-93CH-5018324)
+- [Investing.com News](https://www.investing.com/news/company-news/wisdomtree-reports-152b-net-inflows-through-october-2026-93CH-5018322)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/spiraxsarco-shares-gain-4-on-improved-sales-growth-93CH-5018321)
+- [Investing.com News](https://www.investing.com/news/forex-news/citi-sees-yen-strengthening-risk-if-japanese-stocks-correct-further-93CH-5018320)
+- [Investing.com News](https://www.investing.com/news/analyst-ratings/telsey-raises-grocery-outlet-stock-price-target-on-turnaround-progress-93CH-5018319)
+- [Investing.com News](https://www.investing.com/news/analyst-ratings/mizuho-raises-ardent-health-stock-price-target-to-21-on-execution-93CH-5018317)
+- [Investing.com News](https://www.investing.com/news/analyst-ratings/mizuho-reiterates-outperform-on-commvault-stock-200-target-93CH-5018316)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-113-sec-announces-enforcement-annual-results-fiscal-year-2026)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-112-sec-adopts-amendments-update-definitions-small-entity-investment-companies-investment-advisers)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-111-sec-issues-exemptive-relief-treasury-clearing-requirements-certain-inter-affiliate-non-us-repo)
@@ -3294,30 +3293,30 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [ECB Press Releases](https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261105~6495a0df6f.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr261104~caf181d7ac.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp.261102~70003226e9.en.html)
+- [CoinDesk](https://www.coindesk.com/business/2026/11/11/kraken-s-xstocks-adds-200-uk-and-eu-shares-as-its-assets-top-usd1-1-billion)
+- [CoinDesk](https://www.coindesk.com/markets/2026/11/11/coreweave-earnings-revive-ai-outlook-as-anthropic-weighs-higher-ipo-valuation)
 - [CoinDesk](https://www.coindesk.com/policy/2026/11/10/warren-what-is-white-house-doing-to-prevent-a-repeat-of-teleprompter-s-trump-bets)
 - [CoinDesk](https://www.coindesk.com/business/2026/11/10/former-nyse-president-says-stock-issuers-hold-the-key-to-tokenization-as-bullish-builds-its-platform)
 - [CoinDesk](https://www.coindesk.com/business/2026/11/10/goldman-sachs-citi-among-banks-said-to-commit-usd270-million-to-stablecoin-venture)
 - [CoinDesk](https://www.coindesk.com/news-analysis/2026/11/10/crypto-teams-up-with-u-s-government-to-defend-stock-perps-in-legal-fight)
 - [CoinDesk](https://www.coindesk.com/markets/2026/11/10/emb-10-am-et-plume-affiliate-gets-the-legal-green-light-to-trade-regulated-security-entitlements-onchain)
 - [CoinDesk](https://www.coindesk.com/opinion/2026/11/10/will-stablecoins-survive-once-the-banks-catch-up)
-- [CoinDesk](https://www.coindesk.com/markets/2026/11/10/u-s-cpi-rose-stronger-than-expected-0-4-in-october-core-rate-rose-0-3)
-- [CoinDesk](https://www.coindesk.com/business/2026/11/09/ripple-prime-head-marc-asch-to-step-down-noel-kimmel-named-successor)
+- [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-speculators-btc-exchanges-unrealized-loss-727k?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
+- [CoinTelegraph](https://cointelegraph.com/news/bitget-wallet-crypto-phishing-risk-detections-surge?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
+- [CoinTelegraph](https://cointelegraph.com/news/bitmine-6b-net-loss-eth-treasury-holdings?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/ecb-warns-legislative-delays-digital-euro-launch?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-etf-outflows-persist-while-equity-investors-buy-the-dip?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/sec-crypto-cases-enforcement-actions-fall-23-2025?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/initia-second-crypto-exploit-three-weeks?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/across-protocol-restores-website-after-hackers-hijack-domain?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/crypto-ally-tom-emmer-elected-house-gop-minority-whip?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/lnbits-rushes-emergency-patch-after-reported-bitcoin-wallet-thefts?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602184?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602195?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602193?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602207?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602187?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602181?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602197?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602209?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602211?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602210?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602203?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6602189?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
