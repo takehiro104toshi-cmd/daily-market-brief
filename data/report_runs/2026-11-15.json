@@ -20,6 +20,25 @@
       "git_commit_sha": "ae5d4299656883c9029b8eb1fe0385229ec37278",
       "generation_status": "success",
       "html_valid": true
+    },
+    "pre_market": {
+      "status": "success",
+      "scheduled_time": "07:30",
+      "started_at": "2026-11-15T11:00:22.135332+09:00",
+      "data_fetch_started_at": "2026-11-15T11:00:22.135332+09:00",
+      "trigger_type": "schedule",
+      "is_recovery_run": false,
+      "workflow_run_id": "43665649746",
+      "generated_at": "2026-11-15T11:00:22.135332+09:00",
+      "report_build_completed_at": "2026-11-15T11:00:22.135332+09:00",
+      "retry_count": 0,
+      "slot_label": "寄り前レポート",
+      "generated_at_jst": "2026-11-15T11:00:22.135332+09:00",
+      "generated_at_utc": "2026-11-15T02:00:22.135332+00:00",
+      "report_date_jst": "2026-11-15",
+      "git_commit_sha": "1cbf720ef4e6fda872eb4f399418fc878add7d16",
+      "generation_status": "success",
+      "html_valid": true
     }
   }
 }
