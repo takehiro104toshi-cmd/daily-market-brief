@@ -40,8 +40,8 @@
 ## 📱 今日の5分要約
 
 ■今日の結論: 本日の相場は強気40%・普通-5%・弱気65%と見立てています。
-■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Chip stocks see $2.3 trillion weekly wipeout as panic grips the AI trade
-■注目テーマ3つ: …
+■重要ニュース3件: Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models／Microsoft to fund Mistral's European AI expansion in multibillion-dollar deal／Bitcoin nodes could be stalled by repeating one ID 50,000 times. AI found the bug
+■…
 
 ---
 ## 1. 今日の結論　★★★★★
@@ -67,7 +67,7 @@
 - **恩恵銘柄:** 該当なし ／ **悪影響銘柄:** 該当なし
 - **営業トーク:** 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3. 「Chip stocks see $2.3 trillion weekly wipeout as panic grips the AI trade」（MarketWatch Top Stories）　★★★★★
+### 3. 「Bitcoin nodes could be stalled by repeating one ID 50,000 times. AI found the bug」（CoinDesk）　★★★★★
 - **理由（AI分析）:** テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - **日本株への影響（AI分析）:** ソフトバンクグループ・日本電信電話など「情報通信・生成AI」関連銘柄の材料として意識されています。
 - **ドル円への影響（AI分析）:** 為替への直接的な影響は限定的とみられます。
@@ -97,7 +97,17 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト4 ／ 継続性5 ／ 営業利用価値5 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 3. Chip stocks see $2.3 trillion weekly wipeout as panic grips the AI trade　★★★☆☆
+### 3. Bitcoin nodes could be stalled by repeating one ID 50,000 times. AI found the bug　★★★☆☆
+- **ニュース:** 「Bitcoin nodes could be stalled by repeating one ID 50,000 times. AI found the bug」（CoinDesk）
+- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
+- **重要テーマ:** AI
+- **関連セクター:** 情報通信・生成AI
+- **恩恵銘柄:** 該当なし
+- **悪影響銘柄:** 該当なし
+- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
+- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
+
+### 4. Chip stocks see $2.3 trillion weekly wipeout as panic grips the AI trade　★★★☆☆
 - **ニュース:** 「Chip stocks see $2.3 trillion weekly wipeout as panic grips the AI trade」（MarketWatch Top Stories）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
@@ -107,18 +117,8 @@
 - **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
 - **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
 
-### 4. Peterson: The Fed's chairman sees an AI revolution coming. Now he has to figure out what it means　★★★☆☆
+### 5. Peterson: The Fed's chairman sees an AI revolution coming. Now he has to figure out what it means　★★★☆☆
 - **ニュース:** 「Peterson: The Fed's chairman sees an AI revolution coming. Now he has to figure out what it means」（CNBC Markets）
-- **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
-- **重要テーマ:** AI
-- **関連セクター:** 情報通信・生成AI
-- **恩恵銘柄:** 該当なし
-- **悪影響銘柄:** 該当なし
-- **営業で話すポイント:** 「「情報通信・生成AI」関連の値動きを確認しておきたい局面です。」
-- **重要度内訳（8軸）:** 市場インパクト2 ／ 継続性5 ／ 営業利用価値3 ／ 日本株影響度3 ／ 米国株影響度1 ／ 個別株へ展開できるか1 ／ テーマ株へ展開できるか3 ／ 今後数週間重要か5
-
-### 5. Prediction markets outlook for stocks in 2026 dims amid AI sell-off　★★★☆☆
-- **ニュース:** 「Prediction markets outlook for stocks in 2026 dims amid AI sell-off」（CNBC Top News）
 - **岡三ストラテジストならどう見るか:** 「AI」というテーマの一環として、「情報通信・生成AI」関連への波及が意識されやすいニュースと考えられます。
 - **重要テーマ:** AI
 - **関連セクター:** 情報通信・生成AI
@@ -315,7 +315,7 @@
   ドル円が前日比+0.20%（円安方向）ことから、「内需・消費」への資金動向は方向感に乏しく、中立的と考えられます。
   営業で話すポイント: 「内需・消費」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
 - **コモディティ・資源**: 中立
-  WTI原油が前日比+0.49%、金先物が前日比-3.98%ことから、「コモディティ・資源」への資金動向は方向感に乏しく、中立的と考えられます。
+  WTI原油が前日比+0.93%、金先物が前日比-4.62%ことから、「コモディティ・資源」への資金動向は方向感に乏しく、中立的と考えられます。
   関連テーマ: 資源
   関連セクター: 資源・エネルギー
   営業で話すポイント: 「コモディティ・資源」は市場シグナル上、様子見が意識されやすい局面とお伝えできます。
@@ -2076,7 +2076,7 @@
 | 半導体 | ★☆☆☆☆ | 中立 |
 | 銀行 | ★☆☆☆☆ | 中立 |
 | 商社 | ★☆☆☆☆ | 中立 |
-| 自動車 | ★★★☆☆ | 中立 |
+| 自動車 | ★★☆☆☆ | 中立 |
 | 海運 | ★☆☆☆☆ | 中立 |
 | 電力 | ★☆☆☆☆ | 中立 |
 | 素材 | ★☆☆☆☆ | 中立 |
@@ -2177,10 +2177,10 @@ NYダウ下落
 | ナスダック総合 | 22,617.73 | -5.28% | ★★★ | [🔗](https://finance.yahoo.com/quote/^IXIC) |
 | VIX指数（恐怖指数） | 35.89 | +26.20% | ★★★ | [🔗](https://finance.yahoo.com/quote/^VIX) |
 | SOX指数（フィラデルフィア半導体指数） | 8,408.59 | -10.73% | ★★★ | [🔗](https://finance.yahoo.com/quote/^SOX) |
-| ドル指数（DXY） | 103.84 | -0.06% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
-| WTI原油先物 | 83.62 | +0.49% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
-| 金先物（ゴールド） | 3,539.00 | -3.98% | ★★★ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 58,207.92 | -5.97% | ★★★ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ドル指数（DXY） | 103.81 | -0.09% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
+| WTI原油先物 | 83.98 | +0.93% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
+| 金先物（ゴールド） | 3,515.40 | -4.62% | ★★★ | [🔗](https://finance.yahoo.com/quote/GC=F) |
+| ビットコイン | 57,904.26 | -6.46% | ★★★ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2209,36 +2209,36 @@ NYダウ下落
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 3位 ★★★★★ [Chip stocks see $2.3 trillion weekly wipeout as panic grips the AI trade](https://www.marketwatch.com/story/chip-stocks-see-2-3-trillion-weekly-wipeout-as-panic-grips-the-ai-trade-371f2f03?mod=mw_rss_topstories)
-- 出典（事実）: MarketWatch Top Stories
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 4位 ★★★★★ [Peterson: The Fed's chairman sees an AI revolution coming. Now he has to figure out what it means](https://www.cnbc.com/2026/11/16/kevin-warsh-fed-ai-jobs-productivity-interest-rateshtml.html)
-- 出典（事実）: CNBC Markets
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 5位 ★★★★★ [Prediction markets outlook for stocks in 2026 dims amid AI sell-off](https://www.cnbc.com/2026/11/20/sp-500-8000-kalshi-odds-ai-selloff.html)
-- 出典（事実）: CNBC Top News
-- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
-- 影響市場（AI分析）: 市場全体
-- 影響業種（AI分析）: 情報通信・生成AI
-- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
-
-### 6位 ★★★★★ [Former Point72 head of proprietary research says AI could turn data into a new asset class for Wall Street](https://www.coindesk.com/markets/2026/11/20/former-point72-head-of-proprietary-research-says-ai-could-turn-data-into-a-new-asset-class-for-wall-street)
+### 3位 ★★★★★ [Bitcoin nodes could be stalled by repeating one ID 50,000 times. AI found the bug](https://www.coindesk.com/markets/2026/11/21/bitcoin-nodes-could-be-stalled-by-repeating-one-id-50-000-times-ai-found-the-bug)
 - 出典（事実）: CoinDesk
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 7位 ★★★★★ [Anthropic Slides 8.5% to Shrink IPO Gain as AI Trade Unravels](https://www.bloomberg.com/news/articles/2026-11-20/anthropic-share-slump-nearly-erases-ipo-pop-as-ai-trade-unravels)
-- 出典（事実）: Bloomberg Markets(見出し)
+### 4位 ★★★★★ [Chip stocks see $2.3 trillion weekly wipeout as panic grips the AI trade](https://www.marketwatch.com/story/chip-stocks-see-2-3-trillion-weekly-wipeout-as-panic-grips-the-ai-trade-371f2f03?mod=mw_rss_topstories)
+- 出典（事実）: MarketWatch Top Stories
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 5位 ★★★★★ [Peterson: The Fed's chairman sees an AI revolution coming. Now he has to figure out what it means](https://www.cnbc.com/2026/11/16/kevin-warsh-fed-ai-jobs-productivity-interest-rateshtml.html)
+- 出典（事実）: CNBC Markets
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 6位 ★★★★★ [Prediction markets outlook for stocks in 2026 dims amid AI sell-off](https://www.cnbc.com/2026/11/20/sp-500-8000-kalshi-odds-ai-selloff.html)
+- 出典（事実）: CNBC Top News
+- 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
+- 影響市場（AI分析）: 市場全体
+- 影響業種（AI分析）: 情報通信・生成AI
+- 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
+
+### 7位 ★★★★★ [Former Point72 head of proprietary research says AI could turn data into a new asset class for Wall Street](https://www.coindesk.com/markets/2026/11/20/former-point72-head-of-proprietary-research-says-ai-could-turn-data-into-a-new-asset-class-for-wall-street)
+- 出典（事実）: CoinDesk
 - 理由（AI分析）: テーマ「AI」に関連する、業種「情報通信・生成AI」に関連する、継続性の高い構造的なテーマであるため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
 - 影響業種（AI分析）: 情報通信・生成AI
@@ -2251,7 +2251,7 @@ NYダウ下落
 - 影響業種（AI分析）: 情報通信・生成AI
 - 営業トーク: 「「情報通信・生成AI」関連は材料出尽くしや利益確定売りが入りやすい局面と考えられます。」
 
-### 9位 ★★★★★ [Walt Disney sr EVP Paul Roeder sells $597,818 in stock](https://www.investing.com/news/insider-trading-news/walt-disney-sr-evp-paul-roeder-sells-597818-in-stock-93CH-5043078)
+### 9位 ★★★★★ [Avis Budget Group EVP Linnen sells $925,530 in shares](https://www.investing.com/news/insider-trading-news/avis-budget-group-evp-linnen-sells-925530-in-shares-93CH-5043222)
 - 出典（事実）: Investing.com News
 - 理由（AI分析）: テーマ「EV」に関連する、業種「自動車」に関連するため、重要度が高いと判断しました。24時間以内の新しい記事です（鮮度加点）。
 - 影響市場（AI分析）: 市場全体
@@ -2272,8 +2272,8 @@ NYダウ下落
 | 米ドル/円 | 159.71 | 160 | 円高方向への転換が意識されやすく、輸出関連株には逆風となりやすい水準です。 |
 | VIX指数（恐怖指数） | 35.89 | 30 | 市場のリスク回避姿勢が強まりやすい水準です。 |
 | 米10年国債利回り | 4.91 | 5 | 金利低下が株式には追い風として意識されやすい水準です。 |
-| WTI原油先物 | 83.62 | 80 | インフレ再燃への警戒が意識されやすい水準です。 |
-| 金先物（ゴールド） | 3,539.00 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
+| WTI原油先物 | 83.98 | 80 | インフレ再燃への警戒が意識されやすい水準です。 |
+| 金先物（ゴールド） | 3,515.40 | 2600 | 安全資産への資金シフトが意識されやすい水準です。 |
 
 ---
 ## 14. テーマ分析　★★★★☆
@@ -2285,10 +2285,10 @@ NYダウ下落
 
 **関連見出し（事実）:**
 - [オープンAI 開発一時中断 AIみずからサイバー攻撃実行のおそれ](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html) — NHKニュース 経済
-- [Nasdaq 100 Has Worst Week Since 2020 on AI Drama: Markets Wrap](https://www.bloomberg.com/news/articles/2026-11-19/stock-market-today-dow-s-p-live-updates) — Bloomberg Markets(見出し)
-- [Anthropic Slides 8.5% to Shrink IPO Gain as AI Trade Unravels](https://www.bloomberg.com/news/articles/2026-11-20/anthropic-share-slump-nearly-erases-ipo-pop-as-ai-trade-unravels) — Bloomberg Markets(見出し)
+- [AI is changing software engineering — and some developers miss the struggle](https://www.cnbc.com/2026/11/20/ai-coding-tools-software-engineers.html) — CNBC Top News
 - [Prediction markets outlook for stocks in 2026 dims amid AI sell-off](https://www.cnbc.com/2026/11/20/sp-500-8000-kalshi-odds-ai-selloff.html) — CNBC Top News
 - [Peterson: The Fed's chairman sees an AI revolution coming. Now he has to figure out what it means](https://www.cnbc.com/2026/11/16/kevin-warsh-fed-ai-jobs-productivity-interest-rateshtml.html) — CNBC Markets
+- [AI risks are the biggest threat to the financial system, Fed survey finds](https://www.cnbc.com/2026/11/13/ai-risks-financial-system-federal-reserve.html) — CNBC Markets
 
 ### 第2位: 円高　★★★☆☆
 - **今強い理由（AI分析）:** 本日一部円高に関する報道が出ており、輸出関連企業の収益への懸念が意識されやすい状況です。
@@ -2308,7 +2308,7 @@ NYダウ下落
 
 **関連見出し（事実）:**
 - [EV補助金受け付け終了 予算枯渇](https://news.yahoo.co.jp/pickup/6603347?source=rss) — Yahoo!ニュース 経済
-- [Walt Disney sr EVP Paul Roeder sells $597,818 in stock](https://www.investing.com/news/insider-trading-news/walt-disney-sr-evp-paul-roeder-sells-597818-in-stock-93CH-5043078) — Investing.com News
+- [Avis Budget Group EVP Linnen sells $925,530 in shares](https://www.investing.com/news/insider-trading-news/avis-budget-group-evp-linnen-sells-925530-in-shares-93CH-5043222) — Investing.com News
 
 ### 第4位: 利上げ　★★★☆☆
 - **今強い理由（AI分析）:** 本日一部利上げに関する報道が出ており、金融株や金利敏感株への関心が意識されています。
@@ -2333,7 +2333,7 @@ NYダウ下落
 
 **営業トーク（AI分析）:** 「本日の情報通信・生成AI関連ニュースは強弱まちまちです」
 
-### 第2位: 自動車　★★★★☆
+### 第2位: 自動車　★★★☆☆
 **追い風（事実）:**
 該当なし（取得不可または該当ニュースなし）。
 
@@ -2984,9 +2984,9 @@ NYダウ下落
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「正恩氏 トランプ氏本気度に疑心か」（Yahoo!ニュース トピックス）
-- 「未着工原発計画に交付金計165億円」（Yahoo!ニュース トピックス）
-- 「スタック車 ほぼノーマルタイヤか」（Yahoo!ニュース トピックス）
+- 「文科相交代の可能性示唆 自民党」（Yahoo!ニュース トピックス）
+- 「AIでリーマン予想証明か 精査続く」（Yahoo!ニュース トピックス）
+- 「大雪影響で千人超が孤立状態 福島」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3212,9 +3212,9 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603347?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603327?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603379?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603281?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603374?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603309?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603408?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603395?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6603372?source=rss)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199771000.html)
@@ -3224,22 +3224,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-19/stock-market-today-dow-s-p-live-updates)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-20/j-j-snack-foods-ceo-on-4q-results-and-consumer-sentiment-video)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-21/australia-says-negotiations-continue-on-gas-reservation-proposal)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-21/switzerland-prolongs-neutrality-soul-searching-with-weapons-vote)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-20/billionaire-raises-720-million-private-credit-for-megha-buyout)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-21/china-s-top-planner-seeks-faster-construction-of-state-projects)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-21/australian-energy-officials-warned-of-data-center-risk-age-says)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-21/china-military-bans-sf-express-from-procurement-over-misconduct)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-21/vietnam-amends-laws-to-speed-land-clearance-development-of-new-projects)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-20/el-salvador-troops-killed-in-haiti-blast-after-rescue-deployment)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-20/-always-remain-liquid-richards-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-20/anthropic-share-slump-nearly-erases-ipo-pop-as-ai-trade-unravels)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-20/trump-huang-should-return-to-nvidia-after-big-apology-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-20/s-p-dow-slide-into-correction-as-investors-dump-tech-video)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-20/masters-in-business-with-david-eichhorn-video)
 - [CNBC Top News](https://www.cnbc.com/2026/11/20/nvidias-7-week-losing-streak-is-longest-since-2008-financial-crisis.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/21/china-xi-trump-putin-global-diplomacy-shenzhen.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/20/a-massive-bearish-trade-just-happened-in-the-chip-stocks.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/20/zscaler-crowdstrike-deal.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/20/ai-coding-tools-software-engineers.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/20/equity-issuance-bull-market-problem.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/20/trump-data-centers-ai-companies-tax.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/20/sp-500-8000-kalshi-odds-ai-selloff.html)
-- [CNBC Top News](https://www.cnbc.com/2026/11/20/as-anthropic-shares-tank-investors-scramble-to-hedge-it-could-be-very-expensive.html)
-- [CNBC Top News](https://www.cnbc.com/2026/11/20/trump-lutnick-commerce-china-ai.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/20/japan-inflation-cpi-october.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/18/nvidia-us-ai-chip-export-controls-data-centers-.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/18/uk-inflation-cpi-fuel-prices.html)
@@ -3256,6 +3256,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [WSJ Markets](https://www.wsj.com/articles/safe-haven-currencies-strengthen-amid-fears-over-global-tariffs-9964e17a?mod=rss_markets_main)
 - [WSJ Markets](https://www.wsj.com/articles/u-s-natural-gas-futures-fall-on-shifting-weather-forecasts-1ef3e457?mod=rss_markets_main)
 - [WSJ Markets](https://www.wsj.com/articles/building-products-distributor-qxo-launching-hostile-bid-for-beacon-de024410?mod=rss_markets_main)
+- [MarketWatch Top Stories](https://www.marketwatch.com/story/why-are-these-tech-outages-rattling-americans-so-much-that-theyre-stockpiling-cash-and-supplies-07516bdd?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/dow-s-p-500-enter-correction-as-nasdaq-suffers-worst-week-since-2020-bd74dadf?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/chip-stocks-see-2-3-trillion-weekly-wipeout-as-panic-grips-the-ai-trade-371f2f03?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/these-stocks-were-crushed-the-most-this-week-as-the-tech-wreck-accelerated-8d6f7323?mod=mw_rss_topstories)
@@ -3263,7 +3264,6 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/everyones-making-money-off-gta-6-this-week-except-investors-in-take-twos-stock-489ee01b?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/the-hidden-catch-in-anthropics-ipo-billions-of-locked-up-shares-are-waiting-in-the-wings-279d33ce?mod=mw_rss_topstories)
 - [MarketWatch Top Stories](https://www.marketwatch.com/story/micron-and-sandisk-stocks-might-look-like-bargains-but-analysts-say-thats-actually-a-red-flag-da1f1f5d?mod=mw_rss_topstories)
-- [MarketWatch Top Stories](https://www.marketwatch.com/story/one-thing-thanksgiving-travelers-can-be-thankful-for-gas-prices-are-down-75-cents-from-this-years-peak-efac1809?mod=mw_rss_topstories)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/elon-musk-in-a-post-on-x-says-some-of-his-trump-posts-went-too-far-and-that-he-regrets-them-90e73a6a?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/bank-of-england-decision-on-thursday-will-be-at-12-02-p-m-local-time-instead-of-12-p-m-due-to-ve-day-two-minutes-of-silence-1f6bed66?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/swiss-national-bank-cuts-interest-rates-by-a-half-point-to-0-5-ed1fce78?mod=mw_rss_realtimeheadlines)
@@ -3272,14 +3272,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/fold-holdings-ceo-william-reeves-sells-4950-in-shares-93CH-5043096)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/thredup-ceo-james-reinhart-sells-84665-in-company-shares-93CH-5043095)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/regency-centers-principal-accounting-officer-sells-109539-in-shares-93CH-5043094)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/eagle-bancorp-montana-director-peter-johnson-disposes-of-33130-in-shares-93CH-5043088)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/icu-medical-director-david-greenberg-sells-155513-in-stock-93CH-5043081)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/saba-capital-management-acquires-162998-ellsworth-growth--income-fund-93CH-5043079)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/walt-disney-director-robert-iger-sells-395-million-of-dis-stock-93CH-5043080)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/walt-disney-sr-evp-paul-roeder-sells-597818-in-stock-93CH-5043078)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/jushi-holdings-director-denis-arsenault-buys-38104-in-company-stock-93CH-5043233)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/vital-farms-director-matthew-ohayer-sells-223897-in-shares-93CH-5043232)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/heritage-insurance-officer-timothy-johns-sells-107091-in-stock-93CH-5043231)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/rocket-pharmaceuticals-general-counsel-martin-wilson-sells-1474-in-stock-93CH-5043230)
+- [Investing.com News](https://www.investing.com/news/company-news/meta-faces-protests-in-india-as-opposition-demands-instagram-accounts-restoration-5043225)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/avis-budget-group-evp-linnen-sells-925530-in-shares-93CH-5043222)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/riskified-director-erez-shachar-sells-253781-in-shares-93CH-5043221)
+- [Investing.com News](https://www.investing.com/news/forex-news/bitcoin-falls-357-to-56814-5043137)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-117-sec-issues-proposal-restructure-consolidated-audit-trail)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-116-sec-charges-indianapolis-based-backward-hat-capital-its-co-founders-560-million-dollar-offering)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-115-sec-eight-entities-used-fake-crypto-asset-trading-platforms-steal-more-37-million-us-investors)
@@ -3305,14 +3305,15 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [ECB Press Releases](https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261116~db374b56ab.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261113~3883f1f187.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261110_1~9725b7aa07.en.html)
+- [CoinDesk](https://www.coindesk.com/markets/2026/11/21/bitcoin-nodes-could-be-stalled-by-repeating-one-id-50-000-times-ai-found-the-bug)
+- [CoinDesk](https://www.coindesk.com/markets/2026/11/21/xrp-falls-10-as-long-bets-unwind-and-etf-assets-slip-below-usd1-billion)
+- [CoinDesk](https://www.coindesk.com/markets/2026/11/21/bitcoin-tanks-below-usd57-000-for-the-first-time-in-two-years-and-its-not-alone)
 - [CoinDesk](https://www.coindesk.com/policy/2026/11/20/kalshi-races-to-get-ahead-of-new-york-order-that-could-shut-down-exchange)
 - [CoinDesk](https://www.coindesk.com/business/2026/11/20/fairmint-plans-tokenized-stock-venue-on-canton-ethereum-under-sec-experiment)
 - [CoinDesk](https://www.coindesk.com/markets/2026/11/20/bitcoin-plunges-below-usd59-000-as-rush-to-cash-puts-new-bear-market-lows-back-in-play)
 - [CoinDesk](https://www.coindesk.com/markets/2026/11/20/former-point72-head-of-proprietary-research-says-ai-could-turn-data-into-a-new-asset-class-for-wall-street)
 - [CoinDesk](https://www.coindesk.com/policy/2026/11/20/hong-kong-moves-to-extend-crypto-licensing-rules-to-brokers-advisers-and-custodians)
-- [CoinDesk](https://www.coindesk.com/policy/2026/11/20/u-s-senated-passes-bill-to-ban-prediction-market-best-on-war-and-death)
-- [CoinDesk](https://www.coindesk.com/tech/2026/11/20/live-news-bitcoin-hovers-just-above-usd61-000-as-anthropic-slides-13-after-nasdaq-debut)
-- [CoinDesk](https://www.coindesk.com/tech/2026/11/20/bitcoin-bots-pounced-within-seconds-when-researchers-exposed-their-keys)
+- [CoinTelegraph](https://cointelegraph.com/news/hong-kong-crypto-custody-advisory-licensing-bill?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/wrapped-monero-token-crashes-998-amid-suspected-135m-exploit?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/sky-protocol-sees-2b-in-stablecoin-withdrawals-disputes-illicit-fund-claims?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-falls-below-60k-for-first-time-since-july-amid-broader-market-selloff?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
@@ -3320,15 +3321,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-hits-new-20-week-low-anthropic-drops-87-tech-sell-off?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/dbs-bets-it-can-lose-the-deposit-and-keep-the-client?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/lagarde-europe-limited-window-tokenization-rules?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603378?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603382?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603383?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603379?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603386?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603372?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603387?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603381?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603410?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603398?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603404?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603402?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603384?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603405?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603400?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6603403?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
