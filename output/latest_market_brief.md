@@ -2180,7 +2180,7 @@ NYダウ上昇
 | ドル指数（DXY） | 104.01 | +0.33% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/DX-Y.NYB) |
 | WTI原油先物 | 83.08 | -0.72% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/CL=F) |
 | 金先物（ゴールド） | 3,639.60 | +2.94% | ★★★ | [🔗](https://finance.yahoo.com/quote/GC=F) |
-| ビットコイン | 59,682.83 | -0.31% | ★☆☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
+| ビットコイン | 59,206.62 | -1.10% | ★★☆ | [🔗](https://finance.yahoo.com/quote/BTC-USD) |
 
 ---
 ## 11. 為替・金利　★★★★☆
@@ -2440,7 +2440,7 @@ NYダウ上昇
 ### 第3位: Tesla（TSLA）　★★★★★
 直近値: 400.00 / 前日比: +19.86 (+5.22%)（事実）
 
-- **短期（AI分析）:** 前日比+19.86 (+5.22%)。 本日、個別の関連見出しは確認されませんでした。
+- **短期（AI分析）:** 前日比+19.86 (+5.22%)。 関連見出し: 「Norway’s Wealth Fund Again Votes No to Musk’s Tesla Pay Package」（Bloomberg Markets(見出し)）
 - **中期（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。
 - **長期（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
 
@@ -2552,7 +2552,7 @@ NYダウ上昇
 直近値: 400.00 / 前日比: +19.86 (+5.22%)（事実）
 
 - **理由（AI分析）:** 前日比+19.86 (+5.22%)と値動きが大きく、本日の注目銘柄として選定しました。
-- **注目材料（AI分析）:** 個別の関連見出しは確認されていません（取得不可または該当なし）。
+- **注目材料（AI分析）:** 「Norway’s Wealth Fund Again Votes No to Musk’s Tesla Pay Package」（Bloomberg Markets(見出し)）
 - **短期見通し（AI分析）:** 業種動向からの短期見通しは、本日時点では判断材料が不足しています。
 
 ### 第4位: KLA（KLAC）　★★★★★
@@ -2600,7 +2600,7 @@ NYダウ上昇
 | Apple（AAPL） | ★★★☆☆ | 「Apple prepares a new way to buy iPhones. Plus, making sense of Google's new AI models」など関連ニュースあり。 |
 | Microsoft（MSFT） | ★★★☆☆ | 「Microsoft has 3 secret weapons that could drive its stock 50% higher, analyst says」など関連ニュースあり。 |
 | NVIDIA（NVDA） | ★★★☆☆ | 前日比上昇、個別の材料は確認されませんでした。 |
-| Tesla（TSLA） | ★★★★★ | 前日比上昇、個別の材料は確認されませんでした。 |
+| Tesla（TSLA） | ★★★★★ | 「Norway’s Wealth Fund Again Votes No to Musk’s Tesla Pay Package」など関連ニュースあり。 |
 | Amazon（AMZN） | ★★★★★ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Alphabet（GOOGL） | ★★★☆☆ | 業種「情報通信・生成AI」は強弱まちまちです。 |
 | Meta Platforms（META） | ★★★★★ | 業種「情報通信・生成AI」は強弱まちまちです。 |
@@ -2800,7 +2800,7 @@ NYダウ上昇
 ### Tesla（TSLA）
 直近値: 400.00 / 前日比: +19.86 (+5.22%)（事実）
 
-- **今日の材料（AI分析）:** 前日比+19.86 (+5.22%)。 本日、個別の関連見出しは確認されませんでした。
+- **今日の材料（AI分析）:** 前日比+19.86 (+5.22%)。 関連見出し: 「Norway’s Wealth Fund Again Votes No to Musk’s Tesla Pay Package」（Bloomberg Markets(見出し)）
 - **今後1週間（AI分析）:** 中長期材料として関連付けられる業種動向は確認されませんでした（取得不可または該当なし）。（参考: 決算発表予定 2027-01-27）
 - **今後1か月（AI分析）:** 業種動向の判断材料が乏しく、1か月程度の見通しも不透明です。（参考: 決算発表予定 2027-01-27）
 - **長期評価（AI分析）:** 業種動向からの長期見解は本日時点では判断材料が不足しています。
@@ -2962,9 +2962,9 @@ NYダウ上昇
 
 ### 今日の雑談（相場以外の公開ニュース）
 
-- 「29日にかけ急な強い雨や落雷注意」（Yahoo!ニュース トピックス）
-- 「台湾の統一地方選 与党が伸長か」（Yahoo!ニュース トピックス）
-- 「山中に2人の遺体 一部は白骨化」（Yahoo!ニュース トピックス）
+- 「防衛費5年「60兆円弱」米側は難色」（Yahoo!ニュース トピックス）
+- 「大学病院 老朽化トラブル相次ぐ」（Yahoo!ニュース トピックス）
+- 「拘束記者の妻手記 露で相次ぎ報道」（Yahoo!ニュース トピックス）
 
 ### 想定質問
 
@@ -3187,13 +3187,13 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 
 ### ニュース見出し
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604276?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604282?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604314?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604277?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604295?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604326?source=rss)
+- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604312?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604290?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604267?source=rss)
 - [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604250?source=rss)
-- [Yahoo!ニュース 経済](https://news.yahoo.co.jp/pickup/6604270?source=rss)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015200151000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199771000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260808/k10015199891000.html)
@@ -3202,22 +3202,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199711000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199591000.html)
 - [NHKニュース 経済](http://www3.nhk.or.jp/news/html/20260807/k10015199721000.html)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-28/modi-nears-majority-needed-to-increase-india-s-parliament-seats)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-28/norway-s-wealth-fund-again-votes-no-to-musk-s-tesla-pay-package)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-28/plunging-fuel-prices-bring-relief-for-drivers-and-central-banks)
+- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-28/eisenkot-edging-closer-to-leading-israel-with-talks-progressing)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-28/rbi-steps-up-gold-loan-scrutiny-as-bullion-rout-signals-strain)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-28/china-import-logistics-fell-0-6-in-january-october-xinhua-says)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-27/jailed-brazil-beach-soccer-star-drawn-into-russia-us-spy-dispute)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/videos/2026-11-27/masters-in-business-with-holly-macdonald-video)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-27/em-asia-stocks-set-for-weekly-gain-as-markets-regain-footing)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-27/hungary-credit-outlook-lifted-by-s-p-on-budget-and-euro-ambition)
 - [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-27/brazil-assets-rally-after-lula-names-banker-luiz-carlos-trabuco-cappi-finance-minister)
-- [Bloomberg Markets(見出し)](https://www.bloomberg.com/news/articles/2026-11-27/mexican-airport-operator-gap-raises-398-million-for-fibra-trust)
 - [CNBC Top News](https://www.cnbc.com/2026/11/27/black-friday-2026-inflation-value-deals.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/26/trump-gdp-revision-investigation.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/27/the-sp-500-is-in-a-correction-bear-markets-and-recessions-dont-always-follow.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/28/saudi-arabia-vision-2030-spending.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/28/dangote-refinery-oil-ipo-nigeria-africa-energy.html)
-- [CNBC Top News](https://www.cnbc.com/2026/11/27/norse-atlantic-bankruptcy-fuel-costs.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/25/kevin-warsh-greenspan-fed-rates-ai-inflation.html)
 - [CNBC Top News](https://www.cnbc.com/2026/11/27/new-car-buying-deals-buying-tips.html)
+- [CNBC Top News](https://www.cnbc.com/2026/11/27/norse-atlantic-bankruptcy-fuel-costs.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/28/saudi-arabia-vision-2030-spending.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/27/china-industrial-profits-october.html)
 - [CNBC Markets](https://www.cnbc.com/2026/11/26/pablo-hernandez-de-cos-ecb-president.html)
@@ -3250,14 +3250,14 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/germany-flash-services-pmi-falls-to-9-month-low-of-49-4-5e5d2763?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/powell-says-labor-market-not-a-source-of-significant-inflation-pressure-cc3b1297?mod=mw_rss_realtimeheadlines)
 - [MarketWatch RealTime Headlines](https://www.marketwatch.com/story/feds-powell-says-rate-cut-on-the-table-as-soon-as-september-f3f7c8f2?mod=mw_rss_realtimeheadlines)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/natural-gas-services-group-ceo-buys-8250-in-company-stock-93CH-5054198)
-- [Investing.com News](https://www.investing.com/news/economy-news/iran-war-intensifies-maritime-risks-as-opec-prepares-for-oil-supply-talks-5054196)
-- [Investing.com News](https://www.investing.com/news/cryptocurrency-news/bitcoin-price-today-falls-below-60k-as-whales-buy-dip-etf-outflows-mount-5054180)
-- [Investing.com News](https://www.investing.com/news/stock-market-news/missed-black-friday-heres-one-final-chance-to-lock-in-investingpro-for-60-off-5053598)
-- [Investing.com News](https://www.investing.com/news/economy-news/chinas-import-logistics-demand-falls-06-in-januaryoctober-5054171)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/arista-networks-ceo-jayshree-ullal-sells-218m-in-company-stock-93CH-5054170)
-- [Investing.com News](https://www.investing.com/news/company-news/citigroup-faces-executive-shakeup-after-35-billion-bookkeeping-error--wsj-5054160)
-- [Investing.com News](https://www.investing.com/news/insider-trading-news/shoulder-innovations-coo-sells-15400-in-common-stock-93CH-5054156)
+- [Investing.com News](https://www.investing.com/news/company-news/musk-says-google-interested-in-renting-more-computing-capacity-from-spacex-5054245)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/musk-says-google-is-interested-in-renting-more-computing-capacity-from-spacex-5054241)
+- [Investing.com News](https://www.investing.com/news/economy-news/us-military-repelled-drones-at-uk-airbase-iran-suspected-of-involvement--ft-5054231)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/oreilly-automotive-svp-sells-287m-in-common-stock-93CH-5054230)
+- [Investing.com News](https://www.investing.com/news/stock-market-news/cyber-monday-is-live-everything-you-can-get-with-investingpro-under-750month-5053718)
+- [Investing.com News](https://www.investing.com/news/company-news/united-fidelity-shut-by-regulators-in-biggest-us-bank-failure-in-two-years-5054218)
+- [Investing.com News](https://www.investing.com/news/economy-news/is-the-us-tariff-wall-here-to-stay-ing-weighs-in-5054207)
+- [Investing.com News](https://www.investing.com/news/insider-trading-news/bv-financial-director-sells-16754-in-company-stock-93CH-5054206)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-118-sec-investor-advisory-committee-host-dec-3-virtual-meeting)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-117-sec-issues-proposal-restructure-consolidated-audit-trail)
 - [SEC Press Releases](https://www.sec.gov/newsroom/press-releases/2026-116-sec-charges-indianapolis-based-backward-hat-capital-its-co-founders-560-million-dollar-offering)
@@ -3274,6 +3274,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [EIA Today in Energy](https://www.eia.gov/todayinenergy/detail.php?id=68464)
 - [EIA Today in Energy](https://www.eia.gov/todayinenergy/detail.php?id=68445)
 - [EIA Today in Energy](https://www.eia.gov/todayinenergy/detail.php?id=68444)
+- [ECB Press Releases](https://www.ecb.europa.eu//press/inter/date/2026/html/ecb.in261128~10e11f78f1.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/govcdec/otherdec/2026/html/ecb.gc261127~13ecadc0f2.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr261127~2e53af695e.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/accounts/2026/html/ecb.mg261126~ccf28c8071.en.html)
@@ -3281,7 +3282,7 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [ECB Press Releases](https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr261125~26d1ade228.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261124~17928e5456.en.html)
 - [ECB Press Releases](https://www.ecb.europa.eu//press/key/date/2026/html/ecb.sp261123~b5816801a0.en.pdf)
-- [ECB Press Releases](https://www.ecb.europa.eu//press/pr/date/2026/html/ecb.pr261123~76b6f57b74.en.html)
+- [CoinDesk](https://www.coindesk.com/markets/2026/11/28/trump-linked-crypto-token-wlfi-plunges-over-50)
 - [CoinDesk](https://www.coindesk.com/business/2026/11/27/kalshi-turns-to-small-businesses-as-legal-battles-threaten-forecasts-on-sports)
 - [CoinDesk](https://www.coindesk.com/daybook-us/2026/11/27/bitcoin-death-cross-is-coming-here-s-what-happened-after-previous-13)
 - [CoinDesk](https://www.coindesk.com/markets/2026/11/27/bitcoin-on-course-to-end-seven-week-losing-streak-while-trailing-stock-rebound)
@@ -3289,23 +3290,22 @@ A. 特定の商品名を挙げてお勧めすることはできません。一�
 - [CoinDesk](https://www.coindesk.com/policy/2026/11/27/next-ecb-chief-favors-tokenized-bank-deposits-over-stablecoins-and-bitcoin)
 - [CoinDesk](https://www.coindesk.com/markets/2026/11/27/injective-asks-sec-to-allow-order-books-for-tokenized-stock-trading)
 - [CoinDesk](https://www.coindesk.com/business/2026/11/27/brazil-s-stock-exchange-teams-up-with-major-banks-to-launch-real-pegged-stablecoin)
-- [CoinDesk](https://www.coindesk.com/business/2026/11/27/tether-can-freeze-stolen-crypto-in-minutes-getting-it-back-can-take-years)
+- [CoinTelegraph](https://cointelegraph.com/news/asean3-agrees-on-initiative-to-explore-crypto-payments-cooperation?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
+- [CoinTelegraph](https://cointelegraph.com/news/binance-receives-in-principle-approval-plans-asia-hub-in-bhutan?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/franklin-templeton-hype-crypto-index-etf?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-whales-pile-btc-despite-shrinking-profit-cushion?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/china-march-2027-rollout-blockchain-identity-regulations?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/markets/bitcoin-price-below-59k-anthropic-tech-stock-rebound?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
 - [CoinTelegraph](https://cointelegraph.com/news/what-was-coinbase-worth-while-nasdaq-was-closed?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/binance-ipo-program-regulatory-approval-yi-he?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [CoinTelegraph](https://cointelegraph.com/news/brazil-b3-stablecoin-tokenization-launch-2027?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604304?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604298?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604305?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604295?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604301?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604288?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604325?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604318?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604316?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604326?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604312?source=rss)
 - [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604303?source=rss)
-- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604302?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604323?source=rss)
+- [Yahoo!ニュース トピックス](https://news.yahoo.co.jp/pickup/6604324?source=rss)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015199841000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200211000.html)
 - [NHKニュース 総合](http://www3.nhk.or.jp/news/html/20260808/k10015200261000.html)
